@@ -39,6 +39,7 @@ expire after 7 days — re-send if it lapses.
 - [x] Invited kcpawan@gmail.com (Pawan KC) as collaborator — invite pending acceptance
 - [x] Wrote AI context docs: `architecture.md` (stack + data model), `rules.md`,
       `phases.md` (8 phases), `design.md`, `memory.md`
+- [x] Rewrote `README.md` — project overview, stack, documentation index
 - [ ] Project environment setup committed — Phase 0 in `docs/phases.md`
 
 **Commits this week**

@@ -59,6 +59,7 @@ documentation only: no application code exists yet.
 
 ## Change log
 
+- **2026-09-15** — Rewrote `README.md`: overview, planned stack, doc index, status.
 - **2026-09-15** — Added `architecture.md`, `rules.md`, `phases.md`, `design.md`,
   `memory.md`. Stack decided. No code written.
 - **2026-09-15** — Added `Eksamadhan_AI_PRD.md`, `PROJECT_TRACKING.md`,
