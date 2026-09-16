@@ -79,14 +79,23 @@ export default function App() {
         return () => clearInterval(id);
     }, [status?.connected, refreshMessages]);
 
+    const allThreads = useMemo(() => buildThreads(messages, pages, 'all'), [messages, pages]);
     const threads = useMemo(
-        () => buildThreads(messages, pages, filter),
-        [messages, pages, filter],
+        () => (filter === 'all' ? allThreads : buildThreads(messages, pages, filter)),
+        [allThreads, messages, pages, filter],
     );
 
+    // Changing the filter can hide the open conversation; clear it so the thread pane
+    // does not keep showing a chat that is no longer in the list.
+    useEffect(() => {
+        if (active && !threads.some(t => t.customerId === active.customerId)) {
+            setActive(null);
+        }
+    }, [threads, active]);
+
     const unread = useMemo(
-        () => threads.filter(t => t.last.direction === 'inbound').length,
-        [threads],
+        () => allThreads.filter(t => t.last.direction === 'inbound').length,
+        [allThreads],
     );
 
     const handleConnect = (platform) => {
@@ -143,7 +152,7 @@ export default function App() {
                     <HomePage
                         user={user}
                         pages={pages}
-                        threadCount={threads.length}
+                        threadCount={allThreads.length}
                         onConnect={handleConnect}
                         onNavigate={setView}
                     />
@@ -152,6 +161,7 @@ export default function App() {
                 {view === 'inbox' && (
                     <InboxPage
                         threads={threads}
+                        totalThreads={allThreads.length}
                         pages={pages}
                         filter={filter}
                         onFilterChange={setFilter}

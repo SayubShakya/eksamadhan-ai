@@ -15,7 +15,7 @@ const ChannelIcon = ({ platform, size = 14 }) =>
     platform === 'instagram' ? <IconInstagram size={size} /> : <IconFacebook size={size} />;
 
 export default function InboxPage({
-    threads, pages, filter, onFilterChange,
+    threads, totalThreads, pages, filter, onFilterChange,
     active, onSelect, onSend, onConnect,
 }) {
     const [draft, setDraft] = useState('');
@@ -51,7 +51,12 @@ export default function InboxPage({
         onSend(activeThread, text);
     };
 
-    if (!threads.length) {
+    // Only take over the whole screen when there is genuinely nothing anywhere.
+    // If a filter merely matches nothing, the chips must stay reachable — otherwise
+    // selecting "Instagram" with no Instagram chats strands the user with no way back.
+    const nothingAtAll = totalThreads === 0;
+
+    if (nothingAtAll) {
         return (
             <div className="inbox">
                 <div className="convlist">
@@ -140,9 +145,22 @@ export default function InboxPage({
                         );
                     })}
                     {!visible.length && (
-                        <p className="empty__text" style={{ padding: 20, fontSize: 13 }}>
-                            No conversations match “{search}”.
-                        </p>
+                        <div className="empty" style={{ padding: '32px 20px' }}>
+                            <p className="empty__title" style={{ fontSize: 14 }}>
+                                {search ? 'No matches' : `Nothing on ${FILTERS.find(f => f.id === filter)?.label ?? 'this channel'}`}
+                            </p>
+                            <p className="empty__text" style={{ fontSize: 13, marginBottom: 14 }}>
+                                {search
+                                    ? `No conversations match “${search}”.`
+                                    : 'No conversations on this channel yet.'}
+                            </p>
+                            <button
+                                className="btn btn--secondary btn--sm"
+                                onClick={() => { setSearch(''); onFilterChange('all'); }}
+                            >
+                                Show all conversations
+                            </button>
+                        </div>
                     )}
                 </div>
             </aside>
@@ -151,8 +169,14 @@ export default function InboxPage({
                 {!activeThread ? (
                     <div className="empty" style={{ height: '100%', alignContent: 'center' }}>
                         <div className="empty__icon"><IconInbox size={28} /></div>
-                        <p className="empty__title">Select a conversation</p>
-                        <p className="empty__text">Choose a chat from the list to read it and reply.</p>
+                        <p className="empty__title">
+                            {threads.length ? 'Select a conversation' : 'Nothing on this channel'}
+                        </p>
+                        <p className="empty__text">
+                            {threads.length
+                                ? 'Choose a chat from the list to read it and reply.'
+                                : 'Switch to another channel, or choose “All” to see every conversation.'}
+                        </p>
                     </div>
                 ) : (
                     <>
