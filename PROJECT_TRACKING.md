@@ -82,6 +82,9 @@ expire after 7 days — re-send if it lapses.
 - [x] **End-to-end verified**: a real Messenger message from a second account reached
       PostgreSQL through the proxy and tunnel; de-duplication confirmed working
 
+- [x] Secured the webhook: `X-Hub-Signature-256` verification with constant-time
+      comparison, plus the proxy raw-body fix it depends on; rebranded the frontend
+
 **Blockers**
 
 - A real database password was committed in the PoC repo's history — needs rotating.
@@ -118,6 +121,9 @@ expire after 7 days — re-send if it lapses.
       `messages` and `messaging_postbacks`
 - [x] **End-to-end verified**: a real Messenger message from a second account reached
       PostgreSQL through the proxy and tunnel; de-duplication confirmed working
+
+- [x] Secured the webhook: `X-Hub-Signature-256` verification with constant-time
+      comparison, plus the proxy raw-body fix it depends on; rebranded the frontend
 
 **Blockers**
 -

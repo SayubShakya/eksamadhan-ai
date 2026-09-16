@@ -3,7 +3,11 @@ const axios = require('axios');
 const { Redis } = require('@upstash/redis');
 const app = express();
 
-app.use(express.json());
+// Keep the exact bytes Meta sent: X-Hub-Signature-256 is an HMAC over the raw body,
+// so re-serialising the parsed JSON downstream would invalidate every signature.
+app.use(express.json({
+    verify: (req, _res, buf) => { req.rawBody = buf; }
+}));
 
 // --- REQUEST LOGGING MIDDLEWARE ---
 app.use((req, res, next) => {
@@ -230,7 +234,9 @@ app.all('*', async (req, res) => {
         const response = await axios({
             method: req.method,
             url: targetUrl,
-            data: req.body,
+            // Forward the untouched bytes when we have them, so the backend can
+            // verify X-Hub-Signature-256 against exactly what Meta hashed.
+            data: req.rawBody && req.rawBody.length ? req.rawBody : req.body,
             headers: {
                 ...req.headers,
                 host: new URL(localTunnelUrl).host, // Crucial for tunnel providers like Pinggy/Ngrok

@@ -292,7 +292,7 @@ function App() {
     return (
         <div className="dashboard">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h1>Azmew Social Connector POC</h1>
+                <h1>Eksamadhan AI</h1>
                 {status?.connected && (
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button onClick={handleLogout} style={{ backgroundColor: '#ff4444', fontSize: '0.8em', padding: '8px 15px' }}>

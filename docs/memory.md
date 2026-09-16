@@ -104,8 +104,13 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
   the file is absent. Copy `.env.example` to `backend/.env` on a fresh clone.
 - Hibernate logs two harmless "constraint does not exist, skipping" warnings on a
   fresh PostgreSQL schema — an artifact of `ddl-auto: update`, not an error.
-- PoC webhook endpoint does **not** verify `X-Hub-Signature-256` — unauthenticated
-  POSTs are accepted. Must be fixed before any public deployment.
+- ~~Webhook does not verify `X-Hub-Signature-256`~~ — fixed 2026-09-16.
+  **The proxy must forward the raw request body** (`express.json({verify})` captures
+  `req.rawBody`; axios forwards it). The signature is an HMAC over the exact bytes Meta
+  sent, so re-serialising the parsed JSON anywhere in the chain invalidates every
+  signature and silently drops all real messages.
+- Spring Boot 4 ships **Jackson 3**: the import is `tools.jackson.databind.ObjectMapper`,
+  not `com.fasterxml.jackson.databind`.
 - Meta access tokens are stored in plaintext in `social_pages.access_token`.
 
 - **`run.sh` tunnel regex must exclude `dashboard.pinggy.io`** — Pinggy's log prints
@@ -142,6 +147,11 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 - Phases are sequential — see `phases.md`.
 
 ## Change log
+
+- **2026-09-16** — Webhook now verifies `X-Hub-Signature-256` (HMAC-SHA256 over the raw
+  body, constant-time compare) in `WebhookSignatureVerifier`; unsigned and wrongly-signed
+  POSTs get 403. Proxy updated to forward untouched bytes. Frontend rebranded from
+  "Azmew Social Connector POC" to "Eksamadhan AI".
 
 - **2026-09-16** — `run.sh` keep-alive rewritten to self-heal: it now detects a dropped
   Pinggy tunnel, reconnects, and registers the NEW hostname. Previously it re-registered

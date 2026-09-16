@@ -37,9 +37,7 @@ Meta Graph API integration"*
 **Still to do:**
 - [x] Port MySQL → PostgreSQL — verified, all three tables created
 - [ ] Replace `ddl-auto: update` with Flyway migrations, then set `validate`
-- [ ] **Webhook signature verification** (`X-Hub-Signature-256`) — the PoC verifies
-      the subscription handshake but does not verify payload signatures, so anyone
-      can POST fake messages to the endpoint
+- [x] Webhook signature verification (`X-Hub-Signature-256`) — done 2026-09-16
 - [ ] OAuth 2.0 + JWT *user* auth — the PoC has no login; it uses a hardcoded
       `demo-tenant-1`. Real Organization/User/roles are still needed (§5.4.3)
 - [ ] Encrypt stored Meta access tokens at rest
