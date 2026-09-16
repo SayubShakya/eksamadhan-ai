@@ -17,7 +17,7 @@ Newest entries at the top of each list.
 | Repo | `github.com/SayubShakya/eksamadhan-ai`, public, branch `main` |
 | `backend/` | Spring Boot, migrated from `java-social-connector-poc` 2026-09-16 |
 | `frontend/` | React + Vite unified inbox, migrated from the same PoC |
-| Build | **not yet verified** — no Maven and no JDK 21 on this machine |
+| Build | ✅ verified 2026-09-16 — compiles, boots on PostgreSQL 16, frontend builds |
 | Docs | PRD, architecture, rules, phases, design, this file, tracking, report |
 | Supervisor access | invited 2026-09-15, acceptance pending |
 
@@ -97,11 +97,13 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 - **Meta App Review is the critical-path risk.** `pages_messaging` and
   `instagram_manage_messages` need approval that can take weeks and can be refused.
 - Pinecone free tier has index limits and can expire — check quota before Phase 2.
-- **The PoC's `.gitignore` ignored `.mvn/`**, so the Maven wrapper jar was never
-  committed and `./mvnw` does not work on a fresh clone. Fixed in the new
-  `.gitignore`; the wrapper files themselves still need restoring.
-- **This machine has JDK 17 and 24; the pom targets 21.** Install a JDK 21 or adjust
-  `<java.version>`.
+- Toolchain installed 2026-09-16: `brew install maven openjdk@21`. JDK 21 is keg-only,
+  so builds need `export JAVA_HOME=/opt/homebrew/opt/openjdk@21` — the system default
+  is still JDK 17, which cannot compile this project.
+- `backend/.env` must exist or the app dies at startup: `Dotenv.load()` throws when
+  the file is absent. Copy `.env.example` to `backend/.env` on a fresh clone.
+- Hibernate logs two harmless "constraint does not exist, skipping" warnings on a
+  fresh PostgreSQL schema — an artifact of `ddl-auto: update`, not an error.
 - PoC webhook endpoint does **not** verify `X-Hub-Signature-256` — unauthenticated
   POSTs are accepted. Must be fixed before any public deployment.
 - Meta access tokens are stored in plaintext in `social_pages.access_token`.
@@ -131,6 +133,15 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 - Phases are sequential — see `phases.md`.
 
 ## Change log
+
+- **2026-09-16** — Fixed `run.sh` for macOS: it carried Windows `taskkill` calls and
+  GNU `sed -i` syntax that fail on BSD sed. Now also starts PostgreSQL via docker
+  compose and exports `JAVA_HOME` for the keg-only JDK 21.
+
+- **2026-09-16** — Verified the migrated stack end to end: `mvn compile` clean,
+  app boots on PostgreSQL 16 (schema auto-created: `tenants`, `social_pages`,
+  `social_messages`), webhook verification returns the challenge on a valid token and
+  403 on a bad one, frontend builds (245KB bundle). Maven wrapper regenerated.
 
 - **2026-09-16** — Migrated the PoC into the repo as `backend/` + `frontend/`.
   Package renamed, MySQL→PostgreSQL, secrets externalised, `docker-compose.yml`

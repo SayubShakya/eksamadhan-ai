@@ -88,18 +88,36 @@ run.sh      Starts backend and frontend together
 Requires **JDK 21**, Maven, Node 20+ and Docker.
 
 ```bash
-git clone git@github.com:SayubShakya/eksamadhan-ai.git
+git clone git@github-b:SayubShakya/eksamadhan-ai.git
 cd eksamadhan-ai
-cp .env.example .env         # set DB_PASSWORD and your Meta app credentials
-docker compose up -d         # PostgreSQL
-./run.sh                     # backend :8080 + frontend :5173
+
+cp .env.example .env          # set DB_PASSWORD
+cp .env.example backend/.env  # required — the app fails to start without it
+
+./run.sh                      # starts PostgreSQL, backend :8080, frontend :5173
+```
+
+Open <http://localhost:5173>. `run.sh` also opens a public Pinggy tunnel, which Meta
+needs to reach your webhook — the URLs to paste into the Meta app dashboard are
+printed when it starts. Logs go to `backend.log` and `frontend.log`; Ctrl+C stops
+everything.
+
+### Running the parts separately
+
+```bash
+docker compose up -d                              # PostgreSQL only
+cd backend  && mvn spring-boot:run                # API on :8080
+cd frontend && npm install && npm run dev         # UI on :5173
 ```
 
 Connecting a Facebook page or Instagram account requires a Meta app — see
 [`META_SETUP.md`](META_SETUP.md).
 
-> The backend was migrated from MySQL to PostgreSQL and has not yet been rebuilt
-> against it. Expect to fix schema issues on first run.
+JDK 21 is required. If installed via Homebrew it is keg-only, so set:
+
+```bash
+export JAVA_HOME=/opt/homebrew/opt/openjdk@21
+```
 
 ## Build plan
 

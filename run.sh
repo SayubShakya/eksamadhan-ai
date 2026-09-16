@@ -1,34 +1,42 @@
 #!/bin/bash
 
 # ==============================================================================
-# 🚀 AZMEW JAVA MONOREPO AUTO-START SCRIPT
+# 🚀 EKSAMADHAN AI — AUTO-START SCRIPT
 # This script handles everything: Database, Tunnel, Backend (Java), and Frontend (React).
 # It cleans ports, builds Maven dependencies, and updates environment variables.
 # ==============================================================================
 
-ROOT_DIR=$(pwd)
+ROOT_DIR=$(cd "$(dirname "$0")" && pwd)
+
+# ☕ JDK 21 — Homebrew's openjdk@21 is keg-only and the system default is JDK 17,
+# which cannot compile this project.
+if [ -d /opt/homebrew/opt/openjdk@21 ]; then
+  export JAVA_HOME=/opt/homebrew/opt/openjdk@21
+  export PATH="$JAVA_HOME/bin:$PATH"
+fi
 BE_DIR="$ROOT_DIR/backend"
 FE_DIR="$ROOT_DIR/frontend"
 ENV_FILE="$BE_DIR/.env"
 TUNNEL_LOG="$ROOT_DIR/tunnel.log"
 
 echo "--------------------------------------------------------"
-echo "🌟 INITIALIZING AZMEW JAVA CONNECTOR ECOSYSTEM"
+echo "🌟 STARTING EKSAMADHAN AI"
 echo "--------------------------------------------------------"
 
 # 🛠️ 1. CLEANUP PREVIOUS PROCESSES
 echo "🧹 Cleaning up existing processes on ports 8080 (BE) and 5173 (FE)..."
-# Kill Java (8080)
-sync
-taskkill //F //IM java.exe //T 2>/dev/null || true
-# Kill Node/Vite (5173)
-npx kill-port 5173 2>/dev/null || true
-npx kill-port 8080 2>/dev/null || true
+lsof -ti tcp:8080 2>/dev/null | xargs kill -9 2>/dev/null || true
+lsof -ti tcp:5173 2>/dev/null | xargs kill -9 2>/dev/null || true
+
+# 🐘 DATABASE
+echo "🐘 Starting PostgreSQL (docker compose)..."
+docker compose -f "$ROOT_DIR/docker-compose.yml" up -d >/dev/null 2>&1 || {
+  echo "⚠️  Could not start PostgreSQL. Is Docker running?"; exit 1;
+}
 
 # 🌐 2. START TUNNEL (Pinggy)
 echo "🌐 Starting Pinggy Tunnel (Port 8080)..."
-# Kill any existing ssh tunnels
-taskkill //F //IM ssh.exe 2>/dev/null || true
+pkill -f 'a.pinggy.io' 2>/dev/null || true
 > "$TUNNEL_LOG"
 # Pinggy is very stable and has no 'reminder' pages
 ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -p 443 -R0:localhost:8080 a.pinggy.io > "$TUNNEL_LOG" 2>&1 &
@@ -62,14 +70,15 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 
 echo "📝 Updating Redirect URIs..."
-sed -i "s|FACEBOOK_REDIRECT_URI=.*|FACEBOOK_REDIRECT_URI=${TUNNEL_URL}/api/auth/facebook/callback|" "$ENV_FILE"
-sed -i "s|INSTAGRAM_REDIRECT_URI=.*|INSTAGRAM_REDIRECT_URI=${TUNNEL_URL}/api/auth/instagram/callback|" "$ENV_FILE"
+SED_INPLACE=(-i '')
+[ "$(uname)" = "Linux" ] && SED_INPLACE=(-i)
+sed "${SED_INPLACE[@]}" "s|FACEBOOK_REDIRECT_URI=.*|FACEBOOK_REDIRECT_URI=${TUNNEL_URL}/api/auth/facebook/callback|" "$ENV_FILE"
+sed "${SED_INPLACE[@]}" "s|INSTAGRAM_REDIRECT_URI=.*|INSTAGRAM_REDIRECT_URI=${TUNNEL_URL}/api/auth/instagram/callback|" "$ENV_FILE"
 
 
 # ☕ 4. BUILD & START BACKEND
-echo "☕ Starting Java Backend (Spring Boot with MySQL)..."
+echo "☕ Starting Java Backend (Spring Boot + PostgreSQL)..."
 cd "$BE_DIR"
-# Use global mvn since mvnw is missing its wrapper properties
 mvn spring-boot:run -DskipTests > "$ROOT_DIR/backend.log" 2>&1 &
 BACKEND_PID=$!
 cd "$ROOT_DIR"
