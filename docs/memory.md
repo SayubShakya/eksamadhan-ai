@@ -108,6 +108,9 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
   POSTs are accepted. Must be fixed before any public deployment.
 - Meta access tokens are stored in plaintext in `social_pages.access_token`.
 
+- **`run.sh` tunnel regex must exclude `dashboard.pinggy.io`** — Pinggy's log prints
+  that upgrade-advert link above the real tunnel URL, and a loose regex registers the
+  advert instead, breaking every Meta callback with a 502. Fixed 2026-09-16.
 - **Pinggy free tunnels expire after 60 minutes** and hand out a new hostname each
   restart. Hence `meta-proxy/`. Re-registration runs every 5 minutes from `run.sh`.
 - `run.sh` originally matched only `*.pinggy.link` when parsing the tunnel URL, but
@@ -139,6 +142,13 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 - Phases are sequential — see `phases.md`.
 
 ## Change log
+
+- **2026-09-16** — Meta app created: **App ID `1060346096625681`**, type Business,
+  Development mode. Products added: Messenger, Instagram, Facebook Login for Business.
+  App ID + secret in `backend/.env`. Full chain verified: Vercel proxy → Redis →
+  Pinggy → local Spring Boot; `/api/auth/privacy` returns 200 and webhook verification
+  echoes the challenge (403 on a bad token). Proxy's built-in handshake now also
+  answers `/api/webhook` and reads `WEBHOOK_VERIFY_TOKEN`.
 
 - **2026-09-16** — Meta proxy verified end to end: env vars set in Vercel (Upstash
   URL/token + `PROXY_AUTH_TOKEN`), redeployed, `/_proxy/register` returns success with

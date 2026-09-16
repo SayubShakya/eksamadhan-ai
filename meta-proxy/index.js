@@ -199,12 +199,12 @@ app.all('*', async (req, res) => {
     if (req.path === '/_proxy/register' || req.path === '/') return;
 
     // --- WEBHOOK VERIFICATION HANDSHAKE (GET) ---
-    if (req.method === 'GET' && req.path === '/api/social/webhook') {
+    if (req.method === 'GET' && (req.path === '/api/webhook' || req.path === '/api/social/webhook')) {
         const mode = req.query['hub.mode'];
         const token = req.query['hub.verify_token'];
         const challenge = req.query['hub.challenge'];
 
-        const VERIFY_TOKEN = "eksamadhan_token";
+        const VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || "eksamadhan_verify_token";
 
         if (mode === 'subscribe' && token === VERIFY_TOKEN) {
             console.log("✅ Proxy-level Webhook verification successful.");

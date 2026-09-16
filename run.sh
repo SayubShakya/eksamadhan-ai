@@ -55,7 +55,9 @@ COUNT=0
 while [ -z "$TUNNEL_URL" ] && [ $COUNT -lt $MAX_RETRIES ]; do
   sleep 1
   if grep -q "https://" "$TUNNEL_LOG"; then
-     TUNNEL_URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.(pinggy\.link|pinggy-free\.link|free\.pinggy\.net|pinggy\.io)' "$TUNNEL_LOG" | head -n 1)
+     # Match only real tunnel hostnames. Pinggy's log also contains
+     # https://dashboard.pinggy.io (an upgrade advert) — must not match that.
+     TUNNEL_URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.(pinggy\.link|pinggy-free\.link|free\.pinggy\.net)' "$TUNNEL_LOG" | grep -v 'dashboard\.' | head -n 1)
   fi
   COUNT=$((COUNT+1))
   echo -n "."

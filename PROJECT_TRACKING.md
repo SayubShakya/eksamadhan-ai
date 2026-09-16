@@ -74,6 +74,9 @@ expire after 7 days — re-send if it lapses.
       to Vercel (https://meta-proxy-jet.vercel.app) with Upstash Redis — registration
       endpoint verified (success with token, 401 without)
 
+- [x] Created the Meta app (ID 1060346096625681) and verified the public callback
+      chain end to end — privacy URL 200, webhook verification returns the challenge
+
 **Blockers**
 
 - A real database password was committed in the PoC repo's history — needs rotating.
@@ -101,6 +104,9 @@ expire after 7 days — re-send if it lapses.
 - [x] Created Facebook Page + Instagram Professional account; deployed the Meta proxy
       to Vercel (https://meta-proxy-jet.vercel.app) with Upstash Redis — registration
       endpoint verified (success with token, 401 without)
+
+- [x] Created the Meta app (ID 1060346096625681) and verified the public callback
+      chain end to end — privacy URL 200, webhook verification returns the challenge
 
 **Blockers**
 -
