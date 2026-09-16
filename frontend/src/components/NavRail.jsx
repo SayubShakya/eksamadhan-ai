@@ -1,7 +1,8 @@
 import {
-    IconBolt, IconHome, IconInbox, IconKnowledge,
+    IconHome, IconInbox, IconKnowledge,
     IconChannels, IconTeam, IconAnalytics, IconSettings,
 } from './icons.jsx';
+import { LogoMark } from './Logo.jsx';
 
 const ITEMS = [
     { id: 'home', label: 'Home', Icon: IconHome },
@@ -15,7 +16,7 @@ const ITEMS = [
 export default function NavRail({ view, onNavigate, unread = 0 }) {
     return (
         <nav className="rail" aria-label="Main">
-            <div className="rail__mark" aria-hidden="true"><IconBolt /></div>
+            <div className="rail__mark"><LogoMark size={34} title="Eksamadhan AI" /></div>
 
             {ITEMS.map(({ id, label, Icon }) => (
                 <button

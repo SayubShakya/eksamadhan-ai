@@ -148,6 +148,11 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 
 ## Change log
 
+- **2026-09-16** — Logo designed as hand-written SVG (sharp at 16px, themeable,
+  one file). Settled on three bars resolving into a bubble, violet→blue→cyan gradient,
+  after rejecting seven other directions — `design.md` lists them and why, so they are
+  not revisited. Replaces Vite's default favicon and the placeholder bolt.
+
 - **2026-09-16** — Rebuilt the frontend against `design-refs/`: light theme with tokens
   from `design.md`, shared 72px nav rail + top bar, Home (greeting, setup checklist,
   stat tiles, channel cards, empty state), Inbox (three panes), and placeholder pages
@@ -162,6 +167,9 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
   plus a top bar carrying the availability selector, search and user. `inbox-v3`
   predates that frame and needs regenerating before Phase 3.
 
+- **2026-09-16 (later)** — Manjit asked to work directly on `main`: no branches, no
+  PRs. CodeRabbit therefore never runs, since it only reviews pull requests. Config
+  kept in case the workflow changes back. Print plain `git add/commit/push` blocks.
 - **2026-09-16** — CodeRabbit installed (Open Source plan). **Reviews are manual**:
   the free plan gates automatic review behind 10+ repo stars, so each PR needs a
   `@coderabbitai review` comment. The `auto_review` setting in `.coderabbit.yaml` has

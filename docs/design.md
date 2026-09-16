@@ -4,6 +4,27 @@ Two surfaces with different jobs:
 **Dashboard** — a tool agents stare at for hours: dense, calm, low-chrome.
 **Widget** — a guest on someone else's storefront: small, neutral, unobtrusive.
 
+## Logo
+
+Three bars of decreasing length resolving into one speech bubble: **many messages, one
+answer**. "Ek Samadhan" is Nepali for "one solution".
+
+- **Gradient** (violet `#7c3aed` → blue `#2563eb` → cyan `#06b6d4`) is the brand form.
+  On dark grounds the stops lighten to `#a78bfa → #60a5fa → #22d3ee`.
+- **Mono** uses `currentColor` only — print, favicons, unknown backgrounds.
+- Lockups: stacked (mark over wordmark and positioning line) for covers and marketing;
+  horizontal for app headers. Reference sheet: `design-refs/logo-final.png`.
+- Must stay legible at 16px. Check the small sizes before changing any path.
+
+Each rendered instance generates its own gradient id via `useId()` — duplicate SVG
+gradient ids make browsers resolve the wrong fill when the mark appears twice on a page.
+
+**Rejected directions**, so they are not revisited: overlapping bubbles (needed two
+opacities, so it failed in one colour), a generic chat-lines icon (indistinguishable
+from every messaging app), a tick-in-bubble (closer, but read as a verification badge),
+faceted low-poly and node-network emblems (illegible below 32px), and brain/circuit
+motifs — the most saturated cliché in the AI category.
+
 ## Colour
 
 Defined as CSS custom properties on `:root`, overridden under
