@@ -1,0 +1,64 @@
+# CodeRabbit configuration — https://docs.coderabbit.ai
+# Final-year project: Spring Boot 3 (Java 21) + React/Vite, Meta Graph API integration.
+
+language: en-GB
+early_access: false
+
+reviews:
+  profile: chill            # assertive is noisy on a solo student project
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+
+  path_filters:
+    - "!**/target/**"
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/*.lock"
+    - "!**/package-lock.json"
+    - "!docs/*.docx"
+
+  path_instructions:
+    - path: "backend/**/*.java"
+      instructions: >
+        Spring Boot 3 on Java 21. Flag: JPA entities returned directly from
+        controllers instead of DTOs; missing Bean Validation on request bodies;
+        bare `catch (Exception)` that swallows failures; external calls (OpenAI,
+        Pinecone, Meta, FCM) made inline from a controller rather than a service;
+        missing timeouts on outbound HTTP; secrets or message bodies written to
+        logs; entity changes without a corresponding migration. The project
+        targets sub-2-second replies, so flag anything that blocks the request
+        thread on a slow network call.
+
+    - path: "backend/**/controller/WebhookController.java"
+      instructions: >
+        Security-critical. The webhook must verify X-Hub-Signature-256 as an HMAC
+        over the RAW request body using a constant-time comparison. Flag any change
+        that parses or re-serialises the body before verification, weakens the
+        comparison, or makes the signature header optional.
+
+    - path: "frontend/**/*.jsx"
+      instructions: >
+        React 19 + Vite. Flag: missing keys in lists; state updates in render;
+        unhandled promise rejections in fetch calls; hardcoded backend URLs
+        instead of the Vite proxy; missing loading and error states on data
+        fetches; accessibility gaps on interactive elements (keyboard focus,
+        aria-label on icon-only buttons).
+
+    - path: "meta-proxy/**/*.js"
+      instructions: >
+        Express proxy on Vercel. The raw request body must be preserved end to end
+        so downstream signature verification works. Flag anything that re-serialises
+        the body, logs secrets or tokens, or weakens the PROXY_AUTH_TOKEN check on
+        /_proxy/register.
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+
+chat:
+  auto_reply: true

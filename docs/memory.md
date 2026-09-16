@@ -148,6 +148,11 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 
 ## Change log
 
+- **2026-09-16** — Added `.coderabbit.yaml` with path-specific review instructions
+  (Spring Boot, React, the Express proxy, and the security-critical webhook). Switched
+  the intended workflow from direct pushes to `main` over to branch + pull request,
+  since CodeRabbit only reviews PRs.
+
 - **2026-09-16** — Webhook now verifies `X-Hub-Signature-256` (HMAC-SHA256 over the raw
   body, constant-time compare) in `WebhookSignatureVerifier`; unsigned and wrongly-signed
   POSTs get 403. Proxy updated to forward untouched bytes. Frontend rebranded from
