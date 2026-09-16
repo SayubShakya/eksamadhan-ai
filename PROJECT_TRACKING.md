@@ -77,11 +77,17 @@ expire after 7 days — re-send if it lapses.
 - [x] Created the Meta app (ID 1060346096625681) and verified the public callback
       chain end to end — privacy URL 200, webhook verification returns the challenge
 
+- [x] Connected the Facebook Page through OAuth — token stored, webhook subscribed to
+      `messages` and `messaging_postbacks`
+
 **Blockers**
 
 - A real database password was committed in the PoC repo's history — needs rotating.
 - Instagram↔Page linking hit a temporary Meta action restriction on 2026-09-16;
   retry after 24h. Does not block Facebook Messenger work.
+- No real inbound message tested yet: Development mode needs the sender to hold an app
+  role, and registering a second account as Tester requires a phone number not already
+  on the primary account. Waiting on a second SIM.
 
 ---
 
@@ -107,6 +113,9 @@ expire after 7 days — re-send if it lapses.
 
 - [x] Created the Meta app (ID 1060346096625681) and verified the public callback
       chain end to end — privacy URL 200, webhook verification returns the challenge
+
+- [x] Connected the Facebook Page through OAuth — token stored, webhook subscribed to
+      `messages` and `messaging_postbacks`
 
 **Blockers**
 -

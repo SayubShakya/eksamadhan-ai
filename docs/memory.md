@@ -143,6 +143,16 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 
 ## Change log
 
+- **2026-09-16** — Meta integration configured end to end. Webhook verified and saved,
+  Page `Eksamadhan-AI` (id `1351161354741349`) connected via OAuth with a stored access
+  token, subscribed to `messages` + `messaging_postbacks`. Proxy now sends
+  `X-Pinggy-No-Screen` (the free-tunnel interstitial was breaking the OAuth callback and
+  caused a duplicate callback → harmless `400` on the reused code).
+  **Not yet proven:** no real inbound message received. Development mode only delivers
+  events from users holding an app role, and adding a second account as Tester is blocked
+  — it needs a Facebook developer account, which needs a phone number not already used on
+  the primary account. Manjit will retry with a second SIM.
+
 - **2026-09-16** — Meta app created: **App ID `1060346096625681`**, type Business,
   Development mode. Products added: Messenger, Instagram, Facebook Login for Business.
   App ID + secret in `backend/.env`. Full chain verified: Vercel proxy → Redis →

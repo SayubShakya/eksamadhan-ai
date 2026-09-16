@@ -233,7 +233,11 @@ app.all('*', async (req, res) => {
             data: req.body,
             headers: {
                 ...req.headers,
-                host: new URL(localTunnelUrl).host // Crucial for tunnel providers like Pinggy/Ngrok
+                host: new URL(localTunnelUrl).host, // Crucial for tunnel providers like Pinggy/Ngrok
+                // Free Pinggy tunnels show a browser interstitial ("Make sure you trust
+                // this website") before serving the real response. That breaks OAuth
+                // callbacks and any browser-initiated request. This header skips it.
+                'X-Pinggy-No-Screen': '1'
             },
             timeout: 30000,
             maxRedirects: 0,
