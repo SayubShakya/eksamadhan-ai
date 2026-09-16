@@ -428,14 +428,29 @@
     .checklist__head .count { white-space: nowrap; }
     .progress { flex: 1; width: auto; }
     .checklist__steps { grid-template-columns: 1fr; }
-    .stats { grid-template-columns: 1fr 1fr; gap: 12px; }
-    .channels { grid-template-columns: 1fr; }
+    /* Two up: one tile per row made the page several screens tall for four numbers. */
+    .stats { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+    .stat { padding: 12px 14px; }
+    .stat__label { font-size: 10px; }
+    .stat__value { font-size: 19px; margin-top: 6px; }
+
+    .channels { grid-template-columns: 1fr; gap: 12px; }
+    .channel { padding: 16px 14px; display: grid; grid-template-columns: 44px 1fr; gap: 12px 14px; text-align: left; align-items: center; }
+    .channel__icon { margin: 0; grid-row: span 2; }
+    .channel__name { margin: 0; }
+    .channel__desc { display: none; }
+    .channel__state { margin: 0; grid-column: 2; }
+    .channel .btn { grid-column: 1 / -1; }
+
     .card { padding: 16px; }
+    .checklist__steps { gap: 10px; }
+    .step { padding: 14px; }
+    .section-title { margin: 22px 0 10px; }
     .msg { max-width: 88%; }
     .rail { width: min(280px, 82vw); }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 380px) {
     .status-select { padding: 6px 8px; }
     .stats { grid-template-columns: 1fr; }
 }
