@@ -140,6 +140,22 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 
 ## Change log
 
+- **2026-09-16** — Meta proxy verified end to end: env vars set in Vercel (Upstash
+  URL/token + `PROXY_AUTH_TOKEN`), redeployed, `/_proxy/register` returns success with
+  the right token and 401 without it. Rebranded the proxy from "Azmew"; Redis keys are
+  now `eksamadhan:*`. `PROXY_URL` and `PROXY_AUTH_TOKEN` written to `backend/.env`.
+
+- **2026-09-16** — Deployed `meta-proxy` to Vercel: **https://meta-proxy-jet.vercel.app**
+  (stable alias; the `meta-proxy-<hash>-...` URL changes per deploy — never use it in
+  the Meta dashboard). Upstash Redis `eksamadhan-proxy` created in ap-south-1.
+  Facebook Page `Eksamadhan-AI` and Instagram `eksamadhan_ai` (Professional) created;
+  the Page↔Instagram link was blocked mid-flow by a temporary Meta action restriction
+  after repeated auth attempts — retry after 24h, and check whether it already
+  completed before redoing it.
+
+- **2026-09-16** — Rewrote `META_SETUP.md` as a step-by-step connection guide; the
+  old one still described `serveo` tunnels and predated the proxy.
+
 - **2026-09-16** — Migrated `meta-proxy/` (Vercel + Upstash Redis) into the repo and
   wired `run.sh` to register the live tunnel with it. Fixed the tunnel URL regex.
 

@@ -50,9 +50,9 @@ const redis = new Redis({
     token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 
-const REDIS_KEY_TUNNEL_URL = 'azmew:tunnel_url';
-const REDIS_KEY_LAST_REGISTERED = 'azmew:last_registered';
-const REDIS_KEY_LOGS = 'azmew:request_logs';
+const REDIS_KEY_TUNNEL_URL = 'eksamadhan:tunnel_url';
+const REDIS_KEY_LAST_REGISTERED = 'eksamadhan:last_registered';
+const REDIS_KEY_LOGS = 'eksamadhan:request_logs';
 
 // Helper: Add log entry to Redis (Keep last 50)
 async function addLog(entry) {
@@ -99,7 +99,7 @@ async function getLastRegistered() {
 // SECURE REGISTRATION: Update the local tunnel URL
 app.post('/_proxy/register', async (req, res) => {
     const { url, token } = req.body;
-    const SECRET_TOKEN = process.env.PROXY_AUTH_TOKEN || "azmew_token";
+    const SECRET_TOKEN = process.env.PROXY_AUTH_TOKEN || "eksamadhan_token";
 
     if (token !== SECRET_TOKEN) {
         return res.status(401).json({ error: "Unauthorized registration" });
@@ -165,11 +165,11 @@ app.get('/', async (req, res) => {
     res.send(`
         <html>
             <head>
-                <title>Azmew Meta Proxy</title>
+                <title>Eksamadhan AI — Meta Proxy</title>
                 <meta name="viewport" content="width=device-width, initial-scale=1">
             </head>
             <body style="font-family: sans-serif; padding: 2rem; background: #0f172a; color: white; max-width: 1000px; margin: 0 auto;">
-                <h1>📱 Azmew Meta Proxy</h1>
+                <h1>📱 Eksamadhan AI — Meta Proxy</h1>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 2rem;">
                     <div style="background: #1e293b; padding: 1.5rem; border-radius: 8px;">
@@ -181,7 +181,7 @@ app.get('/', async (req, res) => {
                     <div style="background: #1e293b; padding: 1.5rem; border-radius: 8px;">
                         <h3 style="margin-top: 0;">Configuration</h3>
                         <p><b>Callback URL:</b><br><code style="word-break: break-all;">${req.protocol}://${req.get('host')}/api/social/webhook</code></p>
-                        <p><b>Verify Token:</b><br><code>azmew_token</code></p>
+                        <p><b>Verify Token:</b><br><code>eksamadhan_verify_token</code></p>
                     </div>
                 </div>
 
@@ -204,7 +204,7 @@ app.all('*', async (req, res) => {
         const token = req.query['hub.verify_token'];
         const challenge = req.query['hub.challenge'];
 
-        const VERIFY_TOKEN = "azmew_token";
+        const VERIFY_TOKEN = "eksamadhan_token";
 
         if (mode === 'subscribe' && token === VERIFY_TOKEN) {
             console.log("✅ Proxy-level Webhook verification successful.");

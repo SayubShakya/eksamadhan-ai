@@ -70,9 +70,15 @@ expire after 7 days — re-send if it lapses.
 - [x] Migrated `meta-proxy/` into the project; `run.sh` now registers the tunnel and
       keeps it alive, and fixed the tunnel URL parsing bug
 
+- [x] Created Facebook Page + Instagram Professional account; deployed the Meta proxy
+      to Vercel (https://meta-proxy-jet.vercel.app) with Upstash Redis — registration
+      endpoint verified (success with token, 401 without)
+
 **Blockers**
 
 - A real database password was committed in the PoC repo's history — needs rotating.
+- Instagram↔Page linking hit a temporary Meta action restriction on 2026-09-16;
+  retry after 24h. Does not block Facebook Messenger work.
 
 ---
 
@@ -91,6 +97,10 @@ expire after 7 days — re-send if it lapses.
 
 - [x] Migrated `meta-proxy/` into the project; `run.sh` now registers the tunnel and
       keeps it alive, and fixed the tunnel URL parsing bug
+
+- [x] Created Facebook Page + Instagram Professional account; deployed the Meta proxy
+      to Vercel (https://meta-proxy-jet.vercel.app) with Upstash Redis — registration
+      endpoint verified (success with token, 401 without)
 
 **Blockers**
 -
