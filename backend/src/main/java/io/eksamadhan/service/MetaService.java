@@ -197,6 +197,19 @@ public class MetaService {
                 });
     }
 
+    /**
+     * Reacts to a customer's message. Support varies by channel and by how old the
+     * message is, so callers must handle rejection rather than assume success.
+     */
+    public Mono<Map> sendReaction(String recipientId, String messageId, String emoji, String pageAccessToken) {
+        Map<String, Object> body = Map.of(
+                "recipient", Map.of("id", recipientId),
+                "sender_action", "react",
+                "payload", Map.of("message_id", messageId, "reaction", emoji)
+        );
+        return post(body, pageAccessToken);
+    }
+
     private Map<String, Object> buildBody(String recipientId, String text, String replyToMid) {
         Map<String, Object> body = new java.util.HashMap<>();
         body.put("recipient", Map.of("id", recipientId));

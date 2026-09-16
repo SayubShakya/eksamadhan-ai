@@ -26,6 +26,10 @@ export const IconClose = (p) => <svg {...s(p)}><path d="M18 6L6 18" /><path d="M
 export const IconImage = (p) => <svg {...s(p)}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>;
 export const IconMic = (p) => <svg {...s(p)}><rect x="9" y="2" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0" /><path d="M12 18v4" /></svg>;
 export const IconStop = (p) => <svg {...s(p)} fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>;
+export const IconThumb = (p) => <svg {...s(p)} fill="currentColor" stroke="none"><path d="M7 10h2v11H7a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z" /><path d="M11 10 14 3a2.2 2.2 0 0 1 2.2 2.6L15.4 9h4a2 2 0 0 1 2 2.4l-1.3 6.3A3 3 0 0 1 17.2 20H11z" /></svg>;
+export const IconSmile = (p) => <svg {...s({ size: p.size || 16 })}><circle cx="12" cy="12" r="9" /><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0" /><circle cx="9" cy="10" r=".9" fill="currentColor" /><circle cx="15" cy="10" r=".9" fill="currentColor" /></svg>;
+export const IconDots = (p) => <svg {...s({ size: p.size || 16 })}><circle cx="12" cy="5" r="1.4" fill="currentColor" /><circle cx="12" cy="12" r="1.4" fill="currentColor" /><circle cx="12" cy="19" r="1.4" fill="currentColor" /></svg>;
+export const IconCopy = (p) => <svg {...s({ size: p.size || 15 })}><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>;
 export const IconReply = (p) => <svg {...s({ size: p.size || 15 })}><path d="M9 17l-5-5 5-5" /><path d="M4 12h10a6 6 0 0 1 6 6v1" /></svg>;
 export const IconBack = (p) => <svg {...s(p)}><path d="M19 12H5" /><path d="M11 18l-6-6 6-6" /></svg>;
 export const IconArrowRight = (p) => <svg {...s({ size: p.size || 14 })}><path d="M5 12h14" /><path d="M13 6l6 6-6 6" /></svg>;

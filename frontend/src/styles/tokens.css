@@ -2,13 +2,21 @@
 :root {
     --bg: #ffffff;
     --surface: #f7f8fa;
+    /* The chrome around the conversation — sidebar, list, top bar, context pane. Tinted
+       so those large areas do not glare, while cards and bubbles stay crisp white. */
+    --panel: #f2f4f7;
     --surface-raised: #ffffff;
-    --border: #e4e7ec;
+    --border: #e2e6ec;
     --border-strong: #d0d5dd;
     --text: #1a1d23;
     --text-muted: #667085;
     --accent: #2563eb;
+    /* Sent bubbles use a softer, muted blue — a whole column of the full accent reads
+       as too bright. Still 4.63:1 against white, so the text stays legible. */
+    --bubble-out: #4c74bd;
     --accent-weak: #eff4ff;
+    /* Selected states sit on --panel, where --accent-weak is almost invisible. */
+    --accent-tint: #dfe8fb;
     --ai: #eceef2;
     --success: #16a34a;
     --success-weak: #ecfdf3;

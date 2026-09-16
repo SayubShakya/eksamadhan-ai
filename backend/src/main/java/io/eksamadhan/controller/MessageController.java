@@ -195,6 +195,37 @@ public class MessageController {
     }
 
     /**
+     * React to a customer's message with an emoji.
+     */
+    @PostMapping("/react/{tenantId}")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> react(@PathVariable String tenantId, @RequestBody Map<String, String> body) {
+        String metaMessageId = body.get("metaMessageId");
+        String emoji = body.get("reaction");
+        String recipientId = body.get("recipientId");
+
+        return tenantRepository.findByApiKey(tenantId)
+                .<ResponseEntity<?>>map(tenant -> {
+                    SocialPage page = resolvePage(tenant, body.get("pageId"));
+                    if (page == null) {
+                        return ResponseEntity.status(404).body(Map.of("error", "No connected pages found"));
+                    }
+                    try {
+                        metaService.sendReaction(recipientId, metaMessageId, emoji, page.getAccessToken()).block();
+                        messageRepository.findByMetaMessageId(metaMessageId).ifPresent(m -> {
+                            m.setReaction(emoji);
+                            messageRepository.save(m);
+                        });
+                        return ResponseEntity.ok(Map.of("success", true));
+                    } catch (Exception e) {
+                        log.error("❌ Reaction failed: {}", e.getMessage());
+                        return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+                    }
+                })
+                .orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "Tenant not found")));
+    }
+
+    /**
      * Manual sync trigger
      */
     @PostMapping("/sync/{tenantId}")
@@ -235,6 +266,7 @@ public class MessageController {
                 .timestamp(msg.getTimestamp() != null ? msg.getTimestamp().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null)
                 .metaMessageId(msg.getMetaMessageId())
                 .replyToId(msg.getReplyToId())
+                .reaction(msg.getReaction())
                 .attachmentType(msg.getAttachmentType())
                 .attachmentUrl(msg.getAttachmentUrl())
                 .build();

@@ -63,12 +63,20 @@ export function buildThreads(messages, pages, filter) {
 
         const last = msgs[msgs.length - 1];
         const inbound = msgs.find(m => m.direction === 'inbound');
+
+        // Messages waiting for a reply: the run of inbound messages since the agent
+        // last answered. More useful than a total, which never stops growing.
+        let unanswered = 0;
+        for (let i = msgs.length - 1; i >= 0 && msgs[i].direction === 'inbound'; i--) {
+            unanswered++;
+        }
         return {
             customerId,
             name: inbound?.senderName || `User ${String(customerId).slice(-8)}`,
             avatarUrl: msgs.find(m => m.direction === 'inbound' && m.senderAvatarUrl)?.senderAvatarUrl || null,
             pageId: msgs.find(m => m.pageId)?.pageId,
             messages: msgs,
+            unanswered,
             last,
             timestamp: new Date(last.timestamp).getTime(),
         };

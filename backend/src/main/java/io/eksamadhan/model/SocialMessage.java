@@ -59,6 +59,8 @@ public class SocialMessage {
 
     // Attachments: voice notes, images, files. Meta hosts the file and gives us a
     // signed URL — it expires, so anything needing permanence must be downloaded.
+    private String reaction;         // emoji the agent reacted with, if any
+
     private String attachmentType;   // "audio", "image", "video", "file"
 
     @Column(columnDefinition = "TEXT")

@@ -79,6 +79,13 @@ export default function App() {
     });
     const [query, setQuery] = useState('');
     const [sendError, setSendError] = useState('');
+
+    // "Delete for me" hides the message on this device, the same meaning Messenger
+    // gives it — the customer still has their copy, so nothing is deleted at Meta.
+    const [hiddenIds, setHiddenIds] = useState(() => {
+        try { return new Set(JSON.parse(localStorage.getItem('hiddenMessages') || '[]')); }
+        catch { return new Set(); }
+    });
     const lastPayload = useRef('');
 
     useEffect(() => {
@@ -186,10 +193,15 @@ export default function App() {
         return () => clearInterval(id);
     }, [status?.connected, refreshMessages]);
 
-    const allThreads = useMemo(() => buildThreads(messages, pages, 'all'), [messages, pages]);
+    const visibleMessages = useMemo(
+        () => (hiddenIds.size ? messages.filter(m => !hiddenIds.has(m.id)) : messages),
+        [messages, hiddenIds],
+    );
+
+    const allThreads = useMemo(() => buildThreads(visibleMessages, pages, 'all'), [visibleMessages, pages]);
     const threads = useMemo(
-        () => (filter === 'all' ? allThreads : buildThreads(messages, pages, filter)),
-        [allThreads, messages, pages, filter],
+        () => (filter === 'all' ? allThreads : buildThreads(visibleMessages, pages, filter)),
+        [allThreads, visibleMessages, pages, filter],
     );
 
     // Changing the filter can hide the open conversation; clear it so the thread pane
@@ -214,7 +226,7 @@ export default function App() {
     }, [allThreads]);
 
     const unread = useMemo(
-        () => allThreads.filter(t => t.last.direction === 'inbound').length,
+        () => allThreads.reduce((sum, t) => sum + t.unanswered, 0),
         [allThreads],
     );
 
@@ -280,6 +292,30 @@ export default function App() {
         }
     };
 
+    const handleReact = async (message, emoji) => {
+        setSendError('');
+        try {
+            await api.reactToMessage(TENANT_ID, {
+                metaMessageId: message.metaMessageId,
+                reaction: emoji,
+                recipientId: message.direction === 'inbound' ? message.senderId : message.recipientId,
+                pageId: message.pageId,
+            });
+            refreshMessages();
+        } catch (err) {
+            console.error('Reaction failed', err);
+            setSendError('Meta would not accept that reaction. It may be unsupported on this channel or the message may be too old.');
+        }
+    };
+
+    const handleHideMessage = useCallback((message) => {
+        setHiddenIds(prev => {
+            const next = new Set(prev).add(message.id);
+            try { localStorage.setItem('hiddenMessages', JSON.stringify([...next])); } catch { /* private mode */ }
+            return next;
+        });
+    }, []);
+
     const handleLogout = async () => {
         if (!window.confirm('This disconnects every page and deletes stored history. Continue?')) return;
         try {
@@ -340,6 +376,8 @@ export default function App() {
                         onSend={handleSend}
                         onSendVoice={handleSendVoice}
                         onSendImage={handleSendImage}
+                        onReact={handleReact}
+                        onHideMessage={handleHideMessage}
                         onConnect={handleConnect}
                         search={query}
                         onSearchChange={setQuery}

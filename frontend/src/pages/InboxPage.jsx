@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import {
     IconSend, IconInbox, IconPlus, IconBack, IconReply, IconClose, IconMic, IconStop, IconImage,
+    IconSmile, IconThumb,
     IconFacebook, IconInstagram,
 } from '../components/icons.jsx';
 import { isRecordingSupported, startRecording, formatDuration } from '../lib/recorder.js';
+import MessageActions from '../components/MessageActions.jsx';
 import { formatTimestamp, formatTime, formatDay, initials } from '../lib/format.js';
 
 const FILTERS = [
@@ -22,6 +24,12 @@ function PersonAvatar({ name, url, size = 36, className = '' }) {
         ? <img className={`avatar avatar--photo ${className}`} style={style} src={url} alt="" />
         : <span className={`avatar ${className}`} style={style} aria-hidden="true">{initials(name)}</span>;
 }
+
+/** Long threads render in pages so the DOM stays small and scrolling stays smooth. */
+const PAGE_SIZE = 30;
+
+/** A small set for the composer — a full picker is a dependency we do not need. */
+const QUICK_EMOJI = ['😊', '😂', '👍', '🙏', '❤️', '😅', '🎉', '😢', '😮', '🔥', '✅', '👋'];
 
 const ATTACHMENT_LABEL = {
     audio: '🎤 Voice message',
@@ -67,24 +75,38 @@ function Attachment({ message }) {
 
 export default function InboxPage({
     threads, totalThreads, pages, filter, onFilterChange,
-    active, onSelect, onSend, onSendVoice, onSendImage, onConnect, search, onSearchChange,
-    sendError, onDismissError,
+    active, onSelect, onSend, onSendVoice, onSendImage, onReact, onHideMessage,
+    onConnect, search, onSearchChange, sendError, onDismissError,
 }) {
     const [draft, setDraft] = useState('');
     const [replyTo, setReplyTo] = useState(null);   // message being answered
     const [recorder, setRecorder] = useState(null); // active recording session
     const [seconds, setSeconds] = useState(0);
     const [busy, setBusy] = useState(false);
+    const [shown, setShown] = useState(PAGE_SIZE);   // messages rendered, newest first
+    const [emojiOpen, setEmojiOpen] = useState(false);
     const endRef = useRef(null);
     const imageRef = useRef(null);
     const bodyRef = useRef(null);
 
     const activeThread = threads.find(t => t.customerId === active?.customerId) || null;
+    const visibleMessages = activeThread ? activeThread.messages.slice(-shown) : [];
+
+    /** Keep the reading position steady while older messages are prepended. */
+    const loadEarlier = () => {
+        const box = bodyRef.current;
+        const before = box?.scrollHeight ?? 0;
+        setShown(n => n + PAGE_SIZE);
+        requestAnimationFrame(() => {
+            if (box) box.scrollTop += box.scrollHeight - before;
+        });
+    };
 
     // Jump to the newest message when switching conversations.
     useEffect(() => {
         endRef.current?.scrollIntoView();
         setReplyTo(null);
+        setShown(PAGE_SIZE);
     }, [active?.customerId]);
 
     // On new messages, only follow if the agent is already near the bottom —
@@ -94,7 +116,7 @@ export default function InboxPage({
         if (!box) return;
         const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
         if (nearBottom) endRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [activeThread?.messages.length]);
+    }, [visibleMessages.length]);
 
     const visible = search
         ? threads.filter(t => t.name.toLowerCase().includes(search.toLowerCase()))
@@ -227,7 +249,14 @@ export default function InboxPage({
                                         <span className={`tag ${awaitingReply ? 'tag--agent' : 'tag--ai'}`}>
                                             {awaitingReply ? 'Needs agent' : 'Replied'}
                                         </span>
-                                        {awaitingReply && <span className="unread" aria-label="Awaiting reply" />}
+                                        {t.unanswered > 0 && (
+                                            <span
+                                                className="unread-count"
+                                                aria-label={`${t.unanswered} message${t.unanswered === 1 ? '' : 's'} waiting for a reply`}
+                                            >
+                                                {t.unanswered > 99 ? '99+' : t.unanswered}
+                                            </span>
+                                        )}
                                     </span>
                                 </div>
                             </button>
@@ -296,11 +325,25 @@ export default function InboxPage({
 
                         <div className="thread__body" ref={bodyRef}>
                             <div className="thread__spacer" />
-                            {activeThread.messages.map((m, i) => {
-                                const prev = activeThread.messages[i - 1];
+
+                            {activeThread.messages.length > shown && (
+                                <div className="thread__more">
+                                    <button className="btn btn--secondary btn--sm" onClick={loadEarlier}>
+                                        Load earlier messages
+                                    </button>
+                                    <span className="thread__moreCount">
+                                        {activeThread.messages.length - shown} older
+                                    </span>
+                                </div>
+                            )}
+
+                            {visibleMessages.map((m, i) => {
+                                const prev = visibleMessages[i - 1];
                                 const newDay = !prev ||
                                     new Date(prev.timestamp).toDateString() !== new Date(m.timestamp).toDateString();
                                 const outbound = m.direction === 'outbound';
+                                // Look the quote up in the full thread: the original may
+                                // be older than the page currently rendered.
                                 const quoted = m.replyToId
                                     ? activeThread.messages.find(x => x.metaMessageId === m.replyToId)
                                     : null;
@@ -319,36 +362,46 @@ export default function InboxPage({
                                             <div className="msg__stack">
                                                 {quoted && (
                                                     <div className="quote quote--inline">
-                                                        <span className="quote__who">
-                                                            {quoted.direction === 'outbound' ? 'You' : activeThread.name}
+                                                        {/* Say who answered whom, as Messenger does — the quoted
+                                                            text alone leaves the direction ambiguous. */}
+                                                        <span className="quote__label">
+                                                            <IconReply size={12} />
+                                                            {outbound
+                                                                ? `You replied to ${activeThread.name}`
+                                                                : `${activeThread.name} replied to you`}
                                                         </span>
                                                         <span className="quote__text">{quoted.text || quoted.content}</span>
                                                     </div>
                                                 )}
                                                 {/* Three speakers, three treatments — docs/design.md.
                                                     AI replies will use bubble--ai once Phase 2 lands. */}
-                                                <div className={`bubble ${outbound ? 'bubble--agent' : 'bubble--customer'} ${m.attachmentUrl ? 'bubble--media' : ''}`}>
-                                                    <Attachment message={m} />
-                                                    {(m.text || m.content) && (
-                                                        <span>{m.text || m.content}</span>
-                                                    )}
+                                                {/* Bubble and actions share a row, so the
+                                                    buttons centre on the bubble rather than
+                                                    on the bubble plus its timestamp. */}
+                                                <div className="msg__line">
+                                                    <div className={`bubble ${outbound ? 'bubble--agent' : 'bubble--customer'} ${m.attachmentUrl ? 'bubble--media' : ''}`}>
+                                                        <Attachment message={m} />
+                                                        {(m.text || m.content) && (
+                                                            <span>{m.text || m.content}</span>
+                                                        )}
+                                                    </div>
+
+                                                    <MessageActions
+                                                        message={m}
+                                                        onReact={onReact}
+                                                        onReply={setReplyTo}
+                                                        onCopy={(msg) => navigator.clipboard?.writeText(msg.text || msg.content || '')}
+                                                        onHide={onHideMessage}
+                                                    />
                                                 </div>
+                                                {m.reaction && (
+                                                    <span className="reaction" title="Your reaction">{m.reaction}</span>
+                                                )}
                                                 <div className="msg__meta">
                                                     {m.status === 'sending' ? 'Sending…' : formatTime(m.timestamp)}
                                                 </div>
                                             </div>
 
-                                            {m.metaMessageId && (
-                                                <button
-                                                    type="button"
-                                                    className="msg__reply"
-                                                    onClick={() => setReplyTo(m)}
-                                                    aria-label="Reply to this message"
-                                                    title="Reply"
-                                                >
-                                                    <IconReply />
-                                                </button>
-                                            )}
                                         </div>
                                     </div>
                                 );
@@ -406,7 +459,7 @@ export default function InboxPage({
                                     </button>
                                 </div>
                             ) : (
-                                <form className="composer__form" onSubmit={submit}>
+                                <form className="composer__form composer__form--chat" onSubmit={submit}>
                                     {isRecordingSupported() && (
                                         <button
                                             type="button"
@@ -443,16 +496,63 @@ export default function InboxPage({
                                     >
                                         <IconImage />
                                     </button>
-                                    <input
-                                        value={draft}
-                                        onChange={e => setDraft(e.target.value)}
-                                        placeholder={busy ? 'Sending voice message…' : 'Type your response...'}
-                                        aria-label="Your reply"
-                                        disabled={busy}
-                                    />
-                                    <button className="btn btn--primary" type="submit" disabled={!draft.trim() || busy}>
-                                        Send <IconSend />
-                                    </button>
+                                    <div className="composer__field">
+                                        <input
+                                            value={draft}
+                                            onChange={e => setDraft(e.target.value)}
+                                            placeholder={busy ? 'Sending voice message…' : 'Message'}
+                                            aria-label="Your reply"
+                                            disabled={busy}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="composer__emoji"
+                                            onClick={() => setEmojiOpen(o => !o)}
+                                            aria-label="Insert emoji"
+                                            title="Emoji"
+                                        >
+                                            <IconSmile size={19} />
+                                        </button>
+
+                                        {emojiOpen && (
+                                            <div className="popmenu popmenu--emoji composer__emojiMenu">
+                                                {QUICK_EMOJI.map(e => (
+                                                    <button
+                                                        key={e}
+                                                        type="button"
+                                                        className="popmenu__emoji"
+                                                        onClick={() => { setDraft(d => d + e); setEmojiOpen(false); }}
+                                                    >
+                                                        {e}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Thumbs-up when there is nothing to send, as Messenger does. */}
+                                    {draft.trim() ? (
+                                        <button
+                                            className="icon-btn composer__send"
+                                            type="submit"
+                                            disabled={busy}
+                                            aria-label="Send"
+                                            title="Send"
+                                        >
+                                            <IconSend size={20} />
+                                        </button>
+                                    ) : (
+                                        <button
+                                            className="icon-btn composer__send"
+                                            type="button"
+                                            disabled={busy || !activeThread}
+                                            onClick={() => onSend(activeThread, '👍', replyTo?.metaMessageId || null)}
+                                            aria-label="Send a thumbs up"
+                                            title="Thumbs up"
+                                        >
+                                            <IconThumb size={21} />
+                                        </button>
+                                    )}
                                 </form>
                             )}
                         </div>

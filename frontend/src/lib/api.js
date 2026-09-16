@@ -9,6 +9,9 @@ export const syncMessages = (tenantId) => axios.post(`/api/messages/sync/${tenan
 export const sendReply = (tenantId, payload) => axios.post(`/api/messages/reply/${tenantId}`, payload);
 export const logout = (tenantId) => axios.post(`/api/auth/logout/${tenantId}`);
 
+export const reactToMessage = (tenantId, payload) =>
+    axios.post(`/api/messages/react/${tenantId}`, payload);
+
 export function sendImage(tenantId, { file, recipientId, pageId }) {
     const form = new FormData();
     form.append('file', file, file.name || 'photo.jpg');
