@@ -27,7 +27,19 @@ export default function App() {
     // The section lives in the path, so URLs are shareable and a refresh keeps you
     // where you were. Vite and any static host must fall back to index.html.
     const [view, setViewState] = useState(viewFromPath);
-    const [navOpen, setNavOpen] = useState(false);
+    // Docked and open by default on a desktop, closed on smaller screens where it
+    // would cover the content. The choice is remembered.
+    const [navOpen, setNavOpen] = useState(() => {
+        try {
+            const saved = localStorage.getItem('navOpen');
+            if (saved !== null) return saved === 'true';
+        } catch { /* private mode */ }
+        return window.matchMedia('(min-width: 1024px)').matches;
+    });
+
+    useEffect(() => {
+        try { localStorage.setItem('navOpen', String(navOpen)); } catch { /* private mode */ }
+    }, [navOpen]);
 
     const setView = useCallback((next) => {
         setViewState(next);

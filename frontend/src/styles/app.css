@@ -21,6 +21,29 @@
 }
 .rail--open { transform: none; }
 
+/* Docked on a desktop: in the flow beside the content, no overlay, no shadow. */
+@media (min-width: 1024px) {
+    .scrim { display: none; }
+    .rail {
+        position: relative;
+        transform: none;
+        box-shadow: none;
+        transition: none;
+    }
+    .rail--closed { display: none; }
+    /* .icon-btn sets display later in the file, so this needs the extra class. */
+    .rail .rail__close { display: none; }
+
+    /* Line the menu strip up with the top bar so the two bottom borders meet. */
+    .rail__head {
+        height: var(--topbar);
+        padding: 0 6px;
+        margin: 0 0 8px;
+        border-bottom: 1px solid var(--border);
+    }
+    .rail { padding-top: 0; }
+}
+
 .rail__head {
     display: flex; align-items: center; justify-content: space-between;
     padding: 4px 6px 12px; margin-bottom: 4px;

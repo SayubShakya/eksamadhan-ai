@@ -13,34 +13,43 @@ const ITEMS = [
     { id: 'analytics', label: 'Analytics', Icon: IconAnalytics },
 ];
 
+const DOCKED = '(min-width: 1024px)';
+
 /**
- * Navigation drawer. Closed by default and opened from the top bar, so the reading
- * area gets the full width. Selecting a destination closes it — on a phone it covers
- * the content, and on a desktop leaving it open would be a second click to dismiss.
+ * Navigation. Docked beside the content on a desktop, an overlay drawer below that.
+ * Either way the top-bar button toggles it, so it can be collapsed for more room.
+ *
+ * Selecting a destination closes it only when it is overlaying the content — on a
+ * desktop that would mean re-opening the nav for every move.
  */
 export default function NavRail({ view, onNavigate, unread = 0, open, onClose }) {
     useEffect(() => {
         if (!open) return;
-        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        const onKey = (e) => {
+            if (e.key === 'Escape' && !window.matchMedia(DOCKED).matches) onClose();
+        };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [open, onClose]);
 
-    const go = (id) => { onNavigate(id); onClose(); };
+    const go = (id) => {
+        onNavigate(id);
+        if (!window.matchMedia(DOCKED).matches) onClose();
+    };
 
     return (
         <>
             {open && <div className="scrim" onClick={onClose} aria-hidden="true" />}
 
             <nav
-                className={`rail ${open ? 'rail--open' : ''}`}
+                className={`rail ${open ? 'rail--open' : 'rail--closed'}`}
                 aria-label="Main"
                 aria-hidden={!open}
                 inert={!open ? '' : undefined}
             >
                 <div className="rail__head">
                     <span className="rail__title">Menu</span>
-                    <button className="icon-btn" onClick={onClose} aria-label="Close menu">
+                    <button className="icon-btn rail__close" onClick={onClose} aria-label="Close menu">
                         <IconClose />
                     </button>
                 </div>
