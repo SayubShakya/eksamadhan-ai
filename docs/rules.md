@@ -19,6 +19,20 @@ Read this before writing code. It overrides default habits.
 6. **Update `memory.md` and `PROJECT_TRACKING.md`** in the same turn as any code
    change. See §4.
 
+## Branch and review workflow
+
+- Feature work happens on a branch and merges through a **pull request**, so
+  CodeRabbit (configured in `.coderabbit.yaml`) can review it. A push straight to
+  `main` is never reviewed.
+- Branch names: `feat/...`, `fix/...`, `docs/...`, `chore/...`.
+- **Reviews must be triggered manually.** CodeRabbit's free OSS plan only auto-reviews
+  repositories with 10+ GitHub stars; this one has none. After opening a PR, comment
+  `@coderabbitai review` (or tick "Trigger review" in its bot comment).
+- Address CodeRabbit's comments before merging, or reply saying why not — the PR
+  thread is evidence of process for the final report.
+- CodeRabbit is a reviewer, not an authority. It will flag things that do not matter
+  here; judge each comment.
+
 ## Coding rules
 
 - **Match the existing code.** Naming, error handling, comment density — read a
