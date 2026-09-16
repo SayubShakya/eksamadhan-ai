@@ -148,6 +148,15 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 
 ## Change log
 
+- **2026-09-16** — Rebuilt the frontend against `design-refs/`: light theme with tokens
+  from `design.md`, shared 72px nav rail + top bar, Home (greeting, setup checklist,
+  stat tiles, channel cards, empty state), Inbox (three panes), and placeholder pages
+  naming the phase each belongs to. Structure is now
+  `styles/` · `lib/` (api, format) · `components/` · `pages/`, replacing the single
+  674-line `App.jsx`. Message polling relaxed from 500ms to 1.5s and status from 2s to
+  5s — 500ms was two requests per second per open tab for no visible benefit.
+  Disconnect moved from the header into Settings → Danger zone.
+
 - **2026-09-16** — UI designed in UX Pilot and exported to `docs/design-refs/`
   (home, empty inbox, populated inbox). Established a shared frame: 64px left nav rail
   plus a top bar carrying the availability selector, search and user. `inbox-v3`

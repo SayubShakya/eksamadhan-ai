@@ -1,0 +1,58 @@
+/* Design tokens — see docs/design.md. Never hard-code a colour in a component. */
+:root {
+    --bg: #ffffff;
+    --surface: #f7f8fa;
+    --surface-raised: #ffffff;
+    --border: #e4e7ec;
+    --border-strong: #d0d5dd;
+    --text: #1a1d23;
+    --text-muted: #667085;
+    --accent: #2563eb;
+    --accent-weak: #eff4ff;
+    --ai: #eceef2;
+    --success: #16a34a;
+    --success-weak: #ecfdf3;
+    --warning: #d97706;
+    --warning-weak: #fffaeb;
+    --danger: #dc2626;
+    --danger-weak: #fef3f2;
+
+    --rail: 72px;
+    --topbar: 56px;
+    --list: 320px;
+    --context: 300px;
+
+    --r-sm: 6px;
+    --r-md: 10px;
+    --r-lg: 16px;
+
+    --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+    margin: 0;
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+    background: var(--surface);
+    -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; cursor: pointer; }
+input { font: inherit; }
+a { color: var(--accent); }
+
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+}

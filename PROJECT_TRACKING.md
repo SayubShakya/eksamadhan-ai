@@ -88,6 +88,9 @@ expire after 7 days — re-send if it lapses.
 - [x] Designed the UI in UX Pilot — app home, empty inbox and populated agent inbox;
       exports and implementation notes in `docs/design-refs/`
 
+- [x] Rebuilt the React frontend to match the approved design — shared nav rail and
+      top bar, Home and Inbox screens, design tokens from `design.md`
+
 **Blockers**
 
 - A real database password was committed in the PoC repo's history — needs rotating.
@@ -130,6 +133,9 @@ expire after 7 days — re-send if it lapses.
 
 - [x] Designed the UI in UX Pilot — app home, empty inbox and populated agent inbox;
       exports and implementation notes in `docs/design-refs/`
+
+- [x] Rebuilt the React frontend to match the approved design — shared nav rail and
+      top bar, Home and Inbox screens, design tokens from `design.md`
 
 **Blockers**
 -
