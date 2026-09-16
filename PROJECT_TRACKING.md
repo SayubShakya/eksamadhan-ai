@@ -16,7 +16,7 @@ Weekly log due: **every Monday** (next: 2026-09-21)
 | 1 | GitHub repo created | ✅ done — 2026-09-15 |
 | 1b | `kcpawan@gmail.com` added as collaborator | 🔄 invited 2026-09-15 — awaiting acceptance |
 | 2 | All work committed to the repo | 🔄 ongoing |
-| 3 | Project environment setup, reflected in repo | ⬜ pending — Phase 0 |
+| 3 | Project environment setup, reflected in repo | 🔄 code migrated, build not yet verified |
 | 4 | Weekly log submitted every Monday | 🔄 ongoing |
 | 5 | Log entries match actual commits | 🔄 ongoing |
 | 7 | Final report document in repo, tracked there | 🔄 outline in `docs/FINAL_REPORT.md` |
@@ -40,7 +40,15 @@ expire after 7 days — re-send if it lapses.
 - [x] Wrote AI context docs: `architecture.md` (stack + data model), `rules.md`,
       `phases.md` (8 phases), `design.md`, `memory.md`
 - [x] Rewrote `README.md` — project overview, stack, documentation index
+- [x] Added the submitted contextual report to the repo and realigned all docs to it
+      (Java/Spring Boot, Pinecone, 12-week plan) — reversed the earlier Python/pgvector
+      assumption
+- [x] Migrated `java-social-connector-poc` into the project as `backend/` +
+      `frontend/` — Meta OAuth (FB+IG), webhook ingestion, React inbox. Package
+      renamed to `io.eksamadhan`, MySQL→PostgreSQL, DB password removed from source,
+      `docker-compose.yml` added; original PoC folder removed from the project
 - [ ] Project environment setup committed — Phase 0 in `docs/phases.md`
+      (blocked: no Maven wrapper, no JDK 21 — build unverified)
 
 **Commits this week**
 
@@ -55,11 +63,14 @@ expire after 7 days — re-send if it lapses.
 - Confirm the supervisor accepted the collaborator invite (expires after 7 days)
 - Execute **Phase 0** — docker-compose (postgres+redis), FastAPI skeleton, Next.js
   skeleton, `.env.example`, README setup steps → satisfies requirement 3
-- Decide the LLM provider (deferred to Phase 2)
+- **Submit the Meta App Review request** — `pages_messaging` and
+  `instagram_manage_messages` gate Phase 1 and approval can take weeks
 
 **Blockers**
 
-- _none_
+- Maven wrapper missing (`.mvn/` was git-ignored in the PoC) and no JDK 21 installed,
+  so the migrated backend has not been compiled or run yet.
+- A real database password was committed in the PoC repo's history — needs rotating.
 
 ---
 

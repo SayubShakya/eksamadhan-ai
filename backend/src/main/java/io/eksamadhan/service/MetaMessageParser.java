@@ -1,0 +1,198 @@
+package io.eksamadhan.service;
+
+import io.eksamadhan.model.SocialMessage;
+import io.eksamadhan.model.SocialPage;
+import io.eksamadhan.repository.SocialMessageRepository;
+import io.eksamadhan.repository.SocialPageRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Processes incoming webhook payloads from Meta (Facebook/Instagram).
+ * Mirrors Node.js webhookService.processEvent() logic.
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class MetaMessageParser {
+
+    private final SocialPageRepository pageRepository;
+    private final SocialMessageRepository messageRepository;
+
+    @Transactional
+    public void processWebhookPayload(Map<String, Object> payload) {
+        try {
+            List<Map> entries = (List<Map>) payload.get("entry");
+            if (entries == null || entries.isEmpty()) {
+                log.warn("No entries in webhook payload");
+                return;
+            }
+
+            for (Map entry : entries) {
+                String pageId = entry.get("id") != null ? entry.get("id").toString() : null;
+
+                // Facebook messaging events
+                List<Map> messaging = (List<Map>) entry.get("messaging");
+                if (messaging != null) {
+                    processMessaging(messaging, pageId);
+                }
+
+                // Instagram change events
+                List<Map> changes = (List<Map>) entry.get("changes");
+                if (changes != null) {
+                    processChanges(changes, "INSTAGRAM");
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error processing webhook payload", e);
+        }
+    }
+
+    private void processMessaging(List<Map> messaging, String entryPageId) {
+        for (Map msg : messaging) {
+            try {
+                Map sender = (Map) msg.get("sender");
+                Map recipient = (Map) msg.get("recipient");
+                if (sender == null || recipient == null) continue;
+
+                String senderId = (String) sender.get("id");
+                String recipientId = (String) recipient.get("id");
+
+                // Skip non-message events (read, delivery)
+                if (msg.containsKey("read") || msg.containsKey("delivery")) {
+                    continue;
+                }
+
+                Map message = (Map) msg.get("message");
+                if (message == null) continue;
+
+                // Skip echo messages (is_echo = true means the page sent it)
+                // These are already saved by saveOutboundMessage in the reply flow
+                Boolean isEcho = (Boolean) message.get("is_echo");
+                if (Boolean.TRUE.equals(isEcho)) {
+                    log.debug("Skipping echo message from page");
+                    continue;
+                }
+
+                String mid = (String) message.get("mid");
+                String text = (String) message.get("text");
+                if (text == null || text.isBlank()) {
+                    text = "[Attachment]";
+                }
+
+                Long timestampMillis = ((Number) msg.get("timestamp")).longValue();
+
+                // Find the page this message belongs to
+                // The recipient of an inbound message is our page
+                SocialPage page = pageRepository.findByPageIdAndPlatform(recipientId, "FACEBOOK")
+                        .orElse(null);
+
+                // Fallback: try entryPageId
+                if (page == null && entryPageId != null) {
+                    page = pageRepository.findByPageIdAndPlatform(entryPageId, "FACEBOOK").orElse(null);
+                }
+
+                if (page == null) {
+                    log.debug("No page found for webhook message, skipping (recipientId={}, entryPageId={})", recipientId, entryPageId);
+                    continue;
+                }
+
+                saveMessage(mid, senderId, recipientId, text, page, timestampMillis);
+
+            } catch (Exception e) {
+                log.error("Error processing Facebook webhook message", e);
+            }
+        }
+    }
+
+    private void processChanges(List<Map> changes, String platform) {
+        for (Map change : changes) {
+            try {
+                String field = (String) change.get("field");
+                if (!"messages".equals(field)) continue;
+
+                Map value = (Map) change.get("value");
+                if (value == null) continue;
+
+                Map message = (Map) value.get("message");
+                if (message == null) continue;
+
+                String senderId = value.get("from") != null ? value.get("from").toString() : "";
+                String recipientId = value.get("to") != null ? value.get("to").toString() : "";
+                String mid = (String) message.get("mid");
+                String text = (String) message.get("text");
+
+                SocialPage page = pageRepository.findByPageIdAndPlatform(recipientId, platform).orElse(null);
+                if (page == null) continue;
+
+                long timestamp = System.currentTimeMillis();
+                Object tsObj = value.get("timestamp");
+                if (tsObj == null) tsObj = value.get("created_time");
+                
+                if (tsObj instanceof Number) {
+                    timestamp = ((Number) tsObj).longValue();
+                    // If timestamp is in seconds (10 digits), convert to milliseconds
+                    if (timestamp < 100000000000L) timestamp *= 1000;
+                } else if (tsObj instanceof String) {
+                    try {
+                        // Webhook ISO strings often use standard format
+                        timestamp = ZonedDateTime.parse((String) tsObj, DateTimeFormatter.ISO_OFFSET_DATE_TIME).toInstant().toEpochMilli();
+                    } catch (Exception e) {
+                        try {
+                            DateTimeFormatter metaFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ");
+                            timestamp = ZonedDateTime.parse((String) tsObj, metaFormatter).toInstant().toEpochMilli();
+                        } catch (Exception e2) {
+                            log.warn("Failed to parse string timestamp {}: {}", tsObj, e2.getMessage());
+                        }
+                    }
+                }
+
+                saveMessage(mid, senderId, recipientId, text, page, timestamp);
+
+            } catch (Exception e) {
+                log.error("Error processing Instagram change", e);
+            }
+        }
+    }
+
+    @Transactional
+    private void saveMessage(String mid, String senderId, String recipientId, String text, SocialPage page, long timestampMillis) {
+        if (messageRepository.existsByMetaMessageId(mid)) {
+            return;
+        }
+
+        // Direction: if sender is our page, it's outbound; otherwise inbound
+        boolean isPageSender = senderId.equals(page.getPageId());
+        String direction = isPageSender ? "outbound" : "inbound";
+        String senderName = isPageSender ? page.getPageName() : "User " + senderId.substring(Math.max(0, senderId.length() - 8));
+
+        SocialMessage socialMessage = SocialMessage.builder()
+                .metaMessageId(mid)
+                .externalMessageId(mid)
+                .senderId(senderId)
+                .senderName(senderName)
+                .recipientId(recipientId)
+                .text(text)
+                .content(text)
+                .direction(direction)
+                .platform(page.getPlatform())
+                .pageId(page.getPageId())
+                .tenantId(page.getTenant().getApiKey())
+                .socialPage(page)
+                .isFromUser(isPageSender)
+                .timestamp(ZonedDateTime.ofInstant(Instant.ofEpochMilli(timestampMillis), ZoneId.of("UTC")))
+                .build();
+
+        messageRepository.save(socialMessage);
+        log.info("💬 Webhook: saved {} message mid={}", direction, mid);
+    }
+}

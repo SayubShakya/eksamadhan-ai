@@ -1,91 +1,121 @@
 # Architecture — Eksamadhan AI
 
-Scope source: [`Eksamadhan_AI_PRD.md`](./Eksamadhan_AI_PRD.md).
-**Status: proposed.** Nothing here is built yet — update as reality diverges.
+**Authority:** `2337659_SayubShakya_CIS013-3_Contextual_Report_final.docx` (submitted
+contextual report). Where this file and the report disagree, **the report wins** — it
+is the graded specification. Any deliberate deviation must be recorded in `memory.md`
+with a justification usable in the viva.
 
-## 1. Tech stack (decided)
+Status: proposed structure. No code written yet.
 
-| Layer | Choice | Why |
+## 1. Tech stack (fixed by the report, §5.2)
+
+| Layer | Choice | Justification given in the report |
 | :--- | :--- | :--- |
-| Backend | **Python 3.12 + FastAPI** | RAG/embedding/sentiment libraries are Python-native; async suits webhook fan-in |
-| Dashboard | **Next.js (App Router) + TypeScript** | SSR for the inbox, one language for UI |
-| Widget | **Preact + Vite**, built to a single IIFE `<script>` | must stay small (<30KB) — it loads on customers' storefronts |
-| Primary DB | **PostgreSQL 16** | relational: orgs, agents, threads, messages |
-| Cache / queue | **Redis 7** + RQ or Celery | webhook processing must return 200 fast, so ingest is queued |
-| Vector DB | **pgvector** (not Pinecone) | one less service, no API key, no free-tier expiry mid-semester; swap later if scale demands |
-| LLM | provider-agnostic wrapper | see §5 — do not scatter SDK calls through the codebase |
-| Push | **Firebase Cloud Messaging** | required by PRD 4.6 |
-| Local dev | **docker-compose** (postgres + redis) | satisfies requirement 3, reproducible for the supervisor |
+| Backend | **Java 21 · Spring Boot 3** | multithreaded handling of many concurrent incoming messages; better memory management; stable and enterprise-grade over Node.js |
+| Frontend | **React.js · Vite** | fast component builds, hot reload, modern UI |
+| Database | **PostgreSQL** | reliable, secure, open source, handles complex relational data |
+| Vector DB | **Pinecone** | semantic (meaning-based) search over uploaded business files rather than keyword matching |
+| LLM | **OpenAI API** (latest GPT models) | answer generation over retrieved context |
+| Notifications | **Firebase Cloud Messaging** | device alerts without keeping a screen on |
+| Auth | **OAuth 2.0 + JWT** | report §5.4.3 — never store raw passwords; Meta platform compliance |
+| Hosting | **PrabhuHost** | affordability, 99.9% uptime (report §5.3.2) |
 
-Deviation from PRD §6.1: pgvector replaces Pinecone/Milvus. Justify this in the final
-report — fewer moving parts and no vendor account is the right call at this scale.
+Build tool: Maven. Java version: 21 LTS.
 
-## 2. Repo layout
+**Do not substitute these.** The stack is defended in a submitted, marked document.
+Swapping Pinecone for pgvector or Spring for FastAPI would contradict §5.2 and §5.4.1.
+
+## 2. Performance targets (report §1.4 — these are graded)
+
+| Target | Value | Where enforced |
+| :--- | :--- | :--- |
+| Reply latency | **< 2 seconds** | async pipeline, cached FAQ answers |
+| RAG answer accuracy | **85%** | retrieval quality + confidence gate |
+| Handover alert latency | **< 3 seconds** | FCM dispatch on escalation |
+| AI deflection rate | **60–65%** | escalation thresholds (report L-R 4: >70% automation hurts satisfaction) |
+
+Latency is a stated objective, not a nice-to-have. Every external call needs a timeout
+budget that keeps the total under 2s.
+
+## 3. Repo layout
 
 ```
 eksamadhan-ai/
-├─ backend/
-│  ├─ app/
-│  │  ├─ main.py              # FastAPI entrypoint
-│  │  ├─ core/                # config, security, deps
-│  │  ├─ models/              # SQLAlchemy ORM
-│  │  ├─ schemas/             # Pydantic request/response
-│  │  ├─ api/v1/              # routers: auth, orgs, knowledge, threads, webhooks
-│  │  ├─ services/
-│  │  │  ├─ rag/              # chunk, embed, retrieve, prompt
-│  │  │  ├─ channels/         # meta.py, widget.py — one adapter per channel
-│  │  │  ├─ escalation/       # confidence, sentiment, routing
-│  │  │  └─ notifications/    # fcm.py
-│  │  └─ workers/             # queue consumers
-│  ├─ alembic/                # migrations
-│  └─ tests/
-├─ dashboard/                 # Next.js agent inbox
-├─ widget/                    # embeddable chat widget
-├─ docs/
-└─ docker-compose.yml
+├─ backend/                      # Spring Boot
+│  ├─ src/main/java/io/eksamadhan/
+│  │  ├─ EksamadhanApplication.java
+│  │  ├─ config/                 # beans, async executor, CORS, OpenAPI
+│  │  ├─ security/               # OAuth2, JWT filter, password encoding
+│  │  ├─ domain/                 # JPA entities
+│  │  ├─ repository/             # Spring Data JPA
+│  │  ├─ dto/                    # request/response records
+│  │  ├─ controller/             # REST controllers + webhook endpoints
+│  │  └─ service/
+│  │     ├─ rag/                 # ingestion, embedding, Pinecone, prompting
+│  │     ├─ channel/             # MetaChannelService, WidgetChannelService
+│  │     ├─ escalation/          # sentiment, confidence, routing
+│  │     └─ notification/        # FcmService
+│  ├─ src/main/resources/
+│  │  ├─ application.yml
+│  │  └─ db/migration/           # Flyway migrations
+│  └─ src/test/java/
+├─ frontend/                     # React + Vite dashboard
+├─ widget/                       # embeddable website chat widget
+└─ docs/
 ```
 
-## 3. Core data model
+## 4. Core data model
 
 ```
-Organization ─┬─< User (role: admin | agent, status: online/offline)
-              ├─< Channel (type: facebook | instagram | web, credentials)
-              ├─< KnowledgeSource (type: text|pdf|url) ─< Chunk (embedding vector)
-              └─< Thread (channel, external_id, status, assigned_agent)
-                    └─< Message (sender: customer|ai|agent|system, body, confidence)
+Organization ─┬─< User (role: ADMIN | AGENT, status: ONLINE | BUSY | OFFLINE)
+              ├─< Channel (type: FACEBOOK | INSTAGRAM | WEB, oauth tokens)
+              ├─< KnowledgeSource (TEXT | PDF | URL) ─< Chunk (pineconeVectorId)
+              └─< Thread (channel, externalId, status, assignedAgent)
+                    └─< Message (sender: CUSTOMER|AI|AGENT|SYSTEM, body, confidence, sentiment)
 ```
+
+Chunk text and metadata live in PostgreSQL; the **embedding vector lives in Pinecone**,
+referenced by `pineconeVectorId`. Keep the two in sync — deleting a knowledge source
+must delete its Pinecone vectors, or the bot answers from data the admin removed
+(a GDPR deletion issue, report §2.3.20).
 
 `Thread.status`: `AI_HANDLING → OPEN_FOR_AGENT → AGENT_HANDLING → RESOLVED`.
-That enum is the spine of the whole product — the inbox filters on it, routing writes
-it, and the widget polls it. Get it right before building UI.
+This enum is the spine of the product — inbox filters on it, routing writes it, the
+widget polls it. Settle it before building any UI.
 
-## 4. Request flows
+## 5. Request flows
 
 **Inbound message**
 ```
-Channel webhook → verify signature → persist Message → enqueue job → return 200
-   worker: embed query → pgvector similarity search (top-k)
-         → assemble prompt with retrieved chunks
-         → LLM call → {reply, confidence}
-         → escalate? ── no ──→ send reply via channel adapter
-                     └─ yes ─→ status=OPEN_FOR_AGENT → route → FCM push to agent
+Webhook (Meta / widget) → verify signature → persist Message → return 200 immediately
+   @Async worker:
+      embed query (OpenAI) → Pinecone top-k search → assemble prompt with context
+      → GPT call → {reply, confidence} → sentiment check
+      → escalate? ─ no ─→ send reply through channel adapter
+                  └ yes ─→ status=OPEN_FOR_AGENT → round-robin to an ONLINE agent
+                           → FCM push (< 3s target)
 ```
-Webhooks must ack within seconds or Meta retries and duplicates the message — hence
-the queue. Store the provider message id and dedupe on it.
 
-**Human-in-the-loop**: once an agent posts to a thread, the AI is suppressed for that
-thread until it returns to `RESOLVED` (PRD 4.7).
+Webhooks must ack fast or Meta retries and the customer gets duplicate replies. Store
+the provider message id and dedupe on it. This is exactly the concurrency argument
+that justified Java in §5.2 — use a bounded `ThreadPoolTaskExecutor`, not raw threads.
 
-**Agent inbox**: WebSocket (or SSE) per logged-in agent for live thread updates; FCM
-covers the case where the tab is backgrounded.
+**Human-in-the-loop (report L-R 1, L-R 3):** once an agent posts to a thread, the AI is
+suppressed for that thread until `RESOLVED`. The agent sees the full AI transcript, and
+ideally an AI-generated summary so they need not reread everything (L-R 3).
 
-## 5. Boundaries worth enforcing
+**Cost control (report §5.4.2):** cache answers to common questions (Caffeine,
+in-memory) so repeat questions skip the embedding and completion calls entirely.
 
-- **One LLM interface.** `services/rag/llm.py` exposes `complete()` and `embed()`.
-  Swapping provider must touch one file. Confidence scoring lives behind it too.
-- **One channel interface.** Every adapter implements `send(thread, text)` and
-  `parse_webhook(payload) -> Message`. Adding WhatsApp later should be one new file.
-- **No secrets in the repo.** `.env.example` is committed; `.env` is git-ignored.
-  This is a public repo — a leaked OpenAI key gets scraped within minutes.
-- **Embeddings are versioned.** Store the model name on each chunk; changing embedding
-  model invalidates every vector and requires a re-index.
+## 6. Boundaries worth enforcing
+
+- **One LLM interface.** An `LlmClient` interface with `complete()` and `embed()`.
+  Swapping model or provider touches one implementation class.
+- **One channel interface.** `ChannelAdapter` with `send(thread, text)` and
+  `parseWebhook(payload)`. Facebook, Instagram and Web each implement it.
+- **No secrets in the repo.** This repo is public. Keys go in environment variables;
+  commit `.env.example` / `application-example.yml` only. A leaked OpenAI key is
+  scraped within minutes.
+- **Embeddings are versioned.** Store the embedding model name per chunk — changing
+  model invalidates every vector and forces a re-index.
+- **Encrypt tokens at rest.** Meta OAuth tokens in the DB must be encrypted (§5.4.3).

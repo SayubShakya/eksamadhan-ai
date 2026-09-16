@@ -85,12 +85,18 @@ To ensure responsiveness, the system utilizes **Firebase Cloud Messaging (FCM)**
 ## 6. Technical Architecture
 
 ### 6.1. Tech Stack Recommendation
-* **Frontend**: React.js / Next.js (Dashboard), Preact/Vanilla JS (Embeddable Widget).
-* **Backend**: Node.js (NestJS) or Python (FastAPI).
-* **Database**: PostgreSQL (User data/logs), Redis (Job queues/caching).
-* **Vector DB**: Pinecone / Weaviate / Milvus.
-* **AI/LLM**: OpenAI GPT-4o or Google Gemini 1.5 Pro.
+> Superseded by §5.2 of the submitted contextual report — the stack below reflects
+> the graded document, not the original open options.
+
+* **Frontend**: React.js + Vite (Dashboard and embeddable Widget).
+* **Backend**: **Java 21 / Spring Boot 3** — chosen over Node.js for multithreaded
+  handling of concurrent message volume, memory management and long-term stability.
+* **Database**: PostgreSQL.
+* **Vector DB**: Pinecone.
+* **AI/LLM**: OpenAI API (latest GPT models).
 * **Notifications**: Firebase Cloud Messaging (FCM).
+* **Auth**: OAuth 2.0 + JWT.
+* **Hosting**: PrabhuHost.
 
 ### 6.2. Data Flow (Escalation with Notification)
 1. **Incoming Message**: User sends message.
