@@ -4,6 +4,7 @@ import TopBar from './components/TopBar.jsx';
 import HomePage from './pages/HomePage.jsx';
 import InboxPage from './pages/InboxPage.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
+import ProfilePanel from './components/ProfilePanel.jsx';
 import * as api from './lib/api.js';
 import { buildThreads } from './lib/format.js';
 import './styles/tokens.css';
@@ -68,7 +69,30 @@ export default function App() {
     }, [availability]);
 
     const pages = status?.data?.pages ?? [];
-    const user = { name: 'Sayub', role: 'Owner' };
+
+    // No account system yet, so the profile lives in the browser. It moves to the
+    // server with the Organization/User model.
+    const [user, setUser] = useState(() => {
+        const fallback = { firstName: 'Sayub', lastName: '', role: 'Owner', email: '', avatar: null };
+        try {
+            const saved = JSON.parse(localStorage.getItem('profile') || 'null');
+            if (!saved) return fallback;
+            // Earlier versions stored a single `name`.
+            if (saved.name && !saved.firstName) {
+                const [first, ...rest] = saved.name.split(' ');
+                return { ...fallback, ...saved, firstName: first, lastName: rest.join(' ') };
+            }
+            return { ...fallback, ...saved };
+        } catch {
+            return fallback;
+        }
+    });
+    const [profileOpen, setProfileOpen] = useState(false);
+
+    const saveProfile = useCallback((next) => {
+        setUser(next);
+        try { localStorage.setItem('profile', JSON.stringify(next)); } catch { /* private mode */ }
+    }, []);
 
     const refreshStatus = useCallback(async () => {
         try { setStatus(await api.getStatus(TENANT_ID)); }
@@ -217,6 +241,7 @@ export default function App() {
                     onHome={() => setView('home')}
                     navOpen={navOpen}
                     showSearch={view === 'inbox'}
+                    onEditProfile={() => setProfileOpen(true)}
                 />
 
                 {view === 'home' && (
@@ -250,6 +275,13 @@ export default function App() {
                     <PlaceholderPage view={view} onNavigate={setView} onLogout={handleLogout} />
                 )}
             </div>
+
+            <ProfilePanel
+                open={profileOpen}
+                user={user}
+                onSave={saveProfile}
+                onClose={() => setProfileOpen(false)}
+            />
         </div>
     );
 }

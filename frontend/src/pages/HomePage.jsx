@@ -45,7 +45,7 @@ export default function HomePage({ user, pages, threadCount, todayCount, onConne
         <div className="page">
             <div className="page__head">
                 <div>
-                    <h1 className="page__title">{greeting()}, {user.name}</h1>
+                    <h1 className="page__title">{greeting()}{user.firstName ? `, ${user.firstName}` : ''}</h1>
                     <p className="page__sub">Here's the status of your business AI agent today.</p>
                 </div>
                 <button

@@ -1,5 +1,7 @@
 import { IconSearch, IconMenu } from './icons.jsx';
 import { LogoMark } from './Logo.jsx';
+import Avatar from './Avatar.jsx';
+import { fullName } from '../lib/avatar.js';
 
 const STATUSES = [
     { value: 'online', label: 'Online' },
@@ -13,7 +15,7 @@ const STATUSES = [
  */
 export default function TopBar({
     availability, onAvailabilityChange, query, onQueryChange, user,
-    onToggleNav, onHome, unread = 0, navOpen, showSearch,
+    onToggleNav, onHome, unread = 0, navOpen, showSearch, onEditProfile,
 }) {
     return (
         <header className="topbar">
@@ -58,13 +60,13 @@ export default function TopBar({
                 </select>
             </div>
 
-            <div className="user">
-                <div className="user__text">
-                    <div className="user__name">{user.name}</div>
-                    <div className="user__role">{user.role}</div>
-                </div>
-                <div className="avatar" aria-hidden="true">{user.name.slice(0, 1)}</div>
-            </div>
+            <button className="user" onClick={onEditProfile} aria-label="Edit profile">
+                <span className="user__text">
+                    <span className="user__name">{fullName(user) || 'Set up profile'}</span>
+                    <span className="user__role">{user.role}</span>
+                </span>
+                <Avatar user={user} size={32} />
+            </button>
         </header>
     );
 }
