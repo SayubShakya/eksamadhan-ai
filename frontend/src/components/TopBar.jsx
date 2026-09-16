@@ -13,7 +13,7 @@ const STATUSES = [
  */
 export default function TopBar({
     availability, onAvailabilityChange, query, onQueryChange, user,
-    onToggleNav, onHome, unread = 0, navOpen,
+    onToggleNav, onHome, unread = 0, navOpen, showSearch,
 }) {
     return (
         <header className="topbar">
@@ -31,7 +31,23 @@ export default function TopBar({
                 </>
             )}
 
-            <label className="status-select">
+            {showSearch && (
+                <div className="topbar__search">
+                    <IconSearch />
+                    <input
+                        type="search"
+                        placeholder="Search conversations…"
+                        value={query}
+                        onChange={(e) => onQueryChange(e.target.value)}
+                        aria-label="Search conversations"
+                    />
+                </div>
+            )}
+
+            {/* A <label> wrapper re-dispatches the click to the <select>, which opens
+                the native popup and instantly closes it again. Use a plain element and
+                let the select carry its own label. */}
+            <div className="status-select">
                 <span className={`dot dot--${availability}`} aria-hidden="true" />
                 <select
                     value={availability}
@@ -40,17 +56,6 @@ export default function TopBar({
                 >
                     {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
-            </label>
-
-            <div className="topbar__search">
-                <IconSearch />
-                <input
-                    type="search"
-                    placeholder="Search conversations…"
-                    value={query}
-                    onChange={(e) => onQueryChange(e.target.value)}
-                    aria-label="Search conversations"
-                />
             </div>
 
             <div className="user">

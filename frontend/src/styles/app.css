@@ -37,9 +37,13 @@
         padding: 0 6px 14px;
         align-items: center;
     }
-    .rail--closed .brand { display: none; }
-    .rail--closed .rail__head { justify-content: center; padding: 0; }
-    .rail--closed .rail__collapse { transform: rotate(180deg); }
+    /* Beats `.rail__head .brand__name` further down the file. */
+    .rail--closed .rail__head .brand__name { display: none; }
+    /* Collapsed: logo (home) and expand arrow side by side in the 72px head. */
+    .rail--closed .brand { padding: 2px; }
+    .rail--closed .brand svg { width: 24px; height: 24px; }
+    .rail--closed .rail__head { justify-content: center; gap: 0; padding: 0; }
+    .rail--closed .rail__collapse { transform: rotate(180deg); padding: 3px; }
     .rail--closed .rail__item {
         flex-direction: column; gap: 4px;
         width: 58px; padding: 8px 0;
@@ -179,7 +183,10 @@
     padding: 6px; border-radius: var(--r-sm); display: grid; place-items: center;
 }
 .icon-btn:hover { background: var(--surface); color: var(--text); }
-.user { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-shrink: 0; }
+.user { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+/* Push the account controls right whether or not the search is present. */
+.status-select { margin-left: auto; }
+.topbar__search + .status-select { margin-left: 0; }
 .user__name { font-weight: 500; line-height: 1.2; }
 .user__role { font-size: 12px; color: var(--text-muted); line-height: 1.2; }
 .avatar {

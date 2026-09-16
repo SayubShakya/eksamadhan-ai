@@ -91,6 +91,9 @@ expire after 7 days — re-send if it lapses.
 - [x] Rebuilt the React frontend to match the approved design — shared nav rail and
       top bar, Home and Inbox screens, design tokens from `design.md`
 
+- [x] Frontend UX pass — collapsible navigation, path-based routing, mobile responsive
+      down to 390px, and a dozen interaction bugs fixed
+
 **Blockers**
 
 - A real database password was committed in the PoC repo's history — needs rotating.
@@ -136,6 +139,9 @@ expire after 7 days — re-send if it lapses.
 
 - [x] Rebuilt the React frontend to match the approved design — shared nav rail and
       top bar, Home and Inbox screens, design tokens from `design.md`
+
+- [x] Frontend UX pass — collapsible navigation, path-based routing, mobile responsive
+      down to 390px, and a dozen interaction bugs fixed
 
 **Blockers**
 -

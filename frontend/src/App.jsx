@@ -216,6 +216,7 @@ export default function App() {
                     onToggleNav={() => setNavOpen(o => !o)}
                     onHome={() => setView('home')}
                     navOpen={navOpen}
+                    showSearch={view === 'inbox'}
                 />
 
                 {view === 'home' && (
