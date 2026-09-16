@@ -109,7 +109,7 @@ token so Meta will deliver that Page's events.
 
 ## 7. Connect from the dashboard
 
-Open <http://localhost:5173> and click **Connect Facebook** (or Instagram). You'll be
+Open <http://localhost:5174> and click **Connect Facebook** (or Instagram). You'll be
 sent to Meta's consent screen, choose your Page, and land back on the dashboard with
 the page listed.
 

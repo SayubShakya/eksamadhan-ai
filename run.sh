@@ -24,9 +24,9 @@ echo "🌟 STARTING EKSAMADHAN AI"
 echo "--------------------------------------------------------"
 
 # 🛠️ 1. CLEANUP PREVIOUS PROCESSES
-echo "🧹 Cleaning up existing processes on ports 8080 (BE) and 5173 (FE)..."
+echo "🧹 Cleaning up existing processes on ports 8080 (BE) and 5174 (FE)..."
 lsof -ti tcp:8080 2>/dev/null | xargs kill -9 2>/dev/null || true
-lsof -ti tcp:5173 2>/dev/null | xargs kill -9 2>/dev/null || true
+lsof -ti tcp:5174 2>/dev/null | xargs kill -9 2>/dev/null || true
 
 # 🐘 DATABASE
 echo "🐘 Starting PostgreSQL (docker compose)..."
@@ -153,7 +153,7 @@ echo "--------------------------------------------------------"
 echo "🎉 SYSTEM FULL-STACK READY!"
 echo "--------------------------------------------------------"
 echo "👉 BACKEND:   http://localhost:8080"
-echo "👉 FRONTEND:  http://localhost:5173"
+echo "👉 FRONTEND:  http://localhost:5174"
 echo "👉 TUNNEL:    $TUNNEL_URL"
 echo ""
 echo "📱 META (FACEBOOK/INSTAGRAM) CONFIGURATION:"

@@ -20,4 +20,4 @@ server:
   port: ${SERVER_PORT:8080}
 
 app:
-  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  frontend-url: ${FRONTEND_URL:http://localhost:5174}

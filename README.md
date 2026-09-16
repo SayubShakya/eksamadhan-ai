@@ -95,10 +95,10 @@ cd eksamadhan-ai
 cp .env.example .env          # set DB_PASSWORD
 cp .env.example backend/.env  # required — the app fails to start without it
 
-./run.sh                      # starts PostgreSQL, backend :8080, frontend :5173
+./run.sh                      # starts PostgreSQL, backend :8080, frontend :5174
 ```
 
-Open <http://localhost:5173>. `run.sh` also opens a public Pinggy tunnel, which Meta
+Open <http://localhost:5174>. `run.sh` also opens a public Pinggy tunnel, which Meta
 needs to reach your webhook — the URLs to paste into the Meta app dashboard are
 printed when it starts. Logs go to `backend.log` and `frontend.log`; Ctrl+C stops
 everything.
@@ -108,7 +108,7 @@ everything.
 ```bash
 docker compose up -d                              # PostgreSQL only
 cd backend  && mvn spring-boot:run                # API on :8080
-cd frontend && npm install && npm run dev         # UI on :5173
+cd frontend && npm install && npm run dev         # UI on :5174
 ```
 
 Connecting a Facebook page or Instagram account requires a Meta app — see
