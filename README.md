@@ -66,6 +66,8 @@ Rationale for each choice is in the contextual report §5.2, summarised in
 | :--- | :--- |
 | [`docs/Eksamadhan_AI_PRD.md`](docs/Eksamadhan_AI_PRD.md) | Requirements, user roles, feature modules, FR-01..FR-10 |
 | [`docs/architecture.md`](docs/architecture.md) | Stack, repo layout, data model, request flows |
+| [`docs/weekly-plan.md`](docs/weekly-plan.md) | **Eight-week delivery plan, week by week** |
+| [`docs/weekly-reports/`](docs/weekly-reports/) | Weekly progress reports for the supervisor |
 | [`docs/phases.md`](docs/phases.md) | Build order, Phase 0–7 |
 | [`docs/design.md`](docs/design.md) | Colour, typography, layout, accessibility |
 | [`docs/rules.md`](docs/rules.md) | Engineering rules and boundaries |
@@ -122,6 +124,7 @@ export JAVA_HOME=/opt/homebrew/opt/openjdk@21
 
 ## Build plan
 
-Twelve weeks, four phases (report §7.2): foundation and Meta integration (weeks 1–3),
-RAG and sentiment escalation (4–6), React frontend (7–9), testing, deployment and
-evaluation (10–12). Detail in [`docs/phases.md`](docs/phases.md).
+Eight weeks, 15 September – 9 November 2026 — a compression of the contextual report's
+twelve-week plan, with the trade-offs written down. Week by week in
+[`docs/weekly-plan.md`](docs/weekly-plan.md); phase detail in
+[`docs/phases.md`](docs/phases.md).

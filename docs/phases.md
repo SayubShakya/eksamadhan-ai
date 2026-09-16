@@ -7,6 +7,9 @@ them without recording the reason in `memory.md`.
 Semester 2 build. A phase is done when it is **committed, runnable and demonstrable
 to the supervisor** — not when the code exists locally.
 
+**Dates live in [`weekly-plan.md`](weekly-plan.md)**, which maps these phases onto the
+eight weeks from 15 September to 9 November 2026.
+
 ---
 
 ## Phase 0 — Environment setup ✅

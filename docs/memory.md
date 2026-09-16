@@ -148,6 +148,20 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 
 ## Change log
 
+- **2026-09-16** — Wrote `docs/weekly-plan.md`: an **eight-week** delivery plan
+  (15 Sep – 9 Nov 2026) compressing the report's twelve-week §7.2 plan. The four phases
+  keep their order but the ~3 weeks of slack are gone, so scope was trimmed
+  deliberately — Instagram best-effort, analytics reduced to one screen, round-robin
+  only. Week 2 (auth + `Thread` refactor) and week 5 (escalation) are the load-bearing
+  weeks; if anything slips, cut from weeks 6 and 8, never week 5.
+
+- **2026-09-16** — Week 1 progress report written into `docs/weekly-reports/week-01/`
+  on the University of Bedfordshire form (`.docx` to print and sign) plus a Markdown
+  mirror so it is readable on GitHub. Each report ends with the commit list it covers,
+  because the supervisor will not sign a report whose log does not match the repo.
+  Reports are generated with python-docx from the blank form; the venv is at
+  `/tmp/docxenv` and will need recreating next session.
+
 - **2026-09-16** — Frontend UX pass. Navigation is now a **drawer**, closed by default
   and opened from the top bar, so the reading area gets full width; the logo in the top
   bar returns to Home. Routing moved from `#hash` to **real paths** (`/dashboard`,

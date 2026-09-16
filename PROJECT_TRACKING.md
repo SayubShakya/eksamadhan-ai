@@ -17,8 +17,8 @@ Weekly log due: **every Monday** (next: 2026-09-21)
 | 1b | `kcpawan@gmail.com` added as collaborator | 🔄 invited 2026-09-15 — awaiting acceptance |
 | 2 | All work committed to the repo | 🔄 ongoing |
 | 3 | Project environment setup, reflected in repo | ✅ done — 2026-09-16, verified running |
-| 4 | Weekly log submitted every Monday | 🔄 ongoing |
-| 5 | Log entries match actual commits | 🔄 ongoing |
+| 4 | Weekly log submitted every Monday | 🔄 week 1 written — `docs/weekly-reports/` |
+| 5 | Log entries match actual commits | ✅ week 1 lists all 29 commits |
 | 7 | Final report document in repo, tracked there | 🔄 outline in `docs/FINAL_REPORT.md` |
 
 Collaborator invite sent 2026-09-15 to Pawan KC (`kcpawan@gmail.com`); shows as
@@ -94,6 +94,11 @@ expire after 7 days — re-send if it lapses.
 - [x] Frontend UX pass — collapsible navigation, path-based routing, mobile responsive
       down to 390px, and a dozen interaction bugs fixed
 
+- [x] Wrote the Week 1 progress report on the university form, with the full commit
+      list as evidence — `docs/weekly-reports/week-01/`
+
+- [x] Wrote the eight-week delivery plan — `docs/weekly-plan.md`
+
 **Blockers**
 
 - A real database password was committed in the PoC repo's history — needs rotating.
@@ -142,6 +147,11 @@ expire after 7 days — re-send if it lapses.
 
 - [x] Frontend UX pass — collapsible navigation, path-based routing, mobile responsive
       down to 390px, and a dozen interaction bugs fixed
+
+- [x] Wrote the Week 1 progress report on the university form, with the full commit
+      list as evidence — `docs/weekly-reports/week-01/`
+
+- [x] Wrote the eight-week delivery plan — `docs/weekly-plan.md`
 
 **Blockers**
 -
