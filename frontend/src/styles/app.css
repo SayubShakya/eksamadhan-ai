@@ -30,7 +30,30 @@
         box-shadow: none;
         transition: none;
     }
-    .rail--closed { display: none; }
+    /* Collapsed on a desktop the rail stays put as an icon strip, rather than
+       disappearing — the destinations remain one click away. */
+    .rail--closed {
+        width: 72px;
+        padding: 0 6px 14px;
+        align-items: center;
+    }
+    .rail--closed .brand { display: none; }
+    .rail--closed .rail__head { justify-content: center; padding: 0; }
+    .rail--closed .rail__collapse { transform: rotate(180deg); }
+    .rail--closed .rail__item {
+        flex-direction: column; gap: 4px;
+        width: 58px; padding: 8px 0;
+        font-size: 11px; text-align: center;
+    }
+    .rail--closed .rail__badge {
+        position: absolute; top: 2px; right: 8px;
+        margin: 0; min-width: 17px; height: 17px; font-size: 10px;
+    }
+
+    /* With the rail always visible on a desktop, the top bar needs neither a menu
+       button nor a second copy of the brand. Extra specificity: .icon-btn sets its
+       own display further down the file. */
+    .topbar .topbar__menu, .topbar .brand { display: none; }
     /* .icon-btn sets display later in the file, so this needs the extra class. */
     
 

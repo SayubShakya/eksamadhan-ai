@@ -23,7 +23,7 @@ const DOCKED = '(min-width: 1024px)';
  * Selecting a destination closes it only when it is overlaying the content — on a
  * desktop that would mean re-opening the nav for every move.
  */
-export default function NavRail({ view, onNavigate, unread = 0, open, onClose, onHome }) {
+export default function NavRail({ view, onNavigate, unread = 0, open, onClose, onToggle, onHome }) {
     useEffect(() => {
         if (!open) return;
         const onKey = (e) => {
@@ -53,7 +53,12 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                         <LogoMark size={28} />
                         <span className="brand__name">Eksamadhan AI</span>
                     </button>
-                    <button className="icon-btn rail__collapse" onClick={onClose} aria-label="Collapse menu">
+                    <button
+                        className="icon-btn rail__collapse"
+                        onClick={onToggle}
+                        aria-label={open ? 'Collapse menu' : 'Expand menu'}
+                        aria-expanded={open}
+                    >
                         <IconChevronLeft />
                     </button>
                 </div>

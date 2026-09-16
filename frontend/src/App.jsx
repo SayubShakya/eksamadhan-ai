@@ -202,6 +202,7 @@ export default function App() {
                 unread={unread}
                 open={navOpen}
                 onClose={() => setNavOpen(false)}
+                onToggle={() => setNavOpen(o => !o)}
                 onHome={() => setView('home')}
             />
             <div className="main">
