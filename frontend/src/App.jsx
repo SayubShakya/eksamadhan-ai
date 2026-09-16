@@ -11,29 +11,33 @@ import './styles/app.css';
 
 const TENANT_ID = 'demo-tenant-1';
 const VIEWS = ['home', 'inbox', 'knowledge', 'channels', 'team', 'analytics', 'settings'];
+const BASE = '/dashboard';
 
-const viewFromHash = () => {
-    const v = window.location.hash.replace('#', '');
-    return VIEWS.includes(v) ? v : 'home';
+const viewFromPath = () => {
+    const seg = window.location.pathname.replace(BASE, '').replace(/^\/+|\/+$/g, '');
+    return VIEWS.includes(seg) ? seg : 'home';
 };
+
+const pathForView = (view) => (view === 'home' ? BASE : `${BASE}/${view}`);
 const MESSAGE_POLL_MS = 1500;
 const STATUS_POLL_MS = 5000;
 const SYNC_MS = 30000;
 
 export default function App() {
-    // The section lives in the URL hash so a refresh keeps you where you were and the
-    // browser's Back button moves between sections, as people expect.
-    const [view, setViewState] = useState(viewFromHash);
+    // The section lives in the path, so URLs are shareable and a refresh keeps you
+    // where you were. Vite and any static host must fall back to index.html.
+    const [view, setViewState] = useState(viewFromPath);
+    const [navOpen, setNavOpen] = useState(false);
 
     const setView = useCallback((next) => {
         setViewState(next);
-        if (viewFromHash() !== next) window.location.hash = next;
+        if (viewFromPath() !== next) window.history.pushState({}, '', pathForView(next));
     }, []);
 
     useEffect(() => {
-        const onHash = () => setViewState(viewFromHash());
-        window.addEventListener('hashchange', onHash);
-        return () => window.removeEventListener('hashchange', onHash);
+        const onPop = () => setViewState(viewFromPath());
+        window.addEventListener('popstate', onPop);
+        return () => window.removeEventListener('popstate', onPop);
     }, []);
     const [status, setStatus] = useState(null);
     const [messages, setMessages] = useState([]);
@@ -85,14 +89,14 @@ export default function App() {
         if (platform === 'facebook' || platform === 'instagram') {
             setFilter(platform);
             setViewState('inbox');
-            window.location.hash = 'inbox';
+            window.history.replaceState({}, '', pathForView('inbox'));
             refreshStatus();
         }
         if (params.get('status') === 'error') {
             console.warn('OAuth callback reported an error:', params.get('message'));
         }
         if (params.toString()) {
-            window.history.replaceState({}, document.title, window.location.pathname);
+            window.history.replaceState({}, '', window.location.pathname);
         }
 
         return () => { clearInterval(m); clearInterval(s); };
@@ -180,7 +184,13 @@ export default function App() {
 
     return (
         <div className="shell">
-            <NavRail view={view} onNavigate={setView} unread={unread} />
+            <NavRail
+                view={view}
+                onNavigate={setView}
+                unread={unread}
+                open={navOpen}
+                onClose={() => setNavOpen(false)}
+            />
             <div className="main">
                 <TopBar
                     availability={availability}
@@ -188,6 +198,9 @@ export default function App() {
                     query={query}
                     onQueryChange={(v) => { setQuery(v); if (v && view !== 'inbox') setView('inbox'); }}
                     user={user}
+                    unread={unread}
+                    onToggleNav={() => setNavOpen(o => !o)}
+                    onHome={() => setView('home')}
                 />
 
                 {view === 'home' && (

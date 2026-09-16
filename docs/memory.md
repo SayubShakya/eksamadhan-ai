@@ -148,6 +148,14 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 
 ## Change log
 
+- **2026-09-16** — Frontend UX pass. Navigation is now a **drawer**, closed by default
+  and opened from the top bar, so the reading area gets full width; the logo in the top
+  bar returns to Home. Routing moved from `#hash` to **real paths** (`/dashboard`,
+  `/dashboard/inbox`) via the History API — this needs SPA fallback (Vite dev has it;
+  any static host serving `dist/` must rewrite unknown paths to `index.html`).
+  Responsive down to 390px: one pane at a time on the inbox with a back button,
+  stacked checklist, single-column channels.
+
 - **2026-09-16** — Logo designed as hand-written SVG (sharp at 16px, themeable,
   one file). Settled on three bars resolving into a bubble, violet→blue→cyan gradient,
   after rejecting seven other directions — `design.md` lists them and why, so they are
