@@ -79,15 +79,15 @@ expire after 7 days — re-send if it lapses.
 
 - [x] Connected the Facebook Page through OAuth — token stored, webhook subscribed to
       `messages` and `messaging_postbacks`
+- [x] **End-to-end verified**: a real Messenger message from a second account reached
+      PostgreSQL through the proxy and tunnel; de-duplication confirmed working
 
 **Blockers**
 
 - A real database password was committed in the PoC repo's history — needs rotating.
 - Instagram↔Page linking hit a temporary Meta action restriction on 2026-09-16;
   retry after 24h. Does not block Facebook Messenger work.
-- No real inbound message tested yet: Development mode needs the sender to hold an app
-  role, and registering a second account as Tester requires a phone number not already
-  on the primary account. Waiting on a second SIM.
+- ~~No real inbound message tested~~ — resolved 2026-09-16, working end to end.
 
 ---
 
@@ -116,6 +116,8 @@ expire after 7 days — re-send if it lapses.
 
 - [x] Connected the Facebook Page through OAuth — token stored, webhook subscribed to
       `messages` and `messaging_postbacks`
+- [x] **End-to-end verified**: a real Messenger message from a second account reached
+      PostgreSQL through the proxy and tunnel; de-duplication confirmed working
 
 **Blockers**
 -

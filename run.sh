@@ -95,13 +95,34 @@ if [ -n "$PROXY_URL" ] && [ "$TUNNEL_URL" != "http://localhost:8080" ]; then
         -d "{\"url\":\"$TUNNEL_URL\",\"token\":\"${PROXY_AUTH_TOKEN:-azmew_token}\"}")
   echo "   $REG"
 
-  # Pinggy free tunnels expire after 60 minutes; re-register periodically.
+  # Free Pinggy tunnels die after ~60 minutes and come back with a NEW hostname.
+  # This supervisor restarts the tunnel when it drops and registers whatever URL
+  # Pinggy hands out next, so Meta keeps reaching the backend without any manual step.
   (
+    CURRENT_URL="$TUNNEL_URL"
     while true; do
-      sleep 300
+      sleep 60
+
+      if ! pgrep -f 'a\.pinggy\.io' >/dev/null 2>&1; then
+        echo "♻️  Tunnel dropped — reconnecting..."
+        : > "$TUNNEL_LOG"
+        ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 \
+            -p 443 -R0:localhost:8080 a.pinggy.io > "$TUNNEL_LOG" 2>&1 &
+        sleep 12
+      fi
+
+      NEW_URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.(pinggy\.link|pinggy-free\.link|free\.pinggy\.net)' "$TUNNEL_LOG" \
+                | grep -v 'dashboard\.' | head -n 1)
+      [ -z "$NEW_URL" ] && continue
+
+      if [ "$NEW_URL" != "$CURRENT_URL" ]; then
+        echo "♻️  New tunnel URL: $NEW_URL"
+        CURRENT_URL="$NEW_URL"
+      fi
+
       curl -s -X POST "$PROXY_URL/_proxy/register" \
         -H "Content-Type: application/json" \
-        -d "{\"url\":\"$TUNNEL_URL\",\"token\":\"${PROXY_AUTH_TOKEN:-azmew_token}\"}" >/dev/null
+        -d "{\"url\":\"$CURRENT_URL\",\"token\":\"${PROXY_AUTH_TOKEN:-eksamadhan_token}\"}" >/dev/null
     done
   ) &
   KEEPALIVE_PID=$!
