@@ -54,9 +54,19 @@ thread list becomes a back-navigable screen.
 **Widget:** 380×560px anchored bottom-right, 20px inset; full-screen below 480px.
 Must respect `env(safe-area-inset-bottom)` on mobile.
 
+## Reference implementation
+
+`design-refs/inbox-v3@2x.png` is the approved inbox layout. Its README lists four
+inconsistencies to correct when building — read it before starting Phase 3.
+
 ## Chat thread specifics
 
-- Customer messages left, AI/agent right.
+- Three speakers, three treatments: **customer** white with a 1px border, left;
+  **AI** grey `--ai`, right, with a confidence label beneath; **agent** blue
+  `--accent` with white text, right. Alignment alone is not enough to tell customer
+  from AI when both are grey.
+- AI bubbles carry `NN% confident · AI Reply` in `--text-muted` 12px beneath, amber
+  below the 70% threshold. Agent-only — never rendered to the customer.
 - System notes (*"Chat handed over to Agent Priya"*) centred, `--text-muted`, 12px,
   no bubble. Internal only — never sent to the customer.
 - Typing indicator while the AI is generating; without it the wait reads as broken.

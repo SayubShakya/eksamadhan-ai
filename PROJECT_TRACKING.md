@@ -85,6 +85,9 @@ expire after 7 days — re-send if it lapses.
 - [x] Secured the webhook: `X-Hub-Signature-256` verification with constant-time
       comparison, plus the proxy raw-body fix it depends on; rebranded the frontend
 
+- [x] Designed the UI in UX Pilot — app home, empty inbox and populated agent inbox;
+      exports and implementation notes in `docs/design-refs/`
+
 **Blockers**
 
 - A real database password was committed in the PoC repo's history — needs rotating.
@@ -124,6 +127,9 @@ expire after 7 days — re-send if it lapses.
 
 - [x] Secured the webhook: `X-Hub-Signature-256` verification with constant-time
       comparison, plus the proxy raw-body fix it depends on; rebranded the frontend
+
+- [x] Designed the UI in UX Pilot — app home, empty inbox and populated agent inbox;
+      exports and implementation notes in `docs/design-refs/`
 
 **Blockers**
 -

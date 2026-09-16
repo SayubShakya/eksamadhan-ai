@@ -148,6 +148,11 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 
 ## Change log
 
+- **2026-09-16** — UI designed in UX Pilot and exported to `docs/design-refs/`
+  (home, empty inbox, populated inbox). Established a shared frame: 64px left nav rail
+  plus a top bar carrying the availability selector, search and user. `inbox-v3`
+  predates that frame and needs regenerating before Phase 3.
+
 - **2026-09-16** — CodeRabbit installed (Open Source plan). **Reviews are manual**:
   the free plan gates automatic review behind 10+ repo stars, so each PR needs a
   `@coderabbitai review` comment. The `auto_review` setting in `.coderabbit.yaml` has
