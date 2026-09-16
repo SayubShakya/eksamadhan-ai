@@ -25,6 +25,9 @@ Read this before writing code. It overrides default habits.
   CodeRabbit (configured in `.coderabbit.yaml`) can review it. A push straight to
   `main` is never reviewed.
 - Branch names: `feat/...`, `fix/...`, `docs/...`, `chore/...`.
+- **Reviews must be triggered manually.** CodeRabbit's free OSS plan only auto-reviews
+  repositories with 10+ GitHub stars; this one has none. After opening a PR, comment
+  `@coderabbitai review` (or tick "Trigger review" in its bot comment).
 - Address CodeRabbit's comments before merging, or reply saying why not — the PR
   thread is evidence of process for the final report.
 - CodeRabbit is a reviewer, not an authority. It will flag things that do not matter
