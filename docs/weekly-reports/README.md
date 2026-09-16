@@ -22,10 +22,10 @@ The supervisor's requirements for this project:
 5. The log must match the work actually committed to the repository.
 6. The weekly report will not be signed if the work is not reflected in the Git repo.
 
-Point 5 is why each report ends with the commit range it covers. Before submitting,
-regenerate the evidence with:
+For point 5, check the report against the repository before submitting:
 
 ```bash
-git log --since=<week start> --until=<week end> \
-        --pretty='- %ad `%h` %s' --date=short
+git log --since=<week start> --until=<week end> --pretty='- %ad %s' --date=short
 ```
+
+Every task listed in the report should correspond to commits in that range.

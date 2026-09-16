@@ -34,3 +34,6 @@ dist/
 # Logs
 *.log
 **/*.log
+
+# Word/Excel lock files
+~$*
