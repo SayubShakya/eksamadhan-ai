@@ -71,12 +71,6 @@ export default function App() {
     const [messages, setMessages] = useState([]);
     const [active, setActive] = useState(null);
     const [filter, setFilter] = useState('all');
-    // Availability survives a refresh — an agent who set themselves Busy should not
-    // silently come back Online.
-    const [availability, setAvailability] = useState(() => {
-        try { return localStorage.getItem('availability') || 'online'; }
-        catch { return 'online'; }
-    });
     const [query, setQuery] = useState('');
     const [sendError, setSendError] = useState('');
 
@@ -87,10 +81,6 @@ export default function App() {
         catch { return new Set(); }
     });
     const lastPayload = useRef('');
-
-    useEffect(() => {
-        try { localStorage.setItem('availability', availability); } catch { /* private mode */ }
-    }, [availability]);
 
     const pages = status?.data?.pages ?? [];
 
@@ -340,8 +330,6 @@ export default function App() {
             />
             <div className="main">
                 <TopBar
-                    availability={availability}
-                    onAvailabilityChange={setAvailability}
                     query={query}
                     onQueryChange={(v) => { setQuery(v); if (v && view !== 'inbox') setView('inbox'); }}
                     user={user}
@@ -359,6 +347,8 @@ export default function App() {
                         pages={pages}
                         threadCount={allThreads.length}
                         todayCount={todayCount}
+                        recent={allThreads.slice(0, 5)}
+                        onOpenConversation={(thread) => { setActive(thread); setView('inbox'); }}
                         onConnect={handleConnect}
                         onNavigate={setView}
                     />
