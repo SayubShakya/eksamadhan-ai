@@ -66,6 +66,7 @@ export function buildThreads(messages, pages, filter) {
         return {
             customerId,
             name: inbound?.senderName || `User ${String(customerId).slice(-8)}`,
+            avatarUrl: msgs.find(m => m.direction === 'inbound' && m.senderAvatarUrl)?.senderAvatarUrl || null,
             pageId: msgs.find(m => m.pageId)?.pageId,
             messages: msgs,
             last,

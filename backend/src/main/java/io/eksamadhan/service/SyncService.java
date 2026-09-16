@@ -291,10 +291,59 @@ public class SyncService {
 
 
     /**
-     * Utility: Convert ISO timestamp to LocalDateTime
+     * Fills in customer names and profile pictures.
+     *
+     * Messages stored before profile lookup existed have neither, and Meta's photo URLs
+     * expire, so this refreshes them on every sync rather than only on first contact.
+     * One Graph call per customer, not per message.
      */
     @Transactional
-    public void saveOutboundMessage(String messageId, String recipientId, String text, UUID pageId, String replyToId, String tenantId) {
+    public void refreshCustomerProfiles(SocialPage page) {
+        List<SocialMessage> messages = messageRepository.findByPageId(page.getPageId());
+
+        Set<String> customerIds = messages.stream()
+                .filter(m -> "inbound".equals(m.getDirection()))
+                .map(SocialMessage::getSenderId)
+                .filter(id -> id != null && !id.equals(page.getPageId()))
+                .collect(java.util.stream.Collectors.toSet());
+
+        for (String customerId : customerIds) {
+            try {
+                Map profile = metaService.getUserProfile(customerId, page.getAccessToken()).block();
+                if (profile == null || profile.isEmpty()) continue;
+
+                String first = (String) profile.get("first_name");
+                String last = (String) profile.get("last_name");
+                String name = ((first == null ? "" : first) + " " + (last == null ? "" : last)).trim();
+                String avatar = (String) profile.get("profile_pic");
+                if (name.isBlank() && avatar == null) continue;
+
+                for (SocialMessage m : messages) {
+                    if (!customerId.equals(m.getSenderId())) continue;
+                    if (!name.isBlank()) m.setSenderName(name);
+                    if (avatar != null) m.setSenderAvatarUrl(avatar);
+                }
+                log.info("👤 Refreshed profile for {} ({})", name.isBlank() ? customerId : name, customerId);
+            } catch (Exception e) {
+                log.debug("Profile refresh failed for {}: {}", customerId, e.getMessage());
+            }
+        }
+
+        messageRepository.saveAll(messages);
+    }
+
+    /**
+     * Utility: Convert ISO timestamp to LocalDateTime
+     */
+
+    public void saveOutboundMessage(String messageId, String recipientId, String text, UUID pageId,
+                                    String replyToId, String tenantId) {
+        saveOutboundMessage(messageId, recipientId, text, pageId, replyToId, tenantId, null, null);
+    }
+
+    public void saveOutboundMessage(String messageId, String recipientId, String text, UUID pageId,
+                                    String replyToId, String tenantId,
+                                    String attachmentType, String attachmentUrl) {
         SocialPage page = socialPageRepository.findById(pageId)
                 .orElseThrow(() -> new RuntimeException("Page not found during save: " + pageId));
 
@@ -312,6 +361,8 @@ public class SyncService {
                 .tenantId(tenantId)
                 .socialPage(page)
                 .replyToId(replyToId)
+                .attachmentType(attachmentType)
+                .attachmentUrl(attachmentUrl)
                 .timestamp(Instant.now().atZone(ZoneId.of("UTC")))
                 .build();
 

@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { IconClose, IconUpload } from './icons.jsx';
+import { IconClose, IconPlus } from './icons.jsx';
 import Avatar from './Avatar.jsx';
 import { fileToAvatar } from '../lib/avatar.js';
-
-const ROLES = ['Owner', 'Admin', 'Agent'];
 
 /**
  * Edit the agent profile shown in the top bar.
@@ -17,8 +15,12 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
     const [error, setError] = useState('');
     const fileRef = useRef(null);
 
-    // Re-seed whenever the panel opens, so cancelling really discards.
-    useEffect(() => { if (open) { setDraft(user); setError(''); } }, [open, user]);
+    // Seed only when the panel opens. Depending on `user` too would reset the form
+    // mid-edit whenever the profile object changed identity.
+    useEffect(() => {
+        if (open) { setDraft(user); setError(''); }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
 
     useEffect(() => {
         if (!open) return;
@@ -47,15 +49,18 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
     const submit = (e) => {
         e.preventDefault();
         if (!firstName) return;
-        onSave({ ...draft, firstName, lastName: draft.lastName.trim() });
+        const failed = onSave({ ...draft, firstName, lastName: draft.lastName.trim() });
+        if (failed) { setError(failed); return; }   // keep the panel open so nothing is lost
         onClose();
     };
 
     return (
         <>
-            <div className="scrim" onClick={onClose} aria-hidden="true" />
+            {/* Transparent catcher: closes on an outside click without dimming the page,
+                which would be heavy-handed for a menu hanging off the avatar. */}
+            <div className="popover__catcher" onClick={onClose} aria-hidden="true" />
 
-            <aside className="panel" role="dialog" aria-modal="true" aria-label="Edit profile">
+            <div className="popover" role="dialog" aria-label="Edit profile">
                 <header className="panel__head">
                     <h2 className="panel__title">Edit profile</h2>
                     <button className="icon-btn" onClick={onClose} aria-label="Close">
@@ -64,36 +69,29 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
                 </header>
 
                 <form className="panel__body" onSubmit={submit}>
-                    <div className="panel__identity">
-                        <Avatar user={draft} size={64} />
-                        <div className="panel__avatarActions">
-                            <input
-                                ref={fileRef}
-                                type="file"
-                                accept="image/*"
-                                onChange={pickFile}
-                                hidden
-                            />
+                    <div className="panel__identity panel__identity--solo">
+                        <input
+                            ref={fileRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={pickFile}
+                            hidden
+                        />
+
+                        {/* The whole avatar is the upload target, with a + badge to make
+                            that discoverable — the same pattern people know from social apps. */}
+                        <div className="avatarEdit">
                             <button
                                 type="button"
-                                className="btn btn--secondary btn--sm"
+                                className="avatarEdit__hit"
                                 onClick={() => fileRef.current?.click()}
+                                aria-label={draft.avatar ? 'Change photo' : 'Upload photo'}
                             >
-                                <IconUpload /> {draft.avatar ? 'Change photo' : 'Upload photo'}
+                                <Avatar user={draft} size={68} />
+                                <span className="avatarEdit__badge" aria-hidden="true">
+                                    <IconPlus size={13} />
+                                </span>
                             </button>
-                            {draft.avatar ? (
-                                <button
-                                    type="button"
-                                    className="btn btn--sm btn--link"
-                                    onClick={() => setDraft(d => ({ ...d, avatar: null }))}
-                                >
-                                    Remove
-                                </button>
-                            ) : (
-                                <p className="panel__hint">
-                                    Otherwise your initials are used.
-                                </p>
-                            )}
                         </div>
                     </div>
 
@@ -122,15 +120,15 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
                         </label>
                     </div>
 
-                    <label className="field">
+                    {/* Read-only: letting people set their own role would let any agent
+                        promote themselves. Roles are assigned when inviting (FR-04). */}
+                    <div className="field">
                         <span className="field__label">Role</span>
-                        <select
-                            value={draft.role}
-                            onChange={(e) => setDraft({ ...draft, role: e.target.value })}
-                        >
-                            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                        </select>
-                    </label>
+                        <p className="field__static">
+                            {draft.role}
+                            <span className="field__note">Set by your workspace admin</span>
+                        </p>
+                    </div>
 
                     <label className="field">
                         <span className="field__label">Email</span>
@@ -156,7 +154,7 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
                         </button>
                     </div>
                 </form>
-            </aside>
+            </div>
         </>
     );
 }

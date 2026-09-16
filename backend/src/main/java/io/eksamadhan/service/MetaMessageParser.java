@@ -27,6 +27,10 @@ public class MetaMessageParser {
 
     private final SocialPageRepository pageRepository;
     private final SocialMessageRepository messageRepository;
+    private final MetaService metaService;
+
+    /** Profiles rarely change; one lookup per customer is plenty. */
+    private final Map<String, Map> profileCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Transactional
     public void processWebhookPayload(Map<String, Object> payload) {
@@ -85,8 +89,19 @@ public class MetaMessageParser {
 
                 String mid = (String) message.get("mid");
                 String text = (String) message.get("text");
-                if (text == null || text.isBlank()) {
-                    text = "[Attachment]";
+
+                // A voice note or photo arrives as an attachment with no text. Keep the
+                // type and URL so the agent can actually play or view it.
+                String attachmentType = null;
+                String attachmentUrl = null;
+                List<Map> attachments = (List<Map>) message.get("attachments");
+                if (attachments != null && !attachments.isEmpty()) {
+                    Map first = attachments.get(0);
+                    attachmentType = (String) first.get("type");
+                    Map payload = (Map) first.get("payload");
+                    if (payload != null) {
+                        attachmentUrl = (String) payload.get("url");
+                    }
                 }
 
                 Long timestampMillis = ((Number) msg.get("timestamp")).longValue();
@@ -106,7 +121,8 @@ public class MetaMessageParser {
                     continue;
                 }
 
-                saveMessage(mid, senderId, recipientId, text, page, timestampMillis);
+                saveMessage(mid, senderId, recipientId, text, page, timestampMillis,
+                        attachmentType, attachmentUrl);
 
             } catch (Exception e) {
                 log.error("Error processing Facebook webhook message", e);
@@ -165,7 +181,14 @@ public class MetaMessageParser {
     }
 
     @Transactional
-    private void saveMessage(String mid, String senderId, String recipientId, String text, SocialPage page, long timestampMillis) {
+    private void saveMessage(String mid, String senderId, String recipientId, String text,
+                             SocialPage page, long timestampMillis) {
+        saveMessage(mid, senderId, recipientId, text, page, timestampMillis, null, null);
+    }
+
+    private void saveMessage(String mid, String senderId, String recipientId, String text,
+                             SocialPage page, long timestampMillis,
+                             String attachmentType, String attachmentUrl) {
         if (messageRepository.existsByMetaMessageId(mid)) {
             return;
         }
@@ -173,16 +196,41 @@ public class MetaMessageParser {
         // Direction: if sender is our page, it's outbound; otherwise inbound
         boolean isPageSender = senderId.equals(page.getPageId());
         String direction = isPageSender ? "outbound" : "inbound";
-        String senderName = isPageSender ? page.getPageName() : "User " + senderId.substring(Math.max(0, senderId.length() - 8));
+
+        String senderName = page.getPageName();
+        String senderAvatarUrl = null;
+
+        if (!isPageSender) {
+            // Fall back to a readable placeholder: Meta withholds profiles until the
+            // page has the right permission, and for people who deleted their account.
+            senderName = "User " + senderId.substring(Math.max(0, senderId.length() - 8));
+            Map profile = profileCache.computeIfAbsent(senderId, id -> {
+                try {
+                    return metaService.getUserProfile(id, page.getAccessToken()).block();
+                } catch (Exception e) {
+                    return java.util.Collections.emptyMap();
+                }
+            });
+            if (profile != null && !profile.isEmpty()) {
+                String first = (String) profile.get("first_name");
+                String last = (String) profile.get("last_name");
+                String full = ((first == null ? "" : first) + " " + (last == null ? "" : last)).trim();
+                if (!full.isBlank()) senderName = full;
+                senderAvatarUrl = (String) profile.get("profile_pic");
+            }
+        }
 
         SocialMessage socialMessage = SocialMessage.builder()
                 .metaMessageId(mid)
                 .externalMessageId(mid)
                 .senderId(senderId)
                 .senderName(senderName)
+                .senderAvatarUrl(senderAvatarUrl)
                 .recipientId(recipientId)
                 .text(text)
                 .content(text)
+                .attachmentType(attachmentType)
+                .attachmentUrl(attachmentUrl)
                 .direction(direction)
                 .platform(page.getPlatform())
                 .pageId(page.getPageId())

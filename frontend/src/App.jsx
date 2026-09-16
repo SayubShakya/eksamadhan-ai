@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import NavRail from './components/NavRail.jsx';
 import TopBar from './components/TopBar.jsx';
 import HomePage from './pages/HomePage.jsx';
@@ -23,6 +23,21 @@ const pathForView = (view) => (view === 'home' ? BASE : `${BASE}/${view}`);
 const MESSAGE_POLL_MS = 1500;
 const STATUS_POLL_MS = 5000;
 const SYNC_MS = 30000;
+
+/** Meta's errors are raw API text; turn the common ones into something actionable. */
+function friendlySendError(err) {
+    const raw = err?.response?.data?.error || err?.response?.data?.details || '';
+    if (/outside.*allowed window|#10\b|policy/i.test(raw)) {
+        return 'Meta will not deliver this — you can only message a customer within 24 hours of their last message.';
+    }
+    if (/access token|#190/i.test(raw)) {
+        return 'The connection to this page has expired. Reconnect it under Channels.';
+    }
+    if (!err?.response) {
+        return 'Could not reach the server. Check that the backend is running.';
+    }
+    return 'The message could not be sent. See the server log for details.';
+}
 
 export default function App() {
     // The section lives in the path, so URLs are shareable and a refresh keeps you
@@ -63,6 +78,8 @@ export default function App() {
         catch { return 'online'; }
     });
     const [query, setQuery] = useState('');
+    const [sendError, setSendError] = useState('');
+    const lastPayload = useRef('');
 
     useEffect(() => {
         try { localStorage.setItem('availability', availability); } catch { /* private mode */ }
@@ -89,9 +106,25 @@ export default function App() {
     });
     const [profileOpen, setProfileOpen] = useState(false);
 
+    /**
+     * Returns an error message instead of throwing, so the panel can show it. Silently
+     * swallowing a failed write makes a lost photo look like a UI bug.
+     */
     const saveProfile = useCallback((next) => {
         setUser(next);
-        try { localStorage.setItem('profile', JSON.stringify(next)); } catch { /* private mode */ }
+        try {
+            const json = JSON.stringify(next);
+            localStorage.setItem('profile', json);
+            // Read back: Safari in private mode accepts the write and drops it.
+            if (localStorage.getItem('profile') !== json) {
+                return 'Your browser did not keep the change. Private browsing blocks saving.';
+            }
+            return null;
+        } catch (err) {
+            return err?.name === 'QuotaExceededError'
+                ? 'There is no room left in browser storage for the photo.'
+                : 'Your browser refused to save the change.';
+        }
     }, []);
 
     const refreshStatus = useCallback(async () => {
@@ -102,14 +135,19 @@ export default function App() {
     const refreshMessages = useCallback(async () => {
         try {
             const data = await api.getMessages(TENANT_ID);
-            // Only replace state when something actually changed, so the thread
-            // does not re-render (and fight the scroll position) on every poll.
-            setMessages(prev => {
-                if (prev.length === data.length && prev[prev.length - 1]?.id === data[data.length - 1]?.id) {
-                    return prev;
-                }
-                return data;
-            });
+
+            // Only replace state when something actually changed, so the thread does not
+            // re-render (and fight the scroll position) on every poll. Compare content
+            // rather than the count and last id: profile pictures and names are
+            // backfilled onto existing rows, which leaves both unchanged.
+            //
+            // The check lives outside setMessages deliberately — a state updater must be
+            // pure, and StrictMode invokes it twice, so writing the ref in there made the
+            // second call discard the update.
+            const next = JSON.stringify(data);
+            if (next === lastPayload.current) return;
+            lastPayload.current = next;
+            setMessages(data);
         } catch (err) { console.error('Failed to fetch messages', err); }
     }, []);
 
@@ -185,12 +223,14 @@ export default function App() {
         window.location.href = api.connectUrl(platform, TENANT_ID);
     };
 
-    const handleSend = async (thread, text) => {
+    const handleSend = async (thread, text, replyToId = null) => {
+        setSendError('');
         const tempId = `temp_${Date.now()}`;
         setMessages(prev => [...prev, {
             id: tempId, direction: 'outbound', text,
             senderId: thread.pageId, recipientId: thread.customerId,
             timestamp: new Date().toISOString(), pageId: thread.pageId,
+            replyToId,
             status: 'sending',
         }]);
 
@@ -199,11 +239,44 @@ export default function App() {
                 pageId: thread.pageId,
                 recipientId: thread.customerId,
                 text,
+                replyToId,
             });
         } catch (err) {
             console.error('Send failed', err);
             setMessages(prev => prev.filter(m => m.id !== tempId));
-            alert(err.response?.data?.error || err.response?.data?.details || 'Failed to send message.');
+            // Inline, not alert(): a modal browser dialog blocks the page and loses the
+            // draft, and Meta's raw error text is meaningless to an agent.
+            setSendError(friendlySendError(err));
+        }
+    };
+
+    const handleSendVoice = async (thread, blob) => {
+        setSendError('');
+        try {
+            await api.sendVoice(TENANT_ID, {
+                blob,
+                recipientId: thread.customerId,
+                pageId: thread.pageId,
+            });
+            refreshMessages();
+        } catch (err) {
+            console.error('Voice send failed', err);
+            setSendError(friendlySendError(err));
+        }
+    };
+
+    const handleSendImage = async (thread, file) => {
+        setSendError('');
+        try {
+            await api.sendImage(TENANT_ID, {
+                file,
+                recipientId: thread.customerId,
+                pageId: thread.pageId,
+            });
+            refreshMessages();
+        } catch (err) {
+            console.error('Image send failed', err);
+            setSendError(friendlySendError(err));
         }
     };
 
@@ -265,9 +338,13 @@ export default function App() {
                         active={active}
                         onSelect={setActive}
                         onSend={handleSend}
+                        onSendVoice={handleSendVoice}
+                        onSendImage={handleSendImage}
                         onConnect={handleConnect}
                         search={query}
                         onSearchChange={setQuery}
+                        sendError={sendError}
+                        onDismissError={() => setSendError('')}
                     />
                 )}
 

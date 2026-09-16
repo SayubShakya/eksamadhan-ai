@@ -37,3 +37,6 @@ dist/
 
 # Word/Excel lock files
 ~$*
+
+# Voice recordings stored by the backend
+backend/media/

@@ -33,6 +33,9 @@ public class SocialMessage {
     private String senderName;
 
     @Column(columnDefinition = "TEXT")
+    private String senderAvatarUrl;   // Meta-hosted profile picture; the URL expires
+
+    @Column(columnDefinition = "TEXT")
     private String text; // Message text content
 
     @Column(columnDefinition = "TEXT")
@@ -53,6 +56,13 @@ public class SocialMessage {
     private String externalMessageId; // Legacy field
 
     private String replyToId; // ID of the message being replied to
+
+    // Attachments: voice notes, images, files. Meta hosts the file and gives us a
+    // signed URL — it expires, so anything needing permanence must be downloaded.
+    private String attachmentType;   // "audio", "image", "video", "file"
+
+    @Column(columnDefinition = "TEXT")
+    private String attachmentUrl;
 
 
     private ZonedDateTime timestamp;

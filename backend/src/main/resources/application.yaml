@@ -21,3 +21,10 @@ server:
 
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:5174}
+  # Voice notes recorded in the dashboard are transcoded and kept here so agents can
+  # replay what they sent. Meta's own copy is not fetchable after the fact.
+  media-dir: ${MEDIA_DIR:media}
+
+spring.servlet.multipart:
+  max-file-size: 25MB
+  max-request-size: 25MB

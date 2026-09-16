@@ -171,11 +171,96 @@ public class MetaService {
      * Send a message to a recipient
      */
     public Mono<Map> sendMessage(String recipientId, String text, String pageAccessToken) {
-        Map<String, Object> body = Map.of(
-            "recipient", Map.of("id", recipientId),
-            "message", Map.of("text", text)
-        );
+        return sendMessage(recipientId, text, pageAccessToken, null);
+    }
 
+    /**
+     * @param replyToMid when set, Meta threads this as a reply to that message, so the
+     *                   customer sees the quoted original in Messenger or Instagram.
+     *
+     * `reply_to` is a top-level field, not part of `message` — nesting it returns
+     * "(#100) Invalid keys \"reply_to\" were found in param \"message\"".
+     *
+     * Not every conversation accepts it (it depends on the channel and the age of the
+     * message), so a rejection falls back to sending the text on its own: losing the
+     * quote is better than losing the reply.
+     */
+    public Mono<Map> sendMessage(String recipientId, String text, String pageAccessToken, String replyToMid) {
+        if (replyToMid == null || replyToMid.isBlank()) {
+            return post(buildBody(recipientId, text, null), pageAccessToken);
+        }
+
+        return post(buildBody(recipientId, text, replyToMid), pageAccessToken)
+                .onErrorResume(err -> {
+                    log.warn("Reply-to rejected by Meta, resending without the quote: {}", err.getMessage());
+                    return post(buildBody(recipientId, text, null), pageAccessToken);
+                });
+    }
+
+    private Map<String, Object> buildBody(String recipientId, String text, String replyToMid) {
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("recipient", Map.of("id", recipientId));
+        body.put("message", Map.of("text", text));
+        if (replyToMid != null && !replyToMid.isBlank()) {
+            body.put("reply_to", Map.of("mid", replyToMid));
+        }
+        return body;
+    }
+
+    /**
+     * Sends an audio file as an attachment. Meta accepts the file directly as multipart,
+     * which avoids having to host it on a publicly reachable URL first.
+     */
+    public Mono<Map> sendAudio(String recipientId, java.io.File file, String pageAccessToken) {
+        return sendAttachment(recipientId, file, "audio", "audio/mp4", pageAccessToken);
+    }
+
+    /**
+     * Fetches a customer's public profile. Meta only exposes this for people who have
+     * messaged the page, and it can fail (deleted account, or the permission not yet
+     * granted), so callers treat an empty result as normal.
+     */
+    public Mono<Map> getUserProfile(String psid, String pageAccessToken) {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder.path("/{psid}")
+                        .queryParam("fields", "first_name,last_name,profile_pic")
+                        .queryParam("access_token", pageAccessToken)
+                        .build(psid))
+                .retrieve()
+                .bodyToMono(Map.class)
+                .onErrorResume(err -> {
+                    log.debug("Could not fetch profile for {}: {}", psid, err.getMessage());
+                    return Mono.empty();
+                });
+    }
+
+    public Mono<Map> sendAttachment(String recipientId, java.io.File file, String type,
+                                    String contentType, String pageAccessToken) {
+        var builder = new org.springframework.http.client.MultipartBodyBuilder();
+        builder.part("recipient", "{\"id\":\"" + recipientId + "\"}");
+        builder.part("message", "{\"attachment\":{\"type\":\"" + type + "\",\"payload\":{\"is_reusable\":false}}}");
+        builder.part("filedata", new org.springframework.core.io.FileSystemResource(file))
+               .header("Content-Type", contentType);
+        var parts = builder.build();
+
+        return webClient.post()
+                .uri(uriBuilder -> uriBuilder.path("/me/messages")
+                        .queryParam("access_token", pageAccessToken)
+                        .build())
+                .contentType(org.springframework.http.MediaType.MULTIPART_FORM_DATA)
+                .bodyValue(parts)
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                        clientResponse -> clientResponse.bodyToMono(String.class)
+                                .flatMap(errorBody -> {
+                                    log.error("❌ Meta API Error (audio): {}", errorBody);
+                                    return Mono.error(new RuntimeException("Meta API Error: " + errorBody));
+                                }))
+                .bodyToMono(Map.class)
+                .doOnSuccess(res -> log.info("📎 {} attachment sent: {}", type, res != null ? res.get("message_id") : "?"));
+    }
+
+    private Mono<Map> post(Map<String, Object> body, String pageAccessToken) {
         return webClient.post()
                 .uri(uriBuilder -> uriBuilder
                         .path("/me/messages")
@@ -190,7 +275,7 @@ public class MetaService {
                                     return Mono.error(new RuntimeException("Meta API Error: " + errorBody));
                                 }))
                 .bodyToMono(Map.class)
-                .doOnSuccess(res -> log.info("✅ Message sent to recipient {}", recipientId))
+                .doOnSuccess(res -> log.info("✅ Message sent: {}", res != null ? res.get("message_id") : "?"))
                 .doOnError(err -> log.error("❌ Failed to send message: {}", err.getMessage()));
     }
 }

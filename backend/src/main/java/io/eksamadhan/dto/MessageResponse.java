@@ -18,10 +18,14 @@ public class MessageResponse {
     private String text;
     private String senderId;
     private String senderName;
+    private String senderAvatarUrl;
     private String recipientId;
     private String pageId;
     private String direction;    // "inbound" or "outbound"
     private String platform;     // "facebook", "instagram" (lowercase)
     private String timestamp;    // ISO 8601
     private String metaMessageId;
+    private String replyToId;   // metaMessageId of the message this one answers
+    private String attachmentType;
+    private String attachmentUrl;
 }

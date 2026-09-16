@@ -18,10 +18,15 @@ export const IconSend = (p) => <svg {...s({ size: p.size || 16 })}><path d="M22 
 export const IconPlus = (p) => <svg {...s({ size: p.size || 16 })}><path d="M12 5v14" /><path d="M5 12h14" /></svg>;
 export const IconBolt = (p) => <svg {...s({ size: p.size || 18 })} fill="currentColor" stroke="none"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z" /></svg>;
 export const IconChevronLeft = (p) => <svg {...s(p)}><path d="M15 18l-6-6 6-6" /></svg>;
+export const IconTrash = (p) => <svg {...s({ size: p.size || 14 })}><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /></svg>;
 export const IconUser = (p) => <svg {...s(p)}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>;
 export const IconUpload = (p) => <svg {...s({ size: p.size || 15 })}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 9l5-5 5 5" /><path d="M12 4v12" /></svg>;
 export const IconMenu = (p) => <svg {...s(p)}><path d="M3 6h18" /><path d="M3 12h18" /><path d="M3 18h18" /></svg>;
 export const IconClose = (p) => <svg {...s(p)}><path d="M18 6L6 18" /><path d="M6 6l12 12" /></svg>;
+export const IconImage = (p) => <svg {...s(p)}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>;
+export const IconMic = (p) => <svg {...s(p)}><rect x="9" y="2" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0" /><path d="M12 18v4" /></svg>;
+export const IconStop = (p) => <svg {...s(p)} fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>;
+export const IconReply = (p) => <svg {...s({ size: p.size || 15 })}><path d="M9 17l-5-5 5-5" /><path d="M4 12h10a6 6 0 0 1 6 6v1" /></svg>;
 export const IconBack = (p) => <svg {...s(p)}><path d="M19 12H5" /><path d="M11 18l-6-6 6-6" /></svg>;
 export const IconArrowRight = (p) => <svg {...s({ size: p.size || 14 })}><path d="M5 12h14" /><path d="M13 6l6 6-6 6" /></svg>;
 export const IconCheck = (p) => <svg {...s({ size: p.size || 14 })}><path d="M20 6L9 17l-5-5" /></svg>;

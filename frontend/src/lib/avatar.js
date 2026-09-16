@@ -32,7 +32,14 @@ export function fileToAvatar(file) {
             const h = img.height * scale;
             ctx.drawImage(img, (SIZE - w) / 2, (SIZE - h) / 2, w, h);
 
-            resolve(canvas.toDataURL('image/jpeg', 0.82));
+            // Step the quality down if the result is still large, so a photo can never
+            // fill the storage budget and make the save fail.
+            let out = canvas.toDataURL('image/jpeg', 0.82);
+            for (const q of [0.6, 0.4]) {
+                if (out.length <= 120_000) break;
+                out = canvas.toDataURL('image/jpeg', q);
+            }
+            resolve(out);
         };
 
         img.onerror = () => {
