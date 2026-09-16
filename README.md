@@ -79,8 +79,9 @@ Rationale for each choice is in the contextual report §5.2, summarised in
 ```
 backend/    Spring Boot API — Meta OAuth, webhooks, message ingestion
 frontend/   React + Vite agent dashboard (unified inbox)
+meta-proxy/ Vercel proxy giving Meta a stable webhook/callback URL in development
 docs/       Specification, architecture, phases, design, project memory
-run.sh      Starts backend and frontend together
+run.sh      Starts database, tunnel, backend and frontend together
 ```
 
 ## Getting started

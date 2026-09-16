@@ -37,6 +37,23 @@ Swapping Pinecone for pgvector or Spring for FastAPI would contradict §5.2 and 
 Latency is a stated objective, not a nice-to-have. Every external call needs a timeout
 budget that keeps the total under 2s.
 
+## 2b. Local development and Meta callbacks
+
+Meta will only call one fixed HTTPS URL, but local development runs behind a Pinggy
+tunnel whose address changes on every restart and expires after 60 minutes on the
+free tier. `meta-proxy/` resolves this:
+
+```
+Meta → https://<fixed>.vercel.app → [Upstash Redis: current tunnel URL] → Pinggy → localhost:8080
+```
+
+`run.sh` starts the tunnel, POSTs the new URL to `/_proxy/register` on the proxy, and
+re-registers every 5 minutes. The Meta app dashboard is configured **once** with the
+proxy URL and never touched again.
+
+This is development scaffolding only — in production the backend has a real domain
+and the proxy is removed from the path.
+
 ## 3. Repo layout
 
 ```
@@ -61,6 +78,7 @@ eksamadhan-ai/
 │  └─ src/test/java/
 ├─ frontend/                     # React + Vite dashboard
 ├─ widget/                       # embeddable website chat widget
+├─ meta-proxy/                   # Vercel proxy giving Meta a stable callback URL
 └─ docs/
 ```
 

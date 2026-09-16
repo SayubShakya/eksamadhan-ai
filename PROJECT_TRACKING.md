@@ -16,7 +16,7 @@ Weekly log due: **every Monday** (next: 2026-09-21)
 | 1 | GitHub repo created | ✅ done — 2026-09-15 |
 | 1b | `kcpawan@gmail.com` added as collaborator | 🔄 invited 2026-09-15 — awaiting acceptance |
 | 2 | All work committed to the repo | 🔄 ongoing |
-| 3 | Project environment setup, reflected in repo | 🔄 code migrated, build not yet verified |
+| 3 | Project environment setup, reflected in repo | ✅ done — 2026-09-16, verified running |
 | 4 | Weekly log submitted every Monday | 🔄 ongoing |
 | 5 | Log entries match actual commits | 🔄 ongoing |
 | 7 | Final report document in repo, tracked there | 🔄 outline in `docs/FINAL_REPORT.md` |
@@ -47,8 +47,9 @@ expire after 7 days — re-send if it lapses.
       `frontend/` — Meta OAuth (FB+IG), webhook ingestion, React inbox. Package
       renamed to `io.eksamadhan`, MySQL→PostgreSQL, DB password removed from source,
       `docker-compose.yml` added; original PoC folder removed from the project
-- [ ] Project environment setup committed — Phase 0 in `docs/phases.md`
-      (blocked: no Maven wrapper, no JDK 21 — build unverified)
+- [x] **Phase 0 environment setup complete** — backend compiles and boots against
+      PostgreSQL 16 via docker-compose, schema auto-created, webhook endpoint
+      verified, frontend builds. Toolchain: JDK 21 + Maven 3.9.16
 
 **Commits this week**
 
@@ -66,10 +67,11 @@ expire after 7 days — re-send if it lapses.
 - **Submit the Meta App Review request** — `pages_messaging` and
   `instagram_manage_messages` gate Phase 1 and approval can take weeks
 
+- [x] Migrated `meta-proxy/` into the project; `run.sh` now registers the tunnel and
+      keeps it alive, and fixed the tunnel URL parsing bug
+
 **Blockers**
 
-- Maven wrapper missing (`.mvn/` was git-ignored in the PoC) and no JDK 21 installed,
-  so the migrated backend has not been compiled or run yet.
 - A real database password was committed in the PoC repo's history — needs rotating.
 
 ---
@@ -86,6 +88,9 @@ expire after 7 days — re-send if it lapses.
 
 **Plan for next week**
 -
+
+- [x] Migrated `meta-proxy/` into the project; `run.sh` now registers the tunnel and
+      keeps it alive, and fixed the tunnel URL parsing bug
 
 **Blockers**
 -

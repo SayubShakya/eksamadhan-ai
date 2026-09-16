@@ -108,6 +108,12 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
   POSTs are accepted. Must be fixed before any public deployment.
 - Meta access tokens are stored in plaintext in `social_pages.access_token`.
 
+- **Pinggy free tunnels expire after 60 minutes** and hand out a new hostname each
+  restart. Hence `meta-proxy/`. Re-registration runs every 5 minutes from `run.sh`.
+- `run.sh` originally matched only `*.pinggy.link` when parsing the tunnel URL, but
+  Pinggy now issues `*.run.pinggy-free.link` and `*.free.pinggy.net` — so it reported
+  "Tunnel failed" while the tunnel was actually up. Fixed 2026-09-16.
+
 ### Inherited from the PoC's own bug list (verify each still applies)
 - **Delete cascade order**: `social_messages.social_page_id` FKs to `social_pages`,
   which FKs to `tenants`. Deletes must run messages → pages → tenant or the FK blows up.
@@ -133,6 +139,9 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 - Phases are sequential — see `phases.md`.
 
 ## Change log
+
+- **2026-09-16** — Migrated `meta-proxy/` (Vercel + Upstash Redis) into the repo and
+  wired `run.sh` to register the live tunnel with it. Fixed the tunnel URL regex.
 
 - **2026-09-16** — Fixed `run.sh` for macOS: it carried Windows `taskkill` calls and
   GNU `sed -i` syntax that fail on BSD sed. Now also starts PostgreSQL via docker

@@ -35,6 +35,12 @@ docker compose -f "$ROOT_DIR/docker-compose.yml" up -d >/dev/null 2>&1 || {
 }
 
 # 🌐 2. START TUNNEL (Pinggy)
+# Pull proxy settings from the backend env file if present
+if [ -f "$ENV_FILE" ]; then
+  PROXY_URL=$(grep -E '^PROXY_URL=' "$ENV_FILE" | cut -d= -f2-)
+  PROXY_AUTH_TOKEN=$(grep -E '^PROXY_AUTH_TOKEN=' "$ENV_FILE" | cut -d= -f2-)
+fi
+
 echo "🌐 Starting Pinggy Tunnel (Port 8080)..."
 pkill -f 'a.pinggy.io' 2>/dev/null || true
 > "$TUNNEL_LOG"
@@ -49,7 +55,7 @@ COUNT=0
 while [ -z "$TUNNEL_URL" ] && [ $COUNT -lt $MAX_RETRIES ]; do
   sleep 1
   if grep -q "https://" "$TUNNEL_LOG"; then
-     TUNNEL_URL=$(grep -o 'https://[^ ]*\.pinggy\.link' "$TUNNEL_LOG" | head -n 1)
+     TUNNEL_URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.(pinggy\.link|pinggy-free\.link|free\.pinggy\.net|pinggy\.io)' "$TUNNEL_LOG" | head -n 1)
   fi
   COUNT=$((COUNT+1))
   echo -n "."
@@ -70,11 +76,37 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 
 echo "📝 Updating Redirect URIs..."
+PUBLIC_URL="${PROXY_URL:-$TUNNEL_URL}"
 SED_INPLACE=(-i '')
 [ "$(uname)" = "Linux" ] && SED_INPLACE=(-i)
-sed "${SED_INPLACE[@]}" "s|FACEBOOK_REDIRECT_URI=.*|FACEBOOK_REDIRECT_URI=${TUNNEL_URL}/api/auth/facebook/callback|" "$ENV_FILE"
-sed "${SED_INPLACE[@]}" "s|INSTAGRAM_REDIRECT_URI=.*|INSTAGRAM_REDIRECT_URI=${TUNNEL_URL}/api/auth/instagram/callback|" "$ENV_FILE"
+sed "${SED_INPLACE[@]}" "s|FACEBOOK_REDIRECT_URI=.*|FACEBOOK_REDIRECT_URI=${PUBLIC_URL}/api/auth/facebook/callback|" "$ENV_FILE"
+sed "${SED_INPLACE[@]}" "s|INSTAGRAM_REDIRECT_URI=.*|INSTAGRAM_REDIRECT_URI=${PUBLIC_URL}/api/auth/instagram/callback|" "$ENV_FILE"
 
+
+# 📡 3b. REGISTER TUNNEL WITH THE META PROXY
+# Meta needs one fixed URL, but the Pinggy URL changes on every restart. The Vercel
+# proxy holds the current tunnel in Redis and forwards to it.
+if [ -n "$PROXY_URL" ] && [ "$TUNNEL_URL" != "http://localhost:8080" ]; then
+  echo "📡 Registering tunnel with Meta proxy..."
+  REG=$(curl -s -X POST "$PROXY_URL/_proxy/register" \
+        -H "Content-Type: application/json" \
+        -d "{\"url\":\"$TUNNEL_URL\",\"token\":\"${PROXY_AUTH_TOKEN:-azmew_token}\"}")
+  echo "   $REG"
+
+  # Pinggy free tunnels expire after 60 minutes; re-register periodically.
+  (
+    while true; do
+      sleep 300
+      curl -s -X POST "$PROXY_URL/_proxy/register" \
+        -H "Content-Type: application/json" \
+        -d "{\"url\":\"$TUNNEL_URL\",\"token\":\"${PROXY_AUTH_TOKEN:-azmew_token}\"}" >/dev/null
+    done
+  ) &
+  KEEPALIVE_PID=$!
+elif [ -z "$PROXY_URL" ]; then
+  echo "ℹ️  PROXY_URL not set — skipping proxy registration."
+  echo "   Set PROXY_URL and PROXY_AUTH_TOKEN in $ENV_FILE to use the fixed Meta URL."
+fi
 
 # ☕ 4. BUILD & START BACKEND
 echo "☕ Starting Java Backend (Spring Boot + PostgreSQL)..."
@@ -103,13 +135,13 @@ echo "👉 TUNNEL:    $TUNNEL_URL"
 echo ""
 echo "📱 META (FACEBOOK/INSTAGRAM) CONFIGURATION:"
 echo "--------------------------------------------------------"
-echo "🔗 App Domains:          $(echo $TUNNEL_URL | sed 's|https://||')"
-echo "🔗 Privacy Policy URL:    $TUNNEL_URL/api/auth/privacy"
-echo "🔗 Terms of Service URL:  $TUNNEL_URL/api/auth/privacy"
+echo "🔗 App Domains:          $(echo $PUBLIC_URL | sed 's|https://||')"
+echo "🔗 Privacy Policy URL:    $PUBLIC_URL/api/auth/privacy"
+echo "🔗 Terms of Service URL:  $PUBLIC_URL/api/auth/privacy"
 echo ""
-echo "🔗 FB Redirect URI:       ${TUNNEL_URL}/api/auth/facebook/callback"
-echo "🔗 IG Redirect URI:       ${TUNNEL_URL}/api/auth/instagram/callback"
-echo "🔗 Webhook Callback URL:  ${TUNNEL_URL}/api/webhook"
+echo "🔗 FB Redirect URI:       ${PUBLIC_URL}/api/auth/facebook/callback"
+echo "🔗 IG Redirect URI:       ${PUBLIC_URL}/api/auth/instagram/callback"
+echo "🔗 Webhook Callback URL:  ${PUBLIC_URL}/api/webhook"
 echo "🔗 Webhook Verify Token:  eksamadhan_verify_token"
 echo "--------------------------------------------------------"
 echo "Check backend.log and frontend.log for details."
@@ -119,7 +151,7 @@ echo "Press Ctrl+C to stop all services."
 cleanup() {
     echo ""
     echo "🛑 Shutting down all services..."
-    kill $BACKEND_PID $FRONTEND_PID $TUNNEL_PID 2>/dev/null
+    kill $BACKEND_PID $FRONTEND_PID $TUNNEL_PID $KEEPALIVE_PID 2>/dev/null
     echo "👋 Goodbye!"
 }
 trap cleanup EXIT

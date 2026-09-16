@@ -9,18 +9,17 @@ to the supervisor** — not when the code exists locally.
 
 ---
 
-## Phase 0 — Environment setup 🔄
+## Phase 0 — Environment setup ✅
 *Not in the report's table, but college requirement 3 demands it in week 1.*
 
 - [x] Spring Boot backend in `backend/` (migrated from the PoC)
 - [x] React + Vite frontend in `frontend/`
 - [x] `docker-compose.yml` for PostgreSQL
 - [x] `.env.example`, secrets externalised out of `application.yaml`
-- [ ] **Maven wrapper is missing** — `.mvn/` was git-ignored in the PoC, so `./mvnw`
-      cannot run. Restore it or install Maven.
-- [ ] **JDK 21 not installed** — the pom targets 21; this machine has 17 and 24.
-- [ ] Verify the build compiles and boots against PostgreSQL
-- [ ] README setup steps
+- [x] Maven wrapper regenerated; JDK 21 + Maven 3.9.16 installed
+- [x] Build verified: compiles, boots on PostgreSQL 16, schema auto-created,
+      webhook verification endpoint responds correctly, frontend builds
+- [x] README setup steps
 - **Done when:** a clean clone builds and runs in two commands
 
 ## Phase 1 — Foundation (Weeks 1–3) ⬜
@@ -36,7 +35,7 @@ Meta Graph API integration"*
 - [x] React unified inbox with polling, send-reply endpoint
 
 **Still to do:**
-- [ ] Port MySQL → PostgreSQL and confirm the schema builds
+- [x] Port MySQL → PostgreSQL — verified, all three tables created
 - [ ] Replace `ddl-auto: update` with Flyway migrations, then set `validate`
 - [ ] **Webhook signature verification** (`X-Hub-Signature-256`) — the PoC verifies
       the subscription handshake but does not verify payload signatures, so anyone
