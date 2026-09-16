@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-    IconSearch, IconSend, IconInbox, IconPlus,
+    IconSend, IconInbox, IconPlus, IconBack,
     IconFacebook, IconInstagram,
 } from '../components/icons.jsx';
 import { formatTimestamp, formatTime, formatDay, initials } from '../lib/format.js';
@@ -16,10 +16,9 @@ const ChannelIcon = ({ platform, size = 14 }) =>
 
 export default function InboxPage({
     threads, totalThreads, pages, filter, onFilterChange,
-    active, onSelect, onSend, onConnect,
+    active, onSelect, onSend, onConnect, search, onSearchChange,
 }) {
     const [draft, setDraft] = useState('');
-    const [search, setSearch] = useState('');
     const endRef = useRef(null);
     const bodyRef = useRef(null);
 
@@ -95,14 +94,6 @@ export default function InboxPage({
                         <h2>Conversations</h2>
                         <span className="count">{threads.length} active</span>
                     </div>
-                    <div className="search">
-                        <IconSearch />
-                        <input
-                            type="search" placeholder="Search chats..."
-                            value={search} onChange={e => setSearch(e.target.value)}
-                            aria-label="Search conversations"
-                        />
-                    </div>
                     <div className="chips">
                         {FILTERS.map(f => (
                             <button
@@ -137,8 +128,11 @@ export default function InboxPage({
                                         <span className="conv__time">{formatTimestamp(t.last.timestamp)}</span>
                                     </div>
                                     <div className="conv__preview">{t.last.text || t.last.content || ''}</div>
-                                    <span className={`tag ${awaitingReply ? 'tag--agent' : 'tag--ai'}`}>
-                                        {awaitingReply ? 'Needs agent' : 'Replied'}
+                                    <span className="conv__foot">
+                                        <span className={`tag ${awaitingReply ? 'tag--agent' : 'tag--ai'}`}>
+                                            {awaitingReply ? 'Needs agent' : 'Replied'}
+                                        </span>
+                                        {awaitingReply && <span className="unread" aria-label="Awaiting reply" />}
                                     </span>
                                 </div>
                             </button>
@@ -156,7 +150,7 @@ export default function InboxPage({
                             </p>
                             <button
                                 className="btn btn--secondary btn--sm"
-                                onClick={() => { setSearch(''); onFilterChange('all'); }}
+                                onClick={() => { onSearchChange(''); onFilterChange('all'); }}
                             >
                                 Show all conversations
                             </button>
@@ -181,6 +175,15 @@ export default function InboxPage({
                 ) : (
                     <>
                         <header className="thread__head">
+                            {/* On a phone the list and the thread share the screen, so the
+                                thread needs its own way back. */}
+                            <button
+                                className="icon-btn thread__back"
+                                onClick={() => onSelect(null)}
+                                aria-label="Back to conversations"
+                            >
+                                <IconBack />
+                            </button>
                             <div className="avatar" style={{ width: 38, height: 38 }}>{initials(activeThread.name)}</div>
                             <div className="thread__who">
                                 <div className="thread__name">
@@ -197,6 +200,7 @@ export default function InboxPage({
                         </header>
 
                         <div className="thread__body" ref={bodyRef}>
+                            <div className="thread__spacer" />
                             {activeThread.messages.map((m, i) => {
                                 const prev = activeThread.messages[i - 1];
                                 const newDay = !prev ||
@@ -206,6 +210,11 @@ export default function InboxPage({
                                     <div key={m.id || i}>
                                         {newDay && <div className="day"><span>{formatDay(m.timestamp)}</span></div>}
                                         <div className={`msg ${outbound ? 'msg--out' : 'msg--in'}`}>
+                                            {!outbound && (
+                                                <div className="avatar msg__avatar" aria-hidden="true">
+                                                    {initials(activeThread.name)}
+                                                </div>
+                                            )}
                                             <div>
                                                 {/* Three speakers, three treatments — docs/design.md.
                                                     AI replies will use bubble--ai once Phase 2 lands. */}

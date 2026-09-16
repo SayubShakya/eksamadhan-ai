@@ -1,4 +1,4 @@
-import { IconSearch, IconBell } from './icons.jsx';
+import { IconSearch } from './icons.jsx';
 
 const STATUSES = [
     { value: 'online', label: 'Online' },
@@ -30,15 +30,16 @@ export default function TopBar({ availability, onAvailabilityChange, query, onQu
                 <IconSearch />
                 <input
                     type="search"
-                    placeholder="Search conversations, knowledge, or settings..."
+                    placeholder="Search conversations…"
                     value={query}
                     onChange={(e) => onQueryChange(e.target.value)}
-                    aria-label="Search"
+                    aria-label="Search conversations"
                 />
             </div>
 
             <div className="topbar__right">
-                <button className="icon-btn" aria-label="Notifications"><IconBell /></button>
+                {/* No notification bell until FCM lands (Phase 4) — a bell that never
+                    rings is worse than no bell. */}
                 <div className="user">
                     <div>
                         <div className="user__name">{user.name}</div>

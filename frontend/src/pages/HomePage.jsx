@@ -16,12 +16,27 @@ function greeting() {
     return 'Good evening';
 }
 
-export default function HomePage({ user, pages, threadCount, onConnect, onNavigate }) {
+export default function HomePage({ user, pages, threadCount, todayCount, onConnect, onNavigate }) {
     const connected = pages.length > 0;
     const steps = [
-        { title: 'Connect a channel', desc: 'Link Facebook, Instagram or your website widget.', done: connected },
-        { title: 'Add business knowledge', desc: 'Upload docs or URLs so the AI agent can learn.', done: false },
-        { title: 'Invite your team', desc: 'Add agents to handle complex escalations.', done: false },
+        {
+            title: 'Connect a channel',
+            desc: 'Link Facebook, Instagram or your website widget.',
+            done: connected,
+            action: () => onConnect('facebook'),
+        },
+        {
+            title: 'Add business knowledge',
+            desc: 'Upload docs or URLs so the AI agent can learn.',
+            done: false,
+            action: () => onNavigate('knowledge'),
+        },
+        {
+            title: 'Invite your team',
+            desc: 'Add agents to handle complex escalations.',
+            done: false,
+            action: () => onNavigate('team'),
+        },
     ];
     const doneCount = steps.filter(s => s.done).length;
     const nextStep = steps.findIndex(s => !s.done);
@@ -33,7 +48,10 @@ export default function HomePage({ user, pages, threadCount, onConnect, onNaviga
                     <h1 className="page__title">{greeting()}, {user.name}</h1>
                     <p className="page__sub">Here's the status of your business AI agent today.</p>
                 </div>
-                <button className="btn btn--primary" onClick={() => onConnect('facebook')}>
+                <button
+                    className="btn btn--primary"
+                    onClick={() => document.getElementById('channels')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                >
                     <IconPlus /> Connect a channel
                 </button>
             </div>
@@ -65,7 +83,7 @@ export default function HomePage({ user, pages, threadCount, onConnect, onNaviga
                                         <button
                                             className="btn btn--sm"
                                             style={{ padding: '6px 0', color: 'var(--accent)', background: 'none' }}
-                                            onClick={() => onConnect('facebook')}
+                                            onClick={step.action}
                                         >
                                             Continue <IconArrowRight />
                                         </button>
@@ -78,13 +96,17 @@ export default function HomePage({ user, pages, threadCount, onConnect, onNaviga
             </section>
 
             <div className="stats">
-                <Stat label="Conversations today" value={connected ? threadCount : null} unit="conversations" />
+                <Stat
+                    label="Conversations today"
+                    value={connected ? todayCount : null}
+                    unit={todayCount === 1 ? 'conversation' : 'conversations'}
+                />
                 <Stat label="Resolved by AI" value={null} unit="%" />
                 <Stat label="Escalated to agent" value={null} unit="%" />
                 <Stat label="Average reply time" value={null} unit="seconds" />
             </div>
 
-            <h2 className="section-title">Channels</h2>
+            <h2 className="section-title" id="channels">Channels</h2>
             <div className="channels">
                 {CHANNELS.map(({ id, name, desc, Icon, comingSoon }) => {
                     const live = pages.filter(p => p.platform === id);
@@ -97,11 +119,11 @@ export default function HomePage({ user, pages, threadCount, onConnect, onNaviga
                                 {live.length ? live.map(p => p.pageName).join(', ') : comingSoon ? 'Coming soon' : 'Not connected'}
                             </p>
                             <button
-                                className={`btn ${live.length ? 'btn--secondary' : 'btn--secondary'}`}
+                                className="btn btn--secondary"
                                 disabled={comingSoon}
                                 onClick={() => onConnect(id)}
                             >
-                                {live.length ? 'Add another' : 'Connect'}
+                                {comingSoon ? 'Coming soon' : live.length ? 'Add another' : 'Connect'}
                             </button>
                         </div>
                     );
@@ -123,7 +145,10 @@ export default function HomePage({ user, pages, threadCount, onConnect, onNaviga
                     <div className="empty__icon"><IconInbox size={28} /></div>
                     <p className="empty__title">No conversations yet</p>
                     <p className="empty__text">Messages from your connected channels will appear here.</p>
-                    <button className="btn btn--primary" onClick={() => onConnect('facebook')}>
+                    <button
+                        className="btn btn--primary"
+                        onClick={() => document.getElementById('channels')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                    >
                         <IconPlus /> Connect a channel
                     </button>
                 </div>

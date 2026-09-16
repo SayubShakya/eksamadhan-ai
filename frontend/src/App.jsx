@@ -10,18 +10,46 @@ import './styles/tokens.css';
 import './styles/app.css';
 
 const TENANT_ID = 'demo-tenant-1';
+const VIEWS = ['home', 'inbox', 'knowledge', 'channels', 'team', 'analytics', 'settings'];
+
+const viewFromHash = () => {
+    const v = window.location.hash.replace('#', '');
+    return VIEWS.includes(v) ? v : 'home';
+};
 const MESSAGE_POLL_MS = 1500;
 const STATUS_POLL_MS = 5000;
 const SYNC_MS = 30000;
 
 export default function App() {
-    const [view, setView] = useState('home');
+    // The section lives in the URL hash so a refresh keeps you where you were and the
+    // browser's Back button moves between sections, as people expect.
+    const [view, setViewState] = useState(viewFromHash);
+
+    const setView = useCallback((next) => {
+        setViewState(next);
+        if (viewFromHash() !== next) window.location.hash = next;
+    }, []);
+
+    useEffect(() => {
+        const onHash = () => setViewState(viewFromHash());
+        window.addEventListener('hashchange', onHash);
+        return () => window.removeEventListener('hashchange', onHash);
+    }, []);
     const [status, setStatus] = useState(null);
     const [messages, setMessages] = useState([]);
     const [active, setActive] = useState(null);
     const [filter, setFilter] = useState('all');
-    const [availability, setAvailability] = useState('online');
+    // Availability survives a refresh — an agent who set themselves Busy should not
+    // silently come back Online.
+    const [availability, setAvailability] = useState(() => {
+        try { return localStorage.getItem('availability') || 'online'; }
+        catch { return 'online'; }
+    });
     const [query, setQuery] = useState('');
+
+    useEffect(() => {
+        try { localStorage.setItem('availability', availability); } catch { /* private mode */ }
+    }, [availability]);
 
     const pages = status?.data?.pages ?? [];
     const user = { name: 'Sayub', role: 'Owner' };
@@ -56,7 +84,8 @@ export default function App() {
         const platform = params.get('platform');
         if (platform === 'facebook' || platform === 'instagram') {
             setFilter(platform);
-            setView('inbox');
+            setViewState('inbox');
+            window.location.hash = 'inbox';
             refreshStatus();
         }
         if (params.get('status') === 'error') {
@@ -92,6 +121,19 @@ export default function App() {
             setActive(null);
         }
     }, [threads, active]);
+
+    // Open the newest conversation automatically on a wide screen — an empty reading
+    // pane beside a list of one is a pointless click. On narrow screens the list is
+    // the whole screen, so opening one would hide it.
+    useEffect(() => {
+        if (view !== 'inbox' || active || !threads.length) return;
+        if (window.matchMedia('(min-width: 760px)').matches) setActive(threads[0]);
+    }, [view, active, threads]);
+
+    const todayCount = useMemo(() => {
+        const today = new Date().toDateString();
+        return allThreads.filter(t => new Date(t.last.timestamp).toDateString() === today).length;
+    }, [allThreads]);
 
     const unread = useMemo(
         () => allThreads.filter(t => t.last.direction === 'inbound').length,
@@ -144,7 +186,7 @@ export default function App() {
                     availability={availability}
                     onAvailabilityChange={setAvailability}
                     query={query}
-                    onQueryChange={setQuery}
+                    onQueryChange={(v) => { setQuery(v); if (v && view !== 'inbox') setView('inbox'); }}
                     user={user}
                 />
 
@@ -153,6 +195,7 @@ export default function App() {
                         user={user}
                         pages={pages}
                         threadCount={allThreads.length}
+                        todayCount={todayCount}
                         onConnect={handleConnect}
                         onNavigate={setView}
                     />
@@ -169,6 +212,8 @@ export default function App() {
                         onSelect={setActive}
                         onSend={handleSend}
                         onConnect={handleConnect}
+                        search={query}
+                        onSearchChange={setQuery}
                     />
                 )}
 
