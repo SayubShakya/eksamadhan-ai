@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 import {
     IconHome, IconInbox, IconKnowledge,
-    IconChannels, IconTeam, IconAnalytics, IconSettings, IconClose,
+    IconChannels, IconTeam, IconAnalytics, IconSettings, IconChevronLeft,
 } from './icons.jsx';
+import { LogoMark } from './Logo.jsx';
 
 const ITEMS = [
     { id: 'home', label: 'Home', Icon: IconHome },
@@ -22,7 +23,7 @@ const DOCKED = '(min-width: 1024px)';
  * Selecting a destination closes it only when it is overlaying the content — on a
  * desktop that would mean re-opening the nav for every move.
  */
-export default function NavRail({ view, onNavigate, unread = 0, open, onClose }) {
+export default function NavRail({ view, onNavigate, unread = 0, open, onClose, onHome }) {
     useEffect(() => {
         if (!open) return;
         const onKey = (e) => {
@@ -48,9 +49,12 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose })
                 inert={!open ? '' : undefined}
             >
                 <div className="rail__head">
-                    <span className="rail__title">Menu</span>
-                    <button className="icon-btn rail__close" onClick={onClose} aria-label="Close menu">
-                        <IconClose />
+                    <button className="brand" onClick={onHome} aria-label="Eksamadhan AI — go to home">
+                        <LogoMark size={28} />
+                        <span className="brand__name">Eksamadhan AI</span>
+                    </button>
+                    <button className="icon-btn rail__collapse" onClick={onClose} aria-label="Collapse menu">
+                        <IconChevronLeft />
                     </button>
                 </div>
 

@@ -13,19 +13,23 @@ const STATUSES = [
  */
 export default function TopBar({
     availability, onAvailabilityChange, query, onQueryChange, user,
-    onToggleNav, onHome, unread = 0,
+    onToggleNav, onHome, unread = 0, navOpen,
 }) {
     return (
         <header className="topbar">
-            <button className="icon-btn topbar__menu" onClick={onToggleNav} aria-label="Open menu">
-                <IconMenu />
-                {unread > 0 && <span className="topbar__menudot" aria-hidden="true" />}
-            </button>
+            {!navOpen && (
+                <>
+                    <button className="icon-btn topbar__menu" onClick={onToggleNav} aria-label="Open menu">
+                        <IconMenu />
+                        {unread > 0 && <span className="topbar__menudot" aria-hidden="true" />}
+                    </button>
 
-            <button className="brand" onClick={onHome} aria-label="Eksamadhan AI — go to home">
-                <LogoMark size={30} />
-                <span className="brand__name">Eksamadhan AI</span>
-            </button>
+                    <button className="brand" onClick={onHome} aria-label="Eksamadhan AI — go to home">
+                        <LogoMark size={28} />
+                        <span className="brand__name">Eksamadhan AI</span>
+                    </button>
+                </>
+            )}
 
             <label className="status-select">
                 <span className={`dot dot--${availability}`} aria-hidden="true" />

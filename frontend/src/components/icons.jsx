@@ -17,6 +17,7 @@ export const IconBell = (p) => <svg {...s(p)}><path d="M18 8a6 6 0 1 0-12 0c0 7-
 export const IconSend = (p) => <svg {...s({ size: p.size || 16 })}><path d="M22 2L11 13" /><path d="M22 2l-7 20-4-9-9-4z" /></svg>;
 export const IconPlus = (p) => <svg {...s({ size: p.size || 16 })}><path d="M12 5v14" /><path d="M5 12h14" /></svg>;
 export const IconBolt = (p) => <svg {...s({ size: p.size || 18 })} fill="currentColor" stroke="none"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z" /></svg>;
+export const IconChevronLeft = (p) => <svg {...s(p)}><path d="M15 18l-6-6 6-6" /></svg>;
 export const IconMenu = (p) => <svg {...s(p)}><path d="M3 6h18" /><path d="M3 12h18" /><path d="M3 18h18" /></svg>;
 export const IconClose = (p) => <svg {...s(p)}><path d="M18 6L6 18" /><path d="M6 6l12 12" /></svg>;
 export const IconBack = (p) => <svg {...s(p)}><path d="M19 12H5" /><path d="M11 18l-6-6 6-6" /></svg>;

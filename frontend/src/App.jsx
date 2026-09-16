@@ -202,6 +202,7 @@ export default function App() {
                 unread={unread}
                 open={navOpen}
                 onClose={() => setNavOpen(false)}
+                onHome={() => setView('home')}
             />
             <div className="main">
                 <TopBar
@@ -213,6 +214,7 @@ export default function App() {
                     unread={unread}
                     onToggleNav={() => setNavOpen(o => !o)}
                     onHome={() => setView('home')}
+                    navOpen={navOpen}
                 />
 
                 {view === 'home' && (

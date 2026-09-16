@@ -32,12 +32,12 @@
     }
     .rail--closed { display: none; }
     /* .icon-btn sets display later in the file, so this needs the extra class. */
-    .rail .rail__close { display: none; }
+    
 
-    /* Line the menu strip up with the top bar so the two bottom borders meet. */
+    /* Line the brand strip up with the top bar so the two bottom borders meet. */
     .rail__head {
         height: var(--topbar);
-        padding: 0 6px;
+        padding: 0 4px 0 2px;
         margin: 0 0 8px;
         border-bottom: 1px solid var(--border);
     }
@@ -49,7 +49,8 @@
     padding: 4px 6px 12px; margin-bottom: 4px;
     border-bottom: 1px solid var(--border);
 }
-.rail__title { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+.rail__head .brand__name { display: inline; font-size: 15px; }
+.rail__collapse { color: var(--text-muted); }
 
 .rail__item {
     position: relative;
