@@ -7,7 +7,7 @@ import PlaceholderPage from './pages/PlaceholderPage.jsx';
 import ProfilePanel from './components/ProfilePanel.jsx';
 import ConfirmDialog from './components/ConfirmDialog.jsx';
 import * as api from './lib/api.js';
-import { buildThreads } from './lib/format.js';
+import { mergeThreads } from './lib/format.js';
 import './styles/tokens.css';
 import './styles/app.css';
 
@@ -70,6 +70,7 @@ export default function App() {
     }, []);
     const [status, setStatus] = useState(null);
     const [messages, setMessages] = useState([]);
+    const [serverThreads, setServerThreads] = useState([]);
     const [active, setActive] = useState(null);
     const [filter, setFilter] = useState('all');
     const [query, setQuery] = useState('');
@@ -131,6 +132,11 @@ export default function App() {
         catch (err) { console.error('Failed to check status', err); }
     }, []);
 
+    const refreshThreads = useCallback(async () => {
+        try { setServerThreads(await api.getThreads(TENANT_ID)); }
+        catch (err) { console.error('Failed to fetch threads', err); }
+    }, []);
+
     const refreshMessages = useCallback(async () => {
         try {
             const data = await api.getMessages(TENANT_ID);
@@ -153,7 +159,9 @@ export default function App() {
     useEffect(() => {
         refreshStatus();
         refreshMessages();
+        refreshThreads();
         const m = setInterval(refreshMessages, MESSAGE_POLL_MS);
+        const t = setInterval(refreshThreads, MESSAGE_POLL_MS);
         const s = setInterval(refreshStatus, STATUS_POLL_MS);
 
         // After the OAuth callback the backend redirects with ?platform=…&status=…
@@ -172,8 +180,8 @@ export default function App() {
             window.history.replaceState({}, '', window.location.pathname);
         }
 
-        return () => { clearInterval(m); clearInterval(s); };
-    }, [refreshStatus, refreshMessages]);
+        return () => { clearInterval(m); clearInterval(t); clearInterval(s); };
+    }, [refreshStatus, refreshMessages, refreshThreads]);
 
     // Meta only pushes webhooks for live events, so poll the Graph API as well to
     // pick up anything delivered while we were offline.
@@ -190,10 +198,13 @@ export default function App() {
         [messages, hiddenIds],
     );
 
-    const allThreads = useMemo(() => buildThreads(visibleMessages, pages, 'all'), [visibleMessages, pages]);
+    const allThreads = useMemo(
+        () => mergeThreads(serverThreads, visibleMessages, 'all'),
+        [serverThreads, visibleMessages],
+    );
     const threads = useMemo(
-        () => (filter === 'all' ? allThreads : buildThreads(visibleMessages, pages, filter)),
-        [allThreads, visibleMessages, pages, filter],
+        () => (filter === 'all' ? allThreads : mergeThreads(serverThreads, visibleMessages, filter)),
+        [allThreads, serverThreads, visibleMessages, filter],
     );
 
     // Changing the filter can hide the open conversation; clear it so the thread pane
@@ -218,7 +229,7 @@ export default function App() {
     }, [allThreads]);
 
     const unread = useMemo(
-        () => allThreads.reduce((sum, t) => sum + t.unanswered, 0),
+        () => allThreads.reduce((sum, t) => sum + (t.unanswered || 0), 0),
         [allThreads],
     );
 
@@ -300,6 +311,17 @@ export default function App() {
         }
     };
 
+    /** Take over, hand back, or close a conversation. */
+    const handleThreadAction = useCallback(async (thread, action) => {
+        try {
+            await api.setThreadState(thread.id, action, action === 'take-over' ? { agentId: 'me' } : undefined);
+            await refreshThreads();
+        } catch (err) {
+            console.error(`Thread action ${action} failed`, err);
+            setSendError('Could not update the conversation state.');
+        }
+    }, [refreshThreads]);
+
     const handleHideMessage = useCallback((message) => {
         setHiddenIds(prev => {
             const next = new Set(prev).add(message.id);
@@ -368,6 +390,7 @@ export default function App() {
                         onSendVoice={handleSendVoice}
                         onSendImage={handleSendImage}
                         onReact={handleReact}
+                        onThreadAction={handleThreadAction}
                         onHideMessage={handleHideMessage}
                         onConnect={handleConnect}
                         search={query}

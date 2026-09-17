@@ -881,3 +881,9 @@
 
 .btn--destructive { background: var(--danger); color: #fff; box-shadow: var(--shadow-sm); }
 .btn--destructive:hover { filter: brightness(.94); }
+
+.tag--handling { background: var(--accent-weak); color: var(--accent); }
+.tag--resolved { background: var(--surface); color: var(--text-muted); }
+
+.composer__actions { margin-left: auto; display: flex; gap: 8px; }
+.composer__status { text-transform: none; letter-spacing: 0; font-size: 12px; }

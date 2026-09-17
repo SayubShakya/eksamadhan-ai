@@ -34,51 +34,48 @@ export function initials(name) {
     return (name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 }
 
-/**
- * Groups a flat message list into per-customer threads.
- * A "customer" is any participant id that is not one of our own page ids.
- */
-export function buildThreads(messages, pages, filter) {
-    const pageIds = new Set(pages.map(p => p.pageId));
+/** Human labels for the conversation states, from the contextual report §4.5. */
+export const STATUS_LABEL = {
+    AI_HANDLING: 'AI handling',
+    OPEN_FOR_AGENT: 'Needs agent',
+    AGENT_HANDLING: 'You are handling',
+    RESOLVED: 'Resolved',
+};
 
-    let scoped = messages.filter(m => pageIds.has(m.pageId));
-    if (filter === 'facebook' || filter === 'instagram') {
-        const ids = new Set(pages.filter(p => p.platform === filter).map(p => p.pageId));
-        scoped = scoped.filter(m => ids.has(m.pageId));
-    } else if (filter && filter !== 'all') {
-        scoped = scoped.filter(m => m.pageId === filter);
+/**
+ * Joins server-side threads to their messages.
+ *
+ * The server owns conversation state — status, unanswered count, preview — so the UI
+ * no longer infers any of it by grouping messages. It only attaches the message bodies.
+ */
+export function mergeThreads(threads, messages, filter = 'all') {
+    const byThread = new Map();
+    for (const m of messages) {
+        if (!m.threadId) continue;
+        if (!byThread.has(m.threadId)) byThread.set(m.threadId, []);
+        byThread.get(m.threadId).push(m);
     }
 
-    const customerIds = new Set();
-    scoped.forEach(m => {
-        if (!pageIds.has(m.senderId)) customerIds.add(m.senderId);
-        if (!pageIds.has(m.recipientId)) customerIds.add(m.recipientId);
-    });
-
-    return Array.from(customerIds).map(customerId => {
-        const msgs = scoped
-            .filter(m => m.senderId === customerId || m.recipientId === customerId)
-            .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-        if (!msgs.length) return null;
-
-        const last = msgs[msgs.length - 1];
-        const inbound = msgs.find(m => m.direction === 'inbound');
-
-        // Messages waiting for a reply: the run of inbound messages since the agent
-        // last answered. More useful than a total, which never stops growing.
-        let unanswered = 0;
-        for (let i = msgs.length - 1; i >= 0 && msgs[i].direction === 'inbound'; i--) {
-            unanswered++;
-        }
-        return {
-            customerId,
-            name: inbound?.senderName || `User ${String(customerId).slice(-8)}`,
-            avatarUrl: msgs.find(m => m.direction === 'inbound' && m.senderAvatarUrl)?.senderAvatarUrl || null,
-            pageId: msgs.find(m => m.pageId)?.pageId,
-            messages: msgs,
-            unanswered,
-            last,
-            timestamp: new Date(last.timestamp).getTime(),
-        };
-    }).filter(Boolean).sort((a, b) => b.timestamp - a.timestamp);
+    return threads
+        .filter(t => {
+            if (filter === 'all') return true;
+            if (filter === 'needs_agent') return t.status === 'OPEN_FOR_AGENT';
+            return t.platform === filter;
+        })
+        .map(t => {
+            const msgs = (byThread.get(t.id) || [])
+                .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            return {
+                ...t,
+                name: t.customerName || `User ${String(t.customerId).slice(-8)}`,
+                avatarUrl: t.customerAvatarUrl,
+                messages: msgs,
+                last: msgs[msgs.length - 1] || {
+                    text: t.lastMessagePreview,
+                    timestamp: t.lastMessageAt,
+                    direction: t.lastMessageDirection,
+                },
+            };
+        })
+        .sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
 }

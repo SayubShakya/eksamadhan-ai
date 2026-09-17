@@ -6,13 +6,22 @@ import {
 } from '../components/icons.jsx';
 import { isRecordingSupported, startRecording, formatDuration } from '../lib/recorder.js';
 import MessageActions from '../components/MessageActions.jsx';
-import { formatTimestamp, formatTime, formatDay, initials } from '../lib/format.js';
+import { formatTimestamp, formatTime, formatDay, initials, STATUS_LABEL } from '../lib/format.js';
 
 const FILTERS = [
     { id: 'all', label: 'All' },
+    { id: 'needs_agent', label: 'Needs agent' },
     { id: 'facebook', label: 'Facebook' },
     { id: 'instagram', label: 'Instagram' },
 ];
+
+/** Tag colour per conversation state. */
+const STATUS_TONE = {
+    AI_HANDLING: 'tag--ai',
+    OPEN_FOR_AGENT: 'tag--agent',
+    AGENT_HANDLING: 'tag--handling',
+    RESOLVED: 'tag--resolved',
+};
 
 const ChannelIcon = ({ platform, size = 14 }) =>
     platform === 'instagram' ? <IconInstagram size={size} /> : <IconFacebook size={size} />;
@@ -75,7 +84,7 @@ function Attachment({ message }) {
 
 export default function InboxPage({
     threads, totalThreads, pages, filter, onFilterChange,
-    active, onSelect, onSend, onSendVoice, onSendImage, onReact, onHideMessage,
+    active, onSelect, onSend, onSendVoice, onSendImage, onReact, onHideMessage, onThreadAction,
     onConnect, search, onSearchChange, sendError, onDismissError,
 }) {
     const [draft, setDraft] = useState('');
@@ -228,7 +237,7 @@ export default function InboxPage({
                 <div className="convlist__items">
                     {visible.map(t => {
                         const platform = platformOf(t.pageId);
-                        const awaitingReply = t.last.direction === 'inbound';
+                        const awaitingReply = t.status === 'OPEN_FOR_AGENT' || t.unanswered > 0;
                         return (
                             <button
                                 key={t.customerId}
@@ -246,8 +255,8 @@ export default function InboxPage({
                                     <span className="conv__foot">
                                         {/* Inline with the state tag so the two sit on one line. */}
                                         <ChannelIcon platform={platform} size={13} />
-                                        <span className={`tag ${awaitingReply ? 'tag--agent' : 'tag--ai'}`}>
-                                            {awaitingReply ? 'Needs agent' : 'Replied'}
+                                        <span className={`tag ${STATUS_TONE[t.status] || 'tag--ai'}`}>
+                                            {STATUS_LABEL[t.status] || t.status}
                                         </span>
                                         {t.unanswered > 0 && (
                                             <span
@@ -411,7 +420,34 @@ export default function InboxPage({
 
                         <div className="composer">
                             <div className="composer__status">
-                                <span className="dot dot--online" /> You are handling this conversation
+                                <span className={`dot ${activeThread.status === 'OPEN_FOR_AGENT' ? 'dot--busy' : activeThread.status === 'RESOLVED' ? 'dot--offline' : 'dot--online'}`} />
+                                {STATUS_LABEL[activeThread.status] || activeThread.status}
+
+                                <span className="composer__actions">
+                                    {activeThread.status === 'AGENT_HANDLING' ? (
+                                        <button className="btn btn--sm btn--secondary"
+                                                onClick={() => onThreadAction(activeThread, 'return-to-ai')}>
+                                            Return to AI
+                                        </button>
+                                    ) : activeThread.status !== 'RESOLVED' && (
+                                        <button className="btn btn--sm btn--secondary"
+                                                onClick={() => onThreadAction(activeThread, 'take-over')}>
+                                            Take over from AI
+                                        </button>
+                                    )}
+
+                                    {activeThread.status === 'RESOLVED' ? (
+                                        <button className="btn btn--sm btn--secondary"
+                                                onClick={() => onThreadAction(activeThread, 'return-to-ai')}>
+                                            Reopen
+                                        </button>
+                                    ) : (
+                                        <button className="btn btn--sm btn--secondary"
+                                                onClick={() => onThreadAction(activeThread, 'resolve')}>
+                                            Resolve
+                                        </button>
+                                    )}
+                                </span>
                             </div>
 
                             {sendError && (
