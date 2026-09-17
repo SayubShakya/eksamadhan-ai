@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import {
     IconSend, IconInbox, IconPlus, IconBack, IconReply, IconClose, IconMic, IconStop, IconImage,
-    IconSmile, IconThumb,
+    IconSmile, IconThumb, IconBolt,
     IconFacebook, IconInstagram,
 } from '../components/icons.jsx';
 import { isRecordingSupported, startRecording, formatDuration } from '../lib/recorder.js';
 import MessageActions from '../components/MessageActions.jsx';
-import { formatTimestamp, formatTime, formatDay, initials, STATUS_LABEL } from '../lib/format.js';
+import { formatTimestamp, formatTime, formatDay, initials, STATUS_LABEL, ownershipLabel, SENTIMENT } from '../lib/format.js';
 
 const FILTERS = [
     { id: 'all', label: 'All' },
@@ -85,7 +85,8 @@ function Attachment({ message }) {
 export default function InboxPage({
     threads, totalThreads, pages, filter, onFilterChange,
     active, onSelect, onSend, onSendVoice, onSendImage, onReact, onHideMessage, onThreadAction,
-    onConnect, search, onSearchChange, sendError, onDismissError,
+    onConnect, search, onSearchChange, sendError, onDismissError, me, team = [], onAssign,
+    onSummarise, summarising,
 }) {
     const [draft, setDraft] = useState('');
     const [replyTo, setReplyTo] = useState(null);   // message being answered
@@ -256,7 +257,13 @@ export default function InboxPage({
                                         {/* Inline with the state tag so the two sit on one line. */}
                                         <ChannelIcon platform={platform} size={13} />
                                         <span className={`tag ${STATUS_TONE[t.status] || 'tag--ai'}`}>
-                                            {STATUS_LABEL[t.status] || t.status}
+                                            {ownershipLabel(t, me?.id) || STATUS_LABEL[t.status] || t.status}
+                                            {SENTIMENT[t.sentiment] && t.sentiment !== 'NEUTRAL' && (
+                                                <span className="conv__mood"
+                                                      title={`${SENTIMENT[t.sentiment].label} customer`}>
+                                                    {SENTIMENT[t.sentiment].face}
+                                                </span>
+                                            )}
                                         </span>
                                         {t.unanswered > 0 && (
                                             <span
@@ -382,16 +389,27 @@ export default function InboxPage({
                                                         <span className="quote__text">{quoted.text || quoted.content}</span>
                                                     </div>
                                                 )}
-                                                {/* Three speakers, three treatments — docs/design.md.
-                                                    AI replies will use bubble--ai once Phase 2 lands. */}
+                                                {/* Three speakers, three treatments — docs/design.md:
+                                                    customer, AI, and the agent's own words. An
+                                                    agent must be able to see at a glance what was
+                                                    said on their behalf. */}
                                                 {/* Bubble and actions share a row, so the
                                                     buttons centre on the bubble rather than
                                                     on the bubble plus its timestamp. */}
                                                 <div className="msg__line">
-                                                    <div className={`bubble ${outbound ? 'bubble--agent' : 'bubble--customer'} ${m.attachmentUrl ? 'bubble--media' : ''}`}>
+                                                    <div className={`bubble ${!outbound ? 'bubble--customer' : m.aiGenerated ? 'bubble--ai' : 'bubble--agent'} ${m.attachmentUrl ? 'bubble--media' : ''}`}>
                                                         <Attachment message={m} />
                                                         {(m.text || m.content) && (
                                                             <span>{m.text || m.content}</span>
+                                                        )}
+                                                        {m.aiGenerated && (
+                                                            <span className="bubble__ai" title={
+                                                                m.aiConfidence != null
+                                                                    ? `Answered from your knowledge base, confidence ${(m.aiConfidence * 100).toFixed(0)}%`
+                                                                    : 'Answered from your knowledge base'
+                                                            }>
+                                                                <IconBolt /> AI
+                                                            </span>
                                                         )}
                                                     </div>
 
@@ -421,9 +439,27 @@ export default function InboxPage({
                         <div className="composer">
                             <div className="composer__status">
                                 <span className={`dot ${activeThread.status === 'OPEN_FOR_AGENT' ? 'dot--busy' : activeThread.status === 'RESOLVED' ? 'dot--offline' : 'dot--online'}`} />
-                                {STATUS_LABEL[activeThread.status] || activeThread.status}
+                                {ownershipLabel(activeThread, me?.id)
+                                    || STATUS_LABEL[activeThread.status] || activeThread.status}
 
                                 <span className="composer__actions">
+                                    {/* Hand it on — the busy-agent case. Only offered to people
+                                        the server would actually allow to do it. */}
+                                    {onAssign && team.length > 1 && activeThread.status !== 'RESOLVED' && (
+                                        <select
+                                            className="assign"
+                                            value={activeThread.assignedAgentId || ''}
+                                            onChange={(e) => onAssign(activeThread, e.target.value)}
+                                            aria-label="Assign this conversation"
+                                        >
+                                            <option value="" disabled>Assign to…</option>
+                                            {team.map(member => (
+                                                <option key={member.id} value={member.id}>
+                                                    {member.isYou ? 'Me' : [member.firstName, member.lastName].filter(Boolean).join(' ')}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
                                     {activeThread.status === 'AGENT_HANDLING' ? (
                                         <button className="btn btn--sm btn--secondary"
                                                 onClick={() => onThreadAction(activeThread, 'return-to-ai')}>
@@ -609,10 +645,33 @@ export default function InboxPage({
                         </div>
                     </div>
 
+                    {/* Who owns this conversation. The customer only ever sees one voice, but
+                        internally it passes between the AI and named agents, so an admin
+                        looking at any conversation needs to know who has it right now. */}
+                    <div className="context__row">
+                        <div className="context__key">Handled by</div>
+                        <div>
+                            {activeThread.status === 'AI_HANDLING'
+                                ? 'AI'
+                                : activeThread.assignedAgentName
+                                    || (activeThread.status === 'RESOLVED' ? 'Nobody — resolved' : 'Unassigned')}
+                        </div>
+                    </div>
+
                     <div className="context__row">
                         <div className="context__key">Sentiment</div>
-                        {/* Placeholder until Phase 2 — colour is always paired with a label. */}
-                        <span className="pill pill--neutral">Not analysed yet</span>
+                        {/* Colour is always paired with a word, so it does not rely on
+                            colour vision alone. */}
+                        {SENTIMENT[activeThread.sentiment] ? (
+                            <span className={`pill ${SENTIMENT[activeThread.sentiment].tone}`}>
+                                {/* The face is decoration; the word carries the meaning, so a
+                                    screen reader is not read a lone emoji. */}
+                                <span aria-hidden="true">{SENTIMENT[activeThread.sentiment].face}</span>
+                                {SENTIMENT[activeThread.sentiment].label}
+                            </span>
+                        ) : (
+                            <span className="pill pill--neutral">Not analysed yet</span>
+                        )}
                     </div>
 
                     <div className="context__row">
@@ -625,11 +684,44 @@ export default function InboxPage({
                         <div>{activeThread.messages.length}</div>
                     </div>
 
-                    <div className="context__label" style={{ marginTop: 26 }}>Knowledge base used</div>
-                    <p className="kb__text">
-                        Retrieved context will appear here once the knowledge engine is connected
-                        (Phase 2).
-                    </p>
+                    <div className="context__label" style={{ marginTop: 26 }}>Summary</div>
+                    {activeThread.summary ? (
+                        <>
+                            {/* Three labelled lines from the model. Split so each reads as its
+                                own point rather than one dense paragraph. */}
+                            {activeThread.summary.split('\n').filter(Boolean).map(line => {
+                                const at = line.indexOf(':');
+                                const label = at > 0 ? line.slice(0, at) : null;
+                                const text = at > 0 ? line.slice(at + 1).trim() : line;
+                                return (
+                                    <p className="summary__line" key={line}>
+                                        {label && <span className="summary__label">{label}</span>}
+                                        {text}
+                                    </p>
+                                );
+                            })}
+                            {activeThread.summaryStale && (
+                                <p className="summary__stale">
+                                    New messages have arrived since this was written.
+                                </p>
+                            )}
+                            <button className="btn btn--secondary btn--sm" disabled={summarising}
+                                    onClick={() => onSummarise?.(activeThread)}>
+                                {summarising ? 'Writing…' : 'Refresh summary'}
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <p className="kb__text">
+                                A short brief is written automatically when a conversation is handed
+                                to a person, so whoever picks it up need not read the whole thread.
+                            </p>
+                            <button className="btn btn--secondary btn--sm" disabled={summarising}
+                                    onClick={() => onSummarise?.(activeThread)}>
+                                {summarising ? 'Writing…' : 'Write one now'}
+                            </button>
+                        </>
+                    )}
                 </aside>
             )}
         </div>

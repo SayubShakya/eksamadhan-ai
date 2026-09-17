@@ -51,7 +51,7 @@ public class SocialMessage {
     private String pageId; // The page/account ID this message belongs to
 
     @Column(nullable = false)
-    private String tenantId; // The tenant API key
+    private String tenantId; // The organization API key
 
     private String externalMessageId; // Legacy field
 
@@ -91,6 +91,30 @@ public class SocialMessage {
     private boolean isRead = false;
 
     private ZonedDateTime readAt;
+
+    /**
+     * True when the AI wrote this reply rather than an agent. Drives the inbox styling, and
+     * is what the deflection-rate metric counts.
+     */
+    @Column(name = "ai_generated", nullable = false)
+    @Builder.Default
+    private boolean aiGenerated = false;
+
+    /** How sure the AI was, 0-1. Null for anything a human sent. */
+    @Column(name = "ai_confidence")
+    private Double aiConfidence;
+
+    /**
+     * The knowledge passages this reply was drawn from, as "Title (52%)" entries — the audit
+     * trail behind an AI answer, shown beside the conversation.
+     */
+    @Column(name = "ai_sources", columnDefinition = "TEXT")
+    private String aiSources;
+
+    /** How this message reads. Set for inbound messages only; null for our own replies. */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private Sentiment sentiment;
 
     @PrePersist
     protected void onCreate() {

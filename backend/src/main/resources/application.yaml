@@ -1,6 +1,10 @@
 spring:
   application:
     name: eksamadhan-ai
+  main:
+    # Both webmvc and webflux are on the classpath (MetaService uses WebClient). MVC wins
+    # the deduction anyway, but stating it keeps the reactive security stack out of play.
+    web-application-type: servlet
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/eksamadhan}
     username: ${DB_USERNAME:eksamadhan}
@@ -25,8 +29,60 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  error:
+    # The frontend shows these messages to the user, so they must be present — but a stack
+    # trace in an HTTP response is an information leak.
+    include-message: always
+    include-stacktrace: never
+    include-exception: false
 
 app:
+  # HS256 signing key for session tokens. At least 32 characters. If unset, a random key is
+  # generated at startup, which signs everyone out on every restart.
+  jwt:
+    secret: ${JWT_SECRET:}
+  # The workspace that predates accounts. The first person to sign up adopts it, so the
+  # connected Facebook Page and its message history survive the move to real accounts.
+  # Clearing this disables adoption; it can only ever fire once in any case.
+  adoptable-organization-api-key: ${ADOPTABLE_ORG_API_KEY:demo-tenant-1}
+  # Retrieval-augmented generation. One OpenRouter key covers embeddings now and chat
+  # completions in the next phase.
+  ai:
+    openrouter-key: ${OPEN_ROUTER_KEY:}
+    openrouter-url: ${OPENROUTER_URL:https://openrouter.ai/api/v1}
+    # openai/text-embedding-3-small is the model the contextual report names, reached
+    # through OpenRouter. Its 1536 dimensions are baked into the schema and the entities:
+    # changing the model means a migration and a full re-index.
+    embedding-model: ${EMBEDDING_MODEL:openai/text-embedding-3-small}
+    # Characters, not tokens. A ceiling rather than a target: headings break sections
+    # earlier, and a passage that stays on one topic retrieves far better than a larger one
+    # covering several.
+    chunk-size: ${CHUNK_SIZE:900}
+    chunk-overlap: ${CHUNK_OVERLAP:150}
+    top-k: ${RETRIEVAL_TOP_K:5}
+    # Answer generation. Set auto-reply to false to run the inbox purely manually.
+    auto-reply: ${AI_AUTO_REPLY:true}
+    chat-model: ${CHAT_MODEL:openai/gpt-4o-mini}
+    reply-timeout-seconds: ${AI_REPLY_TIMEOUT:20}
+    # The two escalation thresholds. min-similarity is checked before the model is called at
+    # all, so an off-topic question costs nothing; min-confidence is the model's own verdict
+    # on how well the retrieved passages support its answer. Below either, a human takes it.
+    # Starting values come from the measurements in docs/sample-knowledge-base.md.
+    min-similarity: ${AI_MIN_SIMILARITY:0.25}
+    min-confidence: ${AI_MIN_CONFIDENCE:0.55}
+    # Sent once when a conversation is handed to a human, so the customer is not left
+    # watching silence. Blank to disable.
+    # A conversation must be quiet this long before its handover brief is written. Summarising
+    # mid-exchange spends a model call on a conversation that is still moving.
+    summary-cooldown-seconds: ${AI_SUMMARY_COOLDOWN:30}
+    handover-message: ${AI_HANDOVER_MESSAGE:Let me check that with a colleague — someone from our team will reply here shortly.}
+  email:
+    resend-key: ${RESEND_API_KEY:}
+    # Until a domain is verified at resend.com/domains, Resend allows only this sender and
+    # delivers only to the account owner's own address. Verify a domain before inviting
+    # anyone else, then set EMAIL_FROM to an address at that domain.
+    from: ${EMAIL_FROM:EkSamadhan AI <onboarding@resend.dev>}
+    enabled: ${EMAIL_ENABLED:true}
   frontend-url: ${FRONTEND_URL:http://localhost:5174}
   # Voice notes recorded in the dashboard are transcoded and kept here so agents can
   # replay what they sent. Meta's own copy is not fetchable after the fact.

@@ -23,6 +23,7 @@ public class SyncService {
 
     private final MetaService metaService;
     private final ThreadService threadService;
+    private final org.springframework.context.ApplicationEventPublisher events;
     private final SocialMessageRepository messageRepository;
     private final io.eksamadhan.repository.SocialPageRepository socialPageRepository;
     private final Set<UUID> syncingPages = Collections.synchronizedSet(new HashSet<>());
@@ -36,7 +37,7 @@ public class SyncService {
         log.info("🚀 Launching async history sync for pageId: {}", pageId);
         try {
         log.info("🚀 STARTING SYNC for pageId: {}", pageId);
-            socialPageRepository.findWithTenantById(pageId).ifPresent(this::syncPageHistory);
+            socialPageRepository.findWithOrganizationById(pageId).ifPresent(this::syncPageHistory);
             log.info("✅ SYNC TRIGGERED for pageId: {}", pageId);
         } catch (Exception e) {
             log.error("❌ Failed to sync page history for pageId {}: {}", pageId, e.getMessage());
@@ -48,7 +49,7 @@ public class SyncService {
     public CompletableFuture<Void> subscribeToWebhooksAsync(UUID pageId) {
         log.info("🚀 Launching async webhook subscription for pageId: {}", pageId);
         try {
-            socialPageRepository.findWithTenantById(pageId).ifPresent(page -> 
+            socialPageRepository.findWithOrganizationById(pageId).ifPresent(page -> 
                 metaService.subscribeToWebhooks(page.getPageId(), page.getAccessToken()).subscribe()
             );
         } catch (Exception e) {
@@ -148,8 +149,8 @@ public class SyncService {
 
     @Transactional
     private void processSingleMessage(Map<String, Object> messageData, SocialPage page) {
-        // Log tenant access to ensure session is active
-        String tenantId = page.getTenant().getApiKey();
+        // Log organization access to ensure session is active
+        String tenantId = page.getOrganization().getApiKey();
         String metaMessageId = (String) messageData.get("id");
 
         // De-duplication: Check if message already exists
@@ -254,7 +255,7 @@ public class SyncService {
                     .isFromUser(isFromMe)
                     .platform(page.getPlatform())
                     .pageId(page.getPageId())
-                    .tenantId(page.getTenant().getApiKey())
+                    .tenantId(page.getOrganization().getApiKey())
                     .socialPage(page)
                     .timestamp(timestamp)
                     .build();
@@ -372,5 +373,11 @@ public class SyncService {
         threadService.attach(message, page, recipientId);
         messageRepository.save(message);
         log.info("📝 Saved outbound message to DB: {}", messageId);
+
+        // Agent and AI replies are part of the conversation's memory too — often they are
+        // the answer a later, similar question should recall. Never inbound, so this never
+        // triggers another AI reply.
+        events.publishEvent(new io.eksamadhan.event.MessageIngested(
+                message.getId(), page.getId(), false));
     }
 }

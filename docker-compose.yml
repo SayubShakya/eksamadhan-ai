@@ -1,6 +1,11 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    # pgvector's official image: PostgreSQL 16 with the `vector` extension available.
+    # Same major version and on-disk format as postgres:16, so the existing volume is
+    # reused. It is Debian-based rather than Alpine, so the first start may report a
+    # collation version mismatch (musl vs glibc) — refresh it with
+    # `ALTER DATABASE eksamadhan REFRESH COLLATION VERSION; REINDEX DATABASE eksamadhan;`
+    image: pgvector/pgvector:pg16
     container_name: eksamadhan-postgres
     environment:
       POSTGRES_DB: ${DB_NAME:-eksamadhan}

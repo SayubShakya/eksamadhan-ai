@@ -4,10 +4,11 @@ AI-powered customer support for e-commerce businesses — one inbox for Instagra
 Facebook Messenger and an embeddable website widget, answered by a RAG agent that
 hands over to a human when it is out of its depth.
 
-> **Status: Meta connector working, AI layer not started.**
-> Facebook and Instagram OAuth, webhook ingestion and a unified inbox are in place
-> (migrated from an earlier proof of concept). RAG, sentiment escalation and FCM are
-> next — see [`docs/phases.md`](docs/phases.md).
+> **Status: Meta connector, accounts and semantic retrieval working; AI answers next.**
+> Facebook and Instagram OAuth, webhook ingestion, a unified inbox, accounts with workspaces
+> and roles, and a per-workspace knowledge base with pgvector semantic search are in place.
+> Answer generation, sentiment escalation and FCM are next — see
+> [`docs/phases.md`](docs/phases.md).
 
 Final-year college project · Author: Sayub Shakya · Supervisor: Pawan KC
 
@@ -46,6 +47,8 @@ The agent is alerted by push notification even if the tab is in the background.
 | LLM | OpenAI API |
 | Notifications | Firebase Cloud Messaging |
 | Auth | OAuth 2.0 · JWT |
+| Vector search | pgvector (PostgreSQL) |
+| Embeddings | OpenAI `text-embedding-3-small` via OpenRouter |
 | Hosting | PrabhuHost |
 
 Rationale for each choice is in the contextual report §5.2, summarised in

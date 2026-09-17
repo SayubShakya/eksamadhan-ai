@@ -4,6 +4,9 @@ import TopBar from './components/TopBar.jsx';
 import HomePage from './pages/HomePage.jsx';
 import InboxPage from './pages/InboxPage.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
+import TeamPage from './pages/TeamPage.jsx';
+import KnowledgePage from './pages/KnowledgePage.jsx';
+import AuthPage from './pages/AuthPage.jsx';
 import ProfilePanel from './components/ProfilePanel.jsx';
 import ConfirmDialog from './components/ConfirmDialog.jsx';
 import * as api from './lib/api.js';
@@ -11,7 +14,6 @@ import { mergeThreads } from './lib/format.js';
 import './styles/tokens.css';
 import './styles/app.css';
 
-const TENANT_ID = 'demo-tenant-1';
 const VIEWS = ['home', 'inbox', 'knowledge', 'channels', 'team', 'analytics', 'settings'];
 const BASE = '/dashboard';
 
@@ -21,6 +23,19 @@ const viewFromPath = () => {
 };
 
 const pathForView = (view) => (view === 'home' ? BASE : `${BASE}/${view}`);
+
+/**
+ * The signed-out routes. They live outside /dashboard so that arriving at an invite link
+ * or a bookmarked sign-in page never flashes the inbox first.
+ */
+function authRouteFromPath() {
+    const path = window.location.pathname.replace(/\/+$/, '');
+    if (path === '/login') return { mode: 'login' };
+    if (path === '/signup') return { mode: 'signup' };
+    const invite = path.match(/^\/invite\/(.+)$/);
+    if (invite) return { mode: 'invite', token: invite[1] };
+    return null;
+}
 const MESSAGE_POLL_MS = 1500;
 const STATUS_POLL_MS = 5000;
 const SYNC_MS = 30000;
@@ -41,6 +56,12 @@ function friendlySendError(err) {
 }
 
 export default function App() {
+    // Signed in or not. `undefined` means "we have not asked the server yet", which is
+    // different from `null` (definitely signed out) — without that distinction the sign-in
+    // screen flashes on every reload.
+    const [session, setSession] = useState(undefined);
+    const [authRoute, setAuthRoute] = useState(authRouteFromPath);
+
     // The section lives in the path, so URLs are shareable and a refresh keeps you
     // where you were. Vite and any static host must fall back to index.html.
     const [view, setViewState] = useState(viewFromPath);
@@ -64,7 +85,7 @@ export default function App() {
     }, []);
 
     useEffect(() => {
-        const onPop = () => setViewState(viewFromPath());
+        const onPop = () => { setAuthRoute(authRouteFromPath()); setViewState(viewFromPath()); };
         window.addEventListener('popstate', onPop);
         return () => window.removeEventListener('popstate', onPop);
     }, []);
@@ -86,23 +107,11 @@ export default function App() {
 
     const pages = status?.data?.pages ?? [];
 
-    // No account system yet, so the profile lives in the browser. It moves to the
-    // server with the Organization/User model.
-    const [user, setUser] = useState(() => {
-        const fallback = { firstName: 'Sayub', lastName: '', role: 'Owner', email: '', avatar: null };
-        try {
-            const saved = JSON.parse(localStorage.getItem('profile') || 'null');
-            if (!saved) return fallback;
-            // Earlier versions stored a single `name`.
-            if (saved.name && !saved.firstName) {
-                const [first, ...rest] = saved.name.split(' ');
-                return { ...fallback, ...saved, firstName: first, lastName: rest.join(' ') };
-            }
-            return { ...fallback, ...saved };
-        } catch {
-            return fallback;
-        }
-    });
+    // The profile is the signed-in user, loaded from the server. It used to live in
+    // localStorage because there were no accounts; that key is now only read once, to carry
+    // an existing name over into the first real account.
+    const user = session?.user ?? null;
+
     const [profileOpen, setProfileOpen] = useState(false);
     const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
@@ -110,36 +119,94 @@ export default function App() {
      * Returns an error message instead of throwing, so the panel can show it. Silently
      * swallowing a failed write makes a lost photo look like a UI bug.
      */
-    const saveProfile = useCallback((next) => {
-        setUser(next);
+    const saveProfile = useCallback(async (next) => {
         try {
-            const json = JSON.stringify(next);
-            localStorage.setItem('profile', json);
-            // Read back: Safari in private mode accepts the write and drops it.
-            if (localStorage.getItem('profile') !== json) {
-                return 'Your browser did not keep the change. Private browsing blocks saving.';
-            }
+            const updated = await api.updateMe({
+                firstName: next.firstName,
+                lastName: next.lastName,
+                avatar: next.avatar,
+            });
+            api.setToken(updated.token);
+            setSession(updated);
             return null;
         } catch (err) {
-            return err?.name === 'QuotaExceededError'
-                ? 'There is no room left in browser storage for the photo.'
-                : 'Your browser refused to save the change.';
+            return api.errorMessage(err, 'Your profile could not be saved.');
+        }
+    }, []);
+
+    // One call decides whether we are signed in: a stored token is only a claim until the
+    // server accepts it (it may have expired, or the account may be gone).
+    useEffect(() => {
+        let cancelled = false;
+        if (!api.getToken()) { setSession(null); return; }
+        api.getMe()
+            .then(data => { if (!cancelled) setSession(data); })
+            .catch(() => { if (!cancelled) { api.clearToken(); setSession(null); } });
+        return () => { cancelled = true; };
+    }, []);
+
+    // Any 401 anywhere clears the token and raises this, so the dashboard stops polling
+    // into a wall of failures and shows the sign-in screen instead.
+    useEffect(() => {
+        const onExpired = () => { setSession(null); setAuthRoute({ mode: 'login' }); };
+        window.addEventListener('auth:expired', onExpired);
+        return () => window.removeEventListener('auth:expired', onExpired);
+    }, []);
+
+    // Members available to hand a conversation to. Small and rarely changing, so it is
+    // fetched once rather than polled.
+    const [team, setTeam] = useState([]);
+    useEffect(() => {
+        if (!session) return;
+        api.getTeam()
+            .then(data => setTeam(data.members.filter(m => m.status === 'ACTIVE')))
+            .catch(() => setTeam([]));
+    }, [session]);
+
+    const [summarising, setSummarising] = useState(false);
+
+    // The manual button ignores the cooldown: a person asking for it now has better judgement
+    // about whether the conversation has settled than a timer does.
+    const handleSummarise = useCallback(async (thread) => {
+        setSummarising(true);
+        try {
+            await api.summariseThread(thread.id);
+            await refreshThreadsRef.current?.();
+        } catch (err) {
+            setSendError(api.errorMessage(err, 'Could not write a summary for that conversation.'));
+        } finally {
+            setSummarising(false);
+        }
+    }, []);
+
+    const handleAssign = useCallback(async (thread, userId) => {
+        if (!userId) return;
+        try {
+            await api.assignThread(thread.id, userId);
+            await refreshThreadsRef.current?.();
+        } catch (err) {
+            setSendError(api.errorMessage(err, 'Could not reassign that conversation.'));
         }
     }, []);
 
     const refreshStatus = useCallback(async () => {
-        try { setStatus(await api.getStatus(TENANT_ID)); }
+        try { setStatus(await api.getStatus()); }
         catch (err) { console.error('Failed to check status', err); }
     }, []);
 
+    // Held in a ref so handleAssign can call it without depending on its identity.
+    const refreshThreadsRef = useRef(null);
+
     const refreshThreads = useCallback(async () => {
-        try { setServerThreads(await api.getThreads(TENANT_ID)); }
+        try { setServerThreads(await api.getThreads()); }
         catch (err) { console.error('Failed to fetch threads', err); }
     }, []);
 
+    refreshThreadsRef.current = refreshThreads;
+
     const refreshMessages = useCallback(async () => {
         try {
-            const data = await api.getMessages(TENANT_ID);
+            const data = await api.getMessages();
 
             // Only replace state when something actually changed, so the thread does not
             // re-render (and fight the scroll position) on every poll. Compare content
@@ -157,6 +224,7 @@ export default function App() {
     }, []);
 
     useEffect(() => {
+        if (!session) return undefined;
         refreshStatus();
         refreshMessages();
         refreshThreads();
@@ -181,17 +249,17 @@ export default function App() {
         }
 
         return () => { clearInterval(m); clearInterval(t); clearInterval(s); };
-    }, [refreshStatus, refreshMessages, refreshThreads]);
+    }, [session, refreshStatus, refreshMessages, refreshThreads]);
 
     // Meta only pushes webhooks for live events, so poll the Graph API as well to
     // pick up anything delivered while we were offline.
     useEffect(() => {
-        if (!status?.connected) return;
-        const sync = () => api.syncMessages(TENANT_ID).then(refreshMessages).catch(e => console.error('Sync failed', e));
+        if (!session || !status?.connected) return;
+        const sync = () => api.syncMessages().then(refreshMessages).catch(e => console.error('Sync failed', e));
         sync();
         const id = setInterval(sync, SYNC_MS);
         return () => clearInterval(id);
-    }, [status?.connected, refreshMessages]);
+    }, [session, status?.connected, refreshMessages]);
 
     const visibleMessages = useMemo(
         () => (hiddenIds.size ? messages.filter(m => !hiddenIds.has(m.id)) : messages),
@@ -233,9 +301,16 @@ export default function App() {
         [allThreads],
     );
 
-    const handleConnect = (platform) => {
+    const handleConnect = async (platform) => {
         if (platform === 'widget') return;
-        window.location.href = api.connectUrl(platform, TENANT_ID);
+        try {
+            // Fetched rather than linked: a top-level navigation cannot carry the token,
+            // so the backend signs the workspace into the OAuth state for us.
+            window.location.href = await api.connectUrl(platform);
+        } catch (err) {
+            console.error('Could not start the connection', err);
+            setSendError(api.errorMessage(err, 'Could not start the connection. Please try again.'));
+        }
     };
 
     const handleSend = async (thread, text, replyToId = null) => {
@@ -250,7 +325,7 @@ export default function App() {
         }]);
 
         try {
-            await api.sendReply(TENANT_ID, {
+            await api.sendReply({
                 pageId: thread.pageId,
                 recipientId: thread.customerId,
                 text,
@@ -268,7 +343,7 @@ export default function App() {
     const handleSendVoice = async (thread, blob) => {
         setSendError('');
         try {
-            await api.sendVoice(TENANT_ID, {
+            await api.sendVoice({
                 blob,
                 recipientId: thread.customerId,
                 pageId: thread.pageId,
@@ -283,7 +358,7 @@ export default function App() {
     const handleSendImage = async (thread, file) => {
         setSendError('');
         try {
-            await api.sendImage(TENANT_ID, {
+            await api.sendImage({
                 file,
                 recipientId: thread.customerId,
                 pageId: thread.pageId,
@@ -298,7 +373,7 @@ export default function App() {
     const handleReact = async (message, emoji) => {
         setSendError('');
         try {
-            await api.reactToMessage(TENANT_ID, {
+            await api.reactToMessage({
                 metaMessageId: message.metaMessageId,
                 reaction: emoji,
                 recipientId: message.direction === 'inbound' ? message.senderId : message.recipientId,
@@ -314,7 +389,7 @@ export default function App() {
     /** Take over, hand back, or close a conversation. */
     const handleThreadAction = useCallback(async (thread, action) => {
         try {
-            await api.setThreadState(thread.id, action, action === 'take-over' ? { agentId: 'me' } : undefined);
+            await api.setThreadState(thread.id, action);
             await refreshThreads();
         } catch (err) {
             console.error(`Thread action ${action} failed`, err);
@@ -330,15 +405,50 @@ export default function App() {
         });
     }, []);
 
-    const handleLogout = async () => {
+    const handleDisconnect = async () => {
         setConfirmDisconnect(false);
         try {
-            await api.logout(TENANT_ID);
+            await api.disconnectChannels();
         } catch (err) {
-            console.error('Logout failed', err);
+            console.error('Disconnect failed', err);
+            setSendError(api.errorMessage(err, 'Could not disconnect the channels.'));
         }
-        window.location.href = '/';
+        refreshStatus();
+        refreshMessages();
+        refreshThreads();
     };
+
+    const handleSignOut = useCallback(() => {
+        api.clearToken();
+        setSession(null);
+        setAuthRoute({ mode: 'login' });
+        window.history.pushState({}, '', '/login');
+    }, []);
+
+    // Still asking the server. Rendering nothing beats flashing the sign-in screen at
+    // someone who is signed in.
+    if (session === undefined) return null;
+
+    if (!session) {
+        const route = authRoute ?? { mode: 'login' };
+        return (
+            <AuthPage
+                mode={route.mode}
+                inviteToken={route.token}
+                onSession={(next) => {
+                    api.setToken(next.token);
+                    setSession(next);
+                    setAuthRoute(null);
+                    setViewState('home');
+                    window.history.pushState({}, '', BASE);
+                }}
+                onNavigate={(mode) => {
+                    setAuthRoute({ mode });
+                    window.history.pushState({}, '', `/${mode}`);
+                }}
+            />
+        );
+    }
 
     return (
         <div className="shell">
@@ -362,6 +472,7 @@ export default function App() {
                     navOpen={navOpen}
                     showSearch={view === 'inbox'}
                     onEditProfile={() => setProfileOpen(true)}
+                    onSignOut={handleSignOut}
                 />
 
                 {view === 'home' && (
@@ -398,10 +509,19 @@ export default function App() {
                         sendError={sendError}
                         onDismissError={() => setSendError('')}
                         onError={setSendError}
+                        me={user}
+                        team={team}
+                        onAssign={handleAssign}
+                        onSummarise={handleSummarise}
+                        summarising={summarising}
                     />
                 )}
 
-                {!['home', 'inbox'].includes(view) && (
+                {view === 'team' && <TeamPage />}
+
+                {view === 'knowledge' && <KnowledgePage />}
+
+                {!['home', 'inbox', 'team', 'knowledge'].includes(view) && (
                     <PlaceholderPage
                         view={view}
                         onNavigate={setView}
@@ -416,7 +536,7 @@ export default function App() {
                 message="Every connected page is removed and all stored message history is deleted. This cannot be undone — the messages themselves stay in Messenger, but this app loses its copy."
                 confirmLabel="Disconnect"
                 danger
-                onConfirm={handleLogout}
+                onConfirm={handleDisconnect}
                 onCancel={() => setConfirmDisconnect(false)}
             />
 

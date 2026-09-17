@@ -14,8 +14,16 @@ public enum ThreadStatus {
     AGENT_HANDLING,
     RESOLVED;
 
-    /** Whether the AI is allowed to reply. Human-in-the-loop, report L-R 1 and L-R 3. */
+    /**
+     * Whether the AI is allowed to reply. Human-in-the-loop, report L-R 1 and L-R 3.
+     *
+     * OPEN_FOR_AGENT still allows it. The rule the report and the delivery plan both state is
+     * that the AI goes quiet "once an agent takes over" — not the moment it escalates. Waiting
+     * for a human does not mean the next question is unanswerable, and treating escalation as
+     * permanent silenced the AI for the rest of a conversation after one message it could not
+     * handle, which is how a customer ends up ignored.
+     */
     public boolean aiMayReply() {
-        return this == AI_HANDLING;
+        return this == AI_HANDLING || this == OPEN_FOR_AGENT;
     }
 }

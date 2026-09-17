@@ -5,20 +5,10 @@ import { IconArrowRight } from '../components/icons.jsx';
  * reader (and a supervisor) that the gap is planned, not forgotten.
  */
 const PAGES = {
-    knowledge: {
-        title: 'Knowledge',
-        phase: 'Phase 2',
-        text: 'Upload text, PDFs or a URL for the AI to answer from. Content is chunked, embedded and searched semantically.',
-    },
     channels: {
         title: 'Channels',
         phase: 'Phase 1',
         text: 'Manage connected Facebook Pages and Instagram accounts, and generate the website widget snippet.',
-    },
-    team: {
-        title: 'Team',
-        phase: 'Phase 4',
-        text: 'Invite agents, set roles, and configure round-robin routing and escalation thresholds.',
     },
     analytics: {
         title: 'Analytics',

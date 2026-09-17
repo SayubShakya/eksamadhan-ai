@@ -6,19 +6,19 @@ import { fileToAvatar } from '../lib/avatar.js';
 /**
  * Edit the agent profile shown in the top bar.
  *
- * There is no account system yet — auth arrives with the Organization/User model in
- * Phase 1 — so this saves to the browser. The panel says as much rather than
- * pretending the details are stored on a server.
+ * Saved on the server against the signed-in user. Role and email are read-only: the role
+ * is set when inviting (FR-04), and the email identifies the account.
  */
 export default function ProfilePanel({ open, user, onSave, onClose }) {
     const [draft, setDraft] = useState(user);
     const [error, setError] = useState('');
+    const [saving, setSaving] = useState(false);
     const fileRef = useRef(null);
 
     // Seed only when the panel opens. Depending on `user` too would reset the form
     // mid-edit whenever the profile object changed identity.
     useEffect(() => {
-        if (open) { setDraft(user); setError(''); }
+        if (open) { setDraft(user); setError(''); setSaving(false); }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
@@ -31,7 +31,7 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
 
     if (!open) return null;
 
-    const firstName = draft.firstName.trim();
+    const firstName = (draft.firstName || '').trim();
 
     const pickFile = async (e) => {
         const file = e.target.files?.[0];
@@ -46,10 +46,12 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
         }
     };
 
-    const submit = (e) => {
+    const submit = async (e) => {
         e.preventDefault();
-        if (!firstName) return;
-        const failed = onSave({ ...draft, firstName, lastName: draft.lastName.trim() });
+        if (!firstName || saving) return;
+        setSaving(true);
+        const failed = await onSave({ ...draft, firstName, lastName: (draft.lastName || '').trim() });
+        setSaving(false);
         if (failed) { setError(failed); return; }   // keep the panel open so nothing is lost
         onClose();
     };
@@ -112,7 +114,7 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
                         <label className="field">
                             <span className="field__label">Last name</span>
                             <input
-                                value={draft.lastName}
+                                value={draft.lastName || ''}
                                 onChange={(e) => setDraft({ ...draft, lastName: e.target.value })}
                                 placeholder="Last name"
                                 maxLength={30}
@@ -130,27 +132,22 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
                         </p>
                     </div>
 
-                    <label className="field">
+                    {/* Read-only: the email is the account identifier, so changing it here
+                        would silently change how you sign in. */}
+                    <div className="field">
                         <span className="field__label">Email</span>
-                        <input
-                            type="email"
-                            value={draft.email || ''}
-                            onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-                            placeholder="you@example.com"
-                        />
-                    </label>
-
-                    <p className="panel__note">
-                        Saved on this device only. Profiles move to the server once accounts
-                        and sign-in are built.
-                    </p>
+                        <p className="field__static">
+                            {draft.email}
+                            <span className="field__note">Used to sign in</span>
+                        </p>
+                    </div>
 
                     <div className="panel__actions">
                         <button type="button" className="btn btn--secondary" onClick={onClose}>
                             Cancel
                         </button>
-                        <button type="submit" className="btn btn--primary" disabled={!firstName}>
-                            Save changes
+                        <button type="submit" className="btn btn--primary" disabled={!firstName || saving}>
+                            {saving ? 'Saving…' : 'Save changes'}
                         </button>
                     </div>
                 </form>

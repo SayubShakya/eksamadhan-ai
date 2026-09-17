@@ -30,4 +30,8 @@ public class MessageResponse {
     private String reaction;
     private String attachmentType;
     private String attachmentUrl;
+    private boolean aiGenerated;  // the AI wrote this, not an agent
+    private Double aiConfidence;
+    private String aiSources;
+    private String sentiment;    // inbound messages only    // "Payment methods (46%), Returns (42%)"  // how sure it was, 0-1; null for anything a human sent
 }

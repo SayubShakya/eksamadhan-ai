@@ -18,4 +18,19 @@ public interface ConversationThreadRepository extends JpaRepository<Conversation
     List<ConversationThread> findByTenantIdAndStatusOrderByLastMessageAtDesc(String tenantId, ThreadStatus status);
 
     long countByTenantIdAndStatus(String tenantId, ThreadStatus status);
+
+    /**
+     * How many live conversations each agent is already holding — the load that routing
+     * balances. Only OPEN_FOR_AGENT and AGENT_HANDLING count: a resolved thread is not work.
+     */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT t.assignedAgentId, COUNT(t) FROM ConversationThread t "
+          + "WHERE t.tenantId = :tenantId AND t.assignedAgentId IS NOT NULL "
+          + "AND t.status IN (io.eksamadhan.model.ThreadStatus.OPEN_FOR_AGENT, "
+          + "                 io.eksamadhan.model.ThreadStatus.AGENT_HANDLING) "
+          + "GROUP BY t.assignedAgentId")
+    List<Object[]> countOpenPerAgent(String tenantId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    void deleteByTenantId(String tenantId);
 }

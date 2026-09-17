@@ -4,7 +4,7 @@ Living context for any AI assistant joining this project. **Read this first.**
 Update it in the same turn as any meaningful change — decisions, progress, gotchas.
 Newest entries at the top of each list.
 
-**Last updated:** 2026-09-16
+**Last updated:** 2026-09-17
 
 ---
 
@@ -27,8 +27,8 @@ dedupe on `metaMessageId`, historic sync, async executor, reply sending, a React
 inbox with polling, and a Meta privacy/data-deletion endpoint.
 
 ### What it does not do
-No user login (hardcoded `demo-tenant-1`), no `Thread` entity or status machine,
-no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyway.
+No RAG, no sentiment, no FCM. (Webhook signature verification, Flyway, the `Thread`
+status machine and authentication have all since been built — see the change log.)
 
 ## Authority order
 
@@ -93,6 +93,117 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 
 ## Known issues / gotchas
 
+- **The Postgres image is now `pgvector/pgvector:pg16`**, not `postgres:16-alpine`. Same
+  PG16 data format so the volume was reused, but it is Debian rather than Alpine — the
+  database was `REINDEX`ed once because musl and glibc sort text differently. A fresh clone
+  needs nothing special.
+- **`vector(1536)` passes `ddl-auto: validate`** when mapped as
+  `@JdbcTypeCode(SqlTypes.VECTOR) @Array(length = 1536)` with an explicit
+  `columnDefinition = "vector(1536)"`, using `org.hibernate.orm:hibernate-vector` (version
+  managed by the Boot 4 BOM). Verified 2026-09-17 on a scratch database before building on it.
+- **Chunking quality decides retrieval quality.** A first attempt packed a whole FAQ into one
+  1200-character chunk, and on-topic and off-topic queries then scored 0.29 and 0.18 — barely
+  distinguishable. Making the chunker break at headings moved that to 0.47 against 0.19.
+  If retrieval ever looks weak, look at the chunk boundaries before blaming the model.
+- **Sentiment is read by the model, not a keyword list.** Three reasons a lexicon fails this
+  project specifically: customers write in English, Nepali and romanised Nepali, and no word
+  list covers all three ("lado muji" is classified ANGRY correctly); negation and sarcasm
+  invert a lexicon ("great, another delay" is NEGATIVE); and emoji frequently *are* the whole
+  message. Measured 14/14 on a mixed set covering all three cases, 2026-09-17.
+- **ANGRY is separate from NEGATIVE on purpose.** "My parcel is late and I am annoyed" is
+  negative but still answerable; abuse or a demand for a manager is a signal to fetch a person.
+  `Sentiment.warrantsHuman()` marks the distinction — it is the hook the escalation trigger
+  will use, and is deliberately **not yet wired** to auto-escalation.
+- **The handover brief waits for quiet.** `ConversationSummaryService.scheduleWhenQuiet` only
+  summarises after `app.ai.summary-cooldown-seconds` (30) of silence, and restarts the timer
+  whenever another message arrives. Summarising mid-exchange spends a model call on a
+  conversation that is still moving and captures a half-finished picture. The manual "Refresh
+  summary" button bypasses the cooldown — a person asking for it now has better judgement than
+  a timer. The debounce runs on a single daemon thread, not the shared `taskExecutor`, so a
+  sleeping timer cannot occupy a pool slot.
+- **A conversation has exactly one owner at a time: the AI, or one named agent.** The customer
+  only ever sees one voice; internally the conversation passes between the AI and people.
+  `ThreadService.visibleTo` scopes an agent's inbox to their own conversations, `mayAct`
+  guards every action, and `MessageController` applies the same rule to *replying* — otherwise
+  the filtering would be cosmetic, since the transcript carries the content. Owners and admins
+  see the whole workspace, because someone has to find a conversation whose assignee is away.
+- **The status alone cannot say "you".** `AGENT_HANDLING` is equally true of a colleague's
+  conversation, so the label is built by `ownershipLabel(thread, meId)` in `lib/format.js`. The
+  old hardcoded "You are handling" told an agent they owned someone else's conversation.
+- **Resend will not email anyone but the account owner until a domain is verified.** With no
+  verified domain it refuses any recipient except `shakya.sayub123@gmail.com`, so an invite to
+  a real teammate is rejected by the API. The app treats sending as best-effort: the invitation
+  is still created and the copyable link still shown, and the Team screen says plainly that the
+  email did not go. Verify a domain at resend.com/domains and set `EMAIL_FROM` to an address on
+  it before relying on invitations reaching anyone.
+- **Email addresses are globally unique**, not per workspace, so one person cannot belong to
+  two organizations. Inviting an address that already has an account returns 409 before any
+  email is attempted.
+- **Escalation assigns someone.** `AgentRoutingService` picks the *least-loaded* active
+  member, not strict round-robin: round-robin hands the next conversation to the next agent
+  regardless of how many they are already juggling. Ties break randomly, or one person takes
+  every escalation on a quiet day. It reduces to round-robin when everyone is idle.
+- **The customer is told when a human is coming.** `app.ai.handover-message`, sent once on the
+  transition into OPEN_FOR_AGENT — not per message, or someone asking three unanswerable
+  things is told three times. Blank disables it.
+- **Escalation is not permanent.** `aiMayReply()` covers AI_HANDLING *and* OPEN_FOR_AGENT.
+  Treating escalation as a permanent silence meant one unanswerable message killed the AI for
+  the rest of the conversation — a customer said "Hello there", it scored 0.213 against a
+  shipping FAQ, and the AI never spoke again. The rule the report states is that the AI stops
+  "once an agent takes over", i.e. AGENT_HANDLING.
+- **A greeting is not a question, and weak retrieval must not escalate by itself.** Low
+  similarity now means "no relevant documentation" is passed to the model, which either replies
+  conversationally or sets `answered: false`. Hard-escalating below `min-similarity` made every
+  conversation escalate on its opening "hi".
+- **Prompt wording is load-bearing, and must be tested both ways.** Adding "never state a fact
+  about this business that is not in the context" read as an instruction to refuse: the model
+  then declined questions the context answered outright, with the right passage sitting at
+  0.484. The rule has to state both halves — decline when it is not covered, *answer when it
+  is*. Any change to `AiReplyService.SYSTEM_PROMPT` needs checking against an answerable
+  question, a greeting and an off-topic question before it is committed.
+- **The model's self-reported confidence is useless on its own.** In every on-topic test
+  `gpt-4o-mini` returned `confidence: 1.0`, including on the weakest match (0.377 retrieval
+  similarity). So `app.ai.min-confidence` currently never fires; the gate that actually works
+  is `min-similarity`, checked against retrieval *before* the model is called. Do not claim in
+  the report that the model self-assesses — say the confidence gate is driven by retrieval
+  similarity, with the model's verdict as a second, weaker signal.
+- **Work triggered by ingestion must run after the transaction commits.** Calling an `@Async`
+  service directly from `MetaMessageParser.saveMessage` made it look up a row the committing
+  transaction had not released, find nothing, and silently do nothing. Fixed with a
+  `MessageIngested` event and `@TransactionalEventListener(AFTER_COMMIT)`. Anything added to
+  the ingestion path later must go through the same event.
+- **A native query's timestamp type is the driver's choice.** The PostgreSQL driver returns
+  `java.time.Instant` for `timestamptz`, not `java.sql.Timestamp`; casting blindly threw
+  `ClassCastException` at runtime, and only on the path that had prior messages to recall.
+- **WebClient buffers responses in memory and defaults to 256 KB**, which is far too small
+  for embeddings: one vector of 1536 floats is roughly 30 KB of JSON, so ten chunks overflow
+  it and the call fails with `DataBufferLimitException`. `EmbeddingClient` raises the limit
+  via `.codecs(c -> c.defaultCodecs().maxInMemorySize(...))`. Any future LLM client needs the
+  same treatment.
+- **pgvector's `<=>` is cosine *distance*** (0 = identical), so similarity is `1 - distance`
+  and the sort is ascending. Getting this backwards returns the least relevant passages.
+- **`.env` values must be alphanumeric-ish.** `dotenv-java` rejects a line whose value
+  contains `+`, `/` or `=`, and it reports the failure against the *next* entry in the
+  file, so the error names the wrong variable. Generate secrets with
+  `openssl rand -hex 32`, never `base64`. This cost a confusing startup crash 2026-09-17.
+- **Spring Boot 4 renamed the security starters** under a `security-` prefix:
+  `spring-boot-starter-security-oauth2-resource-server`, not
+  `spring-boot-starter-oauth2-resource-server` (which still resolves but is deprecated).
+  Unlike Flyway, `spring-boot-starter-security` *does* bring its auto-configuration
+  module, so no extra `spring-boot-security` dependency is needed.
+- **Spring Security 7 removed `.and()`** and `authorizeRequests()`. The lambda DSL is
+  mandatory; a Boot-3-era snippet will not compile.
+- **Permit the `ERROR` dispatcher** in the filter chain
+  (`.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()`). Without it an exception
+  thrown on a *permitted* endpoint is forwarded to `/error`, which the chain then
+  rejects — turning every 400 and 409 into a baffling 401.
+- **Security does not see `WebMvcConfigurer` CORS.** The bean must be named
+  `corsConfigurationSource`; `CorsConfigurer` looks it up by name, not by type.
+- **JWTs are held in `localStorage`, not an HttpOnly cookie.** A deliberate trade-off:
+  cookies through the Vercel proxy and the Pinggy tunnel would need SameSite/CSRF
+  handling for no gain at this stage. Record it in the report's Limitations.
+- **`/api/media/**` is unauthenticated** — `<img>` and `<audio>` cannot send a bearer
+  token. Filenames are unguessable UUIDs; signed URLs are future work.
 - `CLAUDE.md` is git-ignored (local instructions, not project work).
 - **Meta App Review is blocked, permanently for practical purposes.** Advanced access
   requires Business Verification → a business portfolio → an account without an
@@ -152,6 +263,112 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 - Phases are sequential — see `phases.md`.
 
 ## Change log
+
+- **2026-09-17** — **Sentiment detection.** `ConversationThread.sentiment` had been declared and
+  never written since the Thread model; the inbox pill said "Not analysed yet" permanently. Every
+  inbound message is now classified POSITIVE / NEUTRAL / NEGATIVE / ANGRY from its text *and* its
+  emoji, including while an agent is handling the conversation, where the AI never runs and the
+  mood would otherwise never be assessed. Existing history is backfilled on sync, skipping
+  anything already classified.
+
+  Detection only: nothing escalates on sentiment yet. That is the remaining escalation trigger,
+  and `Sentiment.warrantsHuman()` is the hook waiting for it.
+
+- **2026-09-17** — **Handover summaries.** The conversation panel now carries a three-line brief
+  — what the customer wants, what they have already been told, what is still open — written for
+  the colleague picking the conversation up rather than for the customer. It replaces a list of
+  retrieved chunk names, which told an agent nothing useful (and displayed wrongly, splitting
+  the source title "Shipping, returns and payments" on its own comma).
+
+  Generated on handover but only after 30 seconds of silence, restarting on each new message,
+  so a conversation still in flight is not summarised half-finished. Stored on the thread with
+  the message count it covered, which is what lets the UI flag a brief as out of date.
+
+- **2026-09-17** — **Conversation ownership and transfer.** Every agent could previously see and
+  answer every conversation. Now an agent's inbox holds only what is assigned to them, owners and
+  admins see everything, and the assignee or an admin can hand a conversation to someone else —
+  the busy-agent case. Verified with two agents: each sees only their own, a cross-assignment
+  attempt returns 404 and leaves the conversation untouched, and an admin can reassign anything.
+
+  The right-hand panel now shows who is handling the conversation, and which knowledge passages
+  the AI's last answer drew on with their match scores (`social_messages.ai_sources`, V5),
+  replacing a placeholder that still claimed the knowledge engine was unconnected. Sources are
+  recorded at reply time rather than recomputed, so it is an audit trail of what was actually
+  used rather than what the knowledge base says today.
+
+- **2026-09-17** — **Email, through Resend.** `EmailService` sends invitations and notifies the
+  assigned agent when a conversation escalates — the latter being the only way an agent learns
+  of waiting work until the FCM push lands. Sending is best-effort everywhere: a bounced email
+  never rolls back the invitation or the escalation that prompted it, and the Team screen
+  reports honestly whether the message was delivered. See the free-tier recipient restriction
+  above, which currently blocks inviting anyone but the account owner.
+
+- **2026-09-17** — **Escalation routes to a person, and says so.** An out-of-scope question
+  ("why is it so expensive, can you reduce the cost?") previously escalated into silence: no
+  reply to the customer and no owner for the conversation. Now the least-loaded active member
+  is assigned and the customer gets one handover message. Verified with a three-person team and
+  four escalations — 3-way tie, then 2, then the last free member, then a random tie-break.
+  The assignee shows in the conversation list and above the composer.
+
+  Still missing from PRD 4.6: an availability toggle (FR-05), so routing currently considers
+  every ACTIVE member rather than only those marked online, and the FCM push (report's
+  three-second alert target).
+
+- **2026-09-17** — **The AI answers.** `LlmClient` (OpenRouter chat completions,
+  `openai/gpt-4o-mini`) and `AiReplyService`, hooked into webhook ingestion through an
+  after-commit event. Three gates decide between answering and handing over: retrieval
+  similarity below `min-similarity` never reaches the model at all; the model is asked whether
+  the passages actually answer the question and told that declining is correct; and confidence
+  below `min-confidence` escalates. Any of them sets the thread to `OPEN_FOR_AGENT` with a
+  recorded reason. `ThreadStatus.aiMayReply()` finally has a caller, so the AI goes quiet once
+  an agent takes over.
+
+  Verified against simulated webhooks with real signatures: grounded answers on-topic
+  ("Yes, we deliver to Pokhara. The delivery charge is Rs 250." — correctly derived from an
+  outside-the-valley rule), escalation when the knowledge base is empty, and escalation on
+  an off-topic question. **The final Meta send is the one link not verified**, because doing so
+  means messaging a real person from the tester account.
+
+  AI replies are flagged (`social_messages.ai_generated`, `ai_confidence`, V4) and shown with
+  their own bubble style, so an agent can see what was said on their behalf. That flag is also
+  what the graded deflection-rate metric will count.
+
+- **2026-09-17** — **Knowledge base and semantic retrieval (Phase 2, part one).** pgvector in
+  PostgreSQL, embeddings from `openai/text-embedding-3-small` through OpenRouter, per-workspace
+  knowledge sources (pasted text and PDF), heading-aware chunking, and top-k cosine retrieval
+  exposed at `GET /api/knowledge/search` so retrieval can be judged on its own before any AI
+  answer is layered on it. Every message is embedded too, giving a thread a semantic memory.
+
+  **Two deliberate deviations from the submitted report, both argued in `architecture.md`:**
+  pgvector replaces Pinecone (PostgreSQL was already mandated, so this removes a service and
+  makes GDPR deletion a cascade rather than a best-effort remote call), and OpenRouter is the
+  gateway to OpenAI's own embedding model rather than calling OpenAI directly.
+
+  Generation and the confidence gate are deliberately *not* built yet — that is the next step.
+  Retrieval had to be provable first, otherwise a bad answer cannot be attributed to the right
+  half of the pipeline.
+
+- **2026-09-17** — **Authentication built; `demo-tenant-1` is gone.** `tenants` became
+  `organizations` (Flyway `V2__auth.sql`) with `api_key` left untouched on purpose —
+  `conversation_threads.tenant_id` and `social_messages.tenant_id` are plain varchar
+  columns holding that string with no FK, so renaming the column would have orphaned
+  every existing row. Added `users` and `invitations`, Spring Security 7 with stateless
+  HS256 JWTs, and roles OWNER / ADMIN / AGENT. Every `{tenantId}` path variable was
+  deleted: the workspace now comes from the caller's token.
+
+  **Adoption:** the first account to sign up inherits the pre-accounts `demo-tenant-1`
+  workspace (gated on it having zero users, so it can only fire once), which is what
+  keeps the connected Facebook Page and the 15 real messages attached to a real account.
+  Controlled by `app.adoptable-organization-api-key`.
+
+  Invites are **copyable links**, not email — no SMTP dependency to fail in a demo.
+  Google sign-in and OTP from report §5.4.3 are deferred and belong in Limitations.
+
+  Three genuine holes were closed in passing: the OAuth callback created a workspace for
+  any `state` value (now a signed, 10-minute token); `MessageController` resolved a
+  `pageId` globally, so one workspace could send through another's access token; and
+  `ThreadController`'s four actions had no ownership check at all. `PageController` was
+  deleted — it served raw `SocialPage` entities including `accessToken`.
 
 - **2026-09-16** — Wrote `docs/weekly-plan.md`: an **eight-week** delivery plan
   (15 Sep – 9 Nov 2026) compressing the report's twelve-week §7.2 plan. The four phases

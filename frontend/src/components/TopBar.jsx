@@ -1,7 +1,9 @@
-import { IconSearch, IconMenu } from './icons.jsx';
+import { IconSearch, IconMenu, IconSignOut } from './icons.jsx';
 import { LogoMark } from './Logo.jsx';
 import Avatar from './Avatar.jsx';
 import { fullName } from '../lib/avatar.js';
+
+const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', AGENT: 'Agent' };
 
 
 /**
@@ -13,8 +15,9 @@ import { fullName } from '../lib/avatar.js';
  */
 export default function TopBar({
     query, onQueryChange, user,
-    onToggleNav, onHome, unread = 0, navOpen, showSearch, onEditProfile,
+    onToggleNav, onHome, unread = 0, navOpen, showSearch, onEditProfile, onSignOut,
 }) {
+    const role = ROLE_LABEL[user?.role] ?? user?.role ?? '';
     return (
         <header className="topbar">
             {!navOpen && (
@@ -47,9 +50,13 @@ export default function TopBar({
             <button className="user" onClick={onEditProfile} aria-label="Edit profile">
                 <span className="user__text">
                     <span className="user__name">{fullName(user) || 'Set up profile'}</span>
-                    <span className="user__role">{user.role}</span>
+                    <span className="user__role">{role}</span>
                 </span>
                 <Avatar user={user} size={32} />
+            </button>
+
+            <button className="icon-btn" onClick={onSignOut} aria-label="Sign out" title="Sign out">
+                <IconSignOut />
             </button>
         </header>
     );

@@ -35,10 +35,34 @@ export function initials(name) {
 }
 
 /** Human labels for the conversation states, from the contextual report §4.5. */
+/**
+ * Who owns this conversation, from the viewer's point of view. The status alone cannot say
+ * "you" — AGENT_HANDLING is equally true for a colleague's conversation.
+ */
+export function ownershipLabel(thread, meId) {
+    if (!thread) return '';
+    if (thread.status === 'AI_HANDLING') return 'AI is handling';
+    if (thread.status === 'RESOLVED') return 'Resolved';
+    const mine = thread.assignedAgentId && thread.assignedAgentId === meId;
+    const who = mine ? 'You' : thread.assignedAgentName;
+    if (thread.status === 'AGENT_HANDLING') {
+        return who ? `${who} ${mine ? 'are' : 'is'} handling` : 'Being handled';
+    }
+    return who ? `Waiting for ${mine ? 'you' : who}` : 'Needs agent';
+}
+
+/** How a sentiment reads, and how it should look. Colour is always paired with a word. */
+export const SENTIMENT = {
+    POSITIVE: { label: 'Happy', face: '😊', tone: 'pill--positive' },
+    NEUTRAL:  { label: 'Neutral', face: '😐', tone: 'pill--neutral' },
+    NEGATIVE: { label: 'Unhappy', face: '😞', tone: 'pill--warning' },
+    ANGRY:    { label: 'Angry', face: '😡', tone: 'pill--negative' },
+};
+
 export const STATUS_LABEL = {
     AI_HANDLING: 'AI handling',
     OPEN_FOR_AGENT: 'Needs agent',
-    AGENT_HANDLING: 'You are handling',
+    AGENT_HANDLING: 'Being handled',
     RESOLVED: 'Resolved',
 };
 

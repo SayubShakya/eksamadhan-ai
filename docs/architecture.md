@@ -14,16 +14,39 @@ Status: proposed structure. No code written yet.
 | Backend | **Java 21 · Spring Boot 3** | multithreaded handling of many concurrent incoming messages; better memory management; stable and enterprise-grade over Node.js |
 | Frontend | **React.js · Vite** | fast component builds, hot reload, modern UI |
 | Database | **PostgreSQL** | reliable, secure, open source, handles complex relational data |
-| Vector DB | **Pinecone** | semantic (meaning-based) search over uploaded business files rather than keyword matching |
-| LLM | **OpenAI API** (latest GPT models) | answer generation over retrieved context |
+| Vector DB | ~~Pinecone~~ → **pgvector in PostgreSQL** | semantic search over uploaded business files rather than keyword matching. See the substitution note below. |
+| LLM | **OpenAI models via OpenRouter** | answer generation over retrieved context, and embeddings |
 | Notifications | **Firebase Cloud Messaging** | device alerts without keeping a screen on |
 | Auth | **OAuth 2.0 + JWT** | report §5.4.3 — never store raw passwords; Meta platform compliance |
 | Hosting | **PrabhuHost** | affordability, 99.9% uptime (report §5.3.2) |
 
 Build tool: Maven. Java version: 21 LTS.
 
-**Do not substitute these.** The stack is defended in a submitted, marked document.
-Swapping Pinecone for pgvector or Spring for FastAPI would contradict §5.2 and §5.4.1.
+**Do not substitute these** without recording why. The stack is defended in a submitted,
+marked document, so replacing Spring with FastAPI, or PostgreSQL with something else, would
+contradict §5.2 and §5.4.1. Two substitutions have been made deliberately:
+
+**Pinecone → pgvector (2026-09-17).** The report chose Pinecone on the strength of Wang et
+al. (2024), that it suits a single developer. pgvector keeps that property and improves on it
+in three ways that matter to this project specifically:
+
+1. PostgreSQL is *already* mandated by §5.2, so this removes a second data store, a second
+   account, and a second set of credentials rather than adding them.
+2. Deleting a knowledge source and deleting its vectors become one transaction with an
+   `ON DELETE CASCADE`, instead of a database delete plus a best-effort remote call that can
+   fail and leave orphaned vectors. That is a direct improvement to the §5.4.1 data-handling
+   obligation — a customer's "delete my data" cannot half-succeed.
+3. Pinecone's free tier has index limits and expires, which was already logged as a risk for
+   this phase. A self-hosted extension cannot expire mid-project.
+
+The retrieval semantics are unchanged: cosine similarity over embeddings, top-k. Argue it in
+the viva as a data-residency and integrity decision, not a convenience one.
+
+**OpenAI API → OpenAI models through OpenRouter (2026-09-17).** A much smaller change: the
+embedding model in use is `openai/text-embedding-3-small`, the OpenAI model the report names,
+reached through a gateway. One key covers embeddings and chat completions, and the provider
+can be changed by configuration if OpenAI becomes unavailable — which answers the report's own
+stated "API Risk".
 
 ## 2. Performance targets (report §1.4 — these are graded)
 
@@ -68,7 +91,7 @@ eksamadhan-ai/
 │  │  ├─ dto/                    # request/response records
 │  │  ├─ controller/             # REST controllers + webhook endpoints
 │  │  └─ service/
-│  │     ├─ rag/                 # ingestion, embedding, Pinecone, prompting
+│  │     ├─ rag/                 # ingestion, chunking, embedding, retrieval, prompting
 │  │     ├─ channel/             # MetaChannelService, WidgetChannelService
 │  │     ├─ escalation/          # sentiment, confidence, routing
 │  │     └─ notification/        # FcmService
@@ -87,15 +110,24 @@ eksamadhan-ai/
 ```
 Organization ─┬─< User (role: ADMIN | AGENT, status: ONLINE | BUSY | OFFLINE)
               ├─< Channel (type: FACEBOOK | INSTAGRAM | WEB, oauth tokens)
-              ├─< KnowledgeSource (TEXT | PDF | URL) ─< Chunk (pineconeVectorId)
+              ├─< KnowledgeSource (TEXT | PDF) ─< KnowledgeChunk (content, embedding vector(1536))
               └─< Thread (channel, externalId, status, assignedAgent)
                     └─< Message (sender: CUSTOMER|AI|AGENT|SYSTEM, body, confidence, sentiment)
+                          └── MessageEmbedding (embedding vector(1536))  — conversation memory
 ```
 
-Chunk text and metadata live in PostgreSQL; the **embedding vector lives in Pinecone**,
-referenced by `pineconeVectorId`. Keep the two in sync — deleting a knowledge source
-must delete its Pinecone vectors, or the bot answers from data the admin removed
-(a GDPR deletion issue, report §2.3.20).
+Chunk text and its **embedding both live in PostgreSQL**, in a `vector(1536)` column provided
+by pgvector. There is nothing to keep in sync: deleting a knowledge source deletes its vectors
+by `ON DELETE CASCADE`, in the same transaction, so the bot can never answer from data the
+admin removed (a GDPR deletion issue, report §2.3.20).
+
+`MessageEmbedding` gives a conversation a semantic memory — the earlier messages that bear on
+what was just asked can be recalled instead of resending a whole thread to the model, which is
+the token-cost problem the report raises when citing OpenAI (2025).
+
+The embedding model name is stored on every row. Similarity scores from different models are
+not comparable, so changing the model means re-indexing, and this is what makes that
+detectable rather than silent.
 
 `Thread.status`: `AI_HANDLING → OPEN_FOR_AGENT → AGENT_HANDLING → RESOLVED`.
 This enum is the spine of the product — inbox filters on it, routing writes it, the
@@ -107,7 +139,8 @@ widget polls it. Settle it before building any UI.
 ```
 Webhook (Meta / widget) → verify signature → persist Message → return 200 immediately
    @Async worker:
-      embed query (OpenAI) → Pinecone top-k search → assemble prompt with context
+      embed query → pgvector top-k cosine search (scoped to the organization)
+      → assemble prompt with context + recalled thread memory
       → GPT call → {reply, confidence} → sentiment check
       → escalate? ─ no ─→ send reply through channel adapter
                   └ yes ─→ status=OPEN_FOR_AGENT → round-robin to an ONLINE agent

@@ -2,20 +2,24 @@ package io.eksamadhan.controller;
 
 import io.eksamadhan.dto.ThreadResponse;
 import io.eksamadhan.model.ConversationThread;
-import io.eksamadhan.repository.TenantRepository;
+import io.eksamadhan.model.User;
+import io.eksamadhan.repository.UserRepository;
+import io.eksamadhan.service.CurrentUser;
+import io.eksamadhan.service.ConversationSummaryService;
 import io.eksamadhan.service.ThreadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Conversations and their state. */
+/** Conversations and their state, always scoped to the caller's workspace. */
 @RestController
 @RequestMapping("/api/threads")
 @RequiredArgsConstructor
@@ -23,38 +27,115 @@ import java.util.UUID;
 public class ThreadController {
 
     private final ThreadService threadService;
-    private final TenantRepository tenantRepository;
+    private final UserRepository userRepository;
+    private final CurrentUser currentUser;
+    private final ConversationSummaryService summaryService;
 
-    @GetMapping("/{tenantId}")
-    public List<ThreadResponse> list(@PathVariable String tenantId) {
-        return tenantRepository.findByApiKey(tenantId)
-                .map(tenant -> threadService.forTenant(tenant.getApiKey()).stream().map(this::toDto).toList())
-                .orElse(Collections.emptyList());
+    @GetMapping
+    public List<ThreadResponse> list() {
+        return threadService.visibleTo(currentUser.require())
+                .stream().map(this::toDto).toList();
     }
 
     @PostMapping("/{threadId}/take-over")
-    public ResponseEntity<?> takeOver(@PathVariable UUID threadId,
-                                      @RequestBody(required = false) Map<String, String> body) {
-        String agentId = body == null ? null : body.get("agentId");
-        return ResponseEntity.ok(toDto(threadService.takeOver(threadId, agentId)));
+    public ResponseEntity<?> takeOver(@PathVariable UUID threadId) {
+        // The agent is whoever is signed in — never a value the client chose.
+        User agent = requireOwnThread(threadId);
+        return ResponseEntity.ok(toDto(threadService.takeOver(threadId, agent.getId().toString())));
     }
 
     @PostMapping("/{threadId}/return-to-ai")
     public ResponseEntity<?> returnToAi(@PathVariable UUID threadId) {
+        requireOwnThread(threadId);
         return ResponseEntity.ok(toDto(threadService.returnToAi(threadId)));
     }
 
     @PostMapping("/{threadId}/resolve")
     public ResponseEntity<?> resolve(@PathVariable UUID threadId) {
+        requireOwnThread(threadId);
         return ResponseEntity.ok(toDto(threadService.resolve(threadId)));
+    }
+
+    /** Writes or rewrites the handover brief for a conversation. */
+    @PostMapping("/{threadId}/summarise")
+    public ResponseEntity<?> summarise(@PathVariable UUID threadId) {
+        requireOwnThread(threadId);
+        return ResponseEntity.ok(toDto(summaryService.summarise(threadId)));
+    }
+
+    public record AssignRequest(String userId) {}
+
+    /**
+     * Hand a conversation to someone else — the busy-agent case.
+     *
+     * Allowed for the current assignee and for owners and admins, so work can be passed on
+     * without an agent being able to quietly take a colleague's conversation.
+     */
+    @PostMapping("/{threadId}/assign")
+    public ResponseEntity<?> assign(@PathVariable UUID threadId, @RequestBody AssignRequest request) {
+        User me = currentUser.require();
+        ConversationThread thread = requireActionable(threadId, me);
+
+        if (!me.getRole().canManageTeam()
+                && !me.getId().toString().equals(thread.getAssignedAgentId())
+                && thread.getAssignedAgentId() != null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Only the assignee or an admin can reassign this conversation");
+        }
+
+        UUID targetId;
+        try {
+            targetId = UUID.fromString(request.userId());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose someone to assign this to");
+        }
+
+        User target = userRepository.findWithOrganizationById(targetId)
+                .filter(u -> u.getOrganization().getId().equals(me.getOrganization().getId()))
+                .filter(u -> u.getStatus() == io.eksamadhan.model.UserStatus.ACTIVE)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "That person is not an active member of this workspace"));
+
+        return ResponseEntity.ok(toDto(threadService.assign(threadId, target)));
     }
 
     /** Manual escalation. Phase 2 calls the same path from the confidence gate. */
     @PostMapping("/{threadId}/escalate")
     public ResponseEntity<?> escalate(@PathVariable UUID threadId,
                                       @RequestBody(required = false) Map<String, String> body) {
+        requireOwnThread(threadId);
         String reason = body == null ? "manual" : body.getOrDefault("reason", "manual");
         return ResponseEntity.ok(toDto(threadService.escalate(threadId, reason)));
+    }
+
+    /**
+     * A thread id is a bare UUID in the URL, so every action must prove the thread belongs
+     * to the caller's workspace. Without this, knowing an id was enough to act on it.
+     *
+     * @return the signed-in user, since callers need it anyway
+     */
+    /**
+     * The conversation, if this caller is allowed to act on it.
+     *
+     * Visibility and permission are the same rule here: an agent may act on what they own,
+     * an owner or admin on anything in the workspace. 404 rather than 403 throughout, so a
+     * conversation someone may not touch is indistinguishable from one that does not exist.
+     */
+    private ConversationThread requireActionable(UUID threadId, User user) {
+        return threadService.forTenant(user.getOrganization().getApiKey()).stream()
+                .filter(t -> t.getId().equals(threadId))
+                .filter(t -> user.getRole().canManageTeam()
+                        || user.getId().toString().equals(t.getAssignedAgentId())
+                        // Nobody owns it yet, so anyone may pick it up.
+                        || t.getAssignedAgentId() == null)
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Conversation not found"));
+    }
+
+    private User requireOwnThread(UUID threadId) {
+        User user = currentUser.require();
+        requireActionable(threadId, user);
+        return user;
     }
 
     private ThreadResponse toDto(ConversationThread t) {
@@ -68,11 +149,27 @@ public class ThreadController {
                 .status(t.getStatus().name())
                 .sentiment(t.getSentiment())
                 .assignedAgentId(t.getAssignedAgentId())
+                .assignedAgentName(agentName(t.getAssignedAgentId()))
                 .lastMessageAt(t.getLastMessageAt() == null ? null
                         : t.getLastMessageAt().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
                 .lastMessagePreview(t.getLastMessagePreview())
                 .lastMessageDirection(t.getLastMessageDirection())
                 .unanswered(t.getUnanswered())
+                .summary(t.getSummary())
+                .summaryStale(t.getSummary() != null && t.getSummaryMessageCount() != null
+                        && summaryService.messageCount(t) > t.getSummaryMessageCount())
                 .build();
+    }
+
+    /** Threads taken over before the user model existed hold non-UUID ids; those show as null. */
+    private String agentName(String assignedAgentId) {
+        if (assignedAgentId == null || assignedAgentId.isBlank()) return null;
+        try {
+            return userRepository.findById(UUID.fromString(assignedAgentId))
+                    .map(User::displayName)
+                    .orElse(null);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

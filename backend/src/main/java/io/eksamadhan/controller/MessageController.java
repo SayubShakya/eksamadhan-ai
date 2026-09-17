@@ -2,23 +2,43 @@ package io.eksamadhan.controller;
 
 import io.eksamadhan.dto.MessageResponse;
 import io.eksamadhan.dto.ReplyRequest;
+import io.eksamadhan.model.ConversationThread;
+import io.eksamadhan.model.Organization;
+import io.eksamadhan.model.User;
 import io.eksamadhan.model.SocialMessage;
 import io.eksamadhan.model.SocialPage;
 import io.eksamadhan.repository.SocialMessageRepository;
 import io.eksamadhan.repository.SocialPageRepository;
-import io.eksamadhan.repository.TenantRepository;
+import io.eksamadhan.service.ConversationMemoryService;
+import io.eksamadhan.service.CurrentUser;
 import io.eksamadhan.service.MetaService;
+import io.eksamadhan.service.SentimentService;
 import io.eksamadhan.service.SyncService;
+import io.eksamadhan.service.ThreadService;
+import io.eksamadhan.service.VoiceMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.io.File;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
+/**
+ * The agent inbox.
+ *
+ * None of these endpoints name an organization any more — it comes from the caller's token,
+ * so an agent can only ever read and reply within their own workspace.
+ */
 @RestController
 @RequestMapping("/api/messages")
 @RequiredArgsConstructor
@@ -26,235 +46,209 @@ import java.util.Map;
 public class MessageController {
 
     private final SocialMessageRepository messageRepository;
-    private final TenantRepository tenantRepository;
     private final SocialPageRepository socialPageRepository;
     private final MetaService metaService;
     private final SyncService syncService;
-    private final io.eksamadhan.service.VoiceMessageService voiceMessageService;
-    private final io.eksamadhan.service.ThreadService threadService;
+    private final VoiceMessageService voiceMessageService;
+    private final ThreadService threadService;
+    private final ConversationMemoryService conversationMemoryService;
+    private final SentimentService sentimentService;
+    private final CurrentUser currentUser;
 
-    /**
-     * Get messages for a tenant - returns flat DTOs matching Node.js API shape
-     */
-    @GetMapping("/{tenantId}")
-    public List<MessageResponse> getMessages(@PathVariable String tenantId) {
-        return tenantRepository.findByApiKey(tenantId)
-                .map(tenant -> {
-                    List<SocialMessage> messages = messageRepository.findByTenantIdOrderByTimestampAsc(tenant.getApiKey());
-                    return messages.stream().map(this::toDto).toList();
-                })
-                .orElse(Collections.emptyList());
+    @GetMapping
+    public List<MessageResponse> getMessages() {
+        User me = currentUser.require();
+        List<SocialMessage> messages =
+                messageRepository.findByTenantIdOrderByTimestampAsc(me.getOrganization().getApiKey());
+
+        if (me.getRole().canManageTeam()) {
+            return messages.stream().map(this::toDto).toList();
+        }
+        // An agent sees the messages of their own conversations only — otherwise scoping the
+        // conversation list would be cosmetic, since the transcript carries the content.
+        Set<UUID> visible = threadService.visibleTo(me).stream()
+                .map(ConversationThread::getId).collect(Collectors.toSet());
+        return messages.stream()
+                .filter(m -> m.getThread() != null && visible.contains(m.getThread().getId()))
+                .map(this::toDto).toList();
     }
 
-    /**
-     * Send a reply to a customer
-     */
-    @PostMapping("/reply/{tenantId}")
-    @org.springframework.transaction.annotation.Transactional
-    public ResponseEntity<?> reply(@PathVariable String tenantId, @RequestBody ReplyRequest request) {
-        log.info("📤 Reply request: tenant={}, to={}", tenantId, request.getRecipientId());
+    @PostMapping("/reply")
+    @Transactional
+    public ResponseEntity<?> reply(@RequestBody ReplyRequest request) {
+        Organization organization = currentUser.organization();
+        SocialPage page = requirePage(organization, request.getPageId());
+        requireMayAnswer(page, request.getRecipientId());
 
-        return tenantRepository.findByApiKey(tenantId)
-                .<ResponseEntity<?>>map(tenant -> {
-                    SocialPage page = null;
-                    if (request.getPageId() != null) {
-                        page = socialPageRepository.findByPageIdAndPlatform(request.getPageId(), "FACEBOOK")
-                                .or(() -> socialPageRepository.findByPageIdAndPlatform(request.getPageId(), "INSTAGRAM"))
-                                .orElse(null);
-                    }
+        try {
+            Map<String, Object> response = metaService.sendMessage(
+                    request.getRecipientId(),
+                    request.getText(),
+                    page.getAccessToken(),
+                    request.getReplyToId()
+            ).block();
 
-                    if (page == null) {
-                        List<SocialPage> pages = socialPageRepository.findByTenant(tenant);
-                        if (!pages.isEmpty()) {
-                            page = pages.get(0);
-                        }
-                    }
+            String messageId = (String) response.get("message_id");
+            syncService.saveOutboundMessage(messageId, request.getRecipientId(), request.getText(),
+                    page.getId(), request.getReplyToId(), organization.getApiKey());
 
-                    if (page == null) {
-                        return ResponseEntity.status(404).body(Map.of("error", "No connected pages found"));
-                    }
-
-                    try {
-                        Map<String, Object> response = metaService.sendMessage(
-                                request.getRecipientId(),
-                                request.getText(),
-                                page.getAccessToken(),
-                                request.getReplyToId()
-                        ).block();
-
-                        String messageId = (String) response.get("message_id");
-                        syncService.saveOutboundMessage(messageId, request.getRecipientId(), request.getText(), page.getId(), request.getReplyToId(), tenantId);
-
-                        return ResponseEntity.ok(Map.of("success", true, "messageId", messageId));
-                    } catch (Exception e) {
-                        log.error("❌ Failed to send reply: {}", e.getMessage());
-                        return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
-                    }
-                })
-                .orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "Tenant not found")));
+            return ResponseEntity.ok(Map.of("success", true, "messageId", messageId));
+        } catch (Exception e) {
+            log.error("Failed to send reply: {}", e.getMessage());
+            return ResponseEntity.status(502).body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**
      * Send a voice message. The browser records WebM or MP4; the service transcodes to
      * AAC because Meta rejects WebM, keeps a copy for playback here, then uploads it.
      */
-    @PostMapping("/voice/{tenantId}")
-    @org.springframework.transaction.annotation.Transactional
-    public ResponseEntity<?> sendVoice(
-            @PathVariable String tenantId,
-            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
-            @RequestParam String recipientId,
-            @RequestParam(required = false) String pageId) {
+    @PostMapping("/voice")
+    @Transactional
+    public ResponseEntity<?> sendVoice(@RequestParam("file") MultipartFile file,
+                                       @RequestParam String recipientId,
+                                       @RequestParam(required = false) String pageId) {
+        Organization organization = currentUser.organization();
+        SocialPage page = requirePage(organization, pageId);
+        requireMayAnswer(page, recipientId);
 
-        return tenantRepository.findByApiKey(tenantId)
-                .<ResponseEntity<?>>map(tenant -> {
-                    SocialPage page = null;
-                    if (pageId != null) {
-                        page = socialPageRepository.findByPageIdAndPlatform(pageId, "FACEBOOK")
-                                .or(() -> socialPageRepository.findByPageIdAndPlatform(pageId, "INSTAGRAM"))
-                                .orElse(null);
-                    }
-                    if (page == null) {
-                        List<SocialPage> pages = socialPageRepository.findByTenant(tenant);
-                        if (!pages.isEmpty()) page = pages.get(0);
-                    }
-                    if (page == null) {
-                        return ResponseEntity.status(404).body(Map.of("error", "No connected pages found"));
-                    }
+        try {
+            String stored = voiceMessageService.convertAndStore(file);
+            File converted = voiceMessageService.resolve(stored).toFile();
 
-                    try {
-                        String stored = voiceMessageService.convertAndStore(file);
-                        java.io.File converted = voiceMessageService.resolve(stored).toFile();
+            Map<String, Object> response = metaService
+                    .sendAudio(recipientId, converted, page.getAccessToken())
+                    .block();
 
-                        Map<String, Object> response = metaService
-                                .sendAudio(recipientId, converted, page.getAccessToken())
-                                .block();
+            String messageId = response != null ? (String) response.get("message_id") : null;
+            syncService.saveOutboundMessage(messageId, recipientId, null, page.getId(),
+                    null, organization.getApiKey(), "audio", "/api/media/" + stored);
 
-                        String messageId = response != null ? (String) response.get("message_id") : null;
-                        syncService.saveOutboundMessage(messageId, recipientId, null, page.getId(),
-                                null, tenantId, "audio", "/api/media/" + stored);
-
-                        return ResponseEntity.ok(Map.of("success", true, "messageId", String.valueOf(messageId)));
-                    } catch (Exception e) {
-                        log.error("❌ Failed to send voice message: {}", e.getMessage());
-                        return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
-                    }
-                })
-                .orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "Tenant not found")));
+            return ResponseEntity.ok(Map.of("success", true, "messageId", String.valueOf(messageId)));
+        } catch (Exception e) {
+            log.error("Failed to send voice message: {}", e.getMessage());
+            return ResponseEntity.status(502).body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**
      * Send an image. Unlike voice there is nothing to transcode — Meta accepts JPEG and
      * PNG directly — so the file is stored as-is and uploaded.
      */
-    @PostMapping("/image/{tenantId}")
-    @org.springframework.transaction.annotation.Transactional
-    public ResponseEntity<?> sendImage(
-            @PathVariable String tenantId,
-            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
-            @RequestParam String recipientId,
-            @RequestParam(required = false) String pageId) {
+    @PostMapping("/image")
+    @Transactional
+    public ResponseEntity<?> sendImage(@RequestParam("file") MultipartFile file,
+                                       @RequestParam String recipientId,
+                                       @RequestParam(required = false) String pageId) {
+        Organization organization = currentUser.organization();
+        SocialPage page = requirePage(organization, pageId);
+        requireMayAnswer(page, recipientId);
 
-        return tenantRepository.findByApiKey(tenantId)
-                .<ResponseEntity<?>>map(tenant -> {
-                    SocialPage page = resolvePage(tenant, pageId);
-                    if (page == null) {
-                        return ResponseEntity.status(404).body(Map.of("error", "No connected pages found"));
-                    }
-                    try {
-                        String stored = voiceMessageService.store(file);
-                        java.io.File saved = voiceMessageService.resolve(stored).toFile();
+        try {
+            String stored = voiceMessageService.store(file);
+            File saved = voiceMessageService.resolve(stored).toFile();
 
-                        Map<String, Object> response = metaService
-                                .sendAttachment(recipientId, saved, "image",
-                                        file.getContentType() == null ? "image/jpeg" : file.getContentType(),
-                                        page.getAccessToken())
-                                .block();
+            Map<String, Object> response = metaService
+                    .sendAttachment(recipientId, saved, "image",
+                            file.getContentType() == null ? "image/jpeg" : file.getContentType(),
+                            page.getAccessToken())
+                    .block();
 
-                        String messageId = response != null ? (String) response.get("message_id") : null;
-                        syncService.saveOutboundMessage(messageId, recipientId, null, page.getId(),
-                                null, tenantId, "image", "/api/media/" + stored);
+            String messageId = response != null ? (String) response.get("message_id") : null;
+            syncService.saveOutboundMessage(messageId, recipientId, null, page.getId(),
+                    null, organization.getApiKey(), "image", "/api/media/" + stored);
 
-                        return ResponseEntity.ok(Map.of("success", true));
-                    } catch (Exception e) {
-                        log.error("❌ Failed to send image: {}", e.getMessage());
-                        return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
-                    }
-                })
-                .orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "Tenant not found")));
-    }
-
-    private SocialPage resolvePage(io.eksamadhan.model.Tenant tenant, String pageId) {
-        if (pageId != null) {
-            SocialPage page = socialPageRepository.findByPageIdAndPlatform(pageId, "FACEBOOK")
-                    .or(() -> socialPageRepository.findByPageIdAndPlatform(pageId, "INSTAGRAM"))
-                    .orElse(null);
-            if (page != null) return page;
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            log.error("Failed to send image: {}", e.getMessage());
+            return ResponseEntity.status(502).body(Map.of("error", e.getMessage()));
         }
-        List<SocialPage> pages = socialPageRepository.findByTenant(tenant);
-        return pages.isEmpty() ? null : pages.get(0);
     }
 
-    /**
-     * React to a customer's message with an emoji.
-     */
-    @PostMapping("/react/{tenantId}")
-    @org.springframework.transaction.annotation.Transactional
-    public ResponseEntity<?> react(@PathVariable String tenantId, @RequestBody Map<String, String> body) {
+    @PostMapping("/react")
+    @Transactional
+    public ResponseEntity<?> react(@RequestBody Map<String, String> body) {
+        Organization organization = currentUser.organization();
+        SocialPage page = requirePage(organization, body.get("pageId"));
+        requireMayAnswer(page, body.get("recipientId"));
+
         String metaMessageId = body.get("metaMessageId");
-        String emoji = body.get("reaction");
-        String recipientId = body.get("recipientId");
+        try {
+            metaService.sendReaction(body.get("recipientId"), metaMessageId,
+                    body.get("reaction"), page.getAccessToken()).block();
 
-        return tenantRepository.findByApiKey(tenantId)
-                .<ResponseEntity<?>>map(tenant -> {
-                    SocialPage page = resolvePage(tenant, body.get("pageId"));
-                    if (page == null) {
-                        return ResponseEntity.status(404).body(Map.of("error", "No connected pages found"));
-                    }
-                    try {
-                        metaService.sendReaction(recipientId, metaMessageId, emoji, page.getAccessToken()).block();
-                        messageRepository.findByMetaMessageId(metaMessageId).ifPresent(m -> {
-                            m.setReaction(emoji);
-                            messageRepository.save(m);
-                        });
-                        return ResponseEntity.ok(Map.of("success", true));
-                    } catch (Exception e) {
-                        log.error("❌ Reaction failed: {}", e.getMessage());
-                        return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
-                    }
-                })
-                .orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "Tenant not found")));
+            messageRepository.findByMetaMessageId(metaMessageId)
+                    // Only a message in this workspace, so a guessed id cannot mark up
+                    // someone else's conversation.
+                    .filter(m -> organization.getApiKey().equals(m.getTenantId()))
+                    .ifPresent(m -> {
+                        m.setReaction(body.get("reaction"));
+                        messageRepository.save(m);
+                    });
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            log.error("Reaction failed: {}", e.getMessage());
+            return ResponseEntity.status(502).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/sync")
+    public ResponseEntity<?> sync() {
+        Organization organization = currentUser.organization();
+        List<SocialPage> pages = socialPageRepository.findByOrganization(organization);
+
+        for (SocialPage page : pages) {
+            // Refresh customer names and photos alongside the message sync — Meta's photo
+            // URLs expire, and older messages predate profile lookup entirely.
+            try { syncService.refreshCustomerProfiles(page); }
+            catch (Exception e) { log.debug("Profile refresh skipped: {}", e.getMessage()); }
+            try { threadService.backfill(page); }
+            catch (Exception e) { log.debug("Thread backfill skipped: {}", e.getMessage()); }
+            // Guarded like its neighbours: an expired page token should degrade this one
+            // page's history sync, not fail the whole request and skip everything after it.
+            try { syncService.syncPageHistory(page); }
+            catch (Exception e) { log.warn("History sync failed for page {}: {}", page.getPageId(), e.getMessage()); }
+        }
+        // Embed anything that predates the conversation memory, so recall works on the
+        // existing history rather than only on messages that arrive from now on.
+        conversationMemoryService.backfillAsync(organization.getApiKey());
+        sentimentService.backfillAsync(organization.getApiKey());
+        return ResponseEntity.ok(Map.of("success", true));
     }
 
     /**
-     * Manual sync trigger
+     * The page to send through, always checked against the caller's organization: a page id
+     * arriving in a request body is untrusted input, and looking it up globally would let
+     * one workspace send through another's access token.
      */
-    @PostMapping("/sync/{tenantId}")
-    public ResponseEntity<?> sync(@PathVariable String tenantId) {
-        // Refresh customer names and photos alongside the message sync — Meta's photo
-        // URLs expire, and older messages predate profile lookup entirely.
-        tenantRepository.findByApiKey(tenantId).ifPresent(tenant ->
-                socialPageRepository.findByTenant(tenant).forEach(page -> {
-                    try { syncService.refreshCustomerProfiles(page); }
-                    catch (Exception e) { log.debug("Profile refresh skipped: {}", e.getMessage()); }
-                    try { threadService.backfill(page); }
-                    catch (Exception e) { log.debug("Thread backfill skipped: {}", e.getMessage()); }
-                }));
-
-        return tenantRepository.findByApiKey(tenantId)
-                .<ResponseEntity<?>>map(tenant -> {
-                    List<SocialPage> pages = socialPageRepository.findByTenant(tenant);
-                    for (SocialPage page : pages) {
-                        syncService.syncPageHistory(page);
-                    }
-                    return ResponseEntity.ok(Map.of("success", true));
-                })
-                .orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "Tenant not found")));
+    /**
+     * Refuses to send into a conversation this caller does not own. Without this, restricting
+     * what an agent can see would not restrict what they can answer.
+     */
+    private void requireMayAnswer(SocialPage page, String customerId) {
+        User me = currentUser.require();
+        threadService.find(page, customerId).ifPresent(thread -> {
+            if (!threadService.mayAct(me, thread)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Conversation not found");
+            }
+        });
     }
 
-    /**
-     * Convert entity → flat DTO (matches Node.js API shape)
-     */
+    private SocialPage requirePage(Organization organization, String pageId) {
+        List<SocialPage> pages = socialPageRepository.findByOrganization(organization);
+        if (pages.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No connected pages found");
+        }
+        if (pageId == null || pageId.isBlank()) {
+            return pages.get(0);
+        }
+        return pages.stream()
+                .filter(p -> pageId.equals(p.getPageId()))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "That page is not connected to this workspace"));
+    }
+
     private MessageResponse toDto(SocialMessage msg) {
         return MessageResponse.builder()
                 .id(msg.getId() != null ? msg.getId().toString() : null)
@@ -273,6 +267,10 @@ public class MessageController {
                 .reaction(msg.getReaction())
                 .attachmentType(msg.getAttachmentType())
                 .attachmentUrl(msg.getAttachmentUrl())
+                .aiGenerated(msg.isAiGenerated())
+                .aiConfidence(msg.getAiConfidence())
+                .aiSources(msg.getAiSources())
+                .sentiment(msg.getSentiment() == null ? null : msg.getSentiment().name())
                 .build();
     }
 }

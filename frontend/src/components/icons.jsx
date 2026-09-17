@@ -22,6 +22,7 @@ export const IconTrash = (p) => <svg {...s({ size: p.size || 14 })}><path d="M3 
 export const IconUser = (p) => <svg {...s(p)}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>;
 export const IconUpload = (p) => <svg {...s({ size: p.size || 15 })}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 9l5-5 5 5" /><path d="M12 4v12" /></svg>;
 export const IconMenu = (p) => <svg {...s(p)}><path d="M3 6h18" /><path d="M3 12h18" /><path d="M3 18h18" /></svg>;
+export const IconSignOut = (p) => <svg {...s(p)}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>;
 export const IconClose = (p) => <svg {...s(p)}><path d="M18 6L6 18" /><path d="M6 6l12 12" /></svg>;
 export const IconImage = (p) => <svg {...s(p)}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>;
 export const IconMic = (p) => <svg {...s(p)}><rect x="9" y="2" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0" /><path d="M12 18v4" /></svg>;

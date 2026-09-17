@@ -2,12 +2,19 @@ package io.eksamadhan.controller;
 
 import io.eksamadhan.dto.StatusResponse;
 import io.eksamadhan.model.SocialPage;
-import io.eksamadhan.model.Tenant;
+import io.eksamadhan.model.Organization;
 import io.eksamadhan.repository.SocialMessageRepository;
 import io.eksamadhan.repository.SocialPageRepository;
-import io.eksamadhan.repository.TenantRepository;
+import io.eksamadhan.repository.OrganizationRepository;
+import io.eksamadhan.repository.ConversationThreadRepository;
+import io.eksamadhan.service.CurrentUser;
+import io.eksamadhan.service.JwtService;
 import io.eksamadhan.service.MetaService;
 import io.eksamadhan.service.SyncService;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.web.server.ResponseStatusException;
 import io.github.cdimascio.dotenv.Dotenv;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,62 +38,48 @@ public class AuthController {
     private final SyncService syncService;
     private final SocialPageRepository pageRepository;
     private final SocialMessageRepository messageRepository;
-    private final TenantRepository tenantRepository;
+    private final OrganizationRepository organizationRepository;
+    private final ConversationThreadRepository threadRepository;
+    private final CurrentUser currentUser;
+    private final JwtService jwtService;
 
-    @GetMapping("/facebook")
-    public RedirectView facebookAuth(@RequestParam(defaultValue = "demo-tenant-1") String tenantId) {
-        String appId = dotenv.get("FACEBOOK_APP_ID");
-        String redirectUri = dotenv.get("FACEBOOK_REDIRECT_URI");
-        
-        // Facebook-specific scopes (matches Node.js PoC exactly)
-        String scope = String.join(",", 
-            "pages_messaging",
-            "pages_manage_metadata",
-            "pages_show_list",
-            "pages_read_engagement"
-        );
-        
-        String state = tenantId + ":facebook";
+    /**
+     * The Meta consent URL for the caller's workspace.
+     *
+     * This is a JSON endpoint rather than a redirect because the browser cannot attach a
+     * bearer token to a top-level navigation. The frontend calls it with the token, then
+     * navigates to the URL it gets back. The {@code state} is a short-lived signed token,
+     * so the callback can only ever act for a workspace we actually sent — previously any
+     * value in {@code state} silently created one.
+     */
+    @GetMapping("/connect-url")
+    public Map<String, String> connectUrl(@RequestParam String platform) {
+        boolean instagram = "instagram".equalsIgnoreCase(platform);
+        if (!instagram && !"facebook".equalsIgnoreCase(platform)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown platform: " + platform);
+        }
+        String target = instagram ? "instagram" : "facebook";
+        String apiKey = currentUser.organizationApiKey();
 
-        String authUrl = String.format(
+        String scope = instagram
+                ? String.join(",", "instagram_basic", "instagram_manage_messages", "pages_messaging",
+                        "pages_manage_metadata", "pages_show_list", "pages_read_engagement")
+                : String.join(",", "pages_messaging", "pages_manage_metadata", "pages_show_list",
+                        "pages_read_engagement");
+
+        String redirectUri = instagram
+                ? dotenv.get("INSTAGRAM_REDIRECT_URI")
+                : dotenv.get("FACEBOOK_REDIRECT_URI");
+
+        String url = String.format(
                 "https://www.facebook.com/v18.0/dialog/oauth?client_id=%s&redirect_uri=%s&scope=%s&state=%s",
-                appId, 
+                dotenv.get("FACEBOOK_APP_ID"),
                 URLEncoder.encode(redirectUri, StandardCharsets.UTF_8),
                 URLEncoder.encode(scope, StandardCharsets.UTF_8),
-                URLEncoder.encode(state, StandardCharsets.UTF_8)
-        );
+                URLEncoder.encode(jwtService.issueOAuthState(apiKey, target), StandardCharsets.UTF_8));
 
-        log.info("Redirecting to Facebook Auth: {}", authUrl);
-        return new RedirectView(authUrl);
-    }
-
-    @GetMapping("/instagram")
-    public RedirectView instagramAuth(@RequestParam(defaultValue = "demo-tenant-1") String tenantId) {
-        String appId = dotenv.get("FACEBOOK_APP_ID");
-        String redirectUri = dotenv.get("INSTAGRAM_REDIRECT_URI");
-        
-        // Instagram-specific scopes (includes both FB and IG)
-        String scope = String.join(",",
-            "instagram_basic",
-            "instagram_manage_messages",
-            "pages_messaging",
-            "pages_manage_metadata",
-            "pages_show_list",
-            "pages_read_engagement"
-        );
-        
-        String state = tenantId + ":instagram";
-
-        String authUrl = String.format(
-                "https://www.facebook.com/v18.0/dialog/oauth?client_id=%s&redirect_uri=%s&scope=%s&state=%s",
-                appId,
-                URLEncoder.encode(redirectUri, StandardCharsets.UTF_8),
-                URLEncoder.encode(scope, StandardCharsets.UTF_8),
-                URLEncoder.encode(state, StandardCharsets.UTF_8)
-        );
-
-        log.info("Redirecting to Instagram Auth: {}", authUrl);
-        return new RedirectView(authUrl);
+        log.info("Issued {} connect URL for organization {}", target, apiKey);
+        return Map.of("url", url);
     }
 
     @GetMapping("/facebook/callback")
@@ -112,12 +105,20 @@ public class AuthController {
         
         String frontendUrl = dotenv.get("FRONTEND_URL");
         
-        // Parse state: tenantId:platform
-        String[] stateParts = (state != null) ? state.split(":") : new String[]{"demo-tenant-1", "facebook"};
-        String tenantApiKey = stateParts[0];
-        String targetPlatform = stateParts.length > 1 ? stateParts[1] : "facebook";
-        
-        log.info("Context: Tenant={}, Platform={}", tenantApiKey, targetPlatform);
+        // The state is a token we signed in /connect-url. Anything else is discarded.
+        String tenantApiKey;
+        String targetPlatform;
+        try {
+            Jwt verified = jwtService.verify(state, JwtService.USE_OAUTH_STATE);
+            tenantApiKey = verified.getClaimAsString("org");
+            targetPlatform = verified.getClaimAsString("platform");
+        } catch (JwtException | IllegalArgumentException e) {
+            log.warn("Rejected OAuth callback with an unrecognised state: {}", e.getMessage());
+            return new RedirectView(frontendUrl + "/dashboard?status=error&message="
+                    + URLEncoder.encode("This connection link expired. Please try again.", StandardCharsets.UTF_8));
+        }
+
+        log.info("Context: Organization={}, Platform={}", tenantApiKey, targetPlatform);
         
         // Handle errors
         if (error != null) {
@@ -166,15 +167,13 @@ public class AuthController {
             List<Map<String, Object>> pages = filterPagesByMessagingPermissions(allPages);
             log.info("User has {} pages with messaging permissions", pages.size());
             
-            // Step 4: Get or create tenant
-            Tenant tenant = tenantRepository.findByApiKey(tenantApiKey)
-                    .orElseGet(() -> tenantRepository.save(Tenant.builder()
-                            .apiKey(tenantApiKey)
-                            .name("Auto-Created Tenant")
-                            .build()));
+            // Step 4: Resolve the organization named by the signed state. It must already
+            // exist — a callback is never a way to create a workspace.
+            Organization organization = organizationRepository.findByApiKey(tenantApiKey)
+                    .orElseThrow(() -> new IllegalStateException("Workspace no longer exists"));
             
             // Step 5: Process and save pages (with validation)
-            List<SocialPage> savedPages = processAndSavePages(pages, tenant, targetPlatform);
+            List<SocialPage> savedPages = processAndSavePages(pages, organization, targetPlatform);
             
             log.info("✅ Saved {} verified pages", savedPages.size());
             
@@ -231,7 +230,7 @@ public class AuthController {
      */
     private List<SocialPage> processAndSavePages(
             List<Map<String, Object>> pages,
-            Tenant tenant,
+            Organization organization,
             String targetPlatform) {
         
         List<SocialPage> savedPages = new ArrayList<>();
@@ -260,7 +259,7 @@ public class AuthController {
             
             // Save Facebook page (if not Instagram-only connection)
             if (!isInstagramTarget) {
-                SocialPage fbPage = saveOrUpdatePage(pageId, pageName, pageToken, "FACEBOOK", tenant, null);
+                SocialPage fbPage = saveOrUpdatePage(pageId, pageName, pageToken, "FACEBOOK", organization, null);
                 if (fbPage != null) {
                     savedPages.add(fbPage);
                 }
@@ -271,7 +270,7 @@ public class AuthController {
             if (igAccount != null && !isFacebookTarget) {
                 String igId = (String) igAccount.get("id");
                 if (igId != null) {
-                    SocialPage igPage = saveOrUpdatePage(igId, pageName, pageToken, "INSTAGRAM", tenant, pageId);
+                    SocialPage igPage = saveOrUpdatePage(igId, pageName, pageToken, "INSTAGRAM", organization, pageId);
                     if (igPage != null) {
                         savedPages.add(igPage);
                         log.info("✅ Linked Instagram account {} to Facebook page {}", igId, pageName);
@@ -291,14 +290,14 @@ public class AuthController {
             String pageName,
             String accessToken,
             String platform,
-            Tenant tenant,
+            Organization organization,
             String linkedFbPageId) {
         
         SocialPage page = pageRepository.findByPageIdAndPlatform(pageId, platform)
                 .orElse(SocialPage.builder()
                         .pageId(pageId)
                         .platform(platform)
-                        .tenant(tenant)
+                        .organization(organization)
                         .build());
         
         page.setPageName(pageName);
@@ -329,18 +328,12 @@ public class AuthController {
 
 
 
-    /**
-     * Get connection status for a tenant
-     * Matches Node.js /api/auth/status/:tenantId endpoint
-     */
-    @GetMapping("/status/{tenantId}")
-    public StatusResponse getStatus(@PathVariable String tenantId) {
-        Tenant tenant = tenantRepository.findByApiKey(tenantId).orElse(null);
-        if (tenant == null) {
-            return StatusResponse.builder().connected(false).build();
-        }
-        
-        List<SocialPage> pages = pageRepository.findByTenant(tenant);
+    /** Which channels the caller's workspace has connected. */
+    @GetMapping("/status")
+    public StatusResponse getStatus() {
+        Organization organization = currentUser.organization();
+
+        List<SocialPage> pages = pageRepository.findByOrganization(organization);
         if (pages.isEmpty()) {
             return StatusResponse.builder().connected(false).build();
         }
@@ -357,7 +350,7 @@ public class AuthController {
         return StatusResponse.builder()
                 .connected(true)
                 .data(StatusResponse.TenantData.builder()
-                        .tenantId(tenant.getApiKey())
+                        .tenantId(organization.getApiKey())
                         .pages(pageDataList)
                         .connectedAt(pages.get(0).getConnectedAt())
                         .build())
@@ -365,32 +358,26 @@ public class AuthController {
     }
 
     /**
-     * Logout and clear tenant data
-     * Matches Node.js /api/auth/logout/:tenantId endpoint
+     * Disconnect every channel and delete the conversation history that came with it.
+     *
+     * This used to delete the organization row as well, which is no longer acceptable: the
+     * workspace owns the accounts. Signing out is a separate, client-side act — the token
+     * is stateless, so the browser simply discards it.
      */
-    @PostMapping("/logout/{tenantId}")
+    @PostMapping("/disconnect")
     @Transactional
-    public Map<String, Boolean> logout(@PathVariable String tenantId) {
-        log.info("🚪 Logout requested for tenant: {}", tenantId);
-        
-        Tenant tenant = tenantRepository.findByApiKey(tenantId).orElse(null);
-        if (tenant == null) {
-            log.warn("Tenant {} not found, nothing to delete", tenantId);
-            return Map.of("success", true);
-        }
-        
-        // CASCADE ORDER: messages → pages → tenant (respects FK constraints)
-        // 1. Delete messages first (they reference social_page_id FK)
-        messageRepository.deleteByTenantId(tenantId);
-        
-        // 2. Delete pages (they reference tenant_id FK)
-        List<SocialPage> pages = pageRepository.findByTenant(tenant);
+    public Map<String, Boolean> disconnect() {
+        Organization organization = currentUser.organization();
+        String apiKey = organization.getApiKey();
+        log.info("Disconnecting all channels for organization {}", apiKey);
+
+        // Order matters: messages reference threads and pages, threads reference pages.
+        messageRepository.deleteByTenantId(apiKey);
+        threadRepository.deleteByTenantId(apiKey);
+        List<SocialPage> pages = pageRepository.findByOrganization(organization);
         pageRepository.deleteAll(pages);
-        
-        // 3. Delete tenant last
-        tenantRepository.delete(tenant);
-        
-        log.info("✅ Tenant {} fully cleared ({} pages removed)", tenantId, pages.size());
+
+        log.info("Organization {} disconnected ({} pages removed)", apiKey, pages.size());
         return Map.of("success", true);
     }
 

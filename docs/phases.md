@@ -39,27 +39,38 @@ Meta Graph API integration"*
 
 **Still to do:**
 - [x] Port MySQL → PostgreSQL — verified, all three tables created
-- [ ] Replace `ddl-auto: update` with Flyway migrations, then set `validate`
+- [x] Replace `ddl-auto: update` with Flyway migrations, then set `validate` — done 2026-09-17
 - [x] Webhook signature verification (`X-Hub-Signature-256`) — done 2026-09-16
-- [ ] OAuth 2.0 + JWT *user* auth — the PoC has no login; it uses a hardcoded
-      `demo-tenant-1`. Real Organization/User/roles are still needed (§5.4.3)
+- [x] OAuth 2.0 + JWT *user* auth — done 2026-09-17. `Organization`/`User`, email and
+      password with bcrypt, stateless HS256 JWTs, roles Owner/Admin/Agent, copy-link
+      agent invites. `demo-tenant-1` is gone: the workspace comes from the token.
+      Google sign-in and OTP (§5.4.3) are deferred — record as a limitation
 - [ ] Encrypt stored Meta access tokens at rest
 - [ ] Agent online/offline status
-- [ ] Rename the domain toward the report's model (Tenant→Organization,
-      SocialMessage→Message on a Thread) — the PoC has no `Thread` concept yet, and
-      the `AI_HANDLING → OPEN_FOR_AGENT → …` status machine depends on it
+- [x] Rename the domain toward the report's model (Tenant→Organization) and add the
+      `Thread` concept with the `AI_HANDLING → OPEN_FOR_AGENT → …` status machine —
+      done 2026-09-17
 - **Risk:** Meta App Review for `pages_messaging` / `instagram_manage_messages` can
   take weeks and may be refused. **Submit the App Review request in week 1**, and
   develop against a test app meanwhile. This is the single biggest schedule risk in
   the project — it sits on the critical path by design of the report's plan.
 
-## Phase 2 — Intelligence layer (Weeks 4–6) ⬜
+## Phase 2 — Intelligence layer (Weeks 4–6) 🔄
 *Report §7.2 · "RAG pipeline, vector database, sentiment detection … alerts the
 support agent" · the academic core*
 
-- Knowledge ingestion: text, then PDF, then URL
-- Chunking + OpenAI embeddings → Pinecone, with model name recorded per chunk
-- Retrieval → prompt assembly → GPT completion → `{reply, confidence}`
+- [x] Knowledge ingestion: text and PDF — done 2026-09-17. URL scraping deferred
+- [x] Chunking + OpenAI embeddings (`text-embedding-3-small`, via OpenRouter) → **pgvector**,
+      with the model name recorded per chunk — done 2026-09-17. pgvector replaces Pinecone;
+      the justification is in `architecture.md` §1
+- [x] Top-k cosine retrieval, exposed at `GET /api/knowledge/search` so retrieval can be
+      judged independently of generation — done 2026-09-17
+- [x] Every message embedded as well, for conversation memory — done 2026-09-17
+- [x] Retrieval → prompt assembly → LLM completion → `{answered, confidence, reply}` —
+      done 2026-09-17, via OpenRouter (`openai/gpt-4o-mini`)
+- [x] Confidence gate and escalation to a human — done 2026-09-17. Note the working gate is
+      *retrieval similarity*, not the model's self-reported confidence, which is near 1.0
+      even on weak matches
 - Confidence gate targeting **85% answer accuracy**
 - Sentiment / anger detection
 - Escalation triggers, round-robin routing to ONLINE agents

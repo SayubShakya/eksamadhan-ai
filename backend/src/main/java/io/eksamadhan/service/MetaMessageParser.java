@@ -29,6 +29,7 @@ public class MetaMessageParser {
     private final SocialMessageRepository messageRepository;
     private final MetaService metaService;
     private final ThreadService threadService;
+    private final org.springframework.context.ApplicationEventPublisher events;
 
     /** Profiles rarely change; one lookup per customer is plenty. */
     private final Map<String, Map> profileCache = new java.util.concurrent.ConcurrentHashMap<>();
@@ -235,7 +236,7 @@ public class MetaMessageParser {
                 .direction(direction)
                 .platform(page.getPlatform())
                 .pageId(page.getPageId())
-                .tenantId(page.getTenant().getApiKey())
+                .tenantId(page.getOrganization().getApiKey())
                 .socialPage(page)
                 .isFromUser(isPageSender)
                 .timestamp(ZonedDateTime.ofInstant(Instant.ofEpochMilli(timestampMillis), ZoneId.of("UTC")))
@@ -247,5 +248,10 @@ public class MetaMessageParser {
         threadService.attach(socialMessage, page, customerId);
         messageRepository.save(socialMessage);
         log.info("💬 Webhook: saved {} message mid={}", direction, mid);
+
+        // Embedding and answering happen after this transaction commits — see
+        // MessageIngestedListener. Doing them inline would race the commit.
+        events.publishEvent(new io.eksamadhan.event.MessageIngested(
+                socialMessage.getId(), page.getId(), !isPageSender));
     }
 }

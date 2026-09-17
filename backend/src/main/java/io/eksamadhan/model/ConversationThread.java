@@ -71,6 +71,25 @@ public class ConversationThread {
     /** Sentiment of the most recent customer message, once Phase 2 populates it. */
     private String sentiment;
 
+    /** When the conversation's mood was last assessed. */
+    @Column(name = "sentiment_at")
+    private ZonedDateTime sentimentAt;
+
+    /** Why this was handed to a human. Null while the AI is still handling it. */
+    @Column(name = "escalation_reason")
+    private String escalationReason;
+
+    /** A short brief for whoever picks this up, so they need not read the whole thread. */
+    @Column(columnDefinition = "TEXT")
+    private String summary;
+
+    @Column(name = "summary_at")
+    private ZonedDateTime summaryAt;
+
+    /** How many messages the summary covered, so the UI can tell when it has gone stale. */
+    @Column(name = "summary_message_count")
+    private Integer summaryMessageCount;
+
     /** Denormalised so the inbox can sort and preview without loading every message. */
     private ZonedDateTime lastMessageAt;
 

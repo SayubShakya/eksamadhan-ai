@@ -36,11 +36,13 @@ The single most important week. Everything after it depends on a `Thread` existi
   therefore App Review are unavailable. Work continues in Development mode with
   Testers. Add supervisor and examiner as Testers before the demo.
 - Rotate the database password committed in the PoC history.
-- `Organization` and `User` entities; OAuth 2.0 + JWT login replacing the hardcoded
-  `demo-tenant-1` (report §5.4.3). Agent invite by email, roles, online/offline status.
-- **`Thread` entity** with `AI_HANDLING → OPEN_FOR_AGENT → AGENT_HANDLING → RESOLVED`.
+- ✅ `Organization` and `User` entities; JWT login replacing the hardcoded
+  `demo-tenant-1` (report §5.4.3). Agent invites are **copyable links** rather than
+  email, avoiding an SMTP dependency; roles are Owner / Admin / Agent. Google sign-in,
+  OTP and the online/offline status moved to later work.
+- ✅ **`Thread` entity** with `AI_HANDLING → OPEN_FOR_AGENT → AGENT_HANDLING → RESOLVED`.
   Messages hang off threads, not pages.
-- Flyway migrations replacing `ddl-auto`.
+- ✅ Flyway migrations replacing `ddl-auto`.
 - Complete the Instagram Business link now the restriction has lifted.
 
 **Done when:** you can sign up, log in, invite an agent, and every message in the
@@ -54,16 +56,18 @@ the whole week; do not start RAG until it is finished.
 ## Week 3 · 29 Sep – 5 Oct — Knowledge engine
 *Report 3 due Mon 6 Oct · PRD 4.3, FR-02*
 
-- Knowledge ingestion: raw text first, then PDF, then URL scraping.
-- Chunking, embeddings via the OpenAI API, vectors stored in Pinecone with the
-  embedding model name recorded per chunk.
-- Top-k semantic retrieval, exposed through an endpoint you can query directly.
-- Knowledge management screen: add, list, delete sources with an indexing status.
+- ✅ Knowledge ingestion: raw text and PDF. URL scraping deferred.
+- ✅ Chunking, embeddings via OpenRouter (`openai/text-embedding-3-small`), vectors stored
+  in **pgvector** with the embedding model name recorded per chunk.
+- ✅ Top-k semantic retrieval, exposed through `GET /api/knowledge/search`.
+- ✅ Knowledge management screen: add, list, delete sources with an indexing status, plus a
+  search box that shows the retrieved passages and their match scores.
 
 **Done when:** you upload a document and a query returns the right chunks with
 similarity scores — retrieval proven before generation is attempted.
 
-**Risk:** Pinecone free-tier index limits. Check quota on day one.
+**Risk retired:** Pinecone's free-tier index limits no longer apply — vectors live in the
+project's own PostgreSQL via pgvector. See the substitution note in `docs/architecture.md`.
 
 ---
 

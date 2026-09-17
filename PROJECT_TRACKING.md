@@ -122,6 +122,86 @@ expire after 7 days — re-send if it lapses.
 - [x] Wrote the Week 1 progress report — `docs/weekly-reports/week-01/`
 - [x] Wrote the eight-week delivery plan — `docs/weekly-plan.md`
 
+---
+
+## Week 2 — 2026-09-22 to 2026-09-28
+
+**Accomplished**
+
+- [x] Added Flyway and baselined the existing schema — `V1__baseline.sql`, `ddl-auto`
+      changed from `update` to `validate` so entities and schema can no longer diverge
+      silently
+- [x] Built the `Thread` (conversation) model and the AI → human status machine
+      (`AI_HANDLING`, `OPEN_FOR_AGENT`, `AGENT_HANDLING`, `RESOLVED`), with take-over,
+      hand-back, escalate and resolve wired through to the inbox
+- [x] **Authentication (PRD §4.1, FR-04; report §5.4.3)** — `Organization` and `User`
+      entities, email/password sign-up and sign-in, bcrypt hashing, stateless HS256 JWT
+      sessions via Spring Security 7, and roles Owner / Admin / Agent
+- [x] Removed the hardcoded `demo-tenant-1`: every endpoint now derives the workspace
+      from the caller's token instead of trusting a URL path variable
+- [x] Team management with copy-link agent invites, accept-invite flow, and a real Team
+      screen replacing the placeholder
+- [x] Security fixes found while doing the above — the Meta OAuth callback could create a
+      workspace for any `state` value (now a signed, expiring token); a reply could be
+      sent through another workspace's page token; conversation actions had no ownership
+      check; and `/api/pages` returned stored Meta access tokens
+
+- [x] **Knowledge base and semantic retrieval (PRD 4.3, FR-02)** — pgvector in PostgreSQL,
+      embeddings via OpenRouter, per-workspace sources from pasted text or PDF, heading-aware
+      chunking, and top-k cosine search
+- [x] Knowledge screen with a live search box showing retrieved passages and match scores,
+      so retrieval quality is visible without any AI answer involved
+- [x] Every message embedded as well, giving a conversation a semantic memory instead of
+      resending whole threads to the model
+- [x] Sample knowledge base and test queries for the demo — `docs/sample-knowledge-base.md`
+- [x] Recorded two deliberate deviations from the submitted report — pgvector instead of
+      Pinecone, and OpenRouter as the gateway to OpenAI's embedding model — with the
+      justification for each in `docs/architecture.md`
+
+- [x] **AI answers from the knowledge base (FR-07)** — prompt assembly from retrieved
+      passages plus the conversation's semantic memory, completion via OpenRouter, and a
+      `{answered, confidence, reply}` contract
+- [x] **The escalation gate** — a question the knowledge base does not cover never reaches
+      the model, and a low-confidence answer is never sent; either way the conversation goes
+      to `OPEN_FOR_AGENT` with the reason recorded. This is the report's "say I do not know
+      rather than guess" commitment, implemented
+- [x] Fixed three faults found in live testing: escalation silenced the AI permanently; a
+      customer's opening greeting escalated the conversation; and a prompt rule intended to
+      prevent invention made the AI decline questions its knowledge base answered
+- [x] AI replies marked and styled separately from an agent's own words, which is also the
+      basis for measuring the deflection rate
+
+- [x] **Routing on escalation (PRD 4.6, FR-09)** — the least-loaded active member is assigned,
+      ties broken randomly, and the customer receives one handover message so the conversation
+      does not go silent
+- [x] **End-to-end proven on real Messenger traffic** — the AI answered live customer questions
+      about delivery cost and cash on delivery from the uploaded knowledge base, and handed over
+      when asked something it could not answer
+
+- [x] **Email (Resend)** — invitations are emailed, and the assigned agent is notified when a
+      conversation escalates. Delivery is best-effort and reported honestly in the UI, since
+      Resend refuses every recipient but the account owner until a domain is verified
+
+- [x] **Conversation ownership (PRD 4.6)** — one owner at a time, the AI or one named agent.
+      Agents see and answer only their own; owners and admins see the workspace; the assignee
+      or an admin can transfer a conversation to someone else
+- [x] **Sentiment detection (report §1.2, "emotion detection analysis")** — every inbound
+      message classified from text and emoji, in English, Nepali and romanised Nepali;
+      14/14 on a mixed test set. Shown in the conversation panel; escalation on negative
+      sentiment is the next step
+- [x] **Handover summaries** — a three-line brief for whoever takes a conversation over,
+      written automatically once the conversation has been quiet for 30 seconds, and
+      refreshable on demand
+- [x] The conversation panel shows who is handling it, and which knowledge passages the AI's
+      last answer used, with match scores
+
+**Plan for next week**
+
+- Verify a sending domain so invitations reach real people
+- Agent availability (FR-05) so routing only considers members marked online, the FCM push to
+  the assigned agent, and sentiment detection and the remaining escalation triggers (negative sentiment, an explicit
+  "talk to a human"), round-robin routing, and the FCM push to the assigned agent
+
 **Blockers**
 
 - ~~Leaked database password~~ — the credential in the PoC history belonged to the

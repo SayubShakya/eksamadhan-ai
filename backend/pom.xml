@@ -45,6 +45,19 @@
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<!-- Supplies the Nimbus JWT encoder/decoder used to sign and verify our own
+		     HS256 tokens. Chosen over jjwt because jjwt-jackson pulls in Jackson 2,
+		     and Boot 4 is on Jackson 3 (tools.jackson). Boot 4 renamed this starter:
+		     spring-boot-starter-oauth2-resource-server is deprecated. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
 			<scope>runtime</scope>
 			<optional>true</optional>
@@ -68,6 +81,18 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
 			<scope>runtime</scope>
+		</dependency>
+		<!-- Maps a pgvector `vector(n)` column to a Java float[]. Version is managed by
+		     the Boot 4.0.2 BOM, which ships Hibernate 7.2. -->
+		<dependency>
+			<groupId>org.hibernate.orm</groupId>
+			<artifactId>hibernate-vector</artifactId>
+		</dependency>
+		<!-- Text extraction from uploaded PDFs for the knowledge base. -->
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>3.0.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>

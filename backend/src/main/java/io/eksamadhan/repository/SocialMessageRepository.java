@@ -15,7 +15,7 @@ public interface SocialMessageRepository extends JpaRepository<SocialMessage, UU
     boolean existsByMetaMessageId(String metaMessageId);
     Optional<SocialMessage> findByMetaMessageId(String metaMessageId);
     
-    // Find messages for a tenant, sorted for chat UI
+    // Find messages for a organization, sorted for chat UI
     List<SocialMessage> findByTenantIdOrderByTimestampAsc(String tenantId);
     
     // Alias for the column we added
@@ -25,6 +25,15 @@ public interface SocialMessageRepository extends JpaRepository<SocialMessage, UU
     List<SocialMessage> findByRecipientId(String recipientId);
 
     // For cleanup during logout
+    /**
+     * Fetch-joined: the AI reply path reads the thread's status on an async thread, where
+     * `open-in-view: false` means a lazy proxy cannot initialise. LEFT so a message that
+     * predates threading still comes back.
+     */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT m FROM SocialMessage m LEFT JOIN FETCH m.thread WHERE m.id = :id")
+    java.util.Optional<SocialMessage> findWithThreadById(java.util.UUID id);
+
     void deleteByTenantId(String tenantId);
 }
 

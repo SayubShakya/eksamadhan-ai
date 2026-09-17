@@ -34,7 +34,7 @@ public class ThreadService {
                 .orElseGet(() -> threadRepository.save(ConversationThread.builder()
                         .customerId(customerId)
                         .platform(page.getPlatform() == null ? "facebook" : page.getPlatform().toLowerCase())
-                        .tenantId(page.getTenant().getApiKey())
+                        .tenantId(page.getOrganization().getApiKey())
                         .pageId(page.getPageId())
                         .socialPage(page)
                         .status(ThreadStatus.AI_HANDLING)
@@ -96,6 +96,27 @@ public class ThreadService {
         return transition(threadId, ThreadStatus.AGENT_HANDLING, t -> t.setAssignedAgentId(agentId));
     }
 
+    /**
+     * Give the conversation to a named person.
+     *
+     * The status follows the assignment: handing a conversation to someone makes it theirs to
+     * answer, so an AI-handled thread becomes OPEN_FOR_AGENT — waiting on that person — while
+     * one already being handled stays AGENT_HANDLING under its new owner.
+     */
+    @Transactional
+    public ConversationThread assign(UUID threadId, io.eksamadhan.model.User agent) {
+        ConversationThread thread = threadRepository.findById(threadId)
+                .orElseThrow(() -> new IllegalArgumentException("No such conversation: " + threadId));
+
+        thread.setAssignedAgentId(agent.getId().toString());
+        if (thread.getStatus() != ThreadStatus.AGENT_HANDLING) {
+            thread.setStatus(ThreadStatus.OPEN_FOR_AGENT);
+            if (thread.getEscalatedAt() == null) thread.setEscalatedAt(ZonedDateTime.now());
+        }
+        log.info("Assigned thread {} to {}", threadId, agent.getEmail());
+        return threadRepository.save(thread);
+    }
+
     /** Hands the conversation back to the AI. */
     @Transactional
     public ConversationThread returnToAi(UUID threadId) {
@@ -125,6 +146,33 @@ public class ThreadService {
         thread.setStatus(status);
         extra.accept(thread);
         return threadRepository.save(thread);
+    }
+
+    /**
+     * The conversations one person may see.
+     *
+     * A conversation belongs to exactly one place: the AI, or one named agent. Owners and
+     * admins see the whole workspace because someone has to be able to find a conversation
+     * whose assignee is away; an agent sees only their own, so their inbox is their work
+     * rather than everyone's.
+     */
+    public java.util.Optional<ConversationThread> find(SocialPage page, String customerId) {
+        return threadRepository.findBySocialPageAndCustomerId(page, customerId);
+    }
+
+    /** Whether this person may answer this conversation. Mirrors {@link #visibleTo}. */
+    public boolean mayAct(io.eksamadhan.model.User user, ConversationThread thread) {
+        return user.getRole().canManageTeam()
+                || thread.getAssignedAgentId() == null
+                || user.getId().toString().equals(thread.getAssignedAgentId());
+    }
+
+    public List<ConversationThread> visibleTo(io.eksamadhan.model.User user) {
+        List<ConversationThread> all = forTenant(user.getOrganization().getApiKey());
+        if (user.getRole().canManageTeam()) return all;
+
+        String me = user.getId().toString();
+        return all.stream().filter(t -> me.equals(t.getAssignedAgentId())).toList();
     }
 
     public List<ConversationThread> forTenant(String tenantId) {

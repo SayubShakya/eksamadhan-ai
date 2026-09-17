@@ -33,10 +33,10 @@ public class SocialPage {
 
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tenant_id", nullable = false)
+    @JoinColumn(name = "organization_id", nullable = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private Tenant tenant;
+    private Organization organization;
 
     private LocalDateTime connectedAt;
 
