@@ -184,6 +184,11 @@ expire after 7 days — re-send if it lapses.
       conversation escalates. Delivery is best-effort and reported honestly in the UI, since
       Resend refuses every recipient but the account owner until a domain is verified
 
+- [x] **Extracted text is stored on the source** (`V16__source_content.sql`) — whatever a PDF,
+      an image description or a crawled page was actually read as is kept alongside the
+      passages. "View text" on the Knowledge screen shows it, and a source can be re-indexed
+      from the stored text without fetching the site or re-reading the file
+
 - [x] **Conversation ownership (PRD 4.6)** — one owner at a time, the AI or one named agent.
       Agents see and answer only their own; owners and admins see the workspace; the assignee
       or an admin can transfer a conversation to someone else
@@ -197,6 +202,8 @@ expire after 7 days — re-send if it lapses.
       and excluded from the deflection figure so spam cannot inflate it
 - [x] A website can be crawled into the knowledge base — same-host only, robots.txt obeyed,
       page-limited, one source per page
+- [x] Every source keeps the text it was read as, so a crawled page or a PDF can be read back
+      and re-chunked without fetching it again
 - [x] Knowledge base holds pictures paired with a title and caption; the AI attaches the
       picture when a customer's question is really about it
 - [x] **Sentiment detection (report §1.2, "emotion detection analysis")** — every inbound

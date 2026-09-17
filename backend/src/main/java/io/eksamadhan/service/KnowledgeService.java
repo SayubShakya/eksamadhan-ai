@@ -191,6 +191,7 @@ public class KnowledgeService {
 
         source.setChunkCount(chunks.size());
         source.setCharacterCount(text.length());
+        source.setContent(text);
         source.setStatus(KnowledgeSourceStatus.READY);
         source.setIndexedAt(OffsetDateTime.now());
         source.setError(null);

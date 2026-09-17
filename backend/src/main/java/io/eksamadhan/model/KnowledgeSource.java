@@ -53,6 +53,14 @@ public class KnowledgeSource {
     @Column(nullable = false, length = 20)
     private KnowledgeSourceStatus status;
 
+    /**
+     * The text this source was read as, before chunking — a crawled page's readable content,
+     * a PDF's extracted text, the pasted text itself. Kept so the reading can be inspected
+     * and so re-indexing does not mean fetching everything again.
+     */
+    @Column(columnDefinition = "TEXT")
+    private String content;
+
     /** Why indexing failed, shown to the admin. Null unless {@code status} is FAILED. */
     @Column(columnDefinition = "TEXT")
     private String error;

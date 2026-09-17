@@ -65,6 +65,10 @@ export const removeMember = (id) => axios.delete(`/api/team/members/${id}`);
 // ── Knowledge base ──────────────────────────────────────────────────────────
 export const getKnowledge = () => axios.get('/api/knowledge').then(r => r.data);
 export const addKnowledgeText = (payload) => axios.post('/api/knowledge/text', payload).then(r => r.data);
+export const getKnowledgeContent = (id) =>
+    axios.get(`/api/knowledge/${id}/content`).then(r => r.data);
+export const reindexKnowledge = (id) =>
+    axios.post(`/api/knowledge/${id}/reindex`).then(r => r.data);
 export const deleteKnowledge = (id) => axios.delete(`/api/knowledge/${id}`);
 export const searchKnowledge = (q, topK) =>
     axios.get('/api/knowledge/search', { params: { q, topK } }).then(r => r.data);

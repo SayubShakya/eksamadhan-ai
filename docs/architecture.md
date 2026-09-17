@@ -110,7 +110,8 @@ eksamadhan-ai/
 ```
 Organization ─┬─< User (role: ADMIN | AGENT, status: ONLINE | BUSY | OFFLINE)
               ├─< Channel (type: FACEBOOK | INSTAGRAM | WEB, oauth tokens)
-              ├─< KnowledgeSource (TEXT | PDF) ─< KnowledgeChunk (content, embedding vector(1536))
+              ├─< KnowledgeSource (TEXT | PDF | IMAGE | WEBSITE, content: the text it was read as)
+              │     └─< KnowledgeChunk (content, embedding vector(1536))
               └─< Thread (channel, externalId, status, assignedAgent)
                     └─< Message (sender: CUSTOMER|AI|AGENT|SYSTEM, body, confidence, sentiment)
                           └── MessageEmbedding (embedding vector(1536))  — conversation memory

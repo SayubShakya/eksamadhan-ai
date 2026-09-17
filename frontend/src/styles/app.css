@@ -1201,3 +1201,12 @@
 .transcript { display: block; font-style: italic; opacity: .92; }
 .transcript small { display: block; font-style: normal; font-size: 10px; letter-spacing: .04em;
                     text-transform: uppercase; opacity: .65; margin-top: 3px; }
+
+/* Reading back what a source was actually extracted as — long, so it scrolls in place. */
+.confirm--wide { max-width: 760px; width: calc(100vw - 40px); }
+.sourcetext {
+    margin: 0 0 16px; padding: 12px 14px; max-height: 50vh; overflow: auto;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    line-height: 1.6; white-space: pre-wrap; word-break: break-word; color: var(--text);
+}

@@ -161,6 +161,13 @@ status machine and authentication have all since been built — see the change l
   averaging 146 characters, each matching on a heading and answering nothing. `min-chunk-size`
   (250) merges runs of tiny passages, which took that page to 11 and the whole crawl from 177
   passages to 30, with retrieval scores unchanged.
+- **Keep the text a source was read as, not only its passages.** Chunks are a retrieval unit
+  and read badly end to end, so there was no way to check what a crawl or a PDF actually
+  captured. `knowledge_sources.content` stores the extracted text, "View text" shows it, and
+  re-indexing re-chunks from it — so a chunker change costs nothing, where before it meant
+  crawling the site again. Sources added before V16 have no stored text and their reindex
+  returns 409 rather than silently emptying themselves.
+
 - **An image is retrieved through words, never pixels.** A knowledge-base picture is indexed
   by its title, the admin's caption, and a description the vision model writes; the file itself
   is only stored and sent. The title is required at upload — saving an untitled image would

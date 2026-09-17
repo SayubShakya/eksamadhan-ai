@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
-import { IconUpload, IconSearch, IconTrash, IconImage } from '../components/icons.jsx';
+import { IconUpload, IconSearch, IconTrash, IconImage, IconClose } from '../components/icons.jsx';
 import * as api from '../lib/api.js';
 
 const STATUS_TONE = {
@@ -34,6 +34,8 @@ export default function KnowledgePage() {
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
     const [removing, setRemoving] = useState(null);
+    // What a source was actually read as — the crawler's reading of a page is worth checking.
+    const [viewing, setViewing] = useState(null);
     const [query, setQuery] = useState('');
     const [results, setResults] = useState(null);
     const [searching, setSearching] = useState(false);
@@ -139,6 +141,15 @@ export default function KnowledgePage() {
             setError(api.errorMessage(err, 'That image could not be added.'));
         } finally {
             setBusy(false);
+        }
+    };
+
+    const view = async (source) => {
+        setViewing({ ...source, content: null });
+        try { setViewing(await api.getKnowledgeContent(source.id)); }
+        catch (err) {
+            setViewing(null);
+            setError(api.errorMessage(err, 'Could not read that source.'));
         }
     };
 
@@ -312,6 +323,11 @@ export default function KnowledgePage() {
                         <span className={`tag ${STATUS_TONE[source.status] || 'tag--ai'}`}>
                             {STATUS_LABEL[source.status] || source.status}
                         </span>
+                        {source.chunkCount > 0 && (
+                            <button className="btn btn--secondary btn--sm" onClick={() => view(source)}>
+                                View text
+                            </button>
+                        )}
                         {library.canManage && (
                             <button className="btn btn--danger btn--sm" onClick={() => setRemoving(source)}
                                     aria-label={`Remove ${source.title}`}>
@@ -360,6 +376,38 @@ export default function KnowledgePage() {
                     Every match here is weak, which usually means the knowledge base does not cover
                     this question. The AI should decline rather than guess.
                 </p>
+            )}
+
+            {viewing && (
+                <>
+                    <div className="scrim" onClick={() => setViewing(null)} aria-hidden="true" />
+                    <div className="confirm confirm--wide" role="dialog" aria-modal="true"
+                         aria-label="Extracted text">
+                        <header className="panel__head">
+                            <h2 className="panel__title">{viewing.title}</h2>
+                            <button className="icon-btn" onClick={() => setViewing(null)} aria-label="Close">
+                                <IconClose />
+                            </button>
+                        </header>
+                        <div className="confirm__body">
+                            {viewing.sourceUrl && <p className="muted" style={{ margin: '0 0 8px' }}>{viewing.sourceUrl}</p>}
+                            {viewing.content === null ? (
+                                <p className="muted">Loading…</p>
+                            ) : (
+                                <>
+                                    <p className="muted" style={{ margin: '0 0 10px' }}>
+                                        {viewing.content.length.toLocaleString()} characters, indexed as
+                                        {' '}{viewing.chunkCount} passage{viewing.chunkCount === 1 ? '' : 's'}.
+                                    </p>
+                                    <pre className="sourcetext">{viewing.content}</pre>
+                                </>
+                            )}
+                            <div className="panel__actions">
+                                <button className="btn btn--secondary" onClick={() => setViewing(null)}>Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </>
             )}
 
             <ConfirmDialog

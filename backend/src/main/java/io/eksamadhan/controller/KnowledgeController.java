@@ -188,6 +188,42 @@ public class KnowledgeController {
         return Map.of("started", true, "url", request.url().strip());
     }
 
+    public record SourceContent(String id, String title, KnowledgeSourceType sourceType,
+                                String sourceUrl, int chunkCount, String content) {}
+
+    /**
+     * What this source was actually read as.
+     *
+     * A separate call rather than a field on the list: the extracted text of a crawled site
+     * runs to hundreds of kilobytes, and nobody needs all of it to render a list of titles.
+     */
+    @GetMapping("/{sourceId}/content")
+    public SourceContent content(@PathVariable UUID sourceId) {
+        KnowledgeSource source = requireOwnSource(sourceId, currentUser.organization());
+        return new SourceContent(source.getId().toString(), source.getTitle(), source.getSourceType(),
+                source.getSourceUrl(), source.getChunkCount(),
+                source.getContent() == null ? "" : source.getContent());
+    }
+
+    /**
+     * Re-chunks and re-embeds from the stored text.
+     *
+     * No fetching: the reading is already saved, so changing the chunking settings or the
+     * embedding model does not mean crawling a site or asking for an upload again.
+     */
+    @PostMapping("/{sourceId}/reindex")
+    public SourceView reindex(@PathVariable UUID sourceId) {
+        Organization organization = currentUser.requireTeamManager().getOrganization();
+        KnowledgeSource source = requireOwnSource(sourceId, organization);
+
+        if (source.getContent() == null || source.getContent().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "This source predates stored content, so it has to be added again.");
+        }
+        knowledgeService.indexAsync(source.getId(), source.getContent());
+        return SourceView.of(source);
+    }
+
     @DeleteMapping("/{sourceId}")
     public Map<String, Boolean> delete(@PathVariable UUID sourceId) {
         Organization organization = currentUser.requireTeamManager().getOrganization();
