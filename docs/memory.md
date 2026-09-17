@@ -161,6 +161,19 @@ status machine and authentication have all since been built — see the change l
   averaging 146 characters, each matching on a heading and answering nothing. `min-chunk-size`
   (250) merges runs of tiny passages, which took that page to 11 and the whole crawl from 177
   passages to 30, with retrieval scores unchanged.
+- **Never take the first `<main>`.** Eight Jeevee policy pages indexed as eight byte-identical
+  copies of the site's hidden login-and-privacy modal, because that modal ships in the markup of
+  every page and sits above the real content. Every simple question then escalated, and the
+  knowledge base looked full while holding one document. `WebCrawler` now strips what a visitor
+  cannot see (`[hidden]`, `aria-hidden`, `role=dialog`, `.modal`, and the Tailwind spellings
+  `.invisible`, `.opacity-0`, `.pointer-events-none`, `.sr-only`) and then scores every content
+  candidate by how much text it carries, falling back to the body when none holds a quarter of
+  the page. Same start URL: 8 sources / 1 distinct text / 232 passages became 11 sources / 11
+  distinct texts / 77 passages, and `what is your refund policy` went from nothing to 0.518.
+- **Identical text across pages is indexed once.** A cheap guard, and the one that would have
+  made the modal bug loud instead of silent: the same text on eight URLs is one document, and
+  eight copies only make retrieval choose between them.
+
 - **Keep the text a source was read as, not only its passages.** Chunks are a retrieval unit
   and read badly end to end, so there was no way to check what a crawl or a PDF actually
   captured. `knowledge_sources.content` stores the extracted text, "View text" shows it, and

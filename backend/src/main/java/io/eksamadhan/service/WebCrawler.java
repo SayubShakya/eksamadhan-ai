@@ -39,6 +39,21 @@ public class WebCrawler {
             + "svg, form, aside, [role=navigation], [role=banner], [role=contentinfo], "
             + ".cookie, .cookies, #cookie, .menu, .navbar, .sidebar";
 
+    /**
+     * Things a visitor never sees. A modern site ships its login dialog, its cookie drawer and
+     * its policy popups in the markup of every page with the visibility turned off in CSS, so a
+     * reader that trusts the HTML alone reads someone's login form on all thirty pages. The
+     * Tailwind utility classes are here because that is how most sites now express "hidden".
+     */
+    private static final String HIDDEN = "[hidden], [aria-hidden=true], [style*='display:none'], "
+            + "[style*='display: none'], [role=dialog], [role=alertdialog], "
+            + ".modal, .drawer, .offcanvas, .popup, .popover, .tooltip, "
+            + ".invisible, .opacity-0, .pointer-events-none, .sr-only, .visually-hidden, .hidden";
+
+    /** Where page content usually lives, best candidate wins — see {@link #content}. */
+    private static final String CONTENT_CANDIDATES =
+            "main, article, [role=main], #content, #main, .content, .main-content, .page-content";
+
     private final int maxPages;
     private final int maxDepth;
     private final long politenessMs;
@@ -67,6 +82,7 @@ public class WebCrawler {
 
         List<Page> pages = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
+        Set<Integer> texts = new HashSet<>();   // identical pages are indexed once, see below
         Deque<Map.Entry<URI, Integer>> queue = new ArrayDeque<>();
         queue.add(Map.entry(start, 0));
         seen.add(start.toString());   // already canonical, so "site.com" and "site.com/" agree
@@ -98,7 +114,10 @@ public class WebCrawler {
                 log.debug("Truncated {} from {} characters", url, text.length());
                 text = text.substring(0, MAX_PAGE_CHARACTERS);
             }
-            if (text.length() >= MIN_USEFUL_CHARACTERS) {
+            // Two pages that read the same are one page. Printer versions, a URL reachable by
+            // two paths, and a page whose real content did not survive extraction all land here;
+            // indexing them separately buys nothing and makes retrieval choose between copies.
+            if (text.length() >= MIN_USEFUL_CHARACTERS && texts.add(text.hashCode())) {
                 String title = document.title().isBlank() ? url.getPath() : document.title().strip();
                 pages.add(new Page(url.toString(), title, text));
             }
@@ -128,9 +147,9 @@ public class WebCrawler {
     private String readable(Document document) {
         Document copy = document.clone();
         copy.select(BOILERPLATE).remove();
+        copy.select(HIDDEN).remove();
 
-        Element main = copy.selectFirst("main, article, [role=main]");
-        Element root = main != null ? main : copy.body();
+        Element root = content(copy);
         if (root == null) return "";
 
         // Headings become their own lines, which is what the chunker splits on.
@@ -142,6 +161,36 @@ public class WebCrawler {
                 .replaceAll(" *\n *", "\n")
                 .replaceAll("\n{3,}", "\n\n")
                 .strip();
+    }
+
+    /**
+     * The element holding the page's own content.
+     *
+     * Taking the first {@code <main>} is what broke this: a site that ships a hidden dialog
+     * above the fold has two, and the wrong one was read on every page of a site — eight
+     * different policy pages indexed as eight copies of the same login modal. So every
+     * plausible container is scored by how much text it actually carries, and the body is used
+     * when none of them holds a meaningful share of it.
+     */
+    private Element content(Document copy) {
+        Element body = copy.body();
+        if (body == null) return null;
+        int whole = body.text().length();
+
+        Element best = null;
+        int bestLength = 0;
+        for (Element candidate : copy.select(CONTENT_CANDIDATES)) {
+            int length = candidate.text().length();
+            if (length > bestLength) {
+                best = candidate;
+                bestLength = length;
+            }
+        }
+
+        // A container holding a fraction of the page is a sidebar or a widget, not the article.
+        boolean worthwhile = best != null && bestLength >= MIN_USEFUL_CHARACTERS
+                && bestLength * 4 >= whole;
+        return worthwhile ? best : body;
     }
 
     private URI normalise(String raw) {

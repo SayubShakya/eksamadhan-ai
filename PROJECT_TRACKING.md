@@ -184,6 +184,10 @@ expire after 7 days — re-send if it lapses.
       conversation escalates. Delivery is best-effort and reported honestly in the UI, since
       Resend refuses every recipient but the account owner until a domain is verified
 
+- [x] **Fixed the crawler reading the wrong part of a page** — a hidden login/privacy modal on
+      every Jeevee page was being indexed instead of the page itself, so eight policy pages held
+      one identical document and every question escalated. Hidden and dialog content is now
+      removed and the real content container chosen by weight; identical pages are indexed once
 - [x] **Extracted text is stored on the source** (`V16__source_content.sql`) — whatever a PDF,
       an image description or a crawled page was actually read as is kept alongside the
       passages. "View text" on the Knowledge screen shows it, and a source can be re-indexed
