@@ -6,10 +6,17 @@ spring:
     username: ${DB_USERNAME:eksamadhan}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    # This database already exists, created by ddl-auto. Baselining at 1 marks V1 as
+    # already applied here, while a fresh database runs it normally.
+    baseline-on-migrate: true
+    baseline-version: 1
   jpa:
     hibernate:
-      # TODO(Phase 1): replace with Flyway migrations and set this to `validate`
-      ddl-auto: update
+      # The schema is owned by src/main/resources/db/migration. `validate` fails fast
+      # when an entity and the schema disagree, instead of silently diverging.
+      ddl-auto: validate
     show-sql: false
     open-in-view: false
     properties:
