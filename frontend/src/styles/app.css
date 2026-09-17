@@ -3,7 +3,9 @@
 
 .scrim {
     position: fixed; inset: 0; z-index: 40;
-    background: rgba(16, 20, 27, .38);
+    background: rgba(16, 20, 27, .32);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
     animation: fade .15s ease;
 }
 @keyframes fade { from { opacity: 0 } to { opacity: 1 } }
@@ -23,7 +25,8 @@
 
 /* Docked on a desktop: in the flow beside the content, no overlay, no shadow. */
 @media (min-width: 1024px) {
-    .scrim { display: none; }
+    /* Only the navigation's own backdrop — dialogs keep theirs. */
+    .scrim--nav { display: none; }
     .rail {
         position: relative;
         transform: none;
@@ -497,6 +500,9 @@
 /* ── Profile popover ───────────────────────────────────────────────────── */
 .popover__catcher { position: fixed; inset: 0; z-index: 55; }
 
+/* A dialog's backdrop must cover the docked sidebar too. */
+.confirm ~ .scrim, .scrim:not(.scrim--nav) { z-index: 65; }
+
 .popover {
     position: fixed; z-index: 60;
     top: calc(var(--topbar) + 6px); right: 12px;
@@ -854,3 +860,24 @@
     background: var(--surface); color: var(--accent); font-weight: 600; font-size: 13px;
 }
 .recent__all:hover { background: var(--accent-weak); }
+
+/* ── Confirmation dialog ───────────────────────────────────────────────── */
+.confirm {
+    position: fixed; z-index: 70;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: min(440px, calc(100vw - 32px));
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-md);
+    animation: pop .14s ease;
+}
+@keyframes pop {
+    from { transform: translate(-50%, -48%) scale(.98); opacity: 0 }
+    to   { transform: translate(-50%, -50%) scale(1);   opacity: 1 }
+}
+.confirm__body { padding: 20px; }
+.confirm__message { margin: 0 0 20px; color: var(--text-muted); line-height: 1.6; }
+
+.btn--destructive { background: var(--danger); color: #fff; box-shadow: var(--shadow-sm); }
+.btn--destructive:hover { filter: brightness(.94); }

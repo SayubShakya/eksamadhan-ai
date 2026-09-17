@@ -12,9 +12,6 @@ Final Year UG Project
 | **Report No.** | 1 |
 | **Period covered** | 15–21 September 2026 |
 
-> The signed copy is `Week-01-Progress-Report.docx` in this folder. This Markdown
-> version exists so the report is readable directly on GitHub.
-
 ---
 
 ## Summary of progress
@@ -32,8 +29,12 @@ into the system.
 - Created the Meta developer app, connected the Facebook Page and configured the webhook.
 - Tested it end to end: a real Messenger message from another account reached the
   database in under a second.
-- Secured the webhook so only genuine messages from Meta are accepted, and rebuilt the
-  user interface to the agreed design.
+- Secured the webhook so only genuine messages from Meta are accepted.
+- Built the agent inbox: reply to a specific message, react with emoji, send photos and
+  voice messages, and play voice notes that customers send.
+- Customer names and profile pictures are now fetched from Facebook automatically.
+- Designed the logo and rebuilt the dashboard to the agreed design, including a mobile
+  layout.
 
 ### Issues and roadblocks
 

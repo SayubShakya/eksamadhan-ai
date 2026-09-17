@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage.jsx';
 import InboxPage from './pages/InboxPage.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
 import ProfilePanel from './components/ProfilePanel.jsx';
+import ConfirmDialog from './components/ConfirmDialog.jsx';
 import * as api from './lib/api.js';
 import { buildThreads } from './lib/format.js';
 import './styles/tokens.css';
@@ -102,6 +103,7 @@ export default function App() {
         }
     });
     const [profileOpen, setProfileOpen] = useState(false);
+    const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
     /**
      * Returns an error message instead of throwing, so the panel can show it. Silently
@@ -307,12 +309,11 @@ export default function App() {
     }, []);
 
     const handleLogout = async () => {
-        if (!window.confirm('This disconnects every page and deletes stored history. Continue?')) return;
+        setConfirmDisconnect(false);
         try {
             await api.logout(TENANT_ID);
         } catch (err) {
             console.error('Logout failed', err);
-            if (!window.confirm('The server rejected the request. Clear the local view anyway?')) return;
         }
         window.location.href = '/';
     };
@@ -373,13 +374,28 @@ export default function App() {
                         onSearchChange={setQuery}
                         sendError={sendError}
                         onDismissError={() => setSendError('')}
+                        onError={setSendError}
                     />
                 )}
 
                 {!['home', 'inbox'].includes(view) && (
-                    <PlaceholderPage view={view} onNavigate={setView} onLogout={handleLogout} />
+                    <PlaceholderPage
+                        view={view}
+                        onNavigate={setView}
+                        onLogout={() => setConfirmDisconnect(true)}
+                    />
                 )}
             </div>
+
+            <ConfirmDialog
+                open={confirmDisconnect}
+                title="Disconnect everything?"
+                message="Every connected page is removed and all stored message history is deleted. This cannot be undone — the messages themselves stay in Messenger, but this app loses its copy."
+                confirmLabel="Disconnect"
+                danger
+                onConfirm={handleLogout}
+                onCancel={() => setConfirmDisconnect(false)}
+            />
 
             <ProfilePanel
                 open={profileOpen}

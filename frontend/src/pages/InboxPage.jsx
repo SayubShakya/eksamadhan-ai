@@ -136,9 +136,9 @@ export default function InboxPage({
         try {
             setRecorder(await startRecording());
         } catch {
-            // Denied permission, or no microphone.
-            onDismissError?.();
-            alert('Microphone access is needed to record a voice message.');
+            // Denied permission, or no microphone. Report it where every other send
+            // error appears rather than in a browser dialog.
+            onError?.('Microphone access is needed to record a voice message. Allow it in your browser settings.');
         }
     };
 

@@ -40,7 +40,7 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
 
     return (
         <>
-            {open && <div className="scrim" onClick={onClose} aria-hidden="true" />}
+            {open && <div className="scrim scrim--nav" onClick={onClose} aria-hidden="true" />}
 
             <nav
                 className={`rail ${open ? 'rail--open' : 'rail--closed'}`}
