@@ -9,12 +9,28 @@ import MessageActions from '../components/MessageActions.jsx';
 import AssigneePicker from '../components/AssigneePicker.jsx';
 import { formatTimestamp, formatTime, formatDay, initials, STATUS_LABEL, ownershipLabel, SENTIMENT, participantsOf } from '../lib/format.js';
 
+/**
+ * Active first, and the default: an agent opens the inbox to work, and a resolved
+ * conversation is a record rather than something to do. "Needs agent" was dropped — since
+ * escalation assigns a named person, the list already says whose it is, and a filter that
+ * repeated that was one chip too many.
+ */
 const FILTERS = [
-    { id: 'all', label: 'All' },
-    { id: 'needs_agent', label: 'Needs agent' },
+    { id: 'active', label: 'Active' },
+    { id: 'resolved', label: 'Resolved' },
+];
+
+const PLATFORMS = [
+    { id: 'all', label: 'All channels' },
     { id: 'facebook', label: 'Facebook' },
     { id: 'instagram', label: 'Instagram' },
 ];
+
+/** The count has to describe what is actually listed, or "3 active" lies on the Resolved tab. */
+function countLabel(status, platform, n) {
+    const where = platform === 'all' ? '' : ` on ${PLATFORMS.find(p => p.id === platform)?.label ?? platform}`;
+    return `${n} ${status === 'resolved' ? 'resolved' : 'active'}${where}`;
+}
 
 /** Tag colour per conversation state. */
 const STATUS_TONE = {
@@ -87,8 +103,10 @@ export default function InboxPage({
     threads, totalThreads, pages, filter, onFilterChange,
     active, onSelect, onSend, onSendVoice, onSendImage, onReact, onHideMessage, onThreadAction,
     onConnect, search, onSearchChange, sendError, onDismissError, me, team = [], onAssign,
+    platform: platformFilter = 'all', onPlatformChange,
     onSummarise, summarising,
 }) {
+    const [copiedId, setCopiedId] = useState(false);
     const [draft, setDraft] = useState('');
     const [replyTo, setReplyTo] = useState(null);   // message being answered
     const [recorder, setRecorder] = useState(null); // active recording session
@@ -100,7 +118,7 @@ export default function InboxPage({
     const imageRef = useRef(null);
     const bodyRef = useRef(null);
 
-    const activeThread = threads.find(t => t.customerId === active?.customerId) || null;
+    const activeThread = threads.find(t => t.id === active?.id) || null;
     const participants = useMemo(
         () => (activeThread ? participantsOf(activeThread.messages) : []),
         [activeThread],
@@ -123,7 +141,7 @@ export default function InboxPage({
         endRef.current?.scrollIntoView();
         setReplyTo(null);
         setShown(PAGE_SIZE);
-    }, [active?.customerId]);
+    }, [active?.id]);
 
     // On new messages, only follow if the agent is already near the bottom —
     // otherwise reading older history would keep getting yanked away.
@@ -134,9 +152,23 @@ export default function InboxPage({
         if (nearBottom) endRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [visibleMessages.length]);
 
-    const visible = search
-        ? threads.filter(t => t.name.toLowerCase().includes(search.toLowerCase()))
-        : threads;
+    /**
+     * Search matches a customer's name, a conversation reference, or anything said in the
+     * conversation. Name alone was too narrow once a customer could have several
+     * conversations: the whole point of the reference is being able to find one by it, and
+     * "the conversation where they mentioned Chabahil" is how people actually remember them.
+     */
+    const visible = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return threads;
+        // CONV-ae19042d, conv-ae19042d, #ae19042d and ae19042d all mean the same thing.
+        const ref = q.replace(/^#/, '').replace(/^conv-/, '');
+        return threads.filter(t =>
+            (t.name || '').toLowerCase().includes(q)
+            || (ref.length >= 4 && (t.id || '').toLowerCase().startsWith(ref))
+            || (t.last?.text || t.last?.content || '').toLowerCase().includes(q)
+            || t.messages.some(m => (m.text || m.content || '').toLowerCase().includes(q)));
+    }, [threads, search]);
 
     const platformOf = (pageId) => pages.find(p => p.pageId === pageId)?.platform || 'facebook';
 
@@ -226,7 +258,7 @@ export default function InboxPage({
                 <div className="convlist__head">
                     <div className="convlist__title">
                         <h2>Conversations</h2>
-                        <span className="count">{threads.length} active</span>
+                        <span className="count">{countLabel(filter, platformFilter, threads.length)}</span>
                     </div>
                     <div className="chips">
                         {FILTERS.map(f => (
@@ -238,7 +270,21 @@ export default function InboxPage({
                                 {f.label}
                             </button>
                         ))}
-                    </div>
+                    
+                        {/* A separate control, because a channel is not a state: this way you
+                            can ask for active Facebook conversations, which one row of
+                            mutually exclusive chips could never express. */}
+                        <select
+                            className="chips__select"
+                            value={platformFilter}
+                            onChange={(e) => onPlatformChange?.(e.target.value)}
+                            aria-label="Filter by channel"
+                        >
+                            {PLATFORMS.map(pf => (
+                                <option key={pf.id} value={pf.id}>{pf.label}</option>
+                            ))}
+                        </select>
+</div>
                 </div>
 
                 <div className="convlist__items">
@@ -247,9 +293,9 @@ export default function InboxPage({
                         const awaitingReply = t.status === 'OPEN_FOR_AGENT' || t.unanswered > 0;
                         return (
                             <button
-                                key={t.customerId}
+                                key={t.id || t.customerId}
                                 className={`conv ${awaitingReply ? 'conv--attention' : ''}`}
-                                aria-current={active?.customerId === t.customerId}
+                                aria-current={active?.id === t.id}
                                 onClick={() => onSelect(t)}
                             >
                                 <PersonAvatar name={t.name} url={t.avatarUrl} size={36} />
@@ -262,6 +308,9 @@ export default function InboxPage({
                                     <span className="conv__foot">
                                         {/* Inline with the state tag so the two sit on one line. */}
                                         <ChannelIcon platform={platform} size={13} />
+                                        {/* The same customer can have several conversations, so
+                                            the row needs the reference that tells them apart. */}
+                                        {t.id && <span className="conv__ref">CONV-{t.id.slice(0, 8)}</span>}
                                         <span className={`tag ${STATUS_TONE[t.status] || 'tag--ai'}`}>
                                             {ownershipLabel(t, me?.id) || STATUS_LABEL[t.status] || t.status}
                                             {SENTIMENT[t.sentiment] && t.sentiment !== 'NEUTRAL' && (
@@ -291,12 +340,18 @@ export default function InboxPage({
                             </p>
                             <p className="empty__text" style={{ fontSize: 13, marginBottom: 14 }}>
                                 {search
-                                    ? `No conversations match “${search}”.`
+                                    ? `Nothing matches “${search}” — try a name, a reference like CONV-ae19042d, or something that was said.`
                                     : 'No conversations on this channel yet.'}
                             </p>
                             <button
                                 className="btn btn--secondary btn--sm"
-                                onClick={() => { onSearchChange(''); onFilterChange('all'); }}
+                                /* Clears every filter, not just the one the agent last touched
+                                   — the point is to get out of an empty list. */
+                                onClick={() => {
+                                    onSearchChange('');
+                                    onFilterChange('all');
+                                    onPlatformChange?.('all');
+                                }}
                             >
                                 Show all conversations
                             </button>
@@ -653,6 +708,27 @@ export default function InboxPage({
                                 {platformOf(activeThread.pageId) === 'instagram' ? 'Instagram' : 'Messenger'}
                             </div>
                         </div>
+                    </div>
+
+                    {/* A customer can have several conversations over time, so one needs a
+                        reference you can quote. Short like a git hash: the first block of the
+                        id is enough to tell them apart, and the whole thing is a click away
+                        for anyone querying the database. */}
+                    <div className="context__row">
+                        <div className="context__key">Conversation</div>
+                        <button
+                            className="convid"
+                            title={`${activeThread.id} — click to copy`}
+                            onClick={() => {
+                                navigator.clipboard?.writeText(activeThread.id)
+                                    .then(() => setCopiedId(true))
+                                    .catch(() => {});
+                                setTimeout(() => setCopiedId(false), 1500);
+                            }}
+                        >
+                            CONV-{activeThread.id.slice(0, 8)}
+                            <span className="convid__hint">{copiedId ? 'copied' : 'copy'}</span>
+                        </button>
                     </div>
 
                     {/* Who owns this conversation. The customer only ever sees one voice, but

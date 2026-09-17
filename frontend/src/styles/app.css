@@ -1155,3 +1155,25 @@
     flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--text-muted);
     background: var(--surface); border-radius: 999px; padding: 1px 7px;
 }
+
+/* The conversation's reference. Short like a git hash; the full id copies on click. */
+.convid {
+    display: inline-flex; align-items: center; gap: 8px;
+    font: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
+    padding: 3px 8px; margin-left: -8px;
+    background: none; border: 1px solid transparent; border-radius: var(--r-sm);
+    color: var(--accent); font-weight: 650; text-transform: uppercase; cursor: pointer;
+}
+.convid:hover { background: var(--bg); border-color: var(--border); }
+.convid__hint { font-family: inherit; font-size: 11px; color: var(--text-muted); text-transform: none; opacity: 0; transition: opacity .12s; }
+.convid:hover .convid__hint, .convid:focus-visible .convid__hint { opacity: 1; }
+.conv__ref {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; font-weight: 650; color: var(--accent); text-transform: uppercase; flex-shrink: 0;
+}
+.chips__select {
+    font: inherit; font-size: 12px; font-weight: 500;
+    padding: 5px 8px; border: 1px solid var(--border-strong); border-radius: 999px;
+    background: var(--bg); color: var(--text); cursor: pointer;
+}
+.chips__select:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }

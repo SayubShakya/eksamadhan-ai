@@ -93,7 +93,10 @@ export default function App() {
     const [messages, setMessages] = useState([]);
     const [serverThreads, setServerThreads] = useState([]);
     const [active, setActive] = useState(null);
-    const [filter, setFilter] = useState('all');
+    // Active by default: the inbox opens on work to do, not on the archive.
+    const [filter, setFilter] = useState('active');
+    // Channel is a separate axis from status, so it is filtered separately.
+    const [platform, setPlatform] = useState('all');
     const [query, setQuery] = useState('');
     const [sendError, setSendError] = useState('');
 
@@ -234,9 +237,9 @@ export default function App() {
 
         // After the OAuth callback the backend redirects with ?platform=…&status=…
         const params = new URLSearchParams(window.location.search);
-        const platform = params.get('platform');
-        if (platform === 'facebook' || platform === 'instagram') {
-            setFilter(platform);
+        const connected = params.get('platform');   // named apart from the platform filter state
+        if (connected === 'facebook' || connected === 'instagram') {
+            setPlatform(connected);
             setViewState('inbox');
             window.history.replaceState({}, '', pathForView('inbox'));
             refreshStatus();
@@ -267,18 +270,18 @@ export default function App() {
     );
 
     const allThreads = useMemo(
-        () => mergeThreads(serverThreads, visibleMessages, 'all'),
+        () => mergeThreads(serverThreads, visibleMessages),
         [serverThreads, visibleMessages],
     );
     const threads = useMemo(
-        () => (filter === 'all' ? allThreads : mergeThreads(serverThreads, visibleMessages, filter)),
-        [allThreads, serverThreads, visibleMessages, filter],
+        () => mergeThreads(serverThreads, visibleMessages, { status: filter, platform }),
+        [serverThreads, visibleMessages, filter, platform],
     );
 
     // Changing the filter can hide the open conversation; clear it so the thread pane
     // does not keep showing a chat that is no longer in the list.
     useEffect(() => {
-        if (active && !threads.some(t => t.customerId === active.customerId)) {
+        if (active && !threads.some(t => t.id === active.id)) {
             setActive(null);
         }
     }, [threads, active]);
@@ -495,6 +498,8 @@ export default function App() {
                         pages={pages}
                         filter={filter}
                         onFilterChange={setFilter}
+                        platform={platform}
+                        onPlatformChange={setPlatform}
                         active={active}
                         onSelect={setActive}
                         onSend={handleSend}

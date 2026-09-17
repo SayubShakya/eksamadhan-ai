@@ -11,7 +11,19 @@ import java.util.UUID;
 
 public interface ConversationThreadRepository extends JpaRepository<ConversationThread, UUID> {
 
-    Optional<ConversationThread> findBySocialPageAndCustomerId(SocialPage page, String customerId);
+    /**
+     * The customer's live conversation, if they have one. A resolved conversation is history:
+     * the next message they send starts a new one rather than reopening it.
+     *
+     * A list rather than an Optional so that rows predating the partial unique index cannot
+     * throw; the newest wins.
+     */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT t FROM ConversationThread t WHERE t.socialPage = :page "
+          + "AND t.customerId = :customerId "
+          + "AND t.status <> io.eksamadhan.model.ThreadStatus.RESOLVED "
+          + "ORDER BY t.lastMessageAt DESC")
+    List<ConversationThread> findActive(SocialPage page, String customerId);
 
     List<ConversationThread> findByTenantIdOrderByLastMessageAtDesc(String tenantId);
 

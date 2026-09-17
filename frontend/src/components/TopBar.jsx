@@ -39,7 +39,7 @@ export default function TopBar({
                     <IconSearch />
                     <input
                         type="search"
-                        placeholder="Search conversations…"
+                        placeholder="Search name, CONV-id or message…"
                         value={query}
                         onChange={(e) => onQueryChange(e.target.value)}
                         aria-label="Search conversations"

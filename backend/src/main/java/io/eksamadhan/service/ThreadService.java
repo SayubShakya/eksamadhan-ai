@@ -29,8 +29,10 @@ public class ThreadService {
     /** Finds or creates the thread for a customer on a page, then files the message in it. */
     @Transactional
     public ConversationThread attach(SocialMessage message, SocialPage page, String customerId) {
-        ConversationThread thread = threadRepository
-                .findBySocialPageAndCustomerId(page, customerId)
+        // Their live conversation, or a brand new one. A resolved conversation is never
+        // reused: reopening it would overwrite the record of how it ended.
+        ConversationThread thread = threadRepository.findActive(page, customerId).stream()
+                .findFirst()
                 .orElseGet(() -> threadRepository.save(ConversationThread.builder()
                         .customerId(customerId)
                         .platform(page.getPlatform() == null ? "facebook" : page.getPlatform().toLowerCase())
@@ -53,12 +55,6 @@ public class ThreadService {
             if (message.getSenderName() != null) thread.setCustomerName(message.getSenderName());
             if (message.getSenderAvatarUrl() != null) thread.setCustomerAvatarUrl(message.getSenderAvatarUrl());
             thread.setUnanswered(thread.getUnanswered() + 1);
-
-            // A customer writing again reopens a closed conversation.
-            if (thread.getStatus() == ThreadStatus.RESOLVED) {
-                thread.setStatus(ThreadStatus.AI_HANDLING);
-                thread.setResolvedAt(null);
-            }
         } else {
             thread.setUnanswered(0);
         }
@@ -117,15 +113,54 @@ public class ThreadService {
         return threadRepository.save(thread);
     }
 
-    /** Hands the conversation back to the AI. */
+    /**
+     * Hands the conversation back to the AI, and reopens it if it was closed.
+     *
+     * Refused when the customer has since started a new conversation: a person may only have
+     * one live conversation at a time, and the newer one is the real one. Without this the
+     * database would reject it anyway, with an error nobody could act on.
+     */
     @Transactional
     public ConversationThread returnToAi(UUID threadId) {
+        ConversationThread thread = threadRepository.findById(threadId)
+                .orElseThrow(() -> new IllegalArgumentException("No such conversation: " + threadId));
+
+        if (thread.getStatus() == ThreadStatus.RESOLVED) {
+            boolean alreadyTalking = findActive(thread.getSocialPage(), thread.getCustomerId())
+                    .filter(other -> !other.getId().equals(threadId))
+                    .isPresent();
+            if (alreadyTalking) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.CONFLICT,
+                        "This customer already has a newer conversation open.");
+            }
+            thread.setResolvedAt(null);
+        }
         return transition(threadId, ThreadStatus.AI_HANDLING, t -> t.setAssignedAgentId(null));
     }
 
-    /** Escalates, recording when — the alert latency target is measured from here. */
+    private java.util.Optional<ConversationThread> findActive(SocialPage page, String customerId) {
+        return threadRepository.findActive(page, customerId).stream().findFirst();
+    }
+
+    /**
+     * Escalates, recording when — the alert latency target is measured from here.
+     *
+     * A resolved conversation is left alone. The AI decides whether to escalate on another
+     * thread, seconds after the message arrives, and an agent can close the conversation in
+     * the meantime; without this check that late decision would reopen what they just closed.
+     */
     @Transactional
     public ConversationThread escalate(UUID threadId, String reason) {
+        ConversationThread thread = threadRepository.findById(threadId)
+                .orElseThrow(() -> new IllegalArgumentException("No such conversation: " + threadId));
+
+        if (thread.getStatus() == ThreadStatus.RESOLVED) {
+            log.info("Not escalating thread {} ({}): it was resolved while the AI was deciding",
+                    threadId, reason);
+            return thread;
+        }
+
         log.info("⬆️ Escalating thread {} ({})", threadId, reason);
         return transition(threadId, ThreadStatus.OPEN_FOR_AGENT,
                 t -> t.setEscalatedAt(ZonedDateTime.now()));
@@ -157,7 +192,7 @@ public class ThreadService {
      * rather than everyone's.
      */
     public java.util.Optional<ConversationThread> find(SocialPage page, String customerId) {
-        return threadRepository.findBySocialPageAndCustomerId(page, customerId);
+        return findActive(page, customerId);
     }
 
     /** Whether this person may answer this conversation. Mirrors {@link #visibleTo}. */

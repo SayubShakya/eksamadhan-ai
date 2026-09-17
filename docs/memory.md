@@ -101,6 +101,16 @@ status machine and authentication have all since been built — see the change l
   `@JdbcTypeCode(SqlTypes.VECTOR) @Array(length = 1536)` with an explicit
   `columnDefinition = "vector(1536)"`, using `org.hibernate.orm:hibernate-vector` (version
   managed by the Boot 4 BOM). Verified 2026-09-17 on a scratch database before building on it.
+- **Similarity scores drift upward as the knowledge base grows, so a fixed `min-similarity`
+  decays.** With one small source an off-topic question scored 0.088; with two sources and
+  twenty passages, a comparably off-topic one scored 0.331 — above the 0.25 threshold. More
+  passages means more chances to partially match. The *gap* between first and second place
+  separates cleanly where the absolute score does not (0.12–0.15 confident, 0.02–0.04
+  ambiguous, 0.011 off-topic) and does not drift. Measured in `docs/sample-product-catalogue.md`.
+- **Retrieval score cannot tell "relevant but unanswered" from "irrelevant".** Business
+  questions the knowledge base does not cover ("do you sell laptops", "instalments") scored
+  *higher* than a question about Nepali politics. Only reading the passages distinguishes them,
+  which is why the model is asked whether they actually answer the question.
 - **Chunking quality decides retrieval quality.** A first attempt packed a whole FAQ into one
   1200-character chunk, and on-topic and off-topic queries then scored 0.29 and 0.18 — barely
   distinguishable. Making the chunker break at headings moved that to 0.47 against 0.19.
@@ -121,6 +131,19 @@ status machine and authentication have all since been built — see the change l
   negative but still answerable; abuse or a demand for a manager is a signal to fetch a person.
   `Sentiment.warrantsHuman()` marks the distinction — it is the hook the escalation trigger
   will use, and is deliberately **not yet wired** to auto-escalation.
+- **A resolved conversation stays resolved.** A customer writing again starts a *new* thread
+  rather than reopening the old one, which used to clear `resolvedAt` and overwrite the closing
+  record. Uniqueness moved from "one thread per customer per page" to a partial index —
+  `uk_thread_active`, only one *non-resolved* thread per customer — so history accumulates while
+  two agents still cannot answer the same person in parallel. JPA cannot express a partial
+  index, so the `@UniqueConstraint` on the entity was removed rather than left to contradict it.
+- **Dropping a constraint by name fails on this database.** V10 dropped `uk_thread_page_customer`
+  as V1 names it, but this database predates Flyway and carries Hibernate's generated name, so
+  nothing was dropped and the collision persisted. V11 drops it by what it constrains. The same
+  mistake as V2 — when touching a pre-Flyway constraint, always look it up rather than name it.
+- **A late AI decision must not reopen a closed conversation.** The AI decides whether to
+  escalate seconds after a message arrives, on another thread, and an agent can resolve it in
+  the meantime; `ThreadService.escalate` now leaves a RESOLVED thread alone.
 - **A resolved conversation gets a different brief.** "Needs doing" is meaningless once the
   work is finished, so `RESOLVED_PROMPT` records what was asked, what was done and how it
   ended, and is regenerated the moment a conversation is resolved. The prompt explicitly

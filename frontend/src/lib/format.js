@@ -101,7 +101,7 @@ export const STATUS_LABEL = {
  * The server owns conversation state — status, unanswered count, preview — so the UI
  * no longer infers any of it by grouping messages. It only attaches the message bodies.
  */
-export function mergeThreads(threads, messages, filter = 'all') {
+export function mergeThreads(threads, messages, { status = 'all', platform = 'all' } = {}) {
     const byThread = new Map();
     for (const m of messages) {
         if (!m.threadId) continue;
@@ -111,9 +111,12 @@ export function mergeThreads(threads, messages, filter = 'all') {
 
     return threads
         .filter(t => {
-            if (filter === 'all') return true;
-            if (filter === 'needs_agent') return t.status === 'OPEN_FOR_AGENT';
-            return t.platform === filter;
+            // Status and channel are independent questions, so they are answered separately
+            // rather than as one list of mutually exclusive chips.
+            if (platform !== 'all' && t.platform !== platform) return false;
+            if (status === 'active') return t.status !== 'RESOLVED';
+            if (status === 'resolved') return t.status === 'RESOLVED';
+            return true;
         })
         .map(t => {
             const msgs = (byThread.get(t.id) || [])

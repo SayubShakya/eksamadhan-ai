@@ -18,7 +18,9 @@ import java.util.UUID;
 @Entity
 @Table(
     name = "conversation_threads",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"social_page_id", "customer_id"}),
+    // No unique constraint here: a customer may have many conversations over time, and only
+    // the live one is unique. That is a partial index (uk_thread_active in V11), which JPA
+    // cannot express — so the database owns the rule and this annotation must not restate it.
     indexes = {
         @Index(name = "idx_thread_tenant", columnList = "tenant_id"),
         @Index(name = "idx_thread_status", columnList = "status"),

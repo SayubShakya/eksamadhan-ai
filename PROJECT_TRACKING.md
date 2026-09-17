@@ -154,6 +154,8 @@ expire after 7 days — re-send if it lapses.
 - [x] Every message embedded as well, giving a conversation a semantic memory instead of
       resending whole threads to the model
 - [x] Sample knowledge base and test queries for the demo — `docs/sample-knowledge-base.md`
+      and `docs/sample-product-catalogue.md`, the second measured with both sources loaded so
+      retrieval has to choose between documents
 - [x] Recorded two deliberate deviations from the submitted report — pgvector instead of
       Pinecone, and OpenRouter as the gateway to OpenAI's embedding model — with the
       justification for each in `docs/architecture.md`
@@ -191,6 +193,8 @@ expire after 7 days — re-send if it lapses.
       message classified from text and emoji, in English, Nepali and romanised Nepali;
       14/14 on a mixed test set. Shown in the conversation panel; escalation on negative
       sentiment is the next step
+- [x] A customer writing after resolution starts a new conversation, so the closed one keeps
+      its record; only one live conversation per customer is allowed at a time
 - [x] Resolved conversations get a closing record — what was asked, what was done, and
       whether it actually ended well
 - [x] **Handover summaries** — a three-line brief for whoever takes a conversation over,
