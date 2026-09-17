@@ -99,12 +99,47 @@ expire after 7 days — re-send if it lapses.
 
 - [x] Wrote the eight-week delivery plan — `docs/weekly-plan.md`
 
+- [x] Migrated `meta-proxy/` into the project; `run.sh` registers the tunnel and keeps
+      it alive, and fixed the tunnel URL parsing bug
+- [x] Created Facebook Page + Instagram Professional account; deployed the Meta proxy to
+      Vercel (https://meta-proxy-jet.vercel.app) with Upstash Redis — registration
+      endpoint verified (success with token, 401 without)
+- [x] Created the Meta app (ID 1060346096625681) and verified the public callback chain
+      end to end — privacy URL 200, webhook verification returns the challenge
+- [x] Connected the Facebook Page through OAuth — token stored, webhook subscribed to
+      `messages` and `messaging_postbacks`
+- [x] **End-to-end verified**: a real Messenger message from a second account reached
+      PostgreSQL through the proxy and tunnel; de-duplication confirmed working
+- [x] Secured the webhook: `X-Hub-Signature-256` verification with constant-time
+      comparison, plus the proxy raw-body fix it depends on
+- [x] Designed the UI in UX Pilot and the logo in SVG — exports and implementation notes
+      in `docs/design-refs/`
+- [x] Rebuilt the React frontend to the approved design — shared nav rail and top bar,
+      Home and Inbox, design tokens from `design.md`, responsive to 390px
+- [x] Built the agent inbox: reply to a specific message, emoji reactions, photo and
+      voice messages, playback of customer voice notes, per-conversation unread counts
+- [x] Customer names and profile pictures fetched from Meta and refreshed on each sync
+- [x] Wrote the Week 1 progress report — `docs/weekly-reports/week-01/`
+- [x] Wrote the eight-week delivery plan — `docs/weekly-plan.md`
+
 **Blockers**
 
-- A real database password was committed in the PoC repo's history — needs rotating.
-- Instagram↔Page linking hit a temporary Meta action restriction on 2026-09-16;
-  retry after 24h. Does not block Facebook Messenger work.
-- ~~No real inbound message tested~~ — resolved 2026-09-16, working end to end.
+- ~~Leaked database password~~ — the credential in the PoC history belonged to the
+  MySQL instance on the Windows machine, not to anything in this project. This repo
+  reads `DB_PASSWORD` from the environment and commits no secrets. Remaining action is
+  personal: change it on that machine and anywhere it was reused.
+- **Meta App Review is not achievable on this account.** Advanced access needs Business
+  Verification, which needs a business portfolio, which the account cannot create: Meta
+  has restricted its advertising access ("You're no longer allowed to use Meta
+  technologies to advertise… or create new ad accounts or business portfolios",
+  2026-09-17, dated 30 Sep 2023). **No appeal is offered** — the account-quality page
+  has no "Request review" action. The project proceeds in Development mode with
+  authorised Testers — functionally identical, only the permitted senders differ. This
+  belongs in the final report's Limitations section.
+- **Instagram↔Page link still blocked.** The restriction from 2026-09-16 had not lifted
+  by 2026-09-17. Retrying repeatedly extends it, so leave it a week and try once. If it
+  is still refused, Instagram is dropped: it shares the webhook, parser and inbox with
+  Facebook, so the architecture is demonstrated either way. Record as a limitation.
 
 ---
 
@@ -115,43 +150,8 @@ expire after 7 days — re-send if it lapses.
 **Accomplished**
 -
 
-**Commits this week**
--
-
 **Plan for next week**
 -
-
-- [x] Migrated `meta-proxy/` into the project; `run.sh` now registers the tunnel and
-      keeps it alive, and fixed the tunnel URL parsing bug
-
-- [x] Created Facebook Page + Instagram Professional account; deployed the Meta proxy
-      to Vercel (https://meta-proxy-jet.vercel.app) with Upstash Redis — registration
-      endpoint verified (success with token, 401 without)
-
-- [x] Created the Meta app (ID 1060346096625681) and verified the public callback
-      chain end to end — privacy URL 200, webhook verification returns the challenge
-
-- [x] Connected the Facebook Page through OAuth — token stored, webhook subscribed to
-      `messages` and `messaging_postbacks`
-- [x] **End-to-end verified**: a real Messenger message from a second account reached
-      PostgreSQL through the proxy and tunnel; de-duplication confirmed working
-
-- [x] Secured the webhook: `X-Hub-Signature-256` verification with constant-time
-      comparison, plus the proxy raw-body fix it depends on; rebranded the frontend
-
-- [x] Designed the UI in UX Pilot — app home, empty inbox and populated agent inbox;
-      exports and implementation notes in `docs/design-refs/`
-
-- [x] Rebuilt the React frontend to match the approved design — shared nav rail and
-      top bar, Home and Inbox screens, design tokens from `design.md`
-
-- [x] Frontend UX pass — collapsible navigation, path-based routing, mobile responsive
-      down to 390px, and a dozen interaction bugs fixed
-
-- [x] Wrote the Week 1 progress report on the university form, with the full commit
-      list as evidence — `docs/weekly-reports/week-01/`
-
-- [x] Wrote the eight-week delivery plan — `docs/weekly-plan.md`
 
 **Blockers**
 -

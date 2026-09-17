@@ -25,6 +25,7 @@ public class MessageResponse {
     private String platform;     // "facebook", "instagram" (lowercase)
     private String timestamp;    // ISO 8601
     private String metaMessageId;
+    private String threadId;
     private String replyToId;   // metaMessageId of the message this one answers
     private String reaction;
     private String attachmentType;

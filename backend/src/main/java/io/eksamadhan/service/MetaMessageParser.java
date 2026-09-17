@@ -28,6 +28,7 @@ public class MetaMessageParser {
     private final SocialPageRepository pageRepository;
     private final SocialMessageRepository messageRepository;
     private final MetaService metaService;
+    private final ThreadService threadService;
 
     /** Profiles rarely change; one lookup per customer is plenty. */
     private final Map<String, Map> profileCache = new java.util.concurrent.ConcurrentHashMap<>();
@@ -240,6 +241,10 @@ public class MetaMessageParser {
                 .timestamp(ZonedDateTime.ofInstant(Instant.ofEpochMilli(timestampMillis), ZoneId.of("UTC")))
                 .build();
 
+        // File it in a conversation before saving, so the thread summary and the
+        // message are written in the same transaction.
+        String customerId = isPageSender ? recipientId : senderId;
+        threadService.attach(socialMessage, page, customerId);
         messageRepository.save(socialMessage);
         log.info("💬 Webhook: saved {} message mid={}", direction, mid);
     }

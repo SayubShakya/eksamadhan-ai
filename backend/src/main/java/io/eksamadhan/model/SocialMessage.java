@@ -70,6 +70,13 @@ public class SocialMessage {
     private ZonedDateTime timestamp;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "thread_id")
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private ConversationThread thread;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "social_page_id")
     @JsonIgnore
     @ToString.Exclude

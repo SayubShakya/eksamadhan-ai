@@ -31,8 +31,10 @@ to the approved design.
 
 The single most important week. Everything after it depends on a `Thread` existing.
 
-- **Submit Meta App Review** on day one — `pages_messaging`, `instagram_basic`,
-  `instagram_manage_messages`. Weeks of lead time; nothing else waits on it.
+- ~~Submit Meta App Review~~ — **blocked**: the account cannot create a business
+  portfolio (advertising restriction, 2026-09-17), so Business Verification and
+  therefore App Review are unavailable. Work continues in Development mode with
+  Testers. Add supervisor and examiner as Testers before the demo.
 - Rotate the database password committed in the PoC history.
 - `Organization` and `User` entities; OAuth 2.0 + JWT login replacing the hardcoded
   `demo-tenant-1` (report §5.4.3). Agent invite by email, roles, online/offline status.

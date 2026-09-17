@@ -94,7 +94,12 @@ no RAG, no sentiment, no FCM, no webhook payload signature verification, no Flyw
 ## Known issues / gotchas
 
 - `CLAUDE.md` is git-ignored (local instructions, not project work).
-- **Meta App Review is the critical-path risk.** `pages_messaging` and
+- **Meta App Review is blocked, permanently for practical purposes.** Advanced access
+  requires Business Verification → a business portfolio → an account without an
+  advertising restriction. Manjit's account is restricted (discovered 2026-09-17), so
+  portfolio creation is refused outright. Do not keep proposing App Review as a task.
+  The project runs in Development mode with Testers; record it as a limitation.
+- ~~**Meta App Review is the critical-path risk.**~~ `pages_messaging` and
   `instagram_manage_messages` need approval that can take weeks and can be refused.
 - Pinecone free tier has index limits and can expire — check quota before Phase 2.
 - Toolchain installed 2026-09-16: `brew install maven openjdk@21`. JDK 21 is keg-only,

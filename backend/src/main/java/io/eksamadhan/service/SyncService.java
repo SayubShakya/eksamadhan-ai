@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 public class SyncService {
 
     private final MetaService metaService;
+    private final ThreadService threadService;
     private final SocialMessageRepository messageRepository;
     private final io.eksamadhan.repository.SocialPageRepository socialPageRepository;
     private final Set<UUID> syncingPages = Collections.synchronizedSet(new HashSet<>());
@@ -258,6 +259,8 @@ public class SyncService {
                     .timestamp(timestamp)
                     .build();
 
+            String customerId = isFromMe ? message.getRecipientId() : message.getSenderId();
+            threadService.attach(message, page, customerId);
             messageRepository.save(message);
             log.info("✅ Saved {} {} message from {}: {}", page.getPlatform(), direction, senderName, text.substring(0, Math.min(text.length(), 20)));
             
@@ -366,6 +369,7 @@ public class SyncService {
                 .timestamp(Instant.now().atZone(ZoneId.of("UTC")))
                 .build();
 
+        threadService.attach(message, page, recipientId);
         messageRepository.save(message);
         log.info("📝 Saved outbound message to DB: {}", messageId);
     }

@@ -31,6 +31,7 @@ public class MessageController {
     private final MetaService metaService;
     private final SyncService syncService;
     private final io.eksamadhan.service.VoiceMessageService voiceMessageService;
+    private final io.eksamadhan.service.ThreadService threadService;
 
     /**
      * Get messages for a tenant - returns flat DTOs matching Node.js API shape
@@ -236,6 +237,8 @@ public class MessageController {
                 socialPageRepository.findByTenant(tenant).forEach(page -> {
                     try { syncService.refreshCustomerProfiles(page); }
                     catch (Exception e) { log.debug("Profile refresh skipped: {}", e.getMessage()); }
+                    try { threadService.backfill(page); }
+                    catch (Exception e) { log.debug("Thread backfill skipped: {}", e.getMessage()); }
                 }));
 
         return tenantRepository.findByApiKey(tenantId)
@@ -265,6 +268,7 @@ public class MessageController {
                 .platform(msg.getPlatform() != null ? msg.getPlatform().toLowerCase() : "facebook")
                 .timestamp(msg.getTimestamp() != null ? msg.getTimestamp().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null)
                 .metaMessageId(msg.getMetaMessageId())
+                .threadId(msg.getThread() != null ? msg.getThread().getId().toString() : null)
                 .replyToId(msg.getReplyToId())
                 .reaction(msg.getReaction())
                 .attachmentType(msg.getAttachmentType())
