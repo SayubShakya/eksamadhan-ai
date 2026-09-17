@@ -10,11 +10,6 @@ const PAGES = {
         phase: 'Phase 1',
         text: 'Manage connected Facebook Pages and Instagram accounts, and generate the website widget snippet.',
     },
-    analytics: {
-        title: 'Analytics',
-        phase: 'Phase 4',
-        text: 'Track deflection rate against the 60% target, reply times and escalation volume by channel.',
-    },
     settings: {
         title: 'Settings',
         phase: 'Phase 1',

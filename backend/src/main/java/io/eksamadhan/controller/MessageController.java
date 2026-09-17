@@ -319,6 +319,7 @@ public class MessageController {
                 .aiConfidence(msg.getAiConfidence())
                 .aiSources(msg.getAiSources())
                 .sentiment(msg.getSentiment() == null ? null : msg.getSentiment().name())
+                .transcript(msg.getTranscript())
                 .build();
     }
 }

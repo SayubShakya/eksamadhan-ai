@@ -34,7 +34,7 @@ public class ChatProvider {
             @Value("${app.ai.chat.max-tokens:0}") int maxTokens,
             @Value("${app.ai.chat.timeout-seconds:0}") int timeoutSeconds,
             @Value("${app.ai.chat.local.base-url:http://localhost:11434/v1}") String localUrl,
-            @Value("${app.ai.chat.local.model:qwen3.5:9b}") String localModel,
+            @Value("${app.ai.chat.local.model:gemma4:latest}") String localModel,
             @Value("${app.ai.openrouter-url:https://openrouter.ai/api/v1}") String hostedUrl,
             @Value("${app.ai.chat.hosted.model:openai/gpt-4o-mini}") String hostedModel) {
 
@@ -49,8 +49,11 @@ public class ChatProvider {
         // A local reasoning model spends its budget thinking before it writes, and runs
         // roughly two minutes on consumer hardware; the hosted defaults would time out on
         // every reply and escalate the lot.
+        // Local models vary enormously: a reasoning model spends its budget thinking before
+        // it writes, and vision takes noticeably longer than text. The headroom suits both
+        // without slowing a model that does not need it.
         int tokens = maxTokens > 0 ? maxTokens : (local ? 2500 : 600);
-        int timeout = timeoutSeconds > 0 ? timeoutSeconds : (local ? 180 : 20);
+        int timeout = timeoutSeconds > 0 ? timeoutSeconds : (local ? 120 : 20);
 
         log.info("Chat provider: {} ({}), model {}, {} tokens, {}s timeout",
                 local ? "local" : "hosted", url, chatModel, tokens, timeout);

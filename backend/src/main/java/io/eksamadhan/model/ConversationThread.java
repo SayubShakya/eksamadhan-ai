@@ -81,6 +81,19 @@ public class ConversationThread {
     @Column(name = "escalation_reason")
     private String escalationReason;
 
+    /**
+     * How many unrelated messages have arrived in a row. Reset by anything the AI can answer,
+     * so a customer who asks one odd question is not treated as a nuisance.
+     */
+    @Column(name = "off_topic_streak", nullable = false)
+    @Builder.Default
+    private int offTopicStreak = 0;
+
+    /** Closed by the AI as nothing to do with the business. Excluded from deflection. */
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean unrelated = false;
+
     /** A short brief for whoever picks this up, so they need not read the whole thread. */
     @Column(columnDefinition = "TEXT")
     private String summary;

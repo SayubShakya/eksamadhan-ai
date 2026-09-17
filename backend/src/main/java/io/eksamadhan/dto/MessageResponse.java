@@ -34,6 +34,7 @@ public class MessageResponse {
     private Double aiConfidence;
     private String aiSources;
     private String sentiment;    // inbound messages only
+    private String transcript;   // what a voice note said
 
     // Who is speaking, from the reader's point of view. authorType is CUSTOMER, AI or AGENT;
     // authorId is set only for AGENT, so the client can tell its own messages from a

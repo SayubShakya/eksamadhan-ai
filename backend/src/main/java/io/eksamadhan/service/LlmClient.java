@@ -138,6 +138,55 @@ public class LlmClient {
             """;
 
     /**
+     * Turns a voice note into text, so the rest of the pipeline can treat it as a question.
+     *
+     * Only some models accept audio at all; one that does not returns an error and the caller
+     * falls back to handing the conversation to a person, which is what used to happen to
+     * every voice message.
+     *
+     * @param mp3 audio as MP3 — Meta sends AAC, so it is transcoded first
+     * @return what was said, or null when it could not be read
+     */
+    @SuppressWarnings("unchecked")
+    public String transcribe(byte[] mp3) {
+        if (!isConfigured() || mp3 == null || mp3.length == 0) return null;
+        try {
+            Map<String, Object> response = webClient.post()
+                    .uri("/chat/completions")
+                    .headers(h -> { if (!apiKey.isEmpty()) h.setBearerAuth(apiKey); })
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(Map.of(
+                            "model", model,
+                            "max_tokens", 500,
+                            "messages", List.of(Map.of("role", "user", "content", List.of(
+                                    Map.of("type", "text", "text", TRANSCRIBE_PROMPT),
+                                    Map.of("type", "input_audio", "input_audio", Map.of(
+                                            "data", Base64.getEncoder().encodeToString(mp3),
+                                            "format", "mp3")))))))
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .timeout(timeout)
+                    .block();
+
+            if (response == null || response.get("error") != null) return null;
+            List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
+            if (choices == null || choices.isEmpty()) return null;
+            Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
+            String text = message == null ? null : (String) message.get("content");
+            if (text == null || text.isBlank() || text.strip().equalsIgnoreCase("NO SPEECH")) return null;
+            return text.strip();
+        } catch (Exception e) {
+            log.debug("Could not transcribe audio: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private static final String TRANSCRIBE_PROMPT = """
+            Transcribe this voice message exactly as spoken, in the language it was spoken in.
+            Write only the words. If there is no speech, reply NO SPEECH.
+            """;
+
+    /**
      * One completion. {@code temperature} is low by default because this answers from
      * supplied context — invention is the failure mode, not dullness.
      */

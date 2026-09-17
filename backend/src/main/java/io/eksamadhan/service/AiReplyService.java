@@ -91,6 +91,8 @@ public class AiReplyService {
     private final double minSimilarity;
     private final double minConfidence;
     private final String handoverMessage;
+    private final String unrelatedMessage;
+    private final int offTopicLimit;
     private final String frontendUrl;
 
     public AiReplyService(SocialMessageRepository messageRepository,
@@ -112,6 +114,8 @@ public class AiReplyService {
                           @Value("${app.ai.min-similarity:0.25}") double minSimilarity,
                           @Value("${app.ai.min-confidence:0.55}") double minConfidence,
                           @Value("${app.ai.handover-message:}") String handoverMessage,
+                          @Value("${app.ai.unrelated-message:}") String unrelatedMessage,
+                          @Value("${app.ai.off-topic-limit:3}") int offTopicLimit,
                           @Value("${app.frontend-url}") String frontendUrl) {
         this.messageRepository = messageRepository;
         this.pageRepository = pageRepository;
@@ -132,6 +136,8 @@ public class AiReplyService {
         this.minSimilarity = minSimilarity;
         this.minConfidence = minConfidence;
         this.handoverMessage = handoverMessage;
+        this.unrelatedMessage = unrelatedMessage;
+        this.offTopicLimit = offTopicLimit;
         this.frontendUrl = frontendUrl;
     }
 
@@ -188,8 +194,19 @@ public class AiReplyService {
 
         // Gates 2 and 3: the model's own verdict, and the confidence threshold.
         if (!verdict.answered() || verdict.confidence() < minConfidence || verdict.reply().isBlank()) {
-            log.info("AI declined \"{}\" (answered={}, confidence={}, best passage {}), escalating",
+            log.info("AI declined \"{}\" (answered={}, confidence={}, best passage {})",
                     abbreviate(question), verdict.answered(), round(verdict.confidence()), round(best));
+
+            // Declining with nothing relevant retrieved means the message was not about this
+            // business at all. Escalating those hands an agent someone else's entertainment,
+            // so they are counted instead, and a run of them closes the conversation.
+            if (weakContext) {
+                handleUnrelated(thread, page, message.getSenderId());
+                return;
+            }
+
+            // Relevant content exists but does not answer it: a real question, for a person.
+            resetOffTopic(thread);
             escalate(thread, page, message.getSenderId(), verdict.answered()
                     ? "the AI was not confident enough to answer"
                     : passages.isEmpty()
@@ -197,6 +214,9 @@ public class AiReplyService {
                         : "the question is not covered by the knowledge base");
             return;
         }
+
+        // Anything the AI could answer means this is a real conversation again.
+        resetOffTopic(thread);
 
         // Logged before the send, so the decision is diagnosable separately from whether
         // Meta accepted the message.
@@ -416,11 +436,15 @@ public class AiReplyService {
     }
 
     private void sendHandoverNotice(SocialPage page, String customerId) {
+        sendNotice(page, customerId, handoverMessage);
+    }
+
+    private void sendNotice(SocialPage page, String customerId, String text) {
         try {
             Map<String, Object> response = metaService
-                    .sendMessage(customerId, handoverMessage, page.getAccessToken(), null).block();
+                    .sendMessage(customerId, text, page.getAccessToken(), null).block();
             String metaMessageId = response == null ? null : (String) response.get("message_id");
-            syncService.saveOutboundMessage(metaMessageId, customerId, handoverMessage,
+            syncService.saveOutboundMessage(metaMessageId, customerId, text,
                     page.getId(), null, page.getOrganization().getApiKey());
             if (metaMessageId != null) {
                 messageRepository.findByMetaMessageId(metaMessageId).ifPresent(saved -> {
@@ -431,7 +455,7 @@ public class AiReplyService {
         } catch (Exception e) {
             // The handover itself already succeeded; failing to announce it is not a reason
             // to lose that.
-            log.warn("Could not send the handover notice: {}", e.getMessage());
+            log.warn("Could not send the notice: {}", e.getMessage());
         }
     }
 
@@ -442,13 +466,35 @@ public class AiReplyService {
      *         attachment cannot be read — a voice note, a video, a file
      */
     private String readAttachment(SocialMessage message) {
-        if (!"image".equals(message.getAttachmentType())) return null;
+        String type = message.getAttachmentType();
+        byte[] bytes = attachments.fetch(message.getAttachmentUrl());
+        if (bytes == null) return null;
 
-        byte[] image = attachments.fetch(message.getAttachmentUrl());
-        if (image == null) return null;
+        if ("image".equals(type)) {
+            String described = llmClient.describeImage(bytes, "image/jpeg");
+            return blank(described) ? null : described;
+        }
 
-        String described = llmClient.describeImage(image, "image/jpeg");
-        return described == null || described.isBlank() ? null : described;
+        if ("audio".equals(type)) {
+            // Meta sends AAC in an MP4 container; the chat APIs take MP3. A model that cannot
+            // hear returns nothing, and the caller hands the conversation to a person.
+            byte[] mp3 = mediaService.toMp3(bytes);
+            if (mp3 == null) return null;
+            String spoken = llmClient.transcribe(mp3);
+            if (blank(spoken)) return null;
+
+            // Keep it: an agent picking this conversation up needs to know what was said, and
+            // re-transcribing on every view would be both slow and wasteful.
+            message.setTranscript(spoken);
+            messageRepository.save(message);
+            return spoken;
+        }
+
+        return null;
+    }
+
+    private static boolean blank(String value) {
+        return value == null || value.isBlank();
     }
 
     private String describeUnreadable(SocialMessage message) {
@@ -457,6 +503,52 @@ public class AiReplyService {
         if ("video".equals(type)) return "the customer sent a video, which the AI cannot watch";
         if ("image".equals(type)) return "the customer sent an image the AI could not read";
         return "the customer sent an attachment the AI cannot open";
+    }
+
+    /**
+     * One more message that had nothing to do with the business.
+     *
+     * The first few are answered as conversation — people do say hello, and a customer's odd
+     * aside should not get them shut out. A run of them is someone using the page as a free
+     * chatbot, and the AI closes the conversation itself rather than paying for every turn and
+     * eventually putting it in front of an agent.
+     */
+    private void handleUnrelated(ConversationThread thread, SocialPage page, String customerId) {
+        int streak = thread.getOffTopicStreak() + 1;
+        thread.setOffTopicStreak(streak);
+
+        if (streak < offTopicLimit) {
+            threadRepository.save(thread);
+            log.info("Unrelated message {} of {} on thread {}", streak, offTopicLimit, thread.getId());
+            escalateQuietlyOrWait(thread, page, customerId);
+            return;
+        }
+
+        log.info("Closing thread {} as unrelated after {} off-topic messages", thread.getId(), streak);
+        thread.setUnrelated(true);
+        thread.setOffTopicStreak(streak);
+        threadRepository.save(thread);
+
+        if (page != null && customerId != null && unrelatedMessage != null && !unrelatedMessage.isBlank()) {
+            sendNotice(page, customerId, unrelatedMessage);
+        }
+        threadService.resolve(thread.getId());
+    }
+
+    /**
+     * Below the limit an unrelated message still gets a human eventually — the count is a
+     * safeguard against abuse, not a reason to ignore someone who might be a real customer
+     * phrasing things oddly.
+     */
+    private void escalateQuietlyOrWait(ConversationThread thread, SocialPage page, String customerId) {
+        escalate(thread, page, customerId, "the question is not about this business");
+    }
+
+    private void resetOffTopic(ConversationThread thread) {
+        if (thread.getOffTopicStreak() != 0) {
+            thread.setOffTopicStreak(0);
+            threadRepository.save(thread);
+        }
     }
 
     /** Used when the reply itself blew up: a customer must not be left with silence. */

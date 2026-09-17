@@ -189,6 +189,12 @@ expire after 7 days — re-send if it lapses.
       or an admin can transfer a conversation to someone else
 - [x] The inbox distinguishes the three speakers properly — your own messages on the right
       without an avatar, and the customer, the AI and other agents on the left with theirs
+- [x] Voice messages are transcribed and answered, on a local audio-capable model; the
+      transcript is shown to agents alongside the audio
+- [x] **Analytics (report §1.4)** — deflection against the 60% target, median reply times for
+      the AI and for people, and escalation volume by channel
+- [x] Conversations that are not about the business are closed by the AI rather than escalated,
+      and excluded from the deflection figure so spam cannot inflate it
 - [x] Knowledge base holds pictures paired with a title and caption; the AI attaches the
       picture when a customer's question is really about it
 - [x] **Sentiment detection (report §1.2, "emotion detection analysis")** — every inbound

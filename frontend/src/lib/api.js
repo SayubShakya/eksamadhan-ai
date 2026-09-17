@@ -84,6 +84,10 @@ export function uploadKnowledge({ file, title }) {
     return axios.post('/api/knowledge/upload', form).then(r => r.data);
 }
 
+// ── Analytics ───────────────────────────────────────────────────────────────
+export const getAnalytics = (days = 30) =>
+    axios.get('/api/analytics', { params: { days } }).then(r => r.data);
+
 // ── Inbox ───────────────────────────────────────────────────────────────────
 export const getStatus = () => axios.get('/api/auth/status').then(r => r.data);
 export const getMessages = () => axios.get('/api/messages').then(r => r.data);

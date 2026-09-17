@@ -503,6 +503,14 @@ export default function InboxPage({
                                                 <div className="msg__line">
                                                     <div className={`bubble ${!outbound ? 'bubble--customer' : isAi ? 'bubble--ai' : mine ? 'bubble--agent' : 'bubble--colleague'} ${m.attachmentUrl ? 'bubble--media' : ''}`}>
                                                         <Attachment message={m} />
+                                                        {/* What the voice note said, marked as
+                                                            our reading rather than their words. */}
+                                                        {m.transcript && (
+                                                            <span className="transcript">
+                                                                “{m.transcript}”
+                                                                <small>transcribed</small>
+                                                            </span>
+                                                        )}
                                                         {(m.text || m.content) ? (
                                                             <span>{m.text || m.content}</span>
                                                         ) : !m.attachmentType && (

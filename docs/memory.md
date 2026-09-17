@@ -122,6 +122,28 @@ status machine and authentication have all since been built — see the change l
   predate the column and are not `ai_generated` were sent by a person whose name was never
   recorded — they show as "A colleague" rather than being attributed to the AI, which would be
   a lie.
+- **Local model capability varies enormously, and that decides what works.** `qwen3.5:9b` is a
+  reasoning model: 112–136s per reply, and 600 tokens returns empty content because thinking
+  consumes the budget. `gemma4:latest` (8B) answers the same prompt in **4.7s** with no
+  reasoning field, and reports `vision, audio, tools` — so it reads images (14s) *and*
+  transcribes voice notes (1.7s). Check `capabilities` in `/api/tags` before assuming.
+- **Voice messages are answerable on a local audio-capable model.** OpenRouter refused every
+  audio model on this account (402, balance at zero); gemma4 does it locally. Meta sends AAC in
+  an MP4 container, so it is transcoded to MP3 with ffmpeg first.
+- **A transcript is stored separately from `text`.** `text` is what the customer literally
+  sent; the transcript is our reading of it. Merging them would tell an agent the customer
+  typed something they spoke.
+- **Deflection excludes conversations closed as unrelated.** Someone using the page as a free
+  chatbot is neither a query the AI resolved nor work it saved, so counting them would let spam
+  inflate the headline figure the project is graded on. A conversation counts as deflected when
+  `escalated_at IS NULL` — no person ever touched it.
+- **Reply time is reported as a median, plus the AI's 90th percentile.** One conversation left
+  overnight swallows a mean entirely, and the graded target is a ceiling rather than an average,
+  so the slow tail is the part that matters.
+- **The off-topic streak resets on anything answerable.** A customer who asks one odd question
+  is not a nuisance; three unrelated messages in a row is someone using the page as a chatbot,
+  and the AI closes the conversation itself rather than paying for each turn and eventually
+  putting it in front of an agent.
 - **An image is retrieved through words, never pixels.** A knowledge-base picture is indexed
   by its title, the admin's caption, and a description the vision model writes; the file itself
   is only stored and sent. The title is required at upload — saving an untitled image would

@@ -6,6 +6,7 @@ import InboxPage from './pages/InboxPage.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
 import TeamPage from './pages/TeamPage.jsx';
 import KnowledgePage from './pages/KnowledgePage.jsx';
+import AnalyticsPage from './pages/AnalyticsPage.jsx';
 import AuthPage from './pages/AuthPage.jsx';
 import ProfilePanel from './components/ProfilePanel.jsx';
 import ConfirmDialog from './components/ConfirmDialog.jsx';
@@ -526,7 +527,9 @@ export default function App() {
 
                 {view === 'knowledge' && <KnowledgePage />}
 
-                {!['home', 'inbox', 'team', 'knowledge'].includes(view) && (
+                {view === 'analytics' && <AnalyticsPage />}
+
+                {!['home', 'inbox', 'team', 'knowledge', 'analytics'].includes(view) && (
                     <PlaceholderPage
                         view={view}
                         onNavigate={setView}

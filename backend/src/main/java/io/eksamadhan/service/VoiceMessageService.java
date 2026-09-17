@@ -87,4 +87,37 @@ public class VoiceMessageService {
             throw new IllegalStateException("Could not read " + fileName, e);
         }
     }
+
+    /**
+     * Transcodes arbitrary audio to MP3, which is what the chat APIs accept. Meta sends AAC
+     * in an MP4 container, so a voice note cannot be passed through as it arrives.
+     *
+     * @return the MP3 bytes, or null when ffmpeg is unavailable or the input is unreadable
+     */
+    public byte[] toMp3(byte[] audio) {
+        if (audio == null || audio.length == 0) return null;
+        java.nio.file.Path in = null, out = null;
+        try {
+            in = java.nio.file.Files.createTempFile("voice-in-", ".bin");
+            out = java.nio.file.Files.createTempFile("voice-out-", ".mp3");
+            java.nio.file.Files.write(in, audio);
+
+            Process ffmpeg = new ProcessBuilder("ffmpeg", "-y", "-loglevel", "error",
+                    "-i", in.toString(), "-ar", "16000", "-ac", "1", out.toString())
+                    .redirectErrorStream(true).start();
+            if (!ffmpeg.waitFor(60, java.util.concurrent.TimeUnit.SECONDS) || ffmpeg.exitValue() != 0) {
+                log.warn("ffmpeg could not transcode the voice note");
+                return null;
+            }
+            byte[] mp3 = java.nio.file.Files.readAllBytes(out);
+            return mp3.length == 0 ? null : mp3;
+        } catch (Exception e) {
+            log.warn("Could not transcode audio: {}", e.getMessage());
+            return null;
+        } finally {
+            for (java.nio.file.Path p : new java.nio.file.Path[]{in, out}) {
+                if (p != null) try { java.nio.file.Files.deleteIfExists(p); } catch (Exception ignored) { }
+            }
+        }
+    }
 }

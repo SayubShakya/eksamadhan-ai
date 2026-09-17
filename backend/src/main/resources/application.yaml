@@ -78,7 +78,7 @@ app:
         model: ${HOSTED_CHAT_MODEL:openai/gpt-4o-mini}
       local:
         base-url: ${OLLAMA_URL:http://localhost:11434/v1}
-        model: ${OLLAMA_MODEL:qwen3.5:9b}
+        model: ${OLLAMA_MODEL:gemma4:latest}
 
     embeddings:
       base-url: ${EMBEDDINGS_BASE_URL:${OPENROUTER_URL:https://openrouter.ai/api/v1}}
@@ -108,6 +108,11 @@ app:
     # A conversation must be quiet this long before its handover brief is written. Summarising
     # mid-exchange spends a model call on a conversation that is still moving.
     summary-cooldown-seconds: ${AI_SUMMARY_COOLDOWN:30}
+    # How many unrelated messages in a row before the AI closes the conversation itself.
+    # The first few are answered as conversation: people say hello, and a real customer
+    # phrasing something oddly should not be shut out.
+    off-topic-limit: ${AI_OFF_TOPIC_LIMIT:3}
+    unrelated-message: ${AI_UNRELATED_MESSAGE:I can only help with questions about our products and orders, so I will close this conversation here. Message us again any time you need something.}
     handover-message: ${AI_HANDOVER_MESSAGE:Let me check that with a colleague — someone from our team will reply here shortly.}
   email:
     resend-key: ${RESEND_API_KEY:}

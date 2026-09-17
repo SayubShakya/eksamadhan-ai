@@ -119,6 +119,13 @@ public class SocialMessage {
     @Column(name = "sent_by_user_id")
     private UUID sentByUserId;
 
+    /**
+     * What a voice note said. Separate from {@code text}, which is what the customer literally
+     * sent: this is our reading of it, and an agent should be able to tell the difference.
+     */
+    @Column(columnDefinition = "TEXT")
+    private String transcript;
+
     /** How this message reads. Set for inbound messages only; null for our own replies. */
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
