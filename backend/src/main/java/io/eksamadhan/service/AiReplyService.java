@@ -485,8 +485,8 @@ public class AiReplyService {
 
             // Keep it: an agent picking this conversation up needs to know what was said, and
             // re-transcribing on every view would be both slow and wasteful.
-            message.setTranscript(spoken);
-            messageRepository.save(message);
+            int written = messageRepository.saveTranscript(message.getId(), spoken);
+            log.debug("Stored transcript for {} ({} row)", message.getId(), written);
             return spoken;
         }
 

@@ -130,6 +130,12 @@ status machine and authentication have all since been built — see the change l
 - **Voice messages are answerable on a local audio-capable model.** OpenRouter refused every
   audio model on this account (402, balance at zero); gemma4 does it locally. Meta sends AAC in
   an MP4 container, so it is transcoded to MP3 with ffmpeg first.
+- **Writing one field back to a detached entity needs a targeted update, not `save()`.** The
+  transcript was transcribed and used, and `messageRepository.save(message)` silently wrote
+  nothing: the message is loaded outside a transaction by a fetch-join query, so it is
+  detached, and relying on merge to persist a single field is both opaque and easy to lose.
+  `saveTranscript(id, text)` is a `@Modifying` update instead. Anything else that writes one
+  field from the async path should do the same.
 - **A transcript is stored separately from `text`.** `text` is what the customer literally
   sent; the transcript is our reading of it. Merging them would tell an agent the customer
   typed something they spoke.

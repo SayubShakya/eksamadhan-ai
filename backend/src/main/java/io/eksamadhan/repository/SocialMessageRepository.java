@@ -34,6 +34,19 @@ public interface SocialMessageRepository extends JpaRepository<SocialMessage, UU
             "SELECT m FROM SocialMessage m LEFT JOIN FETCH m.thread WHERE m.id = :id")
     java.util.Optional<SocialMessage> findWithThreadById(java.util.UUID id);
 
+    /**
+     * Writes just the transcript.
+     *
+     * A targeted update rather than saving the whole entity: the message is loaded detached,
+     * outside a transaction, and relying on merge to write one field back is both opaque and
+     * easy to lose to a concurrent write of the same row.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
+    @org.springframework.data.jpa.repository.Query(
+            "UPDATE SocialMessage m SET m.transcript = :transcript WHERE m.id = :id")
+    int saveTranscript(java.util.UUID id, String transcript);
+
     void deleteByTenantId(String tenantId);
 }
 
