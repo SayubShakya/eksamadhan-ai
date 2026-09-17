@@ -36,14 +36,20 @@ public class EmbeddingClient {
     private final WebClient webClient;
     private final String apiKey;
     private final String model;
+    private final boolean local;
     private boolean warnedAboutMissingKey;
 
-    public EmbeddingClient(@Value("${app.ai.openrouter-key:}") String apiKey,
-                           @Value("${app.ai.openrouter-url}") String baseUrl,
-                           @Value("${app.ai.embedding-model}") String model,
+    private final int dimensions;
+
+    public EmbeddingClient(@Value("${app.ai.embeddings.api-key:}") String apiKey,
+                           @Value("${app.ai.embeddings.base-url}") String baseUrl,
+                           @Value("${app.ai.embeddings.model}") String model,
+                           @Value("${app.ai.embeddings.dimensions:1536}") int dimensions,
                            @Value("${app.frontend-url}") String frontendUrl) {
+        this.dimensions = dimensions;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.model = model;
+        this.local = baseUrl.contains("localhost") || baseUrl.contains("127.0.0.1");
         this.webClient = WebClient.builder()
                 .baseUrl(baseUrl)
                 .codecs(codecs -> codecs.defaultCodecs().maxInMemorySize(MAX_RESPONSE_BYTES))
@@ -58,8 +64,13 @@ public class EmbeddingClient {
         return model;
     }
 
+    /**
+     * A local provider such as Ollama needs no key, so requiring one would make it look
+     * unconfigured. Anything else does need one: a hosted endpoint reached without a key
+     * fails per request, which is a worse way to find out.
+     */
     public boolean isConfigured() {
-        return !apiKey.isEmpty();
+        return !apiKey.isEmpty() || local;
     }
 
     /** Convenience for the single-text case, such as a search query. */
@@ -76,8 +87,8 @@ public class EmbeddingClient {
     public List<float[]> embedAll(List<String> texts) {
         if (!isConfigured()) {
             if (!warnedAboutMissingKey) {
-                log.error("OPEN_ROUTER_KEY is not set, so nothing can be embedded. "
-                        + "Add it to backend/.env and restart.");
+                log.error("No embeddings API key is set, so nothing can be embedded. "
+                        + "Set OPEN_ROUTER_KEY (or EMBEDDINGS_API_KEY) in backend/.env and restart.");
                 warnedAboutMissingKey = true;
             }
             throw new IllegalStateException("No OpenRouter API key configured");
@@ -94,7 +105,7 @@ public class EmbeddingClient {
     private List<float[]> embedBatch(List<String> batch) {
         Map<String, Object> response = webClient.post()
                 .uri("/embeddings")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                .headers(h -> { if (!apiKey.isEmpty()) h.setBearerAuth(apiKey); })
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(Map.of("model", model, "input", batch))
                 .retrieve()
@@ -120,6 +131,13 @@ public class EmbeddingClient {
             float[] vector = new float[values.size()];
             for (int i = 0; i < values.size(); i++) {
                 vector[i] = values.get(i).floatValue();
+            }
+            // The schema fixes the column at a set width, so a model of a different width
+            // would fail at the database with an opaque error. Say what is actually wrong.
+            if (vector.length != dimensions) {
+                throw new IllegalStateException(("Model %s returns %d-dimension vectors, but the "
+                        + "schema stores %d. Changing embedding model needs a migration and a "
+                        + "full re-index.").formatted(model, vector.length, dimensions));
             }
             ordered[index] = vector;
         }

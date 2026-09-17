@@ -48,22 +48,55 @@ app:
   # Retrieval-augmented generation. One OpenRouter key covers embeddings now and chat
   # completions in the next phase.
   ai:
+    # Chat and embeddings are configured separately, because they need not come from the
+    # same place: a local Ollama is free and private for chat, while embeddings are usually
+    # better left on a hosted model — see the dimensions note below. Both speak the OpenAI
+    # format, so switching is a URL and a model name.
+    #
+    # These two remain the single-provider shortcut: set them and both halves follow.
     openrouter-key: ${OPEN_ROUTER_KEY:}
     openrouter-url: ${OPENROUTER_URL:https://openrouter.ai/api/v1}
-    # openai/text-embedding-3-small is the model the contextual report names, reached
-    # through OpenRouter. Its 1536 dimensions are baked into the schema and the entities:
-    # changing the model means a migration and a full re-index.
-    embedding-model: ${EMBEDDING_MODEL:openai/text-embedding-3-small}
-    # Characters, not tokens. A ceiling rather than a target: headings break sections
-    # earlier, and a passage that stays on one topic retrieves far better than a larger one
-    # covering several.
+
+    chat:
+      # The one switch: openrouter (hosted) or local (Ollama). It picks the URL, the model,
+      # the token budget and the timeout together, because a local reasoning model needs all
+      # four changed — setting only the URL is how you end up pointing at Ollama with a
+      # 20-second timeout and escalating every reply.
+      provider: ${AI_CHAT_PROVIDER:openrouter}
+
+      # Each of these overrides the provider's default. Blank means "use the default".
+      base-url: ${CHAT_BASE_URL:}
+      model: ${CHAT_MODEL:}
+      max-tokens: ${CHAT_MAX_TOKENS:0}
+      timeout-seconds: ${AI_REPLY_TIMEOUT:0}
+      # Reading images needs a model that can see; blank falls back to the chat model.
+      vision-model: ${VISION_MODEL:}
+      # Ignored by a local provider, which needs no key.
+      api-key: ${CHAT_API_KEY:${OPEN_ROUTER_KEY:}}
+
+      hosted:
+        model: ${HOSTED_CHAT_MODEL:openai/gpt-4o-mini}
+      local:
+        base-url: ${OLLAMA_URL:http://localhost:11434/v1}
+        model: ${OLLAMA_MODEL:qwen3.5:9b}
+
+    embeddings:
+      base-url: ${EMBEDDINGS_BASE_URL:${OPENROUTER_URL:https://openrouter.ai/api/v1}}
+      api-key: ${EMBEDDINGS_API_KEY:${OPEN_ROUTER_KEY:}}
+      # openai/text-embedding-3-small is the model the contextual report names, reached
+      # through OpenRouter.
+      model: ${EMBEDDING_MODEL:openai/text-embedding-3-small}
+      # Baked into the schema as vector(1536). Changing the embedding model to one with a
+      # different width means a migration and a full re-index, so this is checked at startup
+      # rather than discovered when a write fails.
+      dimensions: ${EMBEDDING_DIMENSIONS:1536}
+
     chunk-size: ${CHUNK_SIZE:900}
     chunk-overlap: ${CHUNK_OVERLAP:150}
     top-k: ${RETRIEVAL_TOP_K:5}
     # Answer generation. Set auto-reply to false to run the inbox purely manually.
     auto-reply: ${AI_AUTO_REPLY:true}
     chat-model: ${CHAT_MODEL:openai/gpt-4o-mini}
-    reply-timeout-seconds: ${AI_REPLY_TIMEOUT:20}
     # The two escalation thresholds. min-similarity is checked before the model is called at
     # all, so an off-topic question costs nothing; min-confidence is the model's own verdict
     # on how well the retrieved passages support its answer. Below either, a human takes it.

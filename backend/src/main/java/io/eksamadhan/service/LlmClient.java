@@ -1,6 +1,7 @@
 package io.eksamadhan.service;
 
 import lombok.extern.slf4j.Slf4j;
+import io.eksamadhan.config.ChatProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -29,26 +30,30 @@ public class LlmClient {
     private final WebClient webClient;
     private final String apiKey;
     private final String model;
+    private final String visionModel;
+    private final boolean local;
+    private final int maxTokens;
     private final Duration timeout;
 
-    public LlmClient(@Value("${app.ai.openrouter-key:}") String apiKey,
-                     @Value("${app.ai.openrouter-url}") String baseUrl,
-                     @Value("${app.ai.chat-model}") String model,
-                     @Value("${app.ai.reply-timeout-seconds:20}") int timeoutSeconds,
+    public LlmClient(ChatProvider.ChatSettings settings,
                      @Value("${app.frontend-url}") String frontendUrl) {
-        this.apiKey = apiKey == null ? "" : apiKey.trim();
-        this.model = model;
-        this.timeout = Duration.ofSeconds(timeoutSeconds);
+        this.apiKey = settings.apiKey();
+        this.model = settings.model();
+        this.visionModel = settings.visionModel();
+        this.local = settings.local();
+        this.maxTokens = settings.maxTokens();
+        this.timeout = Duration.ofSeconds(settings.timeoutSeconds());
         this.webClient = WebClient.builder()
-                .baseUrl(baseUrl)
+                .baseUrl(settings.baseUrl())
                 .codecs(codecs -> codecs.defaultCodecs().maxInMemorySize(MAX_RESPONSE_BYTES))
                 .defaultHeader("HTTP-Referer", frontendUrl)
                 .defaultHeader("X-Title", "EkSamadhan AI")
                 .build();
     }
 
+    /** A local provider such as Ollama needs no key; a hosted one does. */
     public boolean isConfigured() {
-        return !apiKey.isEmpty();
+        return !apiKey.isEmpty() || local;
     }
 
     public String model() {
@@ -81,10 +86,10 @@ public class LlmClient {
 
         Map<String, Object> response = webClient.post()
                 .uri("/chat/completions")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                .headers(h -> { if (!apiKey.isEmpty()) h.setBearerAuth(apiKey); })
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(Map.of(
-                        "model", model,
+                        "model", visionModel,
                         "temperature", 0.1,
                         "max_tokens", 120,
                         "messages", List.of(Map.of("role", "user", "content", List.of(
@@ -137,6 +142,11 @@ public class LlmClient {
      * supplied context — invention is the failure mode, not dullness.
      */
     @SuppressWarnings("unchecked")
+    /**
+     * A reasoning model spends its budget thinking before it writes anything, so a limit
+     * tuned for a hosted model returns an empty answer rather than a short one — which the
+     * caller reads as a refusal. Raise app.ai.chat.max-tokens when pointing at one.
+     */
     public String complete(String systemPrompt, String userPrompt) {
         if (!isConfigured()) {
             throw new IllegalStateException("No OpenRouter API key configured");
@@ -144,12 +154,12 @@ public class LlmClient {
 
         Map<String, Object> response = webClient.post()
                 .uri("/chat/completions")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                .headers(h -> { if (!apiKey.isEmpty()) h.setBearerAuth(apiKey); })
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(Map.of(
                         "model", model,
                         "temperature", 0.2,
-                        "max_tokens", 600,
+                        "max_tokens", maxTokens,
                         "messages", List.of(
                                 Map.of("role", "system", "content", systemPrompt),
                                 Map.of("role", "user", "content", userPrompt))))
