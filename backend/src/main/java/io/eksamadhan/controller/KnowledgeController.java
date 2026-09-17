@@ -54,14 +54,14 @@ public class KnowledgeController {
     public record SourceView(String id, String title, KnowledgeSourceType sourceType,
                              KnowledgeSourceStatus status, String error, int chunkCount,
                              int characterCount, OffsetDateTime createdAt, OffsetDateTime indexedAt,
-                             String imageUrl, String caption) {
+                             String imageUrl, String caption, String sourceUrl) {
 
         static SourceView of(KnowledgeSource source) {
             return new SourceView(source.getId().toString(), source.getTitle(), source.getSourceType(),
                     source.getStatus(), source.getError(), source.getChunkCount(),
                     source.getCharacterCount(), source.getCreatedAt(), source.getIndexedAt(),
                     source.getImagePath() == null ? null : "/api/media/" + source.getImagePath(),
-                    source.getCaption());
+                    source.getCaption(), source.getSourceUrl());
         }
     }
 
@@ -168,6 +168,24 @@ public class KnowledgeController {
         knowledgeService.indexAsync(source.getId(), text.toString());
 
         return SourceView.of(source);
+    }
+
+    public record CrawlRequest(String url) {}
+
+    /**
+     * Crawl a website into the knowledge base.
+     *
+     * Returns as soon as the crawl starts: a site of any size takes longer than a request
+     * should, and pages appear in the list as they are indexed.
+     */
+    @PostMapping("/website")
+    public Map<String, Object> crawl(@RequestBody CrawlRequest request) {
+        Organization organization = currentUser.requireTeamManager().getOrganization();
+        if (request.url() == null || request.url().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter a website address");
+        }
+        knowledgeService.crawlAsync(organization.getId(), request.url().strip());
+        return Map.of("started", true, "url", request.url().strip());
     }
 
     @DeleteMapping("/{sourceId}")

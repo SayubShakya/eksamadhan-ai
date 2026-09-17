@@ -150,6 +150,17 @@ status machine and authentication have all since been built — see the change l
   is not a nuisance; three unrelated messages in a row is someone using the page as a chatbot,
   and the AI closes the conversation itself rather than paying for each turn and eventually
   putting it in front of an agent.
+- **A crawler needs limits more than it needs features.** `WebCrawler` stays on one host,
+  obeys robots.txt, stops at 25 pages and 2 levels deep, pauses 400ms between requests, and
+  truncates a page at 20,000 characters. Every page it returns costs an embedding call, and it
+  is making requests of a server nobody asked it to visit.
+- **Canonicalise crawled URLs.** `https://site.com` and `https://site.com/` are the same page
+  and were being crawled and indexed twice until the trailing slash was normalised.
+- **The heading rule fragments list-heavy pages.** Starting a passage at every short line is
+  right for a document in sections and wrong for a news archive: one page produced 137 passages
+  averaging 146 characters, each matching on a heading and answering nothing. `min-chunk-size`
+  (250) merges runs of tiny passages, which took that page to 11 and the whole crawl from 177
+  passages to 30, with retrieval scores unchanged.
 - **An image is retrieved through words, never pixels.** A knowledge-base picture is indexed
   by its title, the admin's caption, and a description the vision model writes; the file itself
   is only stored and sent. The title is required at upload — saving an untitled image would

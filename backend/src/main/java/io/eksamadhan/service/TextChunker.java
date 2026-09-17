@@ -25,11 +25,19 @@ public class TextChunker {
     private final int overlap;
 
     public TextChunker(@Value("${app.ai.chunk-size:1200}") int chunkSize,
-                       @Value("${app.ai.chunk-overlap:200}") int overlap) {
+                       @Value("${app.ai.chunk-overlap:200}") int overlap,
+                       @Value("${app.ai.min-chunk-size:250}") int minChunkSize) {
         this.chunkSize = chunkSize;
+        this.minChunkSize = Math.min(minChunkSize, chunkSize);
         // An overlap at or above the chunk size would never advance.
         this.overlap = Math.min(overlap, Math.max(0, chunkSize / 2));
     }
+
+    /**
+     * Below this a passage is too small to retrieve well: it carries a heading and almost no
+     * content, so it matches a query on the heading alone and then answers nothing.
+     */
+    private final int minChunkSize;
 
     public List<String> chunk(String text) {
         List<String> chunks = new ArrayList<>();
@@ -65,7 +73,37 @@ public class TextChunker {
             current.append(trimmed);
         }
         flush(chunks, current);
-        return chunks;
+        return coalesce(chunks);
+    }
+
+    /**
+     * Merges runs of tiny passages back together.
+     *
+     * The heading rule is right for a document written in sections and wrong for a page that
+     * is mostly a list: a news archive of short dated links produced 137 passages averaging
+     * 146 characters, each matching on its heading and answering nothing. Merging restores
+     * useful passages without losing the boundaries that matter in prose.
+     */
+    private List<String> coalesce(List<String> chunks) {
+        List<String> merged = new ArrayList<>();
+        StringBuilder pending = new StringBuilder();
+
+        for (String chunk : chunks) {
+            if (pending.length() > 0 && pending.length() + chunk.length() + 2 > chunkSize) {
+                merged.add(pending.toString());
+                pending.setLength(0);
+            }
+            if (pending.length() > 0) pending.append("\n\n");
+            pending.append(chunk);
+
+            // Big enough to stand on its own; anything smaller keeps collecting.
+            if (pending.length() >= minChunkSize) {
+                merged.add(pending.toString());
+                pending.setLength(0);
+            }
+        }
+        if (pending.length() > 0) merged.add(pending.toString());
+        return merged;
     }
 
     /**

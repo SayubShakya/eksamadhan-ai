@@ -41,6 +41,10 @@ public class KnowledgeSource {
     @Column(name = "image_path")
     private String imagePath;
 
+    /** For a URL source: the page it was crawled from. */
+    @Column(name = "source_url", columnDefinition = "TEXT")
+    private String sourceUrl;
+
     /** What the admin said the image shows. Embedded alongside the title. */
     @Column(columnDefinition = "TEXT")
     private String caption;

@@ -88,6 +88,12 @@
 			<groupId>org.hibernate.orm</groupId>
 			<artifactId>hibernate-vector</artifactId>
 		</dependency>
+		<!-- HTML parsing for the website crawler: text extraction and link discovery. -->
+		<dependency>
+			<groupId>org.jsoup</groupId>
+			<artifactId>jsoup</artifactId>
+			<version>1.21.2</version>
+		</dependency>
 		<!-- Text extraction from uploaded PDFs for the knowledge base. -->
 		<dependency>
 			<groupId>org.apache.pdfbox</groupId>

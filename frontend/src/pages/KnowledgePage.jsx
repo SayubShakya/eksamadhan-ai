@@ -41,6 +41,8 @@ export default function KnowledgePage() {
     const imageRef = useRef(null);
     // An image needs a title before it is any use: retrieval searches words, not pixels.
     const [pendingImage, setPendingImage] = useState(null);
+    const [site, setSite] = useState('');
+    const [crawling, setCrawling] = useState(false);
     const [imageTitle, setImageTitle] = useState('');
     const [imageCaption, setImageCaption] = useState('');
 
@@ -88,6 +90,26 @@ export default function KnowledgePage() {
             setError(api.errorMessage(err, 'That file could not be added.'));
         } finally {
             setBusy(false);
+        }
+    };
+
+    const crawl = async (e) => {
+        e.preventDefault();
+        if (!site.trim()) return;
+        setError('');
+        setCrawling(true);
+        try {
+            await api.crawlWebsite(site.trim());
+            setSite('');
+            // Pages appear as they are indexed, so keep refreshing for a while.
+            for (let i = 0; i < 20; i++) {
+                await new Promise(r => setTimeout(r, 3000));
+                await load();
+            }
+        } catch (err) {
+            setError(api.errorMessage(err, 'That website could not be read.'));
+        } finally {
+            setCrawling(false);
         }
     };
 
@@ -200,6 +222,24 @@ export default function KnowledgePage() {
                             <input ref={imageRef} type="file" accept="image/*" hidden onChange={chooseImage} />
                         </div>
                     </form>
+
+                    <form className="card" onSubmit={crawl} style={{ marginBottom: 16 }}>
+                        <label className="field">
+                            <span>Or read your website</span>
+                            <input value={site} onChange={e => setSite(e.target.value)}
+                                   placeholder="acme.com.np" disabled={crawling} />
+                            <small className="field__hint">
+                                Follows links within the site only, obeys robots.txt, and stops after
+                                25 pages. Each page becomes its own source you can remove.
+                            </small>
+                        </label>
+                        <div className="knowledge__actions">
+                            <button className="btn btn--primary" type="submit"
+                                    disabled={crawling || !site.trim()}>
+                                {crawling ? 'Reading the site…' : 'Read website'}
+                            </button>
+                        </div>
+                    </form>
                 </>
             )}
 
@@ -261,7 +301,9 @@ export default function KnowledgePage() {
                         <div className="member__name">{source.title}</div>
                         <div className="member__email">
                             {source.sourceType === 'PDF' ? 'PDF'
-                                : source.sourceType === 'IMAGE' ? 'Picture' : 'Text'}
+                                : source.sourceType === 'IMAGE' ? 'Picture'
+                                : source.sourceType === 'URL' ? 'Web page' : 'Text'}
+                            {source.sourceUrl && ` · ${source.sourceUrl.replace(/^https?:\/\//, '').slice(0, 44)}`}
                             {source.status === 'READY' && ` · ${source.chunkCount} passages`}
                             {source.status === 'FAILED' && source.error && ` · ${source.error}`}
                         </div>

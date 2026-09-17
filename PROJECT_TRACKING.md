@@ -195,6 +195,8 @@ expire after 7 days — re-send if it lapses.
       the AI and for people, and escalation volume by channel
 - [x] Conversations that are not about the business are closed by the AI rather than escalated,
       and excluded from the deflection figure so spam cannot inflate it
+- [x] A website can be crawled into the knowledge base — same-host only, robots.txt obeyed,
+      page-limited, one source per page
 - [x] Knowledge base holds pictures paired with a title and caption; the AI attaches the
       picture when a customer's question is really about it
 - [x] **Sentiment detection (report §1.2, "emotion detection analysis")** — every inbound

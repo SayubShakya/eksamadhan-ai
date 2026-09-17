@@ -62,7 +62,9 @@ Contact and opening hours
 Our support team replies from 10am to 6pm, Sunday to Friday. We are closed on Saturdays and public holidays. You can also call 01-5555555 during those hours.
 ```
 
-That produces roughly ten passages, one per section.
+That produces about six passages. The headings force a break, but sections shorter than
+`app.ai.min-chunk-size` (250 characters) are merged into the next one — a passage carrying a
+heading and two lines matches on the heading and then answers nothing.
 
 ---
 
@@ -74,13 +76,13 @@ finds the right passage because it matches on meaning.
 
 | Query | Top passage | Score | Runner-up |
 | :--- | :--- | ---: | ---: |
-| `when will my parcel get to Pokhara?` | Shipping | 0.578 | 0.400 |
-| `how long do I have to send something back?` | Damaged or wrong items | 0.484 | 0.437 |
-| `can I pay when it arrives?` | Payment methods | 0.456 | 0.417 |
-| `are you open on Saturday?` | Contact and opening hours | 0.421 | 0.201 |
-| `my phone got wet, is that covered?` | Warranty | 0.377 | 0.277 |
-| `it turned up broken` | Damaged or wrong items | 0.312 | 0.240 |
-| `who won the football last night?` | *(none relevant)* | 0.088 | 0.064 |
+| `when will my parcel get to Pokhara?` | Shipping | 0.556 | 0.377 |
+| `how long do I have to send something back?` | Refunds | 0.465 | 0.390 |
+| `can I pay when it arrives?` | Payment methods | 0.462 | 0.340 |
+| `are you open on Saturday?` | Contact and opening hours | 0.421 | 0.202 |
+| `my phone got wet, is that covered?` | Warranty | 0.377 | 0.288 |
+| `it turned up broken` | Warranty | 0.240 | 0.215 |
+| `who won the football last night?` | *(none relevant)* | 0.064 | 0.061 |
 
 These are measured, not predicted — run on this exact text on 2026-09-17 with
 `openai/text-embedding-3-small`. Your numbers should land within a few thousandths.
@@ -93,11 +95,10 @@ report.
 
 ### One result that is not what you would guess
 
-`how long do I have to send something back?` retrieves **Damaged or wrong items** (0.484)
-ahead of **Returns** (0.437), even though Returns is the section that actually contains "30
-days". That is because the damaged-items section also talks about time limits ("within 48
-hours") *and* about returning things, so it reads as a closer match to a question combining
-both.
+`how long do I have to send something back?` retrieves the passage headed **Refunds** (0.465)
+rather than one headed Returns — because short sections are merged, and Returns and Refunds
+now sit in the same passage. The answer is in it either way, which is the point: a passage is
+a retrieval unit, not a filing system.
 
 This is worth showing rather than hiding. Two things follow from it:
 

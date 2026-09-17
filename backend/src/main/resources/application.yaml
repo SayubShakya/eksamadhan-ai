@@ -93,6 +93,10 @@ app:
 
     chunk-size: ${CHUNK_SIZE:900}
     chunk-overlap: ${CHUNK_OVERLAP:150}
+    # A passage smaller than this is merged into the next. A page that is mostly a list of
+    # short links would otherwise become hundreds of passages that match on a heading and
+    # answer nothing.
+    min-chunk-size: ${MIN_CHUNK_SIZE:250}
     top-k: ${RETRIEVAL_TOP_K:5}
     # Answer generation. Set auto-reply to false to run the inbox purely manually.
     auto-reply: ${AI_AUTO_REPLY:true}
@@ -121,6 +125,12 @@ app:
     # anyone else, then set EMAIL_FROM to an address at that domain.
     from: ${EMAIL_FROM:EkSamadhan AI <onboarding@resend.dev>}
     enabled: ${EMAIL_ENABLED:true}
+  # Crawling someone's website means making requests they did not ask for, and every page
+  # costs an embedding call. The limits are the feature, not a shortcut.
+  crawler:
+    max-pages: ${CRAWLER_MAX_PAGES:25}
+    max-depth: ${CRAWLER_MAX_DEPTH:2}
+    delay-ms: ${CRAWLER_DELAY_MS:400}
   frontend-url: ${FRONTEND_URL:http://localhost:5174}
   # Voice notes recorded in the dashboard are transcoded and kept here so agents can
   # replay what they sent. Meta's own copy is not fetchable after the fact.

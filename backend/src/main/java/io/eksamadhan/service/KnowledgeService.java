@@ -34,15 +34,21 @@ public class KnowledgeService {
     private final KnowledgeChunkRepository chunkRepository;
     private final TextChunker chunker;
     private final EmbeddingClient embeddingClient;
+    private final WebCrawler crawler;
+    private final io.eksamadhan.repository.OrganizationRepository organizationRepository;
 
     public KnowledgeService(KnowledgeSourceRepository sourceRepository,
                             KnowledgeChunkRepository chunkRepository,
                             TextChunker chunker,
-                            EmbeddingClient embeddingClient) {
+                            EmbeddingClient embeddingClient,
+                            WebCrawler crawler,
+                            io.eksamadhan.repository.OrganizationRepository organizationRepository) {
         this.sourceRepository = sourceRepository;
         this.chunkRepository = chunkRepository;
         this.chunker = chunker;
         this.embeddingClient = embeddingClient;
+        this.crawler = crawler;
+        this.organizationRepository = organizationRepository;
     }
 
     public List<KnowledgeSource> forOrganization(Organization organization) {
@@ -74,6 +80,48 @@ public class KnowledgeService {
                 .status(KnowledgeSourceStatus.PENDING)
                 .characterCount(text.length())
                 .build());
+    }
+
+    /**
+     * Crawls a website and indexes each page as its own source.
+     *
+     * Runs async and page by page, so a slow site fills the list as it goes rather than
+     * showing nothing for a minute and then everything. Re-crawling updates a page in place —
+     * the unique index on (organization, url) is what stops a second crawl duplicating a site.
+     */
+    @Async("taskExecutor")
+    public CompletableFuture<Void> crawlAsync(UUID organizationId, String startUrl) {
+        Organization organization = organizationRepository.findById(organizationId).orElse(null);
+        if (organization == null) return CompletableFuture.completedFuture(null);
+
+        try {
+            for (WebCrawler.Page page : crawler.crawl(startUrl)) {
+                try {
+                    KnowledgeSource source = sourceRepository
+                            .findByOrganizationAndSourceUrl(organization, page.url())
+                            .orElseGet(() -> KnowledgeSource.builder()
+                                    .organization(organization)
+                                    .sourceType(KnowledgeSourceType.URL)
+                                    .sourceUrl(page.url())
+                                    .build());
+
+                    source.setTitle(page.title());
+                    source.setStatus(KnowledgeSourceStatus.PENDING);
+                    source.setCharacterCount(page.text().length());
+                    source.setError(null);
+                    sourceRepository.save(source);
+
+                    index(source.getId(), page.text());
+                } catch (Exception e) {
+                    log.warn("Could not index {}: {}", page.url(), e.getMessage());
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            log.warn("Crawl of {} rejected: {}", startUrl, e.getMessage());
+        } catch (Exception e) {
+            log.error("Crawl of {} failed", startUrl, e);
+        }
+        return CompletableFuture.completedFuture(null);
     }
 
     /** Creates the source as PENDING and returns at once. Call {@link #indexAsync} next. */
