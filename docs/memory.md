@@ -105,6 +105,13 @@ status machine and authentication have all since been built — see the change l
   1200-character chunk, and on-topic and off-topic queries then scored 0.29 and 0.18 — barely
   distinguishable. Making the chunker break at headings moved that to 0.47 against 0.19.
   If retrieval ever looks weak, look at the chunk boundaries before blaming the model.
+- **"Outbound" is not the same as "mine".** A message from our side may be the AI's, a
+  colleague's, or your own, and `social_messages.sent_by_user_id` (V8) is what separates them.
+  Only your own messages sit on the right without a face; the customer, the AI and other agents
+  all sit on the left, because from one agent's desk they are all other people. Messages that
+  predate the column and are not `ai_generated` were sent by a person whose name was never
+  recorded — they show as "A colleague" rather than being attributed to the AI, which would be
+  a lie.
 - **Sentiment is read by the model, not a keyword list.** Three reasons a lexicon fails this
   project specifically: customers write in English, Nepali and romanised Nepali, and no word
   list covers all three ("lado muji" is classified ANGRY correctly); negation and sarcasm

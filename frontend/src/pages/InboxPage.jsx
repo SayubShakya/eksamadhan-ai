@@ -358,6 +358,12 @@ export default function InboxPage({
                                 const newDay = !prev ||
                                     new Date(prev.timestamp).toDateString() !== new Date(m.timestamp).toDateString();
                                 const outbound = m.direction === 'outbound';
+                                // Only your own words sit on the right. Everyone else — the
+                                // customer, the AI, a colleague — sits on the left with a
+                                // face, because from your side of the desk they are all
+                                // other people.
+                                const mine = m.authorType === 'AGENT' && m.authorId === me?.id;
+                                const isAi = m.authorType === 'AI' || (outbound && m.aiGenerated);
                                 // Look the quote up in the full thread: the original may
                                 // be older than the page currently rendered.
                                 const quoted = m.replyToId
@@ -366,25 +372,39 @@ export default function InboxPage({
                                 return (
                                     <div key={m.id || i}>
                                         {newDay && <div className="day"><span>{formatDay(m.timestamp)}</span></div>}
-                                        <div className={`msg ${outbound ? 'msg--out' : 'msg--in'}`}>
-                                            {!outbound && (
+                                        <div className={`msg ${mine ? 'msg--out' : 'msg--in'}`}>
+                                            {!mine && (isAi ? (
+                                                <span className="msg__avatar msg__avatar--ai"
+                                                      title="Answered by the AI" aria-label="AI">
+                                                    <IconBolt />
+                                                </span>
+                                            ) : (
                                                 <PersonAvatar
-                                                    name={activeThread.name}
-                                                    url={activeThread.avatarUrl}
+                                                    name={outbound ? (m.authorName || 'Agent') : activeThread.name}
+                                                    url={outbound ? m.authorAvatar : activeThread.avatarUrl}
                                                     size={28}
                                                     className="msg__avatar"
                                                 />
-                                            )}
+                                            ))}
                                             <div className="msg__stack">
+                                                {/* Name a colleague's message. Not the AI's — its
+                                                    bubble already carries an AI tag — and not the
+                                                    customer's, whose name is in the header. */}
+                                                {!mine && outbound && !isAi && m.authorName
+                                                    && (!prev || prev.authorId !== m.authorId) && (
+                                                    <span className="msg__author">{m.authorName}</span>
+                                                )}
                                                 {quoted && (
                                                     <div className="quote quote--inline">
                                                         {/* Say who answered whom, as Messenger does — the quoted
                                                             text alone leaves the direction ambiguous. */}
                                                         <span className="quote__label">
                                                             <IconReply size={12} />
-                                                            {outbound
+                                                            {mine
                                                                 ? `You replied to ${activeThread.name}`
-                                                                : `${activeThread.name} replied to you`}
+                                                                : outbound
+                                                                    ? `${isAi ? 'AI' : m.authorName || 'A colleague'} replied to ${activeThread.name}`
+                                                                    : `${activeThread.name} replied to you`}
                                                         </span>
                                                         <span className="quote__text">{quoted.text || quoted.content}</span>
                                                     </div>
@@ -397,7 +417,7 @@ export default function InboxPage({
                                                     buttons centre on the bubble rather than
                                                     on the bubble plus its timestamp. */}
                                                 <div className="msg__line">
-                                                    <div className={`bubble ${!outbound ? 'bubble--customer' : m.aiGenerated ? 'bubble--ai' : 'bubble--agent'} ${m.attachmentUrl ? 'bubble--media' : ''}`}>
+                                                    <div className={`bubble ${!outbound ? 'bubble--customer' : isAi ? 'bubble--ai' : mine ? 'bubble--agent' : 'bubble--colleague'} ${m.attachmentUrl ? 'bubble--media' : ''}`}>
                                                         <Attachment message={m} />
                                                         {(m.text || m.content) && (
                                                             <span>{m.text || m.content}</span>

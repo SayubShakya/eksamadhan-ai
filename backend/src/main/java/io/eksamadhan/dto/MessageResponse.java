@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
  * Matches the Node.js API response shape exactly so the frontend works identically.
  */
 @Data
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class MessageResponse {
@@ -33,5 +33,13 @@ public class MessageResponse {
     private boolean aiGenerated;  // the AI wrote this, not an agent
     private Double aiConfidence;
     private String aiSources;
-    private String sentiment;    // inbound messages only    // "Payment methods (46%), Returns (42%)"  // how sure it was, 0-1; null for anything a human sent
+    private String sentiment;    // inbound messages only
+
+    // Who is speaking, from the reader's point of view. authorType is CUSTOMER, AI or AGENT;
+    // authorId is set only for AGENT, so the client can tell its own messages from a
+    // colleague's without knowing anything about roles.
+    private String authorType;
+    private String authorId;
+    private String authorName;
+    private String authorAvatar;    // "Payment methods (46%), Returns (42%)"  // how sure it was, 0-1; null for anything a human sent
 }

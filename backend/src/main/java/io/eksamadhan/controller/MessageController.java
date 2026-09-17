@@ -9,6 +9,7 @@ import io.eksamadhan.model.SocialMessage;
 import io.eksamadhan.model.SocialPage;
 import io.eksamadhan.repository.SocialMessageRepository;
 import io.eksamadhan.repository.SocialPageRepository;
+import io.eksamadhan.repository.UserRepository;
 import io.eksamadhan.service.ConversationMemoryService;
 import io.eksamadhan.service.CurrentUser;
 import io.eksamadhan.service.MetaService;
@@ -54,6 +55,7 @@ public class MessageController {
     private final ConversationMemoryService conversationMemoryService;
     private final SentimentService sentimentService;
     private final CurrentUser currentUser;
+    private final UserRepository userRepository;
 
     @GetMapping
     public List<MessageResponse> getMessages() {
@@ -61,8 +63,9 @@ public class MessageController {
         List<SocialMessage> messages =
                 messageRepository.findByTenantIdOrderByTimestampAsc(me.getOrganization().getApiKey());
 
+        Map<UUID, User> people = new java.util.HashMap<>();
         if (me.getRole().canManageTeam()) {
-            return messages.stream().map(this::toDto).toList();
+            return messages.stream().map(m -> toDto(m, people)).toList();
         }
         // An agent sees the messages of their own conversations only — otherwise scoping the
         // conversation list would be cosmetic, since the transcript carries the content.
@@ -70,7 +73,7 @@ public class MessageController {
                 .map(ConversationThread::getId).collect(Collectors.toSet());
         return messages.stream()
                 .filter(m -> m.getThread() != null && visible.contains(m.getThread().getId()))
-                .map(this::toDto).toList();
+                .map(m -> toDto(m, people)).toList();
     }
 
     @PostMapping("/reply")
@@ -91,6 +94,7 @@ public class MessageController {
             String messageId = (String) response.get("message_id");
             syncService.saveOutboundMessage(messageId, request.getRecipientId(), request.getText(),
                     page.getId(), request.getReplyToId(), organization.getApiKey());
+            stampSender(messageId);
 
             return ResponseEntity.ok(Map.of("success", true, "messageId", messageId));
         } catch (Exception e) {
@@ -123,6 +127,7 @@ public class MessageController {
             String messageId = response != null ? (String) response.get("message_id") : null;
             syncService.saveOutboundMessage(messageId, recipientId, null, page.getId(),
                     null, organization.getApiKey(), "audio", "/api/media/" + stored);
+            stampSender(messageId);
 
             return ResponseEntity.ok(Map.of("success", true, "messageId", String.valueOf(messageId)));
         } catch (Exception e) {
@@ -157,6 +162,7 @@ public class MessageController {
             String messageId = response != null ? (String) response.get("message_id") : null;
             syncService.saveOutboundMessage(messageId, recipientId, null, page.getId(),
                     null, organization.getApiKey(), "image", "/api/media/" + stored);
+            stampSender(messageId);
 
             return ResponseEntity.ok(Map.of("success", true));
         } catch (Exception e) {
@@ -222,6 +228,19 @@ public class MessageController {
      * one workspace send through another's access token.
      */
     /**
+     * Records who sent an outbound message, so the inbox can tell an agent's own words from a
+     * colleague's. Stamped after the fact, keeping one save signature for every sender.
+     */
+    private void stampSender(String metaMessageId) {
+        if (metaMessageId == null) return;
+        UUID meId = currentUser.require().getId();
+        messageRepository.findByMetaMessageId(metaMessageId).ifPresent(saved -> {
+            saved.setSentByUserId(meId);
+            messageRepository.save(saved);
+        });
+    }
+
+    /**
      * Refuses to send into a conversation this caller does not own. Without this, restricting
      * what an agent can see would not restrict what they can answer.
      */
@@ -247,6 +266,35 @@ public class MessageController {
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "That page is not connected to this workspace"));
+    }
+
+    /** Cache: a transcript is mostly a handful of people repeating. */
+    private MessageResponse toDto(SocialMessage msg, Map<UUID, User> people) {
+        MessageResponse dto = toDto(msg);
+        if (!"outbound".equals(msg.getDirection())) {
+            return dto.toBuilder()
+                    .authorType("CUSTOMER")
+                    .authorName(msg.getSenderName())
+                    .authorAvatar(msg.getSenderAvatarUrl())
+                    .build();
+        }
+        if (msg.isAiGenerated()) {
+            return dto.toBuilder().authorType("AI").authorName("AI").build();
+        }
+        // Not AI and no sender recorded: a person sent it before sent_by_user_id existed.
+        // Attributing it to the AI would be a lie, and guessing at a colleague would be
+        // another, so it is an agent whose name we do not have.
+        if (msg.getSentByUserId() == null) {
+            return dto.toBuilder().authorType("AGENT").authorName("A colleague").build();
+        }
+        User sender = people.computeIfAbsent(msg.getSentByUserId(),
+                id -> userRepository.findById(id).orElse(null));
+        return dto.toBuilder()
+                .authorType("AGENT")
+                .authorId(msg.getSentByUserId().toString())
+                .authorName(sender == null ? "A colleague" : sender.displayName())
+                .authorAvatar(sender == null ? null : sender.getAvatar())
+                .build();
     }
 
     private MessageResponse toDto(SocialMessage msg) {

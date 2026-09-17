@@ -185,6 +185,8 @@ expire after 7 days — re-send if it lapses.
 - [x] **Conversation ownership (PRD 4.6)** — one owner at a time, the AI or one named agent.
       Agents see and answer only their own; owners and admins see the workspace; the assignee
       or an admin can transfer a conversation to someone else
+- [x] The inbox distinguishes the three speakers properly — your own messages on the right
+      without an avatar, and the customer, the AI and other agents on the left with theirs
 - [x] **Sentiment detection (report §1.2, "emotion detection analysis")** — every inbound
       message classified from text and emoji, in English, Nepali and romanised Nepali;
       14/14 on a mixed test set. Shown in the conversation panel; escalation on negative

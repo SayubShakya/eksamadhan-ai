@@ -1098,3 +1098,13 @@
 .summary__stale { font-size: 12px; color: var(--warning); margin: 0 0 10px; }
 .pill--warning { background: var(--warning-weak); color: var(--warning); }
 .conv__mood { margin-left: 6px; font-size: 13px; line-height: 1; }
+
+/* A colleague's message: ours, but not yours — left-hand side, distinct from the AI's grey. */
+.bubble--colleague { background: var(--accent-weak); border: 1px solid var(--accent-tint); border-bottom-left-radius: 4px; }
+.msg__author { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 3px; }
+.msg__avatar--ai {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    background: var(--ai); color: var(--text-muted);
+}
+.msg__avatar--ai svg { width: 14px; height: 14px; }

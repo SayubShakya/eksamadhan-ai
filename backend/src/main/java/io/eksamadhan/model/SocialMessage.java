@@ -111,6 +111,14 @@ public class SocialMessage {
     @Column(name = "ai_sources", columnDefinition = "TEXT")
     private String aiSources;
 
+    /**
+     * The team member who sent this, for outbound messages. Null when the AI sent it, or for
+     * messages that predate this column. This is what tells an agent's own words apart from a
+     * colleague's, which decides which side of the thread the bubble sits on.
+     */
+    @Column(name = "sent_by_user_id")
+    private UUID sentByUserId;
+
     /** How this message reads. Set for inbound messages only; null for our own replies. */
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
