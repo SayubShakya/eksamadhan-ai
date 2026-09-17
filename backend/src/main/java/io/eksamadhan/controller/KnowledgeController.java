@@ -32,27 +32,36 @@ public class KnowledgeController {
     private final DocumentTextExtractor extractor;
     private final KnowledgeSourceRepository sourceRepository;
     private final CurrentUser currentUser;
+    private final VoiceMessageService media;
+    private final LlmClient llmClient;
 
     public KnowledgeController(KnowledgeService knowledgeService,
                                RetrievalService retrievalService,
                                DocumentTextExtractor extractor,
                                KnowledgeSourceRepository sourceRepository,
-                               CurrentUser currentUser) {
+                               CurrentUser currentUser,
+                               VoiceMessageService media,
+                               LlmClient llmClient) {
         this.knowledgeService = knowledgeService;
         this.retrievalService = retrievalService;
         this.extractor = extractor;
         this.sourceRepository = sourceRepository;
         this.currentUser = currentUser;
+        this.media = media;
+        this.llmClient = llmClient;
     }
 
     public record SourceView(String id, String title, KnowledgeSourceType sourceType,
                              KnowledgeSourceStatus status, String error, int chunkCount,
-                             int characterCount, OffsetDateTime createdAt, OffsetDateTime indexedAt) {
+                             int characterCount, OffsetDateTime createdAt, OffsetDateTime indexedAt,
+                             String imageUrl, String caption) {
 
         static SourceView of(KnowledgeSource source) {
             return new SourceView(source.getId().toString(), source.getTitle(), source.getSourceType(),
                     source.getStatus(), source.getError(), source.getChunkCount(),
-                    source.getCharacterCount(), source.getCreatedAt(), source.getIndexedAt());
+                    source.getCharacterCount(), source.getCreatedAt(), source.getIndexedAt(),
+                    source.getImagePath() == null ? null : "/api/media/" + source.getImagePath(),
+                    source.getCaption());
         }
     }
 
@@ -106,6 +115,58 @@ public class KnowledgeController {
         KnowledgeSource source = knowledgeService.create(
                 organization, resolvedTitle, extractor.typeOf(file), name, text);
         knowledgeService.indexAsync(source.getId(), text);
+        return SourceView.of(source);
+    }
+
+    /**
+     * Add a picture, paired with what it shows.
+     *
+     * The title is required: an image with no words is unreachable, because retrieval searches
+     * text. The vision description is a supplement, never the whole basis — if the model cannot
+     * read the image the title still finds it.
+     */
+    @PostMapping("/image")
+    public SourceView addImage(@RequestParam("file") MultipartFile file,
+                               @RequestParam String title,
+                               @RequestParam(required = false) String caption) {
+        Organization organization = currentUser.requireTeamManager().getOrganization();
+
+        if (file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That file is empty");
+        }
+        if (title == null || title.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Give the image a title, so the AI knows what it shows");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That is not an image");
+        }
+
+        String stored;
+        try {
+            stored = media.store(file);
+        } catch (java.io.IOException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "That image could not be saved: " + e.getMessage());
+        }
+
+        // Best effort: a failed description costs richer search terms, not the image.
+        String described = null;
+        try {
+            described = llmClient.describeForKnowledge(media.read(stored), contentType);
+        } catch (Exception e) {
+            log.warn("Could not describe {}: {}", file.getOriginalFilename(), e.getMessage());
+        }
+
+        KnowledgeSource source = knowledgeService.createImage(
+                organization, title.strip(), caption, stored, file.getOriginalFilename(), described);
+
+        StringBuilder text = new StringBuilder(title.strip());
+        if (caption != null && !caption.isBlank()) text.append("\n\n").append(caption.strip());
+        if (described != null && !described.isBlank()) text.append("\n\n").append(described.strip());
+        knowledgeService.indexAsync(source.getId(), text.toString());
+
         return SourceView.of(source);
     }
 

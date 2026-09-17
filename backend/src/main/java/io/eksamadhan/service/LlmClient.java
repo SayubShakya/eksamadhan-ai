@@ -65,6 +65,15 @@ public class LlmClient {
      */
     @SuppressWarnings("unchecked")
     public String describeImage(byte[] image, String contentType) {
+        return describeImage(image, contentType, DESCRIBE_PROMPT);
+    }
+
+    /** Describes a picture for the knowledge base rather than a customer's message. */
+    public String describeForKnowledge(byte[] image, String contentType) {
+        return describeImage(image, contentType, CATALOGUE_PROMPT);
+    }
+
+    private String describeImage(byte[] image, String contentType, String instruction) {
         if (!isConfigured() || image == null || image.length == 0) return null;
 
         String mime = (contentType == null || !contentType.startsWith("image/")) ? "image/jpeg" : contentType;
@@ -79,7 +88,7 @@ public class LlmClient {
                         "temperature", 0.1,
                         "max_tokens", 120,
                         "messages", List.of(Map.of("role", "user", "content", List.of(
-                                Map.of("type", "text", "text", DESCRIBE_PROMPT),
+                                Map.of("type", "text", "text", instruction),
                                 Map.of("type", "image_url", "image_url", Map.of("url", dataUrl)))))))
                 .retrieve()
                 .bodyToMono(Map.class)
@@ -102,6 +111,25 @@ public class LlmClient {
             what is visible; do not guess at an order number, a price or a policy.
 
             Example: "The customer is showing a cracked phone screen, probably asking whether             it is covered."
+            """;
+
+    /**
+     * Note the explicit "never a question" and the example. An earlier version asked for the
+     * description "in the words a customer would use", and the model wrote the customer's
+     * question instead of a caption — "Can you tell me more about this black circle?".
+     */
+    private static final String CATALOGUE_PROMPT = """
+            This picture is a business's own reference material — a product photo, a diagram,
+            a screenshot.
+
+            Write a caption of one or two sentences describing what is visible: the object,
+            its colour, and anything someone might ask about. Write it as a plain statement.
+            Never write a question, never address anyone, and never say a customer sent it.
+
+            Do not guess a brand, price or model number that is not readable in the image.
+
+            Example: "A pair of black wireless earbuds beside their closed charging case, \
+            with a small LED on the front."
             """;
 
     /**

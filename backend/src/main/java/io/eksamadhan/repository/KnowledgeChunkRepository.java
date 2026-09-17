@@ -34,6 +34,7 @@ public interface KnowledgeChunkRepository extends JpaRepository<KnowledgeChunk, 
                    c.ordinal,
                    s.title AS source_title,
                    s.id    AS source_id,
+                   s.image_path AS image_path,
                    1 - (c.embedding <=> CAST(:vector AS vector)) AS similarity
               FROM knowledge_chunks c
               JOIN knowledge_sources s ON s.id = c.knowledge_source_id

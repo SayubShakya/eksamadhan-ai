@@ -84,6 +84,7 @@ public class AiReplyService {
     private final EmailService emailService;
     private final ConversationSummaryService summaryService;
     private final AttachmentFetcher attachments;
+    private final VoiceMessageService mediaService;
     private final ObjectMapper objectMapper;
 
     private final boolean enabled;
@@ -105,6 +106,7 @@ public class AiReplyService {
                           EmailService emailService,
                           ConversationSummaryService summaryService,
                           AttachmentFetcher attachments,
+                          VoiceMessageService mediaService,
                           ObjectMapper objectMapper,
                           @Value("${app.ai.auto-reply:true}") boolean enabled,
                           @Value("${app.ai.min-similarity:0.25}") double minSimilarity,
@@ -124,6 +126,7 @@ public class AiReplyService {
         this.emailService = emailService;
         this.summaryService = summaryService;
         this.attachments = attachments;
+        this.mediaService = mediaService;
         this.objectMapper = objectMapper;
         this.enabled = enabled;
         this.minSimilarity = minSimilarity;
@@ -200,7 +203,7 @@ public class AiReplyService {
         log.info("AI will answer (confidence {}, best passage {}{}): {}",
                 round(verdict.confidence()), round(best), weakContext ? ", conversational" : "",
                 abbreviate(verdict.reply()));
-        send(message, page, verdict, summarise(passages));
+        send(message, page, verdict, summarise(passages), pictureFor(passages));
     }
 
     /** "Payment methods (46%), Returns (42%)" — readable beside the conversation. */
@@ -212,7 +215,20 @@ public class AiReplyService {
                 .collect(java.util.stream.Collectors.joining(", "));
     }
 
-    private void send(SocialMessage inbound, SocialPage page, Verdict verdict, String sources) {
+    /**
+     * The picture to attach, if the customer's question was really about one.
+     *
+     * Only when an image is the *best* match: a photo that merely appears among the top five
+     * is incidental, and sending a picture with every answer would quickly read as noise.
+     */
+    private String pictureFor(List<RetrievalService.Passage> passages) {
+        if (passages.isEmpty()) return null;
+        RetrievalService.Passage best = passages.get(0);
+        return best.isImage() ? best.imagePath() : null;
+    }
+
+    private void send(SocialMessage inbound, SocialPage page, Verdict verdict, String sources,
+                      String picture) {
         Map<String, Object> response = metaService.sendMessage(
                 inbound.getSenderId(), verdict.reply(), page.getAccessToken(), null).block();
 
@@ -231,6 +247,39 @@ public class AiReplyService {
         }
 
         log.info("AI reply delivered, meta id {}", metaMessageId);
+
+        // The words first, then the picture, so the customer reads the explanation before the
+        // image rather than being shown a photo with no context.
+        if (picture != null) {
+            sendPicture(page, inbound.getSenderId(), picture);
+        }
+    }
+
+    private void sendPicture(SocialPage page, String customerId, String picture) {
+        try {
+            java.io.File file = mediaService.resolve(picture).toFile();
+            if (!file.exists()) {
+                log.warn("Knowledge image {} is missing from storage", picture);
+                return;
+            }
+            Map<String, Object> response = metaService
+                    .sendAttachment(customerId, file, "image", "image/jpeg", page.getAccessToken())
+                    .block();
+            String metaMessageId = response == null ? null : (String) response.get("message_id");
+            syncService.saveOutboundMessage(metaMessageId, customerId, null, page.getId(), null,
+                    page.getOrganization().getApiKey(), "image", "/api/media/" + picture);
+            if (metaMessageId != null) {
+                messageRepository.findByMetaMessageId(metaMessageId).ifPresent(saved -> {
+                    saved.setAiGenerated(true);
+                    messageRepository.save(saved);
+                });
+            }
+            log.info("AI sent the knowledge image {}", picture);
+        } catch (Exception e) {
+            // The answer already went. Failing to attach the picture is a worse answer, not a
+            // failed one.
+            log.warn("Could not send knowledge image {}: {}", picture, e.getMessage());
+        }
     }
 
     private String buildPrompt(String question, List<RetrievalService.Passage> passages,

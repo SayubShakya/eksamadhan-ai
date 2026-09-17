@@ -1177,3 +1177,10 @@
     background: var(--bg); color: var(--text); cursor: pointer;
 }
 .chips__select:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
+
+/* Naming a picture before it is saved — an untitled image cannot be retrieved. */
+.imgform { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
+.imgform__preview { width: 120px; height: 120px; object-fit: cover; border-radius: var(--r-md); flex-shrink: 0; border: 1px solid var(--border); }
+.imgform__fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.source__thumb { width: 40px; height: 40px; object-fit: cover; border-radius: var(--r-sm); flex-shrink: 0; border: 1px solid var(--border); }
+@media (max-width: 560px) { .imgform { flex-direction: column; } .imgform__preview { width: 100%; height: 160px; } }

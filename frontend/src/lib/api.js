@@ -69,6 +69,14 @@ export const deleteKnowledge = (id) => axios.delete(`/api/knowledge/${id}`);
 export const searchKnowledge = (q, topK) =>
     axios.get('/api/knowledge/search', { params: { q, topK } }).then(r => r.data);
 
+export function uploadKnowledgeImage({ file, title, caption }) {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    form.append('title', title);
+    if (caption) form.append('caption', caption);
+    return axios.post('/api/knowledge/image', form).then(r => r.data);
+}
+
 export function uploadKnowledge({ file, title }) {
     const form = new FormData();
     form.append('file', file, file.name);

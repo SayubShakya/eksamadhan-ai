@@ -32,9 +32,19 @@ public class RetrievalService {
         this.defaultTopK = defaultTopK;
     }
 
-    /** One retrieved passage and how close it was, 1.0 being identical. */
+    /**
+     * One retrieved passage and how close it was, 1.0 being identical.
+     *
+     * {@code imagePath} is set when the passage stands for a picture rather than text, which
+     * is what lets an answer attach the picture instead of only describing it.
+     */
     public record Passage(String id, String sourceId, String sourceTitle,
-                          int ordinal, String content, double similarity) {}
+                          int ordinal, String content, double similarity, String imagePath) {
+
+        public boolean isImage() {
+            return imagePath != null && !imagePath.isBlank();
+        }
+    }
 
     /** Whether an API key is present; without one nothing can be embedded or searched. */
     public boolean isConfigured() {
@@ -56,7 +66,8 @@ public class RetrievalService {
                 (String) row[3],
                 ((Number) row[2]).intValue(),
                 (String) row[1],
-                ((Number) row[5]).doubleValue()
+                ((Number) row[6]).doubleValue(),
+                (String) row[5]
         )).toList();
     }
 }

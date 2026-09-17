@@ -49,6 +49,33 @@ public class KnowledgeService {
         return sourceRepository.findByOrganization(organization);
     }
 
+    /**
+     * Stores a picture and the words that stand in for it.
+     *
+     * The searchable text is the admin's title and caption plus a description the vision
+     * model writes. Both halves matter: the title is what the business calls the thing, and
+     * the description catches how a customer might phrase it — "the black case with the
+     * charging light" is not a phrase anyone thinks to type into a caption.
+     */
+    @Transactional
+    public KnowledgeSource createImage(Organization organization, String title, String caption,
+                                       String storedFile, String originalFilename, String described) {
+        StringBuilder text = new StringBuilder(title);
+        if (caption != null && !caption.isBlank()) text.append("\n\n").append(caption.strip());
+        if (described != null && !described.isBlank()) text.append("\n\n").append(described.strip());
+
+        return sourceRepository.save(KnowledgeSource.builder()
+                .organization(organization)
+                .title(title)
+                .sourceType(KnowledgeSourceType.IMAGE)
+                .originalFilename(originalFilename)
+                .imagePath(storedFile)
+                .caption(caption)
+                .status(KnowledgeSourceStatus.PENDING)
+                .characterCount(text.length())
+                .build());
+    }
+
     /** Creates the source as PENDING and returns at once. Call {@link #indexAsync} next. */
     @Transactional
     public KnowledgeSource create(Organization organization, String title,

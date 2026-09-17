@@ -189,6 +189,8 @@ expire after 7 days — re-send if it lapses.
       or an admin can transfer a conversation to someone else
 - [x] The inbox distinguishes the three speakers properly — your own messages on the right
       without an avatar, and the customer, the AI and other agents on the left with theirs
+- [x] Knowledge base holds pictures paired with a title and caption; the AI attaches the
+      picture when a customer's question is really about it
 - [x] **Sentiment detection (report §1.2, "emotion detection analysis")** — every inbound
       message classified from text and emoji, in English, Nepali and romanised Nepali;
       14/14 on a mixed test set. Shown in the conversation panel; escalation on negative

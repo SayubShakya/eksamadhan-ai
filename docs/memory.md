@@ -122,6 +122,18 @@ status machine and authentication have all since been built — see the change l
   predate the column and are not `ai_generated` were sent by a person whose name was never
   recorded — they show as "A colleague" rather than being attributed to the AI, which would be
   a lie.
+- **An image is retrieved through words, never pixels.** A knowledge-base picture is indexed
+  by its title, the admin's caption, and a description the vision model writes; the file itself
+  is only stored and sent. The title is required at upload — saving an untitled image would
+  create something no query could ever reach.
+- **The picture is only attached when it is the *best* match**, not merely in the top five.
+  A photo that appears among five passages is incidental, and attaching one to every answer
+  reads as noise.
+- **The catalogue description prompt needs an example and an explicit "never a question".**
+  Asking for a description "in the words a customer would use" made the model write the
+  customer's question — "Can you tell me more about this black circle?" — rather than a caption.
+  Customer photos and catalogue photos need separate prompts: the inbound one frames the image
+  as something a customer sent, which is wrong for reference material.
 - **Sentiment is read by the model, not a keyword list.** Three reasons a lexicon fails this
   project specifically: customers write in English, Nepali and romanised Nepali, and no word
   list covers all three ("lado muji" is classified ANGRY correctly); negation and sarcasm

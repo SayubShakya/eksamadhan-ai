@@ -37,6 +37,14 @@ public class KnowledgeSource {
     @Column(name = "original_filename")
     private String originalFilename;
 
+    /** For an IMAGE source: the stored file, served at /api/media/{imagePath}. */
+    @Column(name = "image_path")
+    private String imagePath;
+
+    /** What the admin said the image shows. Embedded alongside the title. */
+    @Column(columnDefinition = "TEXT")
+    private String caption;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private KnowledgeSourceStatus status;

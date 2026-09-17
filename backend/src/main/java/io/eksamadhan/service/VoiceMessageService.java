@@ -78,4 +78,13 @@ public class VoiceMessageService {
         }
         return candidate;
     }
+
+    /** The bytes of a stored file, for anything that needs to look at it again. */
+    public byte[] read(String fileName) {
+        try {
+            return java.nio.file.Files.readAllBytes(resolve(fileName));
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Could not read " + fileName, e);
+        }
+    }
 }

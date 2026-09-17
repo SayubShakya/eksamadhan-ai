@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
-import { IconUpload, IconSearch, IconTrash } from '../components/icons.jsx';
+import { IconUpload, IconSearch, IconTrash, IconImage } from '../components/icons.jsx';
 import * as api from '../lib/api.js';
 
 const STATUS_TONE = {
@@ -38,6 +38,11 @@ export default function KnowledgePage() {
     const [results, setResults] = useState(null);
     const [searching, setSearching] = useState(false);
     const fileRef = useRef(null);
+    const imageRef = useRef(null);
+    // An image needs a title before it is any use: retrieval searches words, not pixels.
+    const [pendingImage, setPendingImage] = useState(null);
+    const [imageTitle, setImageTitle] = useState('');
+    const [imageCaption, setImageCaption] = useState('');
 
     const load = useCallback(async () => {
         try { setLibrary(await api.getKnowledge()); }
@@ -81,6 +86,35 @@ export default function KnowledgePage() {
             await load();
         } catch (err) {
             setError(api.errorMessage(err, 'That file could not be added.'));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const chooseImage = (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        setPendingImage(file);
+        setImageTitle(file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '));
+        setImageCaption('');
+        setError('');
+    };
+
+    const saveImage = async (e) => {
+        e.preventDefault();
+        if (!pendingImage || !imageTitle.trim()) return;
+        setBusy(true);
+        try {
+            await api.uploadKnowledgeImage({
+                file: pendingImage, title: imageTitle.trim(), caption: imageCaption.trim(),
+            });
+            setPendingImage(null);
+            setImageTitle('');
+            setImageCaption('');
+            await load();
+        } catch (err) {
+            setError(api.errorMessage(err, 'That image could not be added.'));
         } finally {
             setBusy(false);
         }
@@ -157,11 +191,48 @@ export default function KnowledgePage() {
                                     onClick={() => fileRef.current?.click()} disabled={busy}>
                                 <IconUpload /> Upload a PDF or text file
                             </button>
+                            <button className="btn btn--secondary" type="button"
+                                    onClick={() => imageRef.current?.click()} disabled={busy}>
+                                <IconImage /> Add a picture
+                            </button>
                             <input ref={fileRef} type="file" accept=".pdf,.txt,.md,text/plain,application/pdf"
                                    hidden onChange={upload} />
+                            <input ref={imageRef} type="file" accept="image/*" hidden onChange={chooseImage} />
                         </div>
                     </form>
                 </>
+            )}
+
+            {/* The title is asked for before the image is saved, not after: an image with no
+                words cannot be retrieved, so saving first would create something unreachable. */}
+            {pendingImage && (
+                <form className="card imgform" onSubmit={saveImage}>
+                    <img className="imgform__preview" src={URL.createObjectURL(pendingImage)} alt="" />
+                    <div className="imgform__fields">
+                        <label className="field">
+                            <span>What does this show?</span>
+                            <input value={imageTitle} onChange={e => setImageTitle(e.target.value)}
+                                   placeholder="Acme Buds Pro in black" maxLength={120} required autoFocus />
+                        </label>
+                        <label className="field">
+                            <span>Anything else worth knowing <small>(optional)</small></span>
+                            <input value={imageCaption} onChange={e => setImageCaption(e.target.value)}
+                                   placeholder="Shows the charging case open, with the LED" maxLength={300} />
+                        </label>
+                        <small className="field__hint">
+                            The AI also writes its own description of the picture, so customers can
+                            find it with words you did not think to type.
+                        </small>
+                        <div className="knowledge__actions">
+                            <button className="btn btn--primary" type="submit"
+                                    disabled={busy || !imageTitle.trim()}>
+                                {busy ? 'Adding…' : 'Add picture'}
+                            </button>
+                            <button className="btn btn--secondary" type="button"
+                                    onClick={() => setPendingImage(null)}>Cancel</button>
+                        </div>
+                    </div>
+                </form>
             )}
 
             {error && <p className="auth__error" role="alert">{error}</p>}
@@ -183,10 +254,14 @@ export default function KnowledgePage() {
 
             {library.sources.map(source => (
                 <div className="member" key={source.id}>
+                    {source.imageUrl && (
+                        <img className="source__thumb" src={source.imageUrl} alt="" />
+                    )}
                     <div style={{ minWidth: 0 }}>
                         <div className="member__name">{source.title}</div>
                         <div className="member__email">
-                            {source.sourceType === 'PDF' ? 'PDF' : 'Text'}
+                            {source.sourceType === 'PDF' ? 'PDF'
+                                : source.sourceType === 'IMAGE' ? 'Picture' : 'Text'}
                             {source.status === 'READY' && ` · ${source.chunkCount} passages`}
                             {source.status === 'FAILED' && source.error && ` · ${source.error}`}
                         </div>
