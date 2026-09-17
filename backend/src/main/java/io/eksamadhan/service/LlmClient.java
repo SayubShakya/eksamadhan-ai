@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Duration;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -53,6 +54,55 @@ public class LlmClient {
     public String model() {
         return model;
     }
+
+    /**
+     * Turns a picture into a sentence, so the rest of the pipeline can treat it as a
+     * question: retrieve against it, ground the answer in the knowledge base, and apply the
+     * same confidence gate. Describing and answering in one step would skip retrieval
+     * entirely and invite the model to invent a policy to go with what it saw.
+     *
+     * @return a one-line description, or null when the image could not be read
+     */
+    @SuppressWarnings("unchecked")
+    public String describeImage(byte[] image, String contentType) {
+        if (!isConfigured() || image == null || image.length == 0) return null;
+
+        String mime = (contentType == null || !contentType.startsWith("image/")) ? "image/jpeg" : contentType;
+        String dataUrl = "data:" + mime + ";base64," + Base64.getEncoder().encodeToString(image);
+
+        Map<String, Object> response = webClient.post()
+                .uri("/chat/completions")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(Map.of(
+                        "model", model,
+                        "temperature", 0.1,
+                        "max_tokens", 120,
+                        "messages", List.of(Map.of("role", "user", "content", List.of(
+                                Map.of("type", "text", "text", DESCRIBE_PROMPT),
+                                Map.of("type", "image_url", "image_url", Map.of("url", dataUrl)))))))
+                .retrieve()
+                .bodyToMono(Map.class)
+                .timeout(timeout)
+                .block();
+
+        if (response == null || response.get("error") != null) return null;
+        List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
+        if (choices == null || choices.isEmpty()) return null;
+        Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
+        String content = message == null ? null : (String) message.get("content");
+        return content == null || content.isBlank() ? null : content.strip();
+    }
+
+    private static final String DESCRIBE_PROMPT = """
+            A customer sent this image to a support team, usually with no words.
+
+            Write one short sentence describing what they are showing and what they are most
+            likely asking about — as if turning the picture into their question. Describe only
+            what is visible; do not guess at an order number, a price or a policy.
+
+            Example: "The customer is showing a cracked phone screen, probably asking whether             it is covered."
+            """;
 
     /**
      * One completion. {@code temperature} is low by default because this answers from

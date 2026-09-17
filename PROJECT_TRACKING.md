@@ -191,6 +191,8 @@ expire after 7 days — re-send if it lapses.
       message classified from text and emoji, in English, Nepali and romanised Nepali;
       14/14 on a mixed test set. Shown in the conversation panel; escalation on negative
       sentiment is the next step
+- [x] Resolved conversations get a closing record — what was asked, what was done, and
+      whether it actually ended well
 - [x] **Handover summaries** — a three-line brief for whoever takes a conversation over,
       written automatically once the conversation has been quiet for 30 seconds, and
       refreshable on demand

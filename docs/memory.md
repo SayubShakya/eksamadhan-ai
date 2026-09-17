@@ -121,6 +121,11 @@ status machine and authentication have all since been built — see the change l
   negative but still answerable; abuse or a demand for a manager is a signal to fetch a person.
   `Sentiment.warrantsHuman()` marks the distinction — it is the hook the escalation trigger
   will use, and is deliberately **not yet wired** to auto-escalation.
+- **A resolved conversation gets a different brief.** "Needs doing" is meaningless once the
+  work is finished, so `RESOLVED_PROMPT` records what was asked, what was done and how it
+  ended, and is regenerated the moment a conversation is resolved. The prompt explicitly
+  requires the outcome to say when nothing was settled — verified against a conversation whose
+  last word was still a question, where it reported "not settled" rather than claiming success.
 - **The handover brief waits for quiet.** `ConversationSummaryService.scheduleWhenQuiet` only
   summarises after `app.ai.summary-cooldown-seconds` (30) of silence, and restarts the timer
   whenever another message arrives. Summarising mid-exchange spends a model call on a

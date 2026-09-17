@@ -209,9 +209,29 @@ public class SyncService {
                 text = (String) messageData.get("text");
             }
 
-            if (text == null || text.isBlank()) {
-                text = "[Media or No Text]";
+            // A photo or voice note has no text, and inventing some was actively harmful: the
+            // agent saw "[Media or No Text]" as though the customer had typed it, and the AI
+            // treated that placeholder as the question it had to answer. Leave it null and let
+            // the attachment speak.
+            String attachmentType = null;
+            String attachmentUrl = null;
+            if (msgObj instanceof Map) {
+                Object attachmentsField = ((Map<String, Object>) msgObj).get("attachments");
+                if (attachmentsField == null) attachmentsField = messageData.get("attachments");
+                if (attachmentsField instanceof Map<?, ?> wrapper
+                        && wrapper.get("data") instanceof List<?> items && !items.isEmpty()
+                        && items.get(0) instanceof Map<?, ?> first) {
+                    attachmentType = mediaTypeOf((String) first.get("mime_type"));
+                    if (first.get("image_data") instanceof Map<?, ?> image) {
+                        attachmentUrl = (String) image.get("url");
+                    } else if (first.get("video_data") instanceof Map<?, ?> video) {
+                        attachmentUrl = (String) video.get("url");
+                    } else if (first.get("file_url") != null) {
+                        attachmentUrl = (String) first.get("file_url");
+                    }
+                }
             }
+            if (text != null && text.isBlank()) text = null;
 
             String createdTimeStr = (String) messageData.get("created_time");
             ZonedDateTime timestamp = ZonedDateTime.now(ZoneId.of("UTC"));
@@ -251,6 +271,8 @@ public class SyncService {
                     .recipientId(recipientId != null ? recipientId : page.getPageId())
                     .text(text)
                     .content(text)
+                    .attachmentType(attachmentType)
+                    .attachmentUrl(attachmentUrl)
                     .direction(direction)
                     .isFromUser(isFromMe)
                     .platform(page.getPlatform())
@@ -334,6 +356,15 @@ public class SyncService {
         }
 
         messageRepository.saveAll(messages);
+    }
+
+    /** Meta reports a mime type; the inbox groups by the broad kind. */
+    private String mediaTypeOf(String mimeType) {
+        if (mimeType == null) return "file";
+        if (mimeType.startsWith("image/")) return "image";
+        if (mimeType.startsWith("audio/")) return "audio";
+        if (mimeType.startsWith("video/")) return "video";
+        return "file";
     }
 
     /**

@@ -33,6 +33,28 @@ public class ConversationSummaryService {
     /** Enough for the thread to make sense without sending a whole history to the model. */
     private static final int MAX_MESSAGES = 40;
 
+    /**
+     * A closed conversation needs a different brief from a live one. "Needs doing" is
+     * meaningless once the work is finished; what a reader wants then is the record — what was
+     * asked, what was done, and whether it actually ended well.
+     */
+    private static final String RESOLVED_PROMPT = """
+            You are recording a closed support conversation, for someone reading it later.
+            Be concise and factual. Do not greet anyone, do not address the customer, and do
+            not invent detail that is not in the transcript.
+
+            Write three short labelled lines, nothing else:
+
+            What was asked: <everything the customer raised across the whole conversation, one
+                             sentence; say "and" rather than listing if there were several>
+            What we did: <what was answered or done, and by whom if a person took over>
+            Outcome: <whether it was actually settled. If the customer never confirmed, or the
+                      last word was still a question, say so plainly rather than claiming
+                      success.>
+
+            No markdown, no bullet characters, no headings beyond those three labels.
+            """;
+
     private static final String SYSTEM_PROMPT = """
             You brief a support agent who is about to take over a conversation they have not
             read. Be concise and factual. Do not greet anyone, do not address the customer,
@@ -86,6 +108,22 @@ public class ConversationSummaryService {
         if (!llmClient.isConfigured()) return;
         if (!waiting.add(threadId)) return;      // a timer is already pending for this thread
         scheduler.schedule(() -> runWhenQuiet(threadId), cooldownSeconds, TimeUnit.SECONDS);
+    }
+
+    /**
+     * Summarise without waiting: used when a conversation is resolved, where there is nothing
+     * left to interrupt it and the reader wants the record immediately. Off the request thread
+     * so closing a conversation stays instant.
+     */
+    public void summariseNow(UUID threadId) {
+        if (!llmClient.isConfigured()) return;
+        scheduler.schedule(() -> {
+            try {
+                summarise(threadId);
+            } catch (Exception e) {
+                log.warn("Could not summarise resolved thread {}: {}", threadId, e.getMessage());
+            }
+        }, 1, TimeUnit.SECONDS);
     }
 
     private void runWhenQuiet(UUID threadId) {
@@ -150,8 +188,13 @@ public class ConversationSummaryService {
             transcript.append(who).append(": ").append(message.getText().strip()).append('\n');
         }
 
+        // A resolved conversation is a record, not a handover.
+        boolean resolved = thread.getStatus() == io.eksamadhan.model.ThreadStatus.RESOLVED;
+
         try {
-            String summary = llmClient.complete(SYSTEM_PROMPT, transcript.toString()).strip();
+            String summary = llmClient
+                    .complete(resolved ? RESOLVED_PROMPT : SYSTEM_PROMPT, transcript.toString())
+                    .strip();
             thread.setSummary(summary);
             thread.setSummaryAt(ZonedDateTime.now());
             thread.setSummaryMessageCount(messages.size());

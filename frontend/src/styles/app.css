@@ -377,7 +377,7 @@
 .bubble { padding: 10px 14px; border-radius: var(--r-lg); }
 /* Three speakers, three treatments — see docs/design.md */
 .bubble--customer { background: var(--bg); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
-.bubble--ai { background: var(--ai); border-bottom-right-radius: 4px; }
+.bubble--ai { background: var(--ai); color: var(--text); border: 1px solid var(--border-strong); border-bottom-left-radius: 4px; }
 .bubble--agent { background: var(--bubble-out); color: #fff; border-bottom-right-radius: 4px; }
 .msg__meta { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
 .msg--out .msg__meta { text-align: right; }
@@ -1058,37 +1058,12 @@
     color: var(--text);
 }
 
-/* An AI reply is visibly not the agent's own words — design.md, three speakers. */
-.bubble--ai { background: var(--ai); color: var(--text); border-bottom-right-radius: 4px; }
-.bubble__ai {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-left: 8px;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: .02em;
-    color: var(--text-muted);
-    vertical-align: middle;
-    cursor: help;
-}
-.bubble__ai svg { width: 12px; height: 12px; }
 .composer__assignee { color: var(--text-muted); font-weight: 500; }
 
 /* Outcome of an action the user needs to know about, such as whether an email was sent. */
 .notice { font-size: 13px; line-height: 1.55; padding: 10px 12px; border-radius: var(--r-sm); margin: 0 0 14px; }
 .notice--ok { background: var(--success-weak); color: var(--success); }
 .notice--warn { background: var(--warning-weak); color: var(--warning); }
-.assign {
-    font: inherit;
-    font-size: 12px;
-    padding: 5px 8px;
-    border: 1px solid var(--border);
-    border-radius: var(--r-sm);
-    background: var(--bg);
-    color: var(--text);
-    max-width: 150px;
-}
 .kb__list { margin: 6px 0 10px; padding-left: 18px; font-size: 13px; color: var(--text); line-height: 1.7; }
 
 /* The handover brief. Each line is one point, so it can be read at a glance. */
@@ -1102,9 +1077,81 @@
 /* A colleague's message: ours, but not yours — left-hand side, distinct from the AI's grey. */
 .bubble--colleague { background: var(--accent-weak); border: 1px solid var(--accent-tint); border-bottom-left-radius: 4px; }
 .msg__author { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 3px; }
-.msg__avatar--ai {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
-    background: var(--ai); color: var(--text-muted);
+/* Inherits size and shape from .avatar; only the fill differs, so the AI's mark sits at
+   exactly the same weight as a person's initials beside it. */
+.msg__avatar--ai { background: var(--ai); color: var(--text-muted); border: 1px solid var(--border-strong); }
+.msg__avatar--ai svg { width: 16px; height: 16px; }
+
+/* Conversation actions sit with the conversation, in its header. */
+.thread__actions { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+.composer__owner { font-weight: 500; }
+/* Yours registers before the words are read. */
+.composer__owner--me { font-weight: 650; color: var(--text); }
+
+/* Assignee field, in the spirit of an issue tracker: the current owner, click to search. */
+.assignee { position: relative; }
+.assignee__current {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    padding: 5px 8px; margin-left: -8px;
+    background: none; border: 1px solid transparent; border-radius: var(--r-sm);
+    font: inherit; color: var(--text); cursor: pointer; text-align: left;
 }
-.msg__avatar--ai svg { width: 14px; height: 14px; }
+.assignee__current:hover:not(:disabled) { background: var(--bg); border-color: var(--border); }
+.assignee__current:disabled { cursor: default; opacity: .7; }
+.assignee__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assignee__name--me { font-weight: 650; }
+.assignee__caret {
+    width: 7px; height: 7px; flex-shrink: 0;
+    border-right: 1.6px solid var(--text-muted); border-bottom: 1.6px solid var(--text-muted);
+    transform: rotate(45deg) translate(-2px, -2px);
+}
+.assignee__ai { background: var(--ai); color: var(--text-muted); display: grid; place-items: center; }
+.assignee__ai svg { width: 13px; height: 13px; }
+
+.assignee__menu {
+    position: absolute; top: calc(100% + 4px); left: -8px; right: -8px; z-index: 40;
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md);
+    box-shadow: var(--shadow-md); padding: 6px; max-height: 320px; overflow-y: auto;
+}
+.assignee__search {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 8px; margin-bottom: 4px;
+    border: 1px solid var(--border); border-radius: var(--r-sm);
+    color: var(--text-muted);
+}
+.assignee__search input { flex: 1; min-width: 0; font: inherit; font-size: 13px; border: 0; background: none; color: var(--text); }
+.assignee__search input:focus-visible { outline: none; }
+.assignee__search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
+
+.assignee__option {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    padding: 7px 8px; border: 0; border-radius: var(--r-sm);
+    background: none; font: inherit; font-size: 13px; color: var(--text);
+    cursor: pointer; text-align: left;
+}
+.assignee__option:hover { background: var(--surface); }
+ /* Target the text, never a bare span: an avatar without a photo is a span too, and
+    picking it up here stretched every one of them into an oval. */
+.assignee__who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assignee__option small { display: block; font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assignee__option svg { color: var(--accent); flex-shrink: 0; }
+.assignee__empty { font-size: 12px; color: var(--text-muted); padding: 8px; margin: 0; }
+
+/* The name must be able to shrink, or the header actions get pushed off a phone screen. */
+.thread__who { min-width: 0; }
+@media (max-width: 600px) {
+    .thread__head { gap: 8px; padding: 10px 12px; }
+    .thread__actions { gap: 6px; }
+    .thread__actions .btn { padding: 5px 9px; font-size: 12px; }
+}
+.bubble__empty { color: var(--text-muted); font-style: italic; }
+
+/* Who has answered this customer — the AI and any agents, in the order they first replied. */
+.participants { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.participants__row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.participants__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.participants__count {
+    flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--text-muted);
+    background: var(--surface); border-radius: 999px; padding: 1px 7px;
+}

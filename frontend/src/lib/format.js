@@ -52,6 +52,35 @@ export function ownershipLabel(thread, meId) {
 }
 
 /** How a sentiment reads, and how it should look. Colour is always paired with a word. */
+/**
+ * Everyone from our side who has spoken in this conversation, in the order they first did.
+ *
+ * Chronological rather than by volume, because the order tells the story of the handover:
+ * the AI answered, then it went to a person, then to another. Counting messages alongside
+ * shows at a glance whether someone actually did the work or only glanced at it.
+ */
+export function participantsOf(messages = []) {
+    const seen = new Map();
+    for (const m of messages) {
+        if (m.direction !== 'outbound') continue;
+        const key = m.authorType === 'AI' ? 'AI' : (m.authorId || m.authorName || 'unknown');
+        const existing = seen.get(key);
+        if (existing) {
+            existing.count += 1;
+        } else {
+            seen.set(key, {
+                key,
+                type: m.authorType || 'AI',
+                id: m.authorId || null,
+                name: m.authorType === 'AI' ? 'AI' : (m.authorName || 'A colleague'),
+                avatar: m.authorAvatar || null,
+                count: 1,
+            });
+        }
+    }
+    return [...seen.values()];
+}
+
 export const SENTIMENT = {
     POSITIVE: { label: 'Happy', face: '😊', tone: 'pill--positive' },
     NEUTRAL:  { label: 'Neutral', face: '😐', tone: 'pill--neutral' },

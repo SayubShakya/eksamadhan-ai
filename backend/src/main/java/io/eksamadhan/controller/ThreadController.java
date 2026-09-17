@@ -53,7 +53,11 @@ public class ThreadController {
     @PostMapping("/{threadId}/resolve")
     public ResponseEntity<?> resolve(@PathVariable UUID threadId) {
         requireOwnThread(threadId);
-        return ResponseEntity.ok(toDto(threadService.resolve(threadId)));
+        ConversationThread resolved = threadService.resolve(threadId);
+        // Rewrite the brief as a record of what happened, which is what a closed
+        // conversation needs rather than a list of what is still outstanding.
+        summaryService.summariseNow(threadId);
+        return ResponseEntity.ok(toDto(resolved));
     }
 
     /** Writes or rewrites the handover brief for a conversation. */

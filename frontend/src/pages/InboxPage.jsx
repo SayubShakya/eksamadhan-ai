@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     IconSend, IconInbox, IconPlus, IconBack, IconReply, IconClose, IconMic, IconStop, IconImage,
-    IconSmile, IconThumb, IconBolt,
+    IconSmile, IconThumb, IconSparkle,
     IconFacebook, IconInstagram,
 } from '../components/icons.jsx';
 import { isRecordingSupported, startRecording, formatDuration } from '../lib/recorder.js';
 import MessageActions from '../components/MessageActions.jsx';
-import { formatTimestamp, formatTime, formatDay, initials, STATUS_LABEL, ownershipLabel, SENTIMENT } from '../lib/format.js';
+import AssigneePicker from '../components/AssigneePicker.jsx';
+import { formatTimestamp, formatTime, formatDay, initials, STATUS_LABEL, ownershipLabel, SENTIMENT, participantsOf } from '../lib/format.js';
 
 const FILTERS = [
     { id: 'all', label: 'All' },
@@ -100,6 +101,11 @@ export default function InboxPage({
     const bodyRef = useRef(null);
 
     const activeThread = threads.find(t => t.customerId === active?.customerId) || null;
+    const participants = useMemo(
+        () => (activeThread ? participantsOf(activeThread.messages) : []),
+        [activeThread],
+    );
+
     const visibleMessages = activeThread ? activeThread.messages.slice(-shown) : [];
 
     /** Keep the reading position steady while older messages are prepended. */
@@ -337,6 +343,26 @@ export default function InboxPage({
                                     Last active {formatTimestamp(activeThread.last.timestamp)}
                                 </div>
                             </div>
+
+                            <div className="thread__actions">
+                                {activeThread.status === 'AI_HANDLING' && (
+                                    <button className="btn btn--sm btn--secondary"
+                                            onClick={() => onThreadAction(activeThread, 'take-over')}>
+                                        Take over
+                                    </button>
+                                )}
+                                {activeThread.status === 'RESOLVED' ? (
+                                    <button className="btn btn--sm btn--secondary"
+                                            onClick={() => onThreadAction(activeThread, 'return-to-ai')}>
+                                        Reopen
+                                    </button>
+                                ) : (
+                                    <button className="btn btn--sm btn--primary"
+                                            onClick={() => onThreadAction(activeThread, 'resolve')}>
+                                        Resolve
+                                    </button>
+                                )}
+                            </div>
                         </header>
 
                         <div className="thread__body" ref={bodyRef}>
@@ -373,10 +399,13 @@ export default function InboxPage({
                                     <div key={m.id || i}>
                                         {newDay && <div className="day"><span>{formatDay(m.timestamp)}</span></div>}
                                         <div className={`msg ${mine ? 'msg--out' : 'msg--in'}`}>
+                                            {/* The AI's mark uses the same .avatar base as a
+                                                person's, so the two cannot drift apart in size. */}
                                             {!mine && (isAi ? (
-                                                <span className="msg__avatar msg__avatar--ai"
+                                                <span className="avatar msg__avatar msg__avatar--ai"
+                                                      style={{ width: 28, height: 28 }}
                                                       title="Answered by the AI" aria-label="AI">
-                                                    <IconBolt />
+                                                    <IconSparkle />
                                                 </span>
                                             ) : (
                                                 <PersonAvatar
@@ -419,16 +448,14 @@ export default function InboxPage({
                                                 <div className="msg__line">
                                                     <div className={`bubble ${!outbound ? 'bubble--customer' : isAi ? 'bubble--ai' : mine ? 'bubble--agent' : 'bubble--colleague'} ${m.attachmentUrl ? 'bubble--media' : ''}`}>
                                                         <Attachment message={m} />
-                                                        {(m.text || m.content) && (
+                                                        {(m.text || m.content) ? (
                                                             <span>{m.text || m.content}</span>
-                                                        )}
-                                                        {m.aiGenerated && (
-                                                            <span className="bubble__ai" title={
-                                                                m.aiConfidence != null
-                                                                    ? `Answered from your knowledge base, confidence ${(m.aiConfidence * 100).toFixed(0)}%`
-                                                                    : 'Answered from your knowledge base'
-                                                            }>
-                                                                <IconBolt /> AI
+                                                        ) : !m.attachmentType && (
+                                                            // Neither words nor a readable
+                                                            // attachment: say so rather than
+                                                            // rendering an empty bubble.
+                                                            <span className="bubble__empty">
+                                                                Attachment could not be loaded
                                                             </span>
                                                         )}
                                                     </div>
@@ -459,51 +486,14 @@ export default function InboxPage({
                         <div className="composer">
                             <div className="composer__status">
                                 <span className={`dot ${activeThread.status === 'OPEN_FOR_AGENT' ? 'dot--busy' : activeThread.status === 'RESOLVED' ? 'dot--offline' : 'dot--online'}`} />
-                                {ownershipLabel(activeThread, me?.id)
-                                    || STATUS_LABEL[activeThread.status] || activeThread.status}
-
-                                <span className="composer__actions">
-                                    {/* Hand it on — the busy-agent case. Only offered to people
-                                        the server would actually allow to do it. */}
-                                    {onAssign && team.length > 1 && activeThread.status !== 'RESOLVED' && (
-                                        <select
-                                            className="assign"
-                                            value={activeThread.assignedAgentId || ''}
-                                            onChange={(e) => onAssign(activeThread, e.target.value)}
-                                            aria-label="Assign this conversation"
-                                        >
-                                            <option value="" disabled>Assign to…</option>
-                                            {team.map(member => (
-                                                <option key={member.id} value={member.id}>
-                                                    {member.isYou ? 'Me' : [member.firstName, member.lastName].filter(Boolean).join(' ')}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    )}
-                                    {activeThread.status === 'AGENT_HANDLING' ? (
-                                        <button className="btn btn--sm btn--secondary"
-                                                onClick={() => onThreadAction(activeThread, 'return-to-ai')}>
-                                            Return to AI
-                                        </button>
-                                    ) : activeThread.status !== 'RESOLVED' && (
-                                        <button className="btn btn--sm btn--secondary"
-                                                onClick={() => onThreadAction(activeThread, 'take-over')}>
-                                            Take over from AI
-                                        </button>
-                                    )}
-
-                                    {activeThread.status === 'RESOLVED' ? (
-                                        <button className="btn btn--sm btn--secondary"
-                                                onClick={() => onThreadAction(activeThread, 'return-to-ai')}>
-                                            Reopen
-                                        </button>
-                                    ) : (
-                                        <button className="btn btn--sm btn--secondary"
-                                                onClick={() => onThreadAction(activeThread, 'resolve')}>
-                                            Resolve
-                                        </button>
-                                    )}
+                                {/* Bolder when it is yours: an agent scanning the inbox needs
+                                    "mine" to register before the words are read. */}
+                                <span className={activeThread.assignedAgentId === me?.id
+                                    ? 'composer__owner composer__owner--me' : 'composer__owner'}>
+                                    {ownershipLabel(activeThread, me?.id)
+                                        || STATUS_LABEL[activeThread.status] || activeThread.status}
                                 </span>
+
                             </div>
 
                             {sendError && (
@@ -670,12 +660,14 @@ export default function InboxPage({
                         looking at any conversation needs to know who has it right now. */}
                     <div className="context__row">
                         <div className="context__key">Handled by</div>
-                        <div>
-                            {activeThread.status === 'AI_HANDLING'
-                                ? 'AI'
-                                : activeThread.assignedAgentName
-                                    || (activeThread.status === 'RESOLVED' ? 'Nobody — resolved' : 'Unassigned')}
-                        </div>
+                        <AssigneePicker
+                            thread={activeThread}
+                            team={team}
+                            me={me}
+                            onAssign={onAssign}
+                            onReturnToAi={(t) => onThreadAction(t, 'return-to-ai')}
+                            disabled={activeThread.status === 'RESOLVED'}
+                        />
                     </div>
 
                     <div className="context__row">
@@ -704,7 +696,37 @@ export default function InboxPage({
                         <div>{activeThread.messages.length}</div>
                     </div>
 
-                    <div className="context__label" style={{ marginTop: 26 }}>Summary</div>
+                    {/* Who has answered this customer. After a handover the conversation may
+                        have passed through the AI and two people, and the transcript alone
+                        makes that hard to see. */}
+                    {participants.length > 0 && (
+                        <div className="context__row">
+                            <div className="context__key">Who replied</div>
+                            <ul className="participants">
+                                {participants.map(p => (
+                                    <li className="participants__row" key={p.key}>
+                                        {p.type === 'AI' ? (
+                                            <span className="avatar assignee__ai" style={{ width: 22, height: 22 }}>
+                                                <IconSparkle />
+                                            </span>
+                                        ) : (
+                                            <PersonAvatar name={p.name} url={p.avatar} size={22} />
+                                        )}
+                                        <span className="participants__name">
+                                            {p.id && p.id === me?.id ? 'You' : p.name}
+                                        </span>
+                                        <span className="participants__count">
+                                            {p.count}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    <div className="context__label" style={{ marginTop: 26 }}>
+                        {activeThread.status === 'RESOLVED' ? 'What happened' : 'Summary'}
+                    </div>
                     {activeThread.summary ? (
                         <>
                             {/* Three labelled lines from the model. Split so each reads as its
@@ -733,8 +755,9 @@ export default function InboxPage({
                     ) : (
                         <>
                             <p className="kb__text">
-                                A short brief is written automatically when a conversation is handed
-                                to a person, so whoever picks it up need not read the whole thread.
+                                {activeThread.status === 'RESOLVED'
+                                    ? 'A record of what was asked and how it ended is written when a conversation is resolved.'
+                                    : 'A short brief is written automatically when a conversation is handed to a person, so whoever picks it up need not read the whole thread.'}
                             </p>
                             <button className="btn btn--secondary btn--sm" disabled={summarising}
                                     onClick={() => onSummarise?.(activeThread)}>

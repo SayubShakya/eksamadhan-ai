@@ -83,6 +83,7 @@ public class AiReplyService {
     private final AgentRoutingService agentRouting;
     private final EmailService emailService;
     private final ConversationSummaryService summaryService;
+    private final AttachmentFetcher attachments;
     private final ObjectMapper objectMapper;
 
     private final boolean enabled;
@@ -103,6 +104,7 @@ public class AiReplyService {
                           AgentRoutingService agentRouting,
                           EmailService emailService,
                           ConversationSummaryService summaryService,
+                          AttachmentFetcher attachments,
                           ObjectMapper objectMapper,
                           @Value("${app.ai.auto-reply:true}") boolean enabled,
                           @Value("${app.ai.min-similarity:0.25}") double minSimilarity,
@@ -121,6 +123,7 @@ public class AiReplyService {
         this.agentRouting = agentRouting;
         this.emailService = emailService;
         this.summaryService = summaryService;
+        this.attachments = attachments;
         this.objectMapper = objectMapper;
         this.enabled = enabled;
         this.minSimilarity = minSimilarity;
@@ -141,9 +144,6 @@ public class AiReplyService {
         SocialMessage message = messageRepository.findWithThreadById(messageId).orElse(null);
         if (message == null || !"inbound".equals(message.getDirection())) return;
 
-        String question = message.getText();
-        if (question == null || question.isBlank()) return;   // an image or voice note
-
         ConversationThread thread = message.getThread();
         if (thread == null) return;
 
@@ -157,6 +157,19 @@ public class AiReplyService {
         SocialPage page = pageRepository.findWithOrganizationById(pageId).orElse(null);
         if (page == null) return;
         Organization organization = page.getOrganization();
+
+        // A message with no words still says something. An image becomes a sentence so the
+        // rest of the pipeline can treat it as a question; anything we cannot read goes to a
+        // person rather than being met with silence, which is what used to happen.
+        String question = message.getText();
+        if (question == null || question.isBlank()) {
+            question = readAttachment(message);
+            if (question == null) {
+                escalate(thread, page, message.getSenderId(), describeUnreadable(message));
+                return;
+            }
+            log.info("Read the customer's {}: {}", message.getAttachmentType(), abbreviate(question));
+        }
 
         List<RetrievalService.Passage> passages =
                 retrievalService.search(organization, question, KNOWLEDGE_PASSAGES);
@@ -371,6 +384,30 @@ public class AiReplyService {
             // to lose that.
             log.warn("Could not send the handover notice: {}", e.getMessage());
         }
+    }
+
+    /**
+     * Turns an attachment into something answerable.
+     *
+     * @return a sentence standing in for the customer's question, or null when the
+     *         attachment cannot be read — a voice note, a video, a file
+     */
+    private String readAttachment(SocialMessage message) {
+        if (!"image".equals(message.getAttachmentType())) return null;
+
+        byte[] image = attachments.fetch(message.getAttachmentUrl());
+        if (image == null) return null;
+
+        String described = llmClient.describeImage(image, "image/jpeg");
+        return described == null || described.isBlank() ? null : described;
+    }
+
+    private String describeUnreadable(SocialMessage message) {
+        String type = message.getAttachmentType();
+        if ("audio".equals(type)) return "the customer sent a voice message, which the AI cannot listen to";
+        if ("video".equals(type)) return "the customer sent a video, which the AI cannot watch";
+        if ("image".equals(type)) return "the customer sent an image the AI could not read";
+        return "the customer sent an attachment the AI cannot open";
     }
 
     /** Used when the reply itself blew up: a customer must not be left with silence. */
