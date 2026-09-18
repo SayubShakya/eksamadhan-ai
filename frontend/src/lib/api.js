@@ -136,3 +136,11 @@ export const connectUrl = (platform) =>
 
 /** Removes every connected page and the stored history. Not the same as signing out. */
 export const disconnectChannels = () => axios.post('/api/auth/disconnect');
+
+// ── Notifications ───────────────────────────────────────────────────────────
+export const getPushKey = () => axios.get('/api/push/key').then(r => r.data);
+export const subscribeToPush = (subscription) =>
+    axios.post('/api/push/subscribe', subscription).then(r => r.data);
+export const unsubscribeFromPush = (subscription) =>
+    axios.post('/api/push/unsubscribe', subscription).then(r => r.data);
+export const sendTestPush = () => axios.post('/api/push/test').then(r => r.data);

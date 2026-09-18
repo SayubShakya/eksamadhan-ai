@@ -82,6 +82,7 @@ public class AiReplyService {
     private final LlmClient llmClient;
     private final AgentRoutingService agentRouting;
     private final EmailService emailService;
+    private final AgentNotificationService agentNotifications;
     private final ConversationSummaryService summaryService;
     private final AttachmentFetcher attachments;
     private final VoiceMessageService mediaService;
@@ -106,6 +107,7 @@ public class AiReplyService {
                           LlmClient llmClient,
                           AgentRoutingService agentRouting,
                           EmailService emailService,
+                          AgentNotificationService agentNotifications,
                           ConversationSummaryService summaryService,
                           AttachmentFetcher attachments,
                           VoiceMessageService mediaService,
@@ -128,6 +130,7 @@ public class AiReplyService {
         this.llmClient = llmClient;
         this.agentRouting = agentRouting;
         this.emailService = emailService;
+        this.agentNotifications = agentNotifications;
         this.summaryService = summaryService;
         this.attachments = attachments;
         this.mediaService = mediaService;
@@ -382,9 +385,8 @@ public class AiReplyService {
         }
         threadRepository.save(escalated);
 
-        // Tell them. Until the FCM push lands this is the only way an agent learns a
-        // conversation is waiting without watching the dashboard. Only on the transition, so
-        // a customer asking several unanswerable things does not send several emails.
+        // Tell them, by browser notification and by email. Only on the transition, so a
+        // customer asking several unanswerable things does not buzz someone several times.
         // Write the brief so a handover never lands someone in forty unread messages — but
         // only once the conversation has gone quiet, since summarising mid-exchange captures
         // a half-finished picture.
@@ -394,6 +396,12 @@ public class AiReplyService {
 
         if (assignee != null && !alreadyWaiting) {
             notifyAssignee(assignee, escalated, reason);
+        } else if (!alreadyWaiting && page != null && escalated.getAssignedAgentId() == null) {
+            // Nobody owns it: routing found no active member. Someone still has to hear about
+            // it, so the workspace's owners and admins do. Checked on the thread rather than on
+            // `assignee`, which is also null for a conversation that already had an owner —
+            // telling admins "nobody is assigned" about an assigned conversation would be a lie.
+            agentNotifications.nobodyToAssign(page.getOrganization(), escalated, reason);
         }
 
         if (!alreadyWaiting && page != null && customerId != null && handoverMessage != null
@@ -403,6 +411,10 @@ public class AiReplyService {
     }
 
     private void notifyAssignee(User agent, ConversationThread thread, String reason) {
+        // The buzz first: it is the one that arrives while they are away from the dashboard,
+        // and it must not wait on an email round trip to Resend.
+        agentNotifications.escalated(agent, thread, reason);
+
         try {
             String customer = thread.getCustomerName() == null ? "A customer" : thread.getCustomerName();
             String link = frontendUrl + "/dashboard/inbox";

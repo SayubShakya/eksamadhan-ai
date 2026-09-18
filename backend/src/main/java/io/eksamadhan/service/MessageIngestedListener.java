@@ -21,13 +21,16 @@ public class MessageIngestedListener {
     private final ConversationMemoryService memoryService;
     private final AiReplyService aiReplyService;
     private final SentimentService sentimentService;
+    private final AgentNotificationService agentNotifications;
 
     public MessageIngestedListener(ConversationMemoryService memoryService,
                                    AiReplyService aiReplyService,
-                                   SentimentService sentimentService) {
+                                   SentimentService sentimentService,
+                                   AgentNotificationService agentNotifications) {
         this.memoryService = memoryService;
         this.aiReplyService = aiReplyService;
         this.sentimentService = sentimentService;
+        this.agentNotifications = agentNotifications;
     }
 
     @Async("taskExecutor")
@@ -49,6 +52,13 @@ public class MessageIngestedListener {
             } catch (Exception e) {
                 log.debug("Sentiment failed for message {}: {}", event.messageId(), e.getMessage());
             }
+        }
+
+        // Buzz the owner if a person already has this conversation. Before the AI runs, so
+        // the status read here is the one that held when the customer wrote: a conversation
+        // the AI is about to escalate is notified once, by the escalation, not twice.
+        if (event.inbound()) {
+            agentNotifications.customerReplied(event.messageId());
         }
 
         // Only a customer's message gets an answer; our own replies must not trigger one.

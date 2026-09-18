@@ -184,6 +184,14 @@ expire after 7 days — re-send if it lapses.
       conversation escalates. Delivery is best-effort and reported honestly in the UI, since
       Resend refuses every recipient but the account owner until a domain is verified
 
+- [x] **Browser notifications for agents (PRD 4.6, FR-06)** — Web Push with VAPID, encrypted
+      per RFC 8291 so the push service in the middle cannot read a customer's message. An agent
+      is notified when the AI hands a conversation over, when a colleague assigns them one, and
+      when a customer replies in a conversation they own; clicking opens that conversation.
+      Verified end to end against a stand-in browser that decrypted the payload and checked the
+      VAPID signature, and unit-tested twice over: the encryption against RFC 8291's own worked
+      example, and the send-or-not rules against the cases that fail silently. With nobody
+      active to assign, the workspace's owners and admins are notified instead
 - [x] **Fixed the crawler reading the wrong part of a page** — a hidden login/privacy modal on
       every Jeevee page was being indexed instead of the page itself, so eight policy pages held
       one identical document and every question escalated. Hidden and dialog content is now
@@ -204,6 +212,8 @@ expire after 7 days — re-send if it lapses.
       the AI and for people, and escalation volume by channel
 - [x] Conversations that are not about the business are closed by the AI rather than escalated,
       and excluded from the deflection figure so spam cannot inflate it
+- [x] **Agents are notified on their own devices when a conversation needs them** — browser
+      push, encrypted end to end, with a per-device switch in the profile panel
 - [x] A website can be crawled into the knowledge base — same-host only, robots.txt obeyed,
       page-limited, one source per page
 - [x] Every source keeps the text it was read as, so a crawled page or a PDF can be read back
@@ -227,9 +237,8 @@ expire after 7 days — re-send if it lapses.
 **Plan for next week**
 
 - Verify a sending domain so invitations reach real people
-- Agent availability (FR-05) so routing only considers members marked online, the FCM push to
-  the assigned agent, and sentiment detection and the remaining escalation triggers (negative sentiment, an explicit
-  "talk to a human"), round-robin routing, and the FCM push to the assigned agent
+- Agent availability (FR-05) so routing only considers members marked online, and the remaining
+  escalation triggers (negative sentiment, an explicit "talk to a human")
 
 **Blockers**
 

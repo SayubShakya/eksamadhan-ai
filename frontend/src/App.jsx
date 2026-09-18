@@ -287,6 +287,20 @@ export default function App() {
         }
     }, [threads, active]);
 
+    // Arriving from a notification: /dashboard/inbox?thread=<id> opens that conversation.
+    // It waits for the conversations to load, then drops the parameter so a refresh later
+    // does not yank the agent back to a conversation they have moved on from.
+    const [wanted, setWanted] = useState(
+        () => new URLSearchParams(window.location.search).get('thread'));
+
+    useEffect(() => {
+        if (!wanted || !threads.length) return;
+        const match = allThreads.find(t => t.id === wanted);
+        if (match) { setActive(match); setViewState('inbox'); }
+        setWanted(null);
+        window.history.replaceState({}, '', pathForView('inbox'));
+    }, [wanted, threads, allThreads]);
+
     // Open the newest conversation automatically on a wide screen — an empty reading
     // pane beside a list of one is a pointless click. On narrow screens the list is
     // the whole screen, so opening one would hide it.

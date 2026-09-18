@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconClose, IconPlus } from './icons.jsx';
 import Avatar from './Avatar.jsx';
 import { fileToAvatar } from '../lib/avatar.js';
+import * as push from '../lib/push.js';
+import * as api from '../lib/api.js';
 
 /**
  * Edit the agent profile shown in the top bar.
@@ -15,10 +17,24 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
     const [saving, setSaving] = useState(false);
     const fileRef = useRef(null);
 
+    // Notifications are a property of this browser, not of the account, so the state is read
+    // from the browser every time the panel opens rather than stored on the profile.
+    const [alerts, setAlerts] = useState({ supported: push.supported(), on: false, busy: true, note: '' });
+
+    const readAlerts = useCallback(async () => {
+        if (!push.supported()) { setAlerts({ supported: false, on: false, busy: false, note: '' }); return; }
+        try {
+            const subscription = await push.current();
+            setAlerts({ supported: true, on: !!subscription, busy: false, note: '' });
+        } catch {
+            setAlerts({ supported: true, on: false, busy: false, note: '' });
+        }
+    }, []);
+
     // Seed only when the panel opens. Depending on `user` too would reset the form
     // mid-edit whenever the profile object changed identity.
     useEffect(() => {
-        if (open) { setDraft(user); setError(''); setSaving(false); }
+        if (open) { setDraft(user); setError(''); setSaving(false); readAlerts(); }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
@@ -43,6 +59,31 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
             setError('');
         } catch (err) {
             setError(err.message);
+        }
+    };
+
+    const toggleAlerts = async () => {
+        setAlerts(a => ({ ...a, busy: true, note: '' }));
+        try {
+            if (alerts.on) {
+                await push.disable();
+                setAlerts({ supported: true, on: false, busy: false, note: 'Notifications are off on this device.' });
+            } else {
+                await push.enable();
+                setAlerts({ supported: true, on: true, busy: false, note: 'This device will be notified.' });
+            }
+        } catch (err) {
+            setAlerts(a => ({ ...a, busy: false, note: err.message || 'Could not change notifications.' }));
+        }
+    };
+
+    const testAlert = async () => {
+        setAlerts(a => ({ ...a, busy: true, note: '' }));
+        try {
+            await api.sendTestPush();
+            setAlerts(a => ({ ...a, busy: false, note: 'Sent — it should appear in a moment.' }));
+        } catch (err) {
+            setAlerts(a => ({ ...a, busy: false, note: api.errorMessage(err, 'Could not send a test notification.') }));
         }
     };
 
@@ -130,6 +171,37 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
                             {draft.role}
                             <span className="field__note">Set by your workspace admin</span>
                         </p>
+                    </div>
+
+                    {/* Per browser, per device. Granting permission on a laptop says nothing
+                        about a phone, so this reads the browser rather than the account. */}
+                    <div className="field">
+                        <span className="field__label">Notifications</span>
+                        {alerts.supported ? (
+                            <div className="field__control">
+                                <button
+                                    type="button"
+                                    className={alerts.on ? 'btn btn--secondary' : 'btn btn--primary'}
+                                    onClick={toggleAlerts}
+                                    disabled={alerts.busy}
+                                >
+                                    {alerts.on ? 'Turn off on this device' : 'Notify me on this device'}
+                                </button>
+                                {alerts.on && (
+                                    <button type="button" className="btn btn--secondary btn--sm" onClick={testAlert} disabled={alerts.busy}>
+                                        Send a test
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="field__static">
+                                Not available
+                                <span className="field__note">This browser cannot show notifications.</span>
+                            </p>
+                        )}
+                        <span className="field__note">
+                            {alerts.note || 'Tells you when a conversation is handed to you, or a customer replies.'}
+                        </span>
                     </div>
 
                     {/* Read-only: the email is the account identifier, so changing it here

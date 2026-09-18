@@ -7,7 +7,7 @@ hands over to a human when it is out of its depth.
 > **Status: Meta connector, accounts and semantic retrieval working; AI answers next.**
 > Facebook and Instagram OAuth, webhook ingestion, a unified inbox, accounts with workspaces
 > and roles, and a per-workspace knowledge base with pgvector semantic search are in place.
-> Answer generation, sentiment escalation and FCM are next — see
+> Answer generation, sentiment escalation and browser notifications are next — see
 > [`docs/phases.md`](docs/phases.md).
 
 Final-year college project · Author: Sayub Shakya · Supervisor: Pawan KC
@@ -33,7 +33,7 @@ The agent is alerted by push notification even if the tab is in the background.
 - **Hybrid handover** — escalation on low confidence, negative sentiment, or explicit request
 - **Round-robin routing** to agents marked online
 - **Human-in-the-loop** — the AI pauses on a thread once an agent replies
-- **Real-time alerts** — Firebase Cloud Messaging to agents and web visitors
+- **Real-time alerts** — encrypted Web Push to an agent's own devices
 - **Embeddable widget** — one `<script>` tag for Shopify/WordPress
 
 ## Planned stack
@@ -45,7 +45,7 @@ The agent is alerted by push notification even if the tab is in the background.
 | Database | PostgreSQL |
 | Vector search | Pinecone |
 | LLM | OpenAI API |
-| Notifications | Firebase Cloud Messaging |
+| Notifications | Web Push (VAPID) |
 | Auth | OAuth 2.0 · JWT |
 | Vector search | pgvector (PostgreSQL) |
 | Embeddings | OpenAI `text-embedding-3-small` via OpenRouter |

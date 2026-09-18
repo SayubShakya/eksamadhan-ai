@@ -605,6 +605,11 @@
 }
 .field__note { font-size: 12px; }
 
+/* The notification switch: the button and its test sit on one line, wrapping on a
+   narrow panel rather than squeezing the labels. */
+.field__control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
+.field__control + .field__note { color: var(--text-muted); }
+
 /* ── Replying to a specific message ────────────────────────────────────── */
 /* Column so bubble and quote size to their own content — otherwise a long quote
    stretches a two-word reply to the full width of the thread. */

@@ -161,6 +161,45 @@ status machine and authentication have all since been built — see the change l
   averaging 146 characters, each matching on a heading and answering nothing. `min-chunk-size`
   (250) merges runs of tiny passages, which took that page to 11 and the whole crawl from 177
   passages to 30, with retrieval scores unchanged.
+- **Web Push instead of FCM (deviation from the report).** The report named Firebase Cloud
+  Messaging; the browser standard underneath it needs no Google project, no service-account
+  key in the environment and no vendor in the path, and reaches Chrome, Firefox, Edge and an
+  installed Android app through each browser's own push service. VAPID is the only credential.
+  Belongs in the final report's Deviations section next to pgvector-for-Pinecone.
+- **The push crypto is verified against RFC 8291's own example, not by trying it.** A wrong
+  key, info string or padding byte produces a body that looks well-formed, is silently dropped
+  by the browser, and is reported as `201 Created` by the push service — so "it did not crash"
+  proves nothing. `WebPushCryptoTest` encrypts the RFC's worked example with its fixed salt and
+  sender key and compares byte for byte, which is the only honest check. Implemented on the JDK
+  (ECDH, HKDF, AES-GCM, `SHA256withECDSAinP1363Format` for the raw r||s JWS signature) rather
+  than pulling in a push library and BouncyCastle.
+- **The siren is reserved for one case.** "🚨 <customer> needs human support" marks an AI
+  handover and nothing else; an assignment from a colleague and a reply in a conversation
+  already being worked are ordinary traffic. Marking everything urgent leaves nothing urgent.
+- **An escalation with nobody to assign still notifies the owners and admins.** Routing only
+  assigns to active members, so a workspace with none — which is every workspace on its first
+  day — would escalate a customer into a queue nobody watches. Decided on the thread's assignee
+  rather than on the routing result, because that is also null for a conversation that already
+  had an owner, and telling admins "nobody is assigned" about an assigned conversation is a lie.
+  This is the branch FR-05 will make live, once routing only considers members marked online.
+- **The VAPID private key lives only in `backend/.env`.** Never in `.env.example`, never in the
+  frontend, never in git history (checked with `git log -S`). It is read through
+  `app.push.private-key`, has no getter, and is never logged. The browser fetches only the
+  public key, at runtime, from `/api/push/key` — nothing about the pair is compiled into the
+  bundle, so rotating it is a server restart rather than a rebuild.
+- **A notification is only worth sending at three moments**: the AI hands a conversation over,
+  a colleague assigns one by name, or a customer writes again in a conversation someone already
+  owns. Buzzing on every inbound message would cover conversations the AI is handling, where
+  there is nothing for a person to do — and a notification people learn to dismiss is worse
+  than none. Tagged per conversation, so four messages in a row replace one another.
+- **404 and 410 from a push service mean the subscription is dead**, and the row is deleted
+  there and then. Anything else is a transient failure and the row stays. Without this, a
+  browser whose site data was cleared costs a failed request on every future notification.
+- **Push subscriptions belong to a person and a browser, not an account.** Permission granted
+  on a laptop says nothing about a phone, which is why the UI reads the live subscription state
+  from the browser rather than storing a preference. Regenerating the VAPID pair invalidates
+  every stored subscription and everyone must re-enable.
+
 - **Never take the first `<main>`.** Eight Jeevee policy pages indexed as eight byte-identical
   copies of the site's hidden login-and-privacy modal, because that modal ships in the markup of
   every page and sits above the real content. Every simple question then escalated, and the
@@ -370,6 +409,28 @@ status machine and authentication have all since been built — see the change l
 
 ## Change log
 
+- **2026-09-18** — **Browser notifications for agents (FR-06).** Web Push with VAPID, replacing
+  the report's Firebase Cloud Messaging: the same notification reaches Chrome, Firefox, Edge and
+  an installed Android app through each browser's own push service, with no Google project and
+  no vendor able to read the payload. `WebPushCrypto` implements RFC 8291 encryption and RFC 8292
+  signing on the JDK, checked against the RFC's own worked example in `WebPushCryptoTest`;
+  `PushService` sends and prunes dead subscriptions; `AgentNotificationService` decides the three
+  moments worth a buzz. The service worker is `frontend/public/sw.js`, the per-device switch is in
+  the profile panel, and clicking a notification opens that conversation
+  (`/dashboard/inbox?thread=<id>`). Verified end to end against a stand-in browser that decrypted
+  the payload and verified the VAPID signature against the advertised key.
+  `AgentNotificationServiceTest` covers the send-or-not rules, which is the part that can rot
+  silently: a notification withheld while a customer waits raises no error anywhere.
+
+- **2026-09-18** — **The crawler was reading the wrong part of every page.** Eight Jeevee policy
+  pages had been indexed as eight byte-identical copies of a hidden login-and-privacy modal,
+  because `selectFirst("main")` found the dialog the site ships above its content on every page.
+  Every ordinary question — refunds, shipping — escalated, while the knowledge base looked full.
+  Hidden and dialog content is now stripped before reading, the content container is chosen by
+  weight rather than document order, and identical pages are indexed once. Same start URL:
+  8 sources / 1 distinct text / 232 passages became 11 / 11 / 77, and "what is your refund
+  policy" went from nothing to 0.518.
+
 - **2026-09-17** — **Sentiment detection.** `ConversationThread.sentiment` had been declared and
   never written since the Thread model; the inbox pill said "Not analysed yet" permanently. Every
   inbound message is now classified POSITIVE / NEUTRAL / NEGATIVE / ANGRY from its text *and* its
@@ -403,8 +464,8 @@ status machine and authentication have all since been built — see the change l
   used rather than what the knowledge base says today.
 
 - **2026-09-17** — **Email, through Resend.** `EmailService` sends invitations and notifies the
-  assigned agent when a conversation escalates — the latter being the only way an agent learns
-  of waiting work until the FCM push lands. Sending is best-effort everywhere: a bounced email
+  assigned agent when a conversation escalates — which, until browser notifications landed on
+  2026-09-18, was the only way an agent learned of waiting work. Sending is best-effort everywhere: a bounced email
   never rolls back the invitation or the escalation that prompted it, and the Team screen
   reports honestly whether the message was delivered. See the free-tier recipient restriction
   above, which currently blocks inviting anyone but the account owner.
@@ -417,8 +478,7 @@ status machine and authentication have all since been built — see the change l
   The assignee shows in the conversation list and above the composer.
 
   Still missing from PRD 4.6: an availability toggle (FR-05), so routing currently considers
-  every ACTIVE member rather than only those marked online, and the FCM push (report's
-  three-second alert target).
+  every ACTIVE member rather than only those marked online.
 
 - **2026-09-17** — **The AI answers.** `LlmClient` (OpenRouter chat completions,
   `openai/gpt-4o-mini`) and `AiReplyService`, hooked into webhook ingestion through an

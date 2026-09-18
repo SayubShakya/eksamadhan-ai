@@ -30,6 +30,7 @@ public class ThreadController {
     private final UserRepository userRepository;
     private final CurrentUser currentUser;
     private final ConversationSummaryService summaryService;
+    private final io.eksamadhan.service.AgentNotificationService agentNotifications;
 
     @GetMapping
     public List<ThreadResponse> list() {
@@ -100,7 +101,9 @@ public class ThreadController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "That person is not an active member of this workspace"));
 
-        return ResponseEntity.ok(toDto(threadService.assign(threadId, target)));
+        ConversationThread assigned = threadService.assign(threadId, target);
+        agentNotifications.assigned(target, assigned, me);
+        return ResponseEntity.ok(toDto(assigned));
     }
 
     /** Manual escalation. Phase 2 calls the same path from the confidence gate. */

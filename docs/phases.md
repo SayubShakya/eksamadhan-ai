@@ -74,7 +74,7 @@ support agent" · the academic core*
 - Confidence gate targeting **85% answer accuracy**
 - Sentiment / anger detection
 - Escalation triggers, round-robin routing to ONLINE agents
-- FCM alert to the assigned agent, **< 3 second** target
+- Web Push alert to the assigned agent's devices, **< 3 second** target
 - Response caching for repeat questions (§5.4.2 cost control)
 - **Done when:** an on-topic question is answered from uploaded content, an off-topic
   one escalates instead of hallucinating, and an angry message reaches an agent's

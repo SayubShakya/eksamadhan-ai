@@ -16,7 +16,7 @@ Status: proposed structure. No code written yet.
 | Database | **PostgreSQL** | reliable, secure, open source, handles complex relational data |
 | Vector DB | ~~Pinecone~~ → **pgvector in PostgreSQL** | semantic search over uploaded business files rather than keyword matching. See the substitution note below. |
 | LLM | **OpenAI models via OpenRouter** | answer generation over retrieved context, and embeddings |
-| Notifications | **Firebase Cloud Messaging** | device alerts without keeping a screen on |
+| Notifications | ~~Firebase Cloud Messaging~~ → **Web Push (VAPID)** | device alerts without keeping a screen on. The browser standard underneath FCM: no Google project, no service-account key, no vendor in the path, and the payload is encrypted end to end (RFC 8291) so the push service cannot read a customer's message. See the substitution note below. |
 | Auth | **OAuth 2.0 + JWT** | report §5.4.3 — never store raw passwords; Meta platform compliance |
 | Hosting | **PrabhuHost** | affordability, 99.9% uptime (report §5.3.2) |
 
@@ -54,7 +54,7 @@ stated "API Risk".
 | :--- | :--- | :--- |
 | Reply latency | **< 2 seconds** | async pipeline, cached FAQ answers |
 | RAG answer accuracy | **85%** | retrieval quality + confidence gate |
-| Handover alert latency | **< 3 seconds** | FCM dispatch on escalation |
+| Handover alert latency | **< 3 seconds** | Web Push dispatch on escalation |
 | AI deflection rate | **60–65%** | escalation thresholds (report L-R 4: >70% automation hurts satisfaction) |
 
 Latency is a stated objective, not a nice-to-have. Every external call needs a timeout
@@ -145,7 +145,7 @@ Webhook (Meta / widget) → verify signature → persist Message → return 200 
       → GPT call → {reply, confidence} → sentiment check
       → escalate? ─ no ─→ send reply through channel adapter
                   └ yes ─→ status=OPEN_FOR_AGENT → round-robin to an ONLINE agent
-                           → FCM push (< 3s target)
+                           → Web Push to the assignee's devices (< 3s target)
 ```
 
 Webhooks must ack fast or Meta retries and the customer gets duplicate replies. Store

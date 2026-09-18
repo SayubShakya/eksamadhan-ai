@@ -93,7 +93,7 @@ off-topic one returns low confidence instead of a hallucination.
 - Escalation triggers: confidence below threshold, negative sentiment, explicit
   request ("talk to a human").
 - Round-robin routing to agents marked Online.
-- Firebase Cloud Messaging push to the assigned agent, target under three seconds.
+- Web Push notification to the assigned agent, target under three seconds.
 - Human-in-the-loop: the AI stops replying to a thread once an agent takes over.
 
 **Done when:** an angry message escalates automatically and reaches an agent's device

@@ -125,6 +125,13 @@ app:
     # anyone else, then set EMAIL_FROM to an address at that domain.
     from: ${EMAIL_FROM:EkSamadhan AI <onboarding@resend.dev>}
     enabled: ${EMAIL_ENABLED:true}
+  # Browser notifications for agents (FR-06), over the Web Push standard. Blank keys turn
+  # the feature off cleanly: the dashboard never asks for permission and nothing is sent.
+  # A new key pair invalidates every stored subscription, so agents must re-enable them.
+  push:
+    subject: ${VAPID_SUBJECT:mailto:support@eksamadhan.ai}
+    public-key: ${VAPID_PUBLIC_KEY:}
+    private-key: ${VAPID_PRIVATE_KEY:}
   # Crawling someone's website means making requests they did not ask for, and every page
   # costs an embedding call. The limits are the feature, not a shortcut.
   crawler:
