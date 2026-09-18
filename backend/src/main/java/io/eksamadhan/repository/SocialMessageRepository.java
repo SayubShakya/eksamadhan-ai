@@ -34,6 +34,13 @@ public interface SocialMessageRepository extends JpaRepository<SocialMessage, UU
             "SELECT m FROM SocialMessage m LEFT JOIN FETCH m.thread WHERE m.id = :id")
     java.util.Optional<SocialMessage> findWithThreadById(java.util.UUID id);
 
+    /** The customer's most recent message in a conversation — what the AI owes an answer to. */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT m FROM SocialMessage m WHERE m.thread = :thread AND m.direction = 'inbound' "
+          + "ORDER BY m.timestamp DESC")
+    java.util.List<SocialMessage> findLatestInbound(io.eksamadhan.model.ConversationThread thread,
+                                                    org.springframework.data.domain.Pageable page);
+
     /**
      * Writes just the transcript.
      *

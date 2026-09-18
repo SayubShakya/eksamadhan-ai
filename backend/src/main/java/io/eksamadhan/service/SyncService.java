@@ -1,5 +1,6 @@
 package io.eksamadhan.service;
 
+import io.eksamadhan.model.ConversationThread;
 import io.eksamadhan.model.SocialMessage;
 import io.eksamadhan.model.SocialPage;
 import io.eksamadhan.repository.SocialMessageRepository;
@@ -9,6 +10,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.ZoneId;
@@ -26,7 +28,41 @@ public class SyncService {
     private final org.springframework.context.ApplicationEventPublisher events;
     private final SocialMessageRepository messageRepository;
     private final io.eksamadhan.repository.SocialPageRepository socialPageRepository;
+    private final io.eksamadhan.repository.ConversationThreadRepository threadRepository;
     private final Set<UUID> syncingPages = Collections.synchronizedSet(new HashSet<>());
+
+    /**
+     * How long the live path gets before the sync considers a message missed.
+     *
+     * The floor is the slowest reply the live path can legitimately still be working on — a
+     * local model reading an image runs to about fifteen seconds — because a catch-up fired
+     * underneath one of those would answer the customer twice. Sixty leaves a wide margin and
+     * still recovers a missed message inside a minute and a half.
+     */
+    @org.springframework.beans.factory.annotation.Value("${app.sync.catch-up-after-seconds:60}")
+    private long catchUpAfterSeconds;
+
+    /**
+     * How far back to look. Beyond this a conversation is history, and answering it would mean
+     * a first-time connection replying to everything a page was ever sent. Meta refuses to
+     * deliver outside 24 hours of the customer's last message in any case.
+     */
+    @org.springframework.beans.factory.annotation.Value("${app.sync.catch-up-window-hours:12}")
+    private long catchUpWindowHours;
+
+    /**
+     * Conversations already retried, and when.
+     *
+     * The unanswered count is not enough on its own: while a reply is being written the
+     * conversation still looks unanswered, so the next sync thirty seconds later asks for
+     * another one. That is not theoretical — it sent a customer the same answer three times.
+     * Remembering the attempt closes the window, and holding it in memory is right for what
+     * this is: after a restart one extra retry is the correct behaviour anyway.
+     */
+    private final Map<UUID, Instant> retried = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Long enough to cover a slow local model and the sync interval behind it. */
+    private static final Duration RETRY_INTERVAL = Duration.ofMinutes(10);
 
     /**
      * Async method to sync page history in the background
@@ -111,6 +147,7 @@ public class SyncService {
             }
             
             log.info("✅ Finished history sync for page: {}", page.getPageName());
+            answerMissed(page);
             
         } catch (Exception e) {
             log.error("❌ Failed to fetch conversations for {}: {}", page.getPageName(), e.getMessage());
@@ -290,6 +327,42 @@ public class SyncService {
         } catch (Exception e) {
             log.error("❌ Error processing message {}: {}", metaMessageId, e.getMessage(), e);
             throw e; // Reraise to be caught by the loop's catch block
+        }
+    }
+
+    /**
+     * Answers customers whose message never reached the AI.
+     *
+     * The AI runs off the webhook, so anything that arrives while this application is down,
+     * or whose webhook Meta fails to deliver, is stored by the next sync and then sits there:
+     * the conversation shows as "AI is handling" and nothing ever happens. Nobody finds out
+     * until a customer gives up. This is the self-healing pass — it looks for conversations
+     * the AI still owes an answer on and puts the customer's last message back through the
+     * same path a webhook would have.
+     *
+     * Safe to run on every sync. A conversation stops matching the moment it is answered,
+     * taken over, or resolved, and the two ends of the window keep it away from replies that
+     * are still being written and from conversations that are long over.
+     */
+    @Transactional(readOnly = true)
+    public void answerMissed(SocialPage page) {
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("UTC"));
+        List<ConversationThread> waiting = threadRepository.findAwaitingAi(page,
+                now.minusSeconds(catchUpAfterSeconds), now.minusHours(catchUpWindowHours));
+
+        retried.values().removeIf(at -> at.isBefore(Instant.now().minus(RETRY_INTERVAL)));
+
+        for (ConversationThread thread : waiting) {
+            if (retried.putIfAbsent(thread.getId(), Instant.now()) != null) continue;
+
+            messageRepository.findLatestInbound(thread, org.springframework.data.domain.PageRequest.of(0, 1))
+                    .stream().findFirst()
+                    .ifPresent(message -> {
+                        log.info("🔁 No reply went out for {} in conversation {} — answering it now",
+                                thread.getCustomerName(), thread.getId());
+                        events.publishEvent(new io.eksamadhan.event.MessageIngested(
+                                message.getId(), page.getId(), true));
+                    });
         }
     }
 

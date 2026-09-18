@@ -7,7 +7,7 @@
 The **Hybrid Support Model**: The system attempts to resolve queries via an AI Agent using a **RAG (Retrieval-Augmented Generation)** pattern. If the AI cannot resolve a query, detects negative sentiment, or receives a specific trigger, the conversation is seamlessly handed over to a live human support agent via a unified routing system.
 
 ### Real-Time Connectivity
-To ensure responsiveness, the system utilizes **Firebase Cloud Messaging (FCM)** to provide real-time alerts to human agents when their intervention is required, and to web-widget users when a reply is received.
+To ensure responsiveness, the system utilizes **Web Push with VAPID** to provide real-time alerts to human agents when their intervention is required, and to web-widget users when a reply is received.
 
 ---
 
@@ -22,7 +22,7 @@ To ensure responsiveness, the system utilizes **Firebase Cloud Messaging (FCM)**
 | Role | Description |
 | :--- | :--- |
 | **Account Admin (Owner)** | Manages subscriptions, connects social accounts (Meta), uploads knowledge base data, and manages agent seats. |
-| **Support Agent** | A human user handling escalated queries. Maintains an "Availability Status" (Online/Busy) and receives FCM notifications. |
+| **Support Agent** | A human user handling escalated queries. Maintains an "Availability Status" (Online/Busy) and receives Web Push notifications. |
 | **End User (Customer)** | The individual interacting with the bot via FB, Insta, or the Web Widget. |
 
 ---
@@ -40,13 +40,13 @@ To ensure responsiveness, the system utilizes **Firebase Cloud Messaging (FCM)**
 
 ### 4.3. The Knowledge Engine (AI & Vector DB)
 * **Context Ingestion**: Admin interface to input "Business Knowledge" (Text input, PDF upload, or URL scraping).
-* **Vector Database (Memory)**: Data is chunked, embedded (OpenAI/Gemini), and stored in a Vector DB (Pinecone/Milvus) for semantic retrieval.
+* **Vector Database (Memory)**: Data is chunked, embedded (`openai/text-embedding-3-small`, 1536 dimensions) and stored in pgvector inside the existing PostgreSQL database for semantic retrieval.
 * **RAG Pipeline**: `Incoming Query` -> `Semantic Search` -> `Retrieve Context` -> `LLM Prompting` -> `Response Generation`.
 
 ### 4.4. The Web Chat Widget
 * **Embeddable Script**: Generates a generic JS snippet for Shopify/WordPress integration.
 * **Widget UI**: Customizable chat bubble.
-* **Client-Side Notifications**: Uses Service Workers/FCM to notify the web visitor of a reply if they have tabbed away.
+* **Client-Side Notifications**: Uses a Service Worker and Web Push to notify the web visitor of a reply if they have tabbed away.
 
 ### 4.5. Hybrid Handover System (The "Escalation" Layer)
 * **Triggers for Handover**:
@@ -56,8 +56,8 @@ To ensure responsiveness, the system utilizes **Firebase Cloud Messaging (FCM)**
 * **Agent Availability Logic**: Agents toggle "Online/Offline".
 * **Routing**: Round Robin distribution to "Online" agents.
 
-### 4.6. Notification Infrastructure (FCM Integration)
-* **Agent Alert**: When a ticket is Escalated, the assigned Human Agent receives an FCM Push Notification.
+### 4.6. Notification Infrastructure (Web Push / VAPID)
+* **Agent Alert**: When a ticket is Escalated, the assigned Human Agent receives a Web Push Notification on every device they have enabled. Where routing finds nobody active, the workspace's Owners and Admins are alerted instead.
 * **Web User Alert**: When the Web Widget receives a reply (AI or Human) and the tab is inactive, the End User receives a Web Push Notification.
 
 ### 4.7. Unified Agent Dashboard
@@ -77,7 +77,7 @@ To ensure responsiveness, the system utilizes **Firebase Cloud Messaging (FCM)**
 | **FR-06** | Agent | View a unified inbox | I don't have to switch between social platforms. |
 | **FR-07** | System | Detect "low confidence" queries | The bot avoids hallucinations and hands over to a human. |
 | **FR-08** | System | Route a chat to a free agent | The workload is distributed evenly. |
-| **FR-09** | Agent | Receive FCM Notification | I am alerted even if the dashboard tab is backgrounded. |
+| **FR-09** | Agent | Receive a Web Push Notification | I am alerted even if the dashboard tab is backgrounded, or closed. |
 | **FR-10** | End User | Receive Web Push Notification | I know when the team has replied to my web chat. |
 
 ---
@@ -92,9 +92,10 @@ To ensure responsiveness, the system utilizes **Firebase Cloud Messaging (FCM)**
 * **Backend**: **Java 21 / Spring Boot 3** — chosen over Node.js for multithreaded
   handling of concurrent message volume, memory management and long-term stability.
 * **Database**: PostgreSQL.
-* **Vector DB**: Pinecone.
-* **AI/LLM**: OpenAI API (latest GPT models).
-* **Notifications**: Firebase Cloud Messaging (FCM).
+* **Vector DB**: pgvector, inside the same PostgreSQL instance. Keeping vectors in the database that is already mandated removes a third-party account, removes a synchronisation path that can drift, and makes GDPR deletion an `ON DELETE CASCADE` in the same transaction rather than a best-effort remote cleanup.
+* **AI/LLM**: Local **Ollama** (`gemma4:latest`) over its OpenAI-compatible API, with **OpenRouter** (`openai/gpt-4o-mini`) as the hosted alternative. Both speak the same API, so a single `AI_CHAT_PROVIDER` switch selects the base URL, model, token budget and timeout together. Running locally keeps customer messages on the machine and costs nothing per reply; the hosted path is there for deployment, where a laptop-class GPU is not available.
+* **Embeddings**: `openai/text-embedding-3-small` via OpenRouter, kept hosted deliberately — the schema stores `vector(1536)`, so a model of a different width would require a migration and a full re-index.
+* **Notifications**: Web Push (VAPID), per RFC 8291/8292.
 * **Auth**: OAuth 2.0 + JWT.
 * **Hosting**: PrabhuHost.
 
@@ -103,15 +104,22 @@ To ensure responsiveness, the system utilizes **Firebase Cloud Messaging (FCM)**
 2. **AI Processing**: System determines AI cannot answer (Low Confidence).
 3. **State Change**: Ticket status updates to `OPEN_FOR_AGENT`.
 4. **Routing**: System selects Agent ID 123 (Status: Online).
-5. **Notification Trigger**: Backend sends payload to FCM:
+5. **Notification Trigger**: Backend encrypts the payload against the agent's stored subscription keys and POSTs it to that browser's push service, signed with the VAPID key pair:
+```
+POST https://fcm.googleapis.com/fcm/send/<endpoint>   (or Mozilla's, Apple's — the browser decides)
+Authorization: vapid t=<ES256 JWT>, k=<VAPID public key>
+Content-Encoding: aes128gcm
+TTL: 14400
+
+<encrypted body>
+```
+The plaintext inside, readable only by that browser:
 ```json
 {
-  "to": "agent_123_device_token",
-  "notification": {
-    "title": "New Escalation",
-    "body": "Customer requires assistance on Instagram."
-  },
-  "data": { "threadId": "xyz" }
+  "title": "🚨 Customer needs human support",
+  "body": "Customer requires assistance on Instagram.",
+  "url": "/dashboard/inbox?thread=xyz",
+  "tag": "thread-xyz"
 }
 ```
 
@@ -123,7 +131,7 @@ To ensure responsiveness, the system utilizes **Firebase Cloud Messaging (FCM)**
     * **Grey Bubbles**: AI Replies.
     * **Blue Bubbles**: Human Agent Replies.
     * **System Notes**: *"Chat handed over to Agent [Name]"* (Internal only).
-* **Notification Permissions**: Dashboard must explicitly ask Agents for permission upon first login.
+* **Notification Permissions**: Dashboard must explicitly ask Agents for permission upon first login — through an in-app prompt that explains what will be sent, raising the browser's own permission dialog only when the Agent accepts. Declining is remembered, and the setting can be changed later from the profile panel.
 
 ---
 

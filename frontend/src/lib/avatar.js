@@ -58,5 +58,10 @@ export function fullName(user) {
 export function userInitials(user) {
     const a = (user.firstName || '').trim()[0] || '';
     const b = (user.lastName || '').trim()[0] || '';
-    return (a + b).toUpperCase();
+    if (a || b) return (a + b).toUpperCase();
+
+    // A customer has one display name from Meta rather than two fields, so "Sayub Shakya"
+    // has to give SS here the same way it does everywhere else.
+    return (user.name || '').trim().split(/\s+/).slice(0, 2)
+        .map(word => word[0] || '').join('').toUpperCase();
 }

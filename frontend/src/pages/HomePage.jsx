@@ -2,7 +2,8 @@ import {
     IconPlus, IconArrowRight, IconCheck, IconInbox,
     IconFacebook, IconInstagram, IconWidget,
 } from '../components/icons.jsx';
-import { formatTimestamp, initials } from '../lib/format.js';
+import { formatTimestamp } from '../lib/format.js';
+import Avatar from '../components/Avatar.jsx';
 
 const CHANNELS = [
     { id: 'facebook', name: 'Facebook Page', desc: 'Automate Messenger replies and comment management.', Icon: IconFacebook },
@@ -159,9 +160,13 @@ export default function HomePage({
                         {recent.map(t => (
                             <li key={t.customerId}>
                                 <button className="recent__row" onClick={() => onOpenConversation(t)}>
-                                    {t.avatarUrl
-                                        ? <img className="avatar avatar--photo recent__avatar" src={t.avatarUrl} alt="" />
-                                        : <span className="avatar recent__avatar">{initials(t.name)}</span>}
+                                    {/* Meta's photo links go dead on their own, so this falls
+                                        back to initials rather than a broken-image icon. */}
+                                    <Avatar
+                                        user={{ avatar: t.avatarUrl, name: t.name }}
+                                        size={36}
+                                        className="recent__avatar"
+                                    />
 
                                     <span className="recent__body">
                                         <span className="recent__top">

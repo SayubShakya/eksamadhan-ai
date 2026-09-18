@@ -189,11 +189,20 @@ expire after 7 days — re-send if it lapses.
       is notified when the AI hands a conversation over, when a colleague assigns them one, and
       when a customer replies in a conversation they own; clicking opens that conversation.
       Signing in asks to enable them, explaining why first rather than raising the browser's
-      own prompt unannounced.
+      own prompt unannounced. The PRD's notification sections (§4.6, §6.1, §6.2, §7) now
+      describe Web Push rather than FCM. Its §4.3 and §6.1 now also match what the code runs:
+      pgvector rather than Pinecone, and local Ollama (`gemma4:latest`) with OpenRouter as the
+      hosted alternative rather than "OpenAI API".
       Verified end to end against a stand-in browser that decrypted the payload and checked the
       VAPID signature, and unit-tested twice over: the encryption against RFC 8291's own worked
       example, and the send-or-not rules against the cases that fail silently. With nobody
       active to assign, the workspace's owners and admins are notified instead
+- [x] Customer photos fall back to initials when Meta's link stops working, instead of the
+      browser's broken-image icon
+- [x] **Fixed customers going unanswered after any downtime** — the AI only ran from the live
+      webhook, so a message that arrived while the app was down was stored by the next sync and
+      never answered. Every sync now retries conversations the AI still owes an answer on, once
+      per conversation per ten minutes so a reply in flight is not duplicated
 - [x] **Fixed the crawler reading the wrong part of a page** — a hidden login/privacy modal on
       every Jeevee page was being indexed instead of the page itself, so eight policy pages held
       one identical document and every question escalated. Hidden and dialog content is now

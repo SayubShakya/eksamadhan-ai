@@ -43,6 +43,22 @@ public interface ConversationThreadRepository extends JpaRepository<Conversation
           + "GROUP BY t.assignedAgentId")
     List<Object[]> countOpenPerAgent(String tenantId);
 
+    /**
+     * Conversations the AI still owes an answer on — see {@code SyncService.answerMissed}.
+     *
+     * The window has both ends. The recent end gives the live webhook time to do its job, so a
+     * reply already being written is not written twice; the far end keeps a history import from
+     * answering conversations that ended weeks ago.
+     */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT t FROM ConversationThread t WHERE t.socialPage = :page "
+          + "AND t.status = io.eksamadhan.model.ThreadStatus.AI_HANDLING "
+          + "AND t.unanswered > 0 AND t.lastMessageDirection = 'inbound' "
+          + "AND t.lastMessageAt < :settled AND t.lastMessageAt > :oldest")
+    List<ConversationThread> findAwaitingAi(SocialPage page,
+                                            java.time.ZonedDateTime settled,
+                                            java.time.ZonedDateTime oldest);
+
     @org.springframework.data.jpa.repository.Modifying
     void deleteByTenantId(String tenantId);
 }

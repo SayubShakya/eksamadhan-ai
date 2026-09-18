@@ -165,7 +165,11 @@ status machine and authentication have all since been built — see the change l
   Messaging; the browser standard underneath it needs no Google project, no service-account
   key in the environment and no vendor in the path, and reaches Chrome, Firefox, Edge and an
   installed Android app through each browser's own push service. VAPID is the only credential.
-  Belongs in the final report's Deviations section next to pgvector-for-Pinecone.
+  Belongs in the final report's Deviations section next to pgvector-for-Pinecone. The PRD was
+  rewritten to match on 2026-09-18 (§4.6, §6.1, §6.2, §7), along with §4.3 and §6.1's
+  Pinecone and "OpenAI API" entries — the PRD now names pgvector, local Ollama with OpenRouter
+  as the alternative, and the hosted embedding model, so it matches what a marker running the
+  repository would see.
 - **The push crypto is verified against RFC 8291's own example, not by trying it.** A wrong
   key, info string or padding byte produces a body that looks well-formed, is silently dropped
   by the browser, and is reported as `201 Created` by the push service — so "it did not crash"
@@ -173,6 +177,31 @@ status machine and authentication have all since been built — see the change l
   sender key and compares byte for byte, which is the only honest check. Implemented on the JDK
   (ECDH, HKDF, AES-GCM, `SHA256withECDSAinP1363Format` for the raw r||s JWS signature) rather
   than pulling in a push library and BouncyCastle.
+- **Meta's profile photos go dead, and a dead one must fall back to initials.** The links
+  carry an expiry, and Meta answers 401 for them the moment the page loses permission to see
+  that person — which in Development mode is anyone who is not an authorised tester. Three
+  places rendered `<img src={avatarUrl}>` with no `onError`, so a stale link drew the browser's
+  broken-image icon and looked like a defect in the product. All three now fall back.
+- **A customer with no photo at all is not a bug.** `GET /{psid}?fields=name,profile_pic`
+  returns error 100 subcode 33 for a person the page may not look up; the name still arrives
+  with the conversation, so they show as initials. Nothing to fix server-side — there is no
+  picture to fetch.
+
+- **The AI only ever ran from the live webhook, so downtime meant silence.** `SyncService`
+  published `MessageIngested` for outbound messages only; an inbound message it stored — which
+  is what happens to anything that arrives while the app is down, or whose webhook Meta fails
+  to deliver — was filed and never answered. The conversation reads "AI is handling" forever
+  and nobody finds out until the customer gives up. `SyncService.answerMissed` now looks, on
+  every sync, for AI-handled conversations with an unanswered inbound message and republishes
+  the customer's last message through the same path a webhook would have used.
+- **The catch-up needs its own memory, not just the unanswered count.** While a reply is being
+  written the conversation still looks unanswered, so the next sync thirty seconds later asks
+  for another — which sent a real customer the same answer three times before it was caught.
+  A conversation is now retried at most once every ten minutes, held in memory because after a
+  restart one extra retry is the right behaviour anyway. The window has a far end too (12
+  hours): without it, connecting a page for the first time would answer everything it was ever
+  sent.
+
 - **The permission prompt is asked by the app, not by the browser.** Signing in shows an
   explained dialog; `Notification.requestPermission()` only runs when someone clicks Enable.
   Calling it on page load is the reliable way to lose the permission for good — an unexplained
