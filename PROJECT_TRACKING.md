@@ -188,6 +188,8 @@ expire after 7 days — re-send if it lapses.
       per RFC 8291 so the push service in the middle cannot read a customer's message. An agent
       is notified when the AI hands a conversation over, when a colleague assigns them one, and
       when a customer replies in a conversation they own; clicking opens that conversation.
+      Signing in asks to enable them, explaining why first rather than raising the browser's
+      own prompt unannounced.
       Verified end to end against a stand-in browser that decrypted the payload and checked the
       VAPID signature, and unit-tested twice over: the encryption against RFC 8291's own worked
       example, and the send-or-not rules against the cases that fail silently. With nobody

@@ -10,6 +10,8 @@ import AnalyticsPage from './pages/AnalyticsPage.jsx';
 import AuthPage from './pages/AuthPage.jsx';
 import ProfilePanel from './components/ProfilePanel.jsx';
 import ConfirmDialog from './components/ConfirmDialog.jsx';
+import NotificationPrompt from './components/NotificationPrompt.jsx';
+import * as push from './lib/push.js';
 import * as api from './lib/api.js';
 import { mergeThreads } from './lib/format.js';
 import './styles/tokens.css';
@@ -148,6 +150,21 @@ export default function App() {
             .catch(() => { if (!cancelled) { api.clearToken(); setSession(null); } });
         return () => { cancelled = true; };
     }, []);
+
+    // Notifications, once the session is real. `state()` re-registers this browser against
+    // whoever just signed in, re-subscribes silently when permission was already given, and
+    // only asks when there is something to ask — see lib/push.js for why the browser's own
+    // prompt is never raised without an explanation first.
+    const [askNotifications, setAskNotifications] = useState(false);
+
+    useEffect(() => {
+        if (!session) return;
+        let cancelled = false;
+        push.state()
+            .then(next => { if (!cancelled) setAskNotifications(next === 'ask'); })
+            .catch(() => { /* notifications are never worth an error in the agent's face */ });
+        return () => { cancelled = true; };
+    }, [session]);
 
     // Any 401 anywhere clears the token and raises this, so the dashboard stops polling
     // into a wall of failures and shows the sign-in screen instead.
@@ -560,6 +577,11 @@ export default function App() {
                 danger
                 onConfirm={handleDisconnect}
                 onCancel={() => setConfirmDisconnect(false)}
+            />
+
+            <NotificationPrompt
+                open={askNotifications}
+                onClose={() => setAskNotifications(false)}
             />
 
             <ProfilePanel

@@ -607,6 +607,12 @@
 
 /* The notification switch: the button and its test sit on one line, wrapping on a
    narrow panel rather than squeezing the labels. */
+/* The two reasons a notification will fire, in the sign-in prompt. */
+.notify__list {
+    margin: 0 0 14px; padding-left: 18px;
+    color: var(--text-muted); font-size: 14px; line-height: 1.7;
+}
+
 .field__control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
 .field__control + .field__note { color: var(--text-muted); }
 

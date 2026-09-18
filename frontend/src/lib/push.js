@@ -38,6 +38,71 @@ function encodeKey(buffer) {
 
 const register = () => navigator.serviceWorker.register('/sw.js', { scope: '/' });
 
+const SNOOZE_KEY = 'push-snoozed-at';
+const SNOOZE_DAYS = 7;
+
+/** "Not now" means not now, not never — but it must not be asked again on the next login. */
+export function snooze() {
+    try { localStorage.setItem(SNOOZE_KEY, String(Date.now())); } catch { /* private mode */ }
+}
+
+function snoozed() {
+    try {
+        const at = Number(localStorage.getItem(SNOOZE_KEY));
+        return Number.isFinite(at) && Date.now() - at < SNOOZE_DAYS * 86400000;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * What to do about notifications for the person who just signed in.
+ *
+ * Deliberately not a bare `requestPermission()` on load. A permission prompt with no
+ * explanation is usually dismissed, and a dismissal in Chrome or Firefox is close to
+ * permanent — the browser will not ask again, and the switch is then buried in site settings.
+ * So the app explains first and only calls the browser when someone clicks Enable.
+ *
+ * @returns 'ask' to show our own prompt, 'ready' when this browser is already subscribed,
+ *          or 'no' when there is nothing to do or nothing we may do.
+ */
+export async function state() {
+    if (!supported()) return 'no';
+
+    let configured = false;
+    try {
+        configured = (await api.getPushKey()).enabled;
+    } catch {
+        return 'no';    // the server is unreachable or push is switched off there
+    }
+    if (!configured) return 'no';
+
+    const existing = await current();
+    if (existing) {
+        // Re-register it against whoever just signed in. The subscription belongs to the
+        // browser, not the account, so on a shared machine the row would otherwise still point
+        // at the last person to enable it — and their colleague's customers would buzz their
+        // phone. Subscribing is an upsert on the endpoint, so this also restores a row the
+        // server pruned after a delivery failure.
+        await remember(existing);
+        return 'ready';
+    }
+
+    // Permission already granted on this browser — a new sign-in, or a subscription dropped
+    // when the server's key pair changed. Re-subscribe quietly; asking again would be noise.
+    if (Notification.permission === 'granted') {
+        try {
+            await enable();
+            return 'ready';
+        } catch {
+            return 'no';
+        }
+    }
+
+    if (Notification.permission === 'denied') return 'no';
+    return snoozed() ? 'no' : 'ask';
+}
+
 /** What this browser is currently subscribed to, if anything. */
 export async function current() {
     if (!supported()) return null;
@@ -84,15 +149,19 @@ export async function enable() {
         applicationServerKey: applicationServerKey(publicKey),
     });
 
+    await remember(subscription);
+    return subscription;
+}
+
+/** Tells the server this browser belongs to the signed-in user. Idempotent on the endpoint. */
+function remember(subscription) {
     const keys = subscription.toJSON().keys || {};
-    await api.subscribeToPush({
+    return api.subscribeToPush({
         endpoint: subscription.endpoint,
         p256dh: keys.p256dh || encodeKey(subscription.getKey('p256dh')),
         auth: keys.auth || encodeKey(subscription.getKey('auth')),
         userAgent: navigator.userAgent,
     });
-
-    return subscription;
 }
 
 /** Turns notifications off on this browser only. */

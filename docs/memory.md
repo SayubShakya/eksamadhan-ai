@@ -173,6 +173,16 @@ status machine and authentication have all since been built — see the change l
   sender key and compares byte for byte, which is the only honest check. Implemented on the JDK
   (ECDH, HKDF, AES-GCM, `SHA256withECDSAinP1363Format` for the raw r||s JWS signature) rather
   than pulling in a push library and BouncyCastle.
+- **The permission prompt is asked by the app, not by the browser.** Signing in shows an
+  explained dialog; `Notification.requestPermission()` only runs when someone clicks Enable.
+  Calling it on page load is the reliable way to lose the permission for good — an unexplained
+  prompt gets dismissed, and Chrome and Firefox treat a dismissal as near-final, after which
+  the only way back is site settings. "Not now" is remembered for seven days.
+- **Every sign-in re-registers this browser's subscription.** A subscription belongs to the
+  browser, not the account, so on a shared machine the server row would otherwise still point at
+  whoever enabled it — and their colleague's customers would buzz the wrong phone. Subscribing
+  is an upsert on the endpoint, so the same call also restores a row the server pruned after a
+  delivery failure, and re-subscribes silently when permission was already granted.
 - **The siren is reserved for one case.** "🚨 <customer> needs human support" marks an AI
   handover and nothing else; an assignment from a colleague and a reply in a conversation
   already being worked are ordinary traffic. Marking everything urgent leaves nothing urgent.
@@ -416,7 +426,8 @@ status machine and authentication have all since been built — see the change l
   signing on the JDK, checked against the RFC's own worked example in `WebPushCryptoTest`;
   `PushService` sends and prunes dead subscriptions; `AgentNotificationService` decides the three
   moments worth a buzz. The service worker is `frontend/public/sw.js`, the per-device switch is in
-  the profile panel, and clicking a notification opens that conversation
+  the profile panel, an explained permission prompt on first sign-in, and clicking a
+  notification opens that conversation
   (`/dashboard/inbox?thread=<id>`). Verified end to end against a stand-in browser that decrypted
   the payload and verified the VAPID signature against the advertised key.
   `AgentNotificationServiceTest` covers the send-or-not rules, which is the part that can rot
