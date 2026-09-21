@@ -27,7 +27,7 @@ expire after 7 days — re-send if it lapses.
 
 ---
 
-## Week 1 — 2026-09-15 to 2026-09-21
+## Week 1 — 2026-09-15 to 2026-09-16
 
 **Accomplished**
 

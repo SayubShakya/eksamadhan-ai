@@ -4,7 +4,7 @@ One folder per week, submitted to the supervisor every Monday.
 
 | Week | Period | Report |
 | :--- | :--- | :--- |
-| 1 | 15–21 Sep 2026 | [`week-01/`](week-01/) |
+| 1 | 15–16 Sep 2026 | [`week-01/`](week-01/) |
 | 2 | 17–24 Sep 2026 | [`week-02/`](week-02/) |
 
 Each folder holds:

@@ -21,41 +21,39 @@ information, and hands the chat to a person when it cannot answer.
 
 ### Tasks done
 
-- **Login and teams** — businesses sign up, invite staff, and see only their own chats.
-- **Knowledge base** — the shop adds its information as text, a PDF, a picture, or a
-  website address that the system reads page by page.
-- **AI replies** — answered from that information. If something is not covered, the AI says
+- **Login and teams.** Businesses sign up, invite staff, and see only their own chats.
+- **Knowledge base.** The shop adds its information as text, a PDF, a picture, or a website
+  address that the system reads page by page.
+- **AI replies.** Answered from that information. If something is not covered, the AI says
   so and a human takes over instead of guessing.
-- **Handover** — one person owns a chat at a time and can pass it on, with a short summary
+- **Handover.** One person owns a chat at a time and can pass it on, with a short summary
   written automatically.
-- **Voice, photos and mood** — customers' voice notes are transcribed and answered, photos
-  are read, and each message is checked for whether the customer sounds upset. Agents can
-  record and send a voice reply of their own.
-- **Reports** — how much the AI handled alone (target 60%), reply speed, and which channel
+- **Voice and photos.** Customers' voice notes are transcribed and answered, and photos are
+  read. Agents can record and send a voice reply of their own.
+- **Mood check.** Every message is checked for whether the customer sounds upset.
+- **Alerts.** Agents are notified on their phone or laptop, switchable per device. A bell in
+  the header lists the same alerts inside the dashboard.
+- **Reports.** How much the AI handled alone (target 60%), reply speed, and which channel
   needs people most.
-- **Alerts** — agents are notified on their phone or laptop using Web Push with VAPID keys,
-  switched on or off per device. A bell in the header lists the same alerts in the dashboard,
-  so nothing is missed if a notification was dismissed or never allowed.
 - **Instagram connected**, sharing one inbox with Facebook.
 
 ### Services and accounts set up
 
 All configured and working. No keys are kept in the repository.
 
-- **Meta (Facebook + Instagram)** — developer app, page connection and message webhook.
+- **Meta** — developer app, Facebook and Instagram page connection, message webhook.
 - **Proxy service** — a purpose-built service on Vercel, giving Meta one fixed address
   because the development tunnel changes often.
 - **Resend** — email, for staff invitations and for telling an agent a chat is waiting.
-- **Web Push (VAPID)** — a generated signing key pair, used for browser alerts.
-- **Ollama (local)** — the AI model running on the development machine. This is what the
-  system uses.
+- **Web Push (VAPID)** — a generated signing key pair, used for the browser alerts.
+- **Ollama (local)** — the AI model on the development machine. This is what the system uses.
 - **OpenRouter** — a paid account kept as an optional fallback, since charging per reply
   would cost money throughout development. One setting switches to it.
 
 ### Change from the proposal
 
-- **Search data** — pgvector inside PostgreSQL instead of Pinecone: one less outside
-  service, and customer data is deleted in a single step.
+- **Search data** — pgvector inside the existing database instead of Pinecone: one less
+  outside service, and customer data is deleted in a single step.
 - **Alerts** — Web Push with VAPID instead of Firebase: no Google account needed, and the
   message is encrypted so the delivery service cannot read it.
 - **AI model** — Gemma 4, run locally, instead of the paid OpenAI API: free per reply, and
