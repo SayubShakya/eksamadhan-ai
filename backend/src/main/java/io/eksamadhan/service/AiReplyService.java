@@ -89,6 +89,9 @@ public class AiReplyService {
     private final LlmClient llmClient;
     private final AgentRoutingService agentRouting;
     /** How far back to look for messages we never answered, and how many to fold in. */
+    /** No single passage may dominate the prompt, however long its source document was. */
+    private static final int MAX_PASSAGE_CHARS = 1200;
+
     private static final int OUTSTANDING_SCAN = 10;
     private static final int OUTSTANDING_LIMIT = 4;
 
@@ -105,6 +108,7 @@ public class AiReplyService {
     private final String handoverMessage;
     private final String unrelatedMessage;
     private final int offTopicLimit;
+    private final int maxContextChars;
     private final String frontendUrl;
 
     public AiReplyService(SocialMessageRepository messageRepository,
@@ -129,6 +133,7 @@ public class AiReplyService {
                           @Value("${app.ai.handover-message:}") String handoverMessage,
                           @Value("${app.ai.unrelated-message:}") String unrelatedMessage,
                           @Value("${app.ai.off-topic-limit:3}") int offTopicLimit,
+                          @Value("${app.ai.max-context-chars:6000}") int maxContextChars,
                           @Value("${app.frontend-url}") String frontendUrl) {
         this.messageRepository = messageRepository;
         this.pageRepository = pageRepository;
@@ -152,6 +157,7 @@ public class AiReplyService {
         this.handoverMessage = handoverMessage;
         this.unrelatedMessage = unrelatedMessage;
         this.offTopicLimit = offTopicLimit;
+        this.maxContextChars = maxContextChars;
         this.frontendUrl = frontendUrl;
     }
 
@@ -214,7 +220,19 @@ public class AiReplyService {
         // is answering conversationally or needs documentation it has not been given.
         boolean weakContext = passages.isEmpty() || best < minSimilarity;
         String prompt = buildPrompt(question, weakContext ? List.of() : passages, thread, weakContext);
-        Verdict verdict = parse(llmClient.complete(SYSTEM_PROMPT, prompt));
+
+        Verdict verdict;
+        try {
+            verdict = parse(llmClient.complete(SYSTEM_PROMPT, prompt));
+        } catch (LlmClient.TruncatedReplyException e) {
+            // Distinguished from every other refusal on purpose: this one is our fault, not a
+            // gap in the knowledge base, and the agent who reads the reason is the person best
+            // placed to report it.
+            log.warn("The model's answer was cut off: {}", e.getMessage());
+            escalate(thread, page, message.getSenderId(),
+                    "the AI's answer was cut off before it finished");
+            return;
+        }
 
         // Gates 2 and 3: the model's own verdict, and the confidence threshold.
         if (!verdict.answered() || verdict.confidence() < minConfidence || verdict.reply().isBlank()) {
@@ -400,16 +418,50 @@ public class AiReplyService {
                     + "message. Reply only if it is conversational; otherwise set answered to "
                     + "false.)\n");
         } else {
-            prompt.append("CONTEXT:\n");
-            for (RetrievalService.Passage passage : passages) {
-                prompt.append("---\n")
-                      .append("From \"").append(passage.sourceTitle()).append("\":\n")
-                      .append(passage.content()).append('\n');
-            }
+            prompt.append("CONTEXT:\n").append(contextBlock(passages, maxContextChars));
         }
 
         prompt.append("\nCUSTOMER'S MESSAGE:\n").append(question).append('\n');
         return prompt.toString();
+    }
+
+    /**
+     * The retrieved passages, as the prompt sees them, within a character budget.
+     *
+     * Bounded because nothing else bounds it: passage length is whatever the source document
+     * happened to contain, and a prompt that crowds out the reply budget comes back as
+     * half-written JSON — which fails the parser and reaches an agent as "not covered by the
+     * knowledge base". Passages arrive best-first, so spending the budget in order drops the
+     * weakest matches rather than the best, and the first passage is always included however
+     * long it is: a prompt with no context at all is worse than one with a long passage.
+     *
+     * Package-private and static so it can be tested as the pure function it is.
+     */
+    static String contextBlock(List<RetrievalService.Passage> passages, int maxChars) {
+        StringBuilder block = new StringBuilder();
+        int used = 0;
+        int dropped = 0;
+
+        for (RetrievalService.Passage passage : passages) {
+            String content = passage.content() == null ? "" : passage.content();
+            if (content.length() > MAX_PASSAGE_CHARS) {
+                content = content.substring(0, MAX_PASSAGE_CHARS) + "…";
+            }
+            if (used > 0 && used + content.length() > maxChars) {
+                dropped++;
+                continue;
+            }
+            used += content.length();
+            block.append("---\n")
+                 .append("From \"").append(passage.sourceTitle()).append("\":\n")
+                 .append(content).append('\n');
+        }
+
+        if (dropped > 0) {
+            log.info("Context capped at {} characters: {} of {} passage(s) left out",
+                    maxChars, dropped, passages.size());
+        }
+        return block.toString();
     }
 
     /**

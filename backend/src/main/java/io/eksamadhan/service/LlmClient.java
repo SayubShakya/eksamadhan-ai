@@ -7,6 +7,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.time.Duration;
 import java.util.Base64;
@@ -34,9 +36,23 @@ public class LlmClient {
     private final boolean local;
     private final int maxTokens;
     private final Duration timeout;
+    private final int maxAttempts;
+
+    /**
+     * Thrown when the model ran out of output budget mid-sentence.
+     *
+     * Worth its own type because the JSON reply then loses its closing brace, the parser reads
+     * that as a refusal, and the customer is handed to a person with the reason "not covered by
+     * the knowledge base" — which is a lie, and points whoever reads it at the wrong fix.
+     */
+    public static class TruncatedReplyException extends IllegalStateException {
+        public TruncatedReplyException(String message) { super(message); }
+    }
 
     public LlmClient(ChatProvider.ChatSettings settings,
+                     @Value("${app.ai.retry.max-attempts:3}") int maxAttempts,
                      @Value("${app.frontend-url}") String frontendUrl) {
+        this.maxAttempts = Math.max(1, maxAttempts);
         this.apiKey = settings.apiKey();
         this.model = settings.model();
         this.visionModel = settings.visionModel();
@@ -49,6 +65,73 @@ public class LlmClient {
                 .defaultHeader("HTTP-Referer", frontendUrl)
                 .defaultHeader("X-Title", "EkSamadhan AI")
                 .build();
+    }
+
+    /**
+     * One request to the model, retried when the failure is worth retrying.
+     *
+     * This is the project's only automatic feedback loop, and it sits deliberately underneath
+     * the human one: without it a single 429 or 503 from the provider escalated a conversation
+     * to a person permanently, because a momentary blip and "the AI cannot answer this" reach
+     * {@code AiReplyService} as the same thing.
+     *
+     * A timeout is not retried. The local budget is two minutes, so a second attempt would
+     * simply double what the customer waits for a model that is merely slow — that case wants a
+     * person, not patience. Nor is 400/401/403: a misconfigured request fails identically
+     * however many times it is sent.
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> post(Map<String, Object> body) {
+        RuntimeException failure = null;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                return webClient.post()
+                        .uri("/chat/completions")
+                        .headers(h -> { if (!apiKey.isEmpty()) h.setBearerAuth(apiKey); })
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(body)
+                        .retrieve()
+                        .bodyToMono(Map.class)
+                        // A customer is waiting: better to escalate to a human than to hang.
+                        .timeout(timeout)
+                        .block();
+
+            } catch (WebClientResponseException e) {
+                if (!worthRetrying(e.getStatusCode().value())) throw e;
+                failure = e;
+            } catch (WebClientRequestException e) {
+                failure = e;   // refused, reset, DNS — the request never landed
+            }
+
+            if (attempt == maxAttempts) break;
+            log.info("Model call failed ({}), retrying — attempt {} of {}",
+                    failure.getMessage(), attempt + 1, maxAttempts);
+            pause(attempt);
+        }
+
+        throw failure;
+    }
+
+    /** Overload, throttling and a provider falling over are all worth a second attempt. */
+    private static boolean worthRetrying(int status) {
+        return status == 429 || status == 500 || status == 502 || status == 503 || status == 504;
+    }
+
+    /**
+     * Backs off between attempts, with jitter.
+     *
+     * The jitter matters when a provider throttles: several conversations fail together, and
+     * without it they would all come back at the same instant and be throttled together again.
+     */
+    private void pause(int attempt) {
+        long millis = 400L * attempt * attempt + (long) (Math.random() * 200);
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while waiting to retry the model", e);
+        }
     }
 
     /** A local provider such as Ollama needs no key; a hosted one does. */
@@ -84,21 +167,13 @@ public class LlmClient {
         String mime = (contentType == null || !contentType.startsWith("image/")) ? "image/jpeg" : contentType;
         String dataUrl = "data:" + mime + ";base64," + Base64.getEncoder().encodeToString(image);
 
-        Map<String, Object> response = webClient.post()
-                .uri("/chat/completions")
-                .headers(h -> { if (!apiKey.isEmpty()) h.setBearerAuth(apiKey); })
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(Map.of(
-                        "model", visionModel,
-                        "temperature", 0.1,
-                        "max_tokens", 120,
-                        "messages", List.of(Map.of("role", "user", "content", List.of(
-                                Map.of("type", "text", "text", instruction),
-                                Map.of("type", "image_url", "image_url", Map.of("url", dataUrl)))))))
-                .retrieve()
-                .bodyToMono(Map.class)
-                .timeout(timeout)
-                .block();
+        Map<String, Object> response = post(Map.of(
+                "model", visionModel,
+                "temperature", 0.1,
+                "max_tokens", 120,
+                "messages", List.of(Map.of("role", "user", "content", List.of(
+                        Map.of("type", "text", "text", instruction),
+                        Map.of("type", "image_url", "image_url", Map.of("url", dataUrl)))))));
 
         if (response == null || response.get("error") != null) return null;
         List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
@@ -151,22 +226,14 @@ public class LlmClient {
     public String transcribe(byte[] mp3) {
         if (!isConfigured() || mp3 == null || mp3.length == 0) return null;
         try {
-            Map<String, Object> response = webClient.post()
-                    .uri("/chat/completions")
-                    .headers(h -> { if (!apiKey.isEmpty()) h.setBearerAuth(apiKey); })
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(Map.of(
-                            "model", model,
-                            "max_tokens", 500,
-                            "messages", List.of(Map.of("role", "user", "content", List.of(
-                                    Map.of("type", "text", "text", TRANSCRIBE_PROMPT),
-                                    Map.of("type", "input_audio", "input_audio", Map.of(
-                                            "data", Base64.getEncoder().encodeToString(mp3),
-                                            "format", "mp3")))))))
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .timeout(timeout)
-                    .block();
+            Map<String, Object> response = post(Map.of(
+                    "model", model,
+                    "max_tokens", 500,
+                    "messages", List.of(Map.of("role", "user", "content", List.of(
+                            Map.of("type", "text", "text", TRANSCRIBE_PROMPT),
+                            Map.of("type", "input_audio", "input_audio", Map.of(
+                                    "data", Base64.getEncoder().encodeToString(mp3),
+                                    "format", "mp3")))))));
 
             if (response == null || response.get("error") != null) return null;
             List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
@@ -201,22 +268,13 @@ public class LlmClient {
             throw new IllegalStateException("No OpenRouter API key configured");
         }
 
-        Map<String, Object> response = webClient.post()
-                .uri("/chat/completions")
-                .headers(h -> { if (!apiKey.isEmpty()) h.setBearerAuth(apiKey); })
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(Map.of(
-                        "model", model,
-                        "temperature", 0.2,
-                        "max_tokens", maxTokens,
-                        "messages", List.of(
-                                Map.of("role", "system", "content", systemPrompt),
-                                Map.of("role", "user", "content", userPrompt))))
-                .retrieve()
-                .bodyToMono(Map.class)
-                // A customer is waiting: better to escalate to a human than to hang.
-                .timeout(timeout)
-                .block();
+        Map<String, Object> response = post(Map.of(
+                "model", model,
+                "temperature", 0.2,
+                "max_tokens", maxTokens,
+                "messages", List.of(
+                        Map.of("role", "system", "content", systemPrompt),
+                        Map.of("role", "user", "content", userPrompt))));
 
         if (response == null) throw new IllegalStateException("No response from the model");
         if (response.get("error") != null) {
@@ -227,8 +285,19 @@ public class LlmClient {
         if (choices == null || choices.isEmpty()) {
             throw new IllegalStateException("The model returned no choices");
         }
-        Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
+        Map<String, Object> choice = choices.get(0);
+        Map<String, Object> message = (Map<String, Object>) choice.get("message");
         String content = message == null ? null : (String) message.get("content");
+
+        // The provider says outright when it stopped because the budget ran out, and until now
+        // that was read and thrown away. The half-written JSON that follows fails the parser
+        // and is reported as a refusal, so the one fact that explains it has to be kept.
+        if ("length".equals(choice.get("finish_reason"))) {
+            throw new TruncatedReplyException(
+                    "The model hit its " + maxTokens + "-token limit before finishing. "
+                    + "Raise app.ai.chat.max-tokens, or shorten the context.");
+        }
+
         if (content == null || content.isBlank()) {
             throw new IllegalStateException("The model returned an empty reply");
         }

@@ -281,6 +281,33 @@ status machine and authentication have all since been built — see the change l
   hours): without it, connecting a page for the first time would answer everything it was ever
   sent.
 
+- **We considered an agentic harness and chose not to build one — this is the viva answer.**
+  Agent = Model + Harness (tools, memory/state, guardrails, feedback loops). Two of those four
+  are already here: memory and state (semantic recall, the thread state machine, handover
+  summaries, outstanding-message gathering) and guardrails (the three gates, the `related`
+  flag, the off-topic streak, escalate-on-failure). **The feedback loop is a human, by design** —
+  that is the "Hybrid AI–Human Escalation" in the project's own title. Tools were rejected on
+  measured grounds: nothing in FR-01..FR-10 needs them; `llama-server` runs `-np 1` so three
+  concurrent calls came back at +1.4s/+2.8s/+4.4s and an agent loop multiplies calls per
+  message; an 8B quantised model is where multi-step tool use fails worst (`qwen3.5:9b` was
+  already dropped); and `docs/rules.md:13-17` says a project that pulls in a framework per
+  feature is indefensible in a viva. Spring AI 2.0 *does* support Boot 4.0.x, so this was a
+  choice, not a compatibility accident.
+- **One transient 429 used to escalate a conversation for good.** There was no retry anywhere
+  in the LLM path, so a blip from the provider and "the AI cannot answer this" reached
+  `AiReplyService` as the same thing. `LlmClient.post` now retries 429/5xx and connection
+  failures twice with jittered backoff — and deliberately **not** timeouts (the local budget is
+  120s; a second attempt just doubles the customer's wait) and **not** 400/401/403 (a
+  misconfigured request fails identically however often it is sent). Verified against a stub
+  provider: two 503s then success took 3 calls and 2.6s; three 503s escalated once; a 400 made
+  exactly one call.
+- **The provider says when it ran out of budget, and we were throwing that away.**
+  `finish_reason: "length"` means the JSON reply lost its closing brace, so the parser reads a
+  refusal and the agent is told "not covered by the knowledge base" — a lie that points at the
+  wrong fix. It is now its own `TruncatedReplyException` with its own escalation reason. The
+  prompt is bounded too: 1,200 characters per passage, 6,000 overall, weakest matches dropped
+  first, and the top match always kept because no context at all is worse than a long passage.
+
 - **"We have no documentation for that" is not "that is none of our business".** Weak
   retrieval was treated as proof a message was off-topic, so it counted toward the streak that
   closes a conversation as spam. Caught on a real one: *"Is there ear pods air in your store?"*

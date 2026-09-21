@@ -51,7 +51,10 @@ class AgentNotificationServiceTest {
 
         // Only the one query these rules depend on; everything else would be unused scaffolding.
         UserRepository users = new StubUserRepository(List.of(owner, admin, agent));
-        notifications = new AgentNotificationService(push, null, users);
+
+        // Null notification repository: `deliver` records into it inside its own try/catch, so
+        // these tests see the push that would have gone out without needing a database.
+        notifications = new AgentNotificationService(push, null, users, null);
     }
 
     private User person(String email, UserRole role) {

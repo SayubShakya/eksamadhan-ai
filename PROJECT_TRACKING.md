@@ -205,6 +205,10 @@ expire after 7 days — re-send if it lapses.
       throttled to six hours, and the two backfills ask for the rows that need work instead of
       reading the whole workspace on every poll. The dashboard now polls every 10s, not 30s
 - [x] Embeddings are cached, removing a duplicate call that cost about a fifth of every reply
+- [x] **Assessed whether an agentic harness (tools, feedback loops) is needed and decided
+      against it**, on measured grounds — recorded in `docs/memory.md` for the viva. Built the
+      two harness pieces that were genuinely missing instead: a retry loop for transient
+      provider failures, and a bounded prompt with truncation detected rather than guessed
 - [x] **Fixed genuine customers being treated as spam** — a question about a product the
       knowledge base does not cover was counted as off-topic, and three of them closed the
       conversation. The AI now judges whether a message concerns the business separately from

@@ -116,6 +116,13 @@ app:
     # The first few are answered as conversation: people say hello, and a real customer
     # phrasing something oddly should not be shut out.
     off-topic-limit: ${AI_OFF_TOPIC_LIMIT:3}
+    # Nothing else bounds the prompt: passage length is whatever the source document held, and
+    # a prompt that crowds out the reply budget comes back as half-written JSON.
+    max-context-chars: ${AI_MAX_CONTEXT_CHARS:6000}
+    # The only automatic retry in the system, and it sits under the human one. Transient
+    # provider failures only — never a timeout, never a bad request. 1 disables it.
+    retry:
+      max-attempts: ${AI_RETRY_ATTEMPTS:3}
     unrelated-message: ${AI_UNRELATED_MESSAGE:I can only help with questions about our products and orders, so I will close this conversation here. Message us again any time you need something.}
     handover-message: ${AI_HANDOVER_MESSAGE:Let me check that with a colleague — someone from our team will reply here shortly.}
   email:
