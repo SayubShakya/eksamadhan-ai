@@ -41,7 +41,14 @@ function authRouteFromPath() {
 }
 const MESSAGE_POLL_MS = 1500;
 const STATUS_POLL_MS = 5000;
-const SYNC_MS = 30000;
+/**
+ * How often the dashboard asks the server to pull from Meta.
+ *
+ * Ten seconds rather than thirty because a sync now costs almost nothing when nothing has
+ * changed — Meta's own updated_time is used to skip untouched conversations — and this interval
+ * is what decides how quickly a message is noticed at all when its webhook never arrives.
+ */
+const SYNC_MS = 10000;
 
 /** Meta's errors are raw API text; turn the common ones into something actionable. */
 function friendlySendError(err) {

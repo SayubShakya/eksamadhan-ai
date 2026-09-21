@@ -73,10 +73,49 @@ public class EmbeddingClient {
         return !apiKey.isEmpty() || local;
     }
 
-    /** Convenience for the single-text case, such as a search query. */
+    /**
+     * Embeds one text — a search query, or a customer's message.
+     *
+     * Cached, because the same text is genuinely embedded more than once. Answering a single
+     * message embedded it twice, once to search the knowledge base and once to recall earlier
+     * messages in the conversation, at about 1.4 seconds a call against a hosted model: a fifth
+     * of the whole reply spent computing the same 1536 numbers twice. Customers also repeat
+     * themselves, and an admin testing the Knowledge screen runs the same query again and again.
+     *
+     * Safe to cache because an embedding is a pure function of the model and the text, and the
+     * model is part of the key — so changing it cannot return a stale vector.
+     */
     public float[] embed(String text) {
-        return embedAll(List.of(text)).get(0);
+        String key = model + '\n' + text;
+
+        synchronized (cache) {
+            float[] hit = cache.get(key);
+            if (hit != null) return hit.clone();       // callers must not mutate the cached copy
+        }
+
+        float[] vector = embedAll(List.of(text)).get(0);
+
+        synchronized (cache) {
+            cache.put(key, vector.clone());
+        }
+        return vector;
     }
+
+    /**
+     * Recently embedded texts, newest-used last.
+     *
+     * Bounded rather than expiring: each entry is 1536 floats, about 6KB, so the cap is the
+     * memory budget and nothing here goes stale on its own.
+     */
+    private static final int CACHE_ENTRIES = 500;
+
+    private final java.util.LinkedHashMap<String, float[]> cache =
+            new java.util.LinkedHashMap<>(64, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(java.util.Map.Entry<String, float[]> eldest) {
+                    return size() > CACHE_ENTRIES;
+                }
+            };
 
     /**
      * Embeds in input order, batching to keep requests a sane size.

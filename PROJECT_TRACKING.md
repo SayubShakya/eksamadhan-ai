@@ -199,6 +199,19 @@ expire after 7 days — re-send if it lapses.
       active to assign, the workspace's owners and admins are notified instead
 - [x] Customer photos fall back to initials when Meta's link stops working, instead of the
       browser's broken-image icon
+- [x] **Message sync made cheap** — unchanged conversations are skipped using Meta's own
+      `updated_time`, de-duplication is one query instead of one per message, profile lookups are
+      throttled to six hours, and the two backfills ask for the rows that need work instead of
+      reading the whole workspace on every poll. The dashboard now polls every 10s, not 30s
+- [x] Embeddings are cached, removing a duplicate call that cost about a fifth of every reply
+- [x] **Conversations are answered concurrently** — the customer-facing path has its own thread
+      pool, sized for conversations in flight, so a reply can no longer queue behind a website
+      crawl or a history sync. Measured limit documented: the local model serves one request at
+      a time, so model calls still serialise until `OLLAMA_NUM_PARALLEL` is raised
+- [x] **Every AI reply carries its own timing** — how long the AI took, and separately how long
+      the message waited before reaching it, shown under the message and stored for analytics
+- [x] The AI answers every message a customer sent since the last reply, not only the newest,
+      so a question asked in two goes is not half-answered
 - [x] **Fixed customers going unanswered after any downtime** — the AI only ran from the live
       webhook, so a message that arrived while the app was down was stored by the next sync and
       never answered. Every sync now retries conversations the AI still owes an answer on, once

@@ -108,8 +108,17 @@ public class ConversationMemoryService {
     @Async("taskExecutor")
     public CompletableFuture<Void> backfillAsync(String tenantId) {
         if (!embeddingClient.isConfigured()) return CompletableFuture.completedFuture(null);
+
+        // Only what is actually missing. This runs on every sync — every thirty seconds while a
+        // dashboard is open — and used to read every message in the workspace and check each one
+        // in Java, which is why it reported "touched 135 messages" over and over on a workspace
+        // where nothing had changed. Asked properly, a settled workspace costs one indexed query
+        // that returns no rows.
+        List<SocialMessage> pending = messageRepository.findWithoutEmbedding(tenantId);
+        if (pending.isEmpty()) return CompletableFuture.completedFuture(null);
+
         int embedded = 0;
-        for (SocialMessage message : messageRepository.findByTenantIdOrderByTimestampAsc(tenantId)) {
+        for (SocialMessage message : pending) {
             try {
                 remember(message.getId());
                 embedded++;
@@ -117,7 +126,7 @@ public class ConversationMemoryService {
                 log.debug("Backfill skipped message {}: {}", message.getId(), e.getMessage());
             }
         }
-        log.info("Conversation memory backfill for {} touched {} messages", tenantId, embedded);
+        log.info("Conversation memory backfill for {} embedded {} messages", tenantId, embedded);
         return CompletableFuture.completedFuture(null);
     }
 }

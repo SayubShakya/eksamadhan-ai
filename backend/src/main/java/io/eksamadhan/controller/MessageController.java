@@ -318,6 +318,8 @@ public class MessageController {
                 .aiGenerated(msg.isAiGenerated())
                 .aiConfidence(msg.getAiConfidence())
                 .aiSources(msg.getAiSources())
+                .aiGeneratedMs(msg.getAiGeneratedMs())
+                .aiWaitedMs(msg.getAiWaitedMs())
                 .sentiment(msg.getSentiment() == null ? null : msg.getSentiment().name())
                 .transcript(msg.getTranscript())
                 .build();

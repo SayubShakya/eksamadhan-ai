@@ -81,6 +81,10 @@ public class AiReplyService {
     private final SyncService syncService;
     private final LlmClient llmClient;
     private final AgentRoutingService agentRouting;
+    /** How far back to look for messages we never answered, and how many to fold in. */
+    private static final int OUTSTANDING_SCAN = 10;
+    private static final int OUTSTANDING_LIMIT = 4;
+
     private final EmailService emailService;
     private final AgentNotificationService agentNotifications;
     private final ConversationSummaryService summaryService;
@@ -153,6 +157,10 @@ public class AiReplyService {
     public void reply(UUID messageId, UUID pageId) {
         if (!enabled || !llmClient.isConfigured()) return;
 
+        // Recorded on the reply so a slow answer can be explained rather than argued about:
+        // this marks when the AI actually started, which is not when the customer wrote.
+        java.time.Instant startedAt = java.time.Instant.now();
+
         SocialMessage message = messageRepository.findWithThreadById(messageId).orElse(null);
         if (message == null || !"inbound".equals(message.getDirection())) return;
 
@@ -182,6 +190,12 @@ public class AiReplyService {
             }
             log.info("Read the customer's {}: {}", message.getAttachmentType(), abbreviate(question));
         }
+
+        // Everything they have said since we last replied, not just the message that woke us.
+        // People send a question in two or three goes, and a reply that only addresses the last
+        // one leaves the earlier ones answered by nobody — "list products" sat unanswered
+        // forever because a second question arrived before the first was picked up.
+        question = outstanding(thread, message, question);
 
         List<RetrievalService.Passage> passages =
                 retrievalService.search(organization, question, KNOWLEDGE_PASSAGES);
@@ -226,7 +240,7 @@ public class AiReplyService {
         log.info("AI will answer (confidence {}, best passage {}{}): {}",
                 round(verdict.confidence()), round(best), weakContext ? ", conversational" : "",
                 abbreviate(verdict.reply()));
-        send(message, page, verdict, summarise(passages), pictureFor(passages));
+        send(message, page, verdict, summarise(passages), pictureFor(passages), startedAt);
     }
 
     /** "Payment methods (46%), Returns (42%)" — readable beside the conversation. */
@@ -236,6 +250,57 @@ public class AiReplyService {
                 .limit(3)
                 .map(p -> "%s (%d%%)".formatted(p.sourceTitle(), Math.round(p.similarity() * 100)))
                 .collect(java.util.stream.Collectors.joining(", "));
+    }
+
+    private static int millisSince(java.time.Instant from) {
+        return (int) Math.min(Integer.MAX_VALUE, java.time.Duration.between(from, java.time.Instant.now()).toMillis());
+    }
+
+    /**
+     * How long the customer waited before the AI even started.
+     *
+     * Near zero when the webhook delivered; a minute or more when the message was only found
+     * by the catch-up sync. Clamped at zero because Meta's timestamp and this machine's clock
+     * are not the same clock, and a small negative would read as nonsense.
+     */
+    private static int waitedFor(SocialMessage inbound, java.time.Instant startedAt) {
+        if (inbound.getTimestamp() == null) return 0;
+        long waited = java.time.Duration.between(inbound.getTimestamp().toInstant(), startedAt).toMillis();
+        return (int) Math.max(0, Math.min(Integer.MAX_VALUE, waited));
+    }
+
+    /**
+     * The customer's unanswered messages, oldest first, as one question.
+     *
+     * Bounded deliberately: only the run of messages since our last reply, and only the last
+     * few of those. A conversation where nobody has replied for fifty messages is not something
+     * to answer in one go — it is something for a person.
+     */
+    private String outstanding(ConversationThread thread, SocialMessage trigger, String question) {
+        try {
+            List<SocialMessage> recent = messageRepository.findRecent(thread,
+                    org.springframework.data.domain.PageRequest.of(0, OUTSTANDING_SCAN));
+
+            List<String> earlier = new java.util.ArrayList<>();
+            for (SocialMessage m : recent) {                      // newest first
+                if (!"inbound".equals(m.getDirection())) break;    // our last reply: stop
+                if (m.getId().equals(trigger.getId())) continue;   // already have it
+                if (m.getTimestamp() != null && trigger.getTimestamp() != null
+                        && m.getTimestamp().isAfter(trigger.getTimestamp())) continue;
+                String text = m.getText() == null ? m.getContent() : m.getText();
+                if (text != null && !text.isBlank()) earlier.add(text.strip());
+                if (earlier.size() >= OUTSTANDING_LIMIT) break;
+            }
+            if (earlier.isEmpty()) return question;
+
+            java.util.Collections.reverse(earlier);               // back into reading order
+            earlier.add(question);
+            log.info("Answering {} outstanding messages together", earlier.size());
+            return String.join("\n", earlier);
+        } catch (Exception e) {
+            log.debug("Could not gather outstanding messages: {}", e.getMessage());
+            return question;
+        }
     }
 
     /**
@@ -251,7 +316,7 @@ public class AiReplyService {
     }
 
     private void send(SocialMessage inbound, SocialPage page, Verdict verdict, String sources,
-                      String picture) {
+                      String picture, java.time.Instant startedAt) {
         Map<String, Object> response = metaService.sendMessage(
                 inbound.getSenderId(), verdict.reply(), page.getAccessToken(), null).block();
 
@@ -265,6 +330,8 @@ public class AiReplyService {
                 saved.setAiGenerated(true);
                 saved.setAiConfidence(verdict.confidence());
                 saved.setAiSources(sources);
+                saved.setAiGeneratedMs(millisSince(startedAt));
+                saved.setAiWaitedMs(waitedFor(inbound, startedAt));
                 messageRepository.save(saved);
             });
         }

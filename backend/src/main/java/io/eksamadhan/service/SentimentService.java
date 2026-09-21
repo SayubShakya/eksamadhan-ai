@@ -99,10 +99,11 @@ public class SentimentService {
     @org.springframework.scheduling.annotation.Async("taskExecutor")
     public java.util.concurrent.CompletableFuture<Void> backfillAsync(String tenantId) {
         if (llmClient.isConfigured()) {
+            // Only the messages that have never been read — the same reasoning as the memory
+            // backfill: this runs on every sync, so it must cost nothing when there is nothing
+            // to do, rather than scanning the whole workspace to discover that.
             int read = 0;
-            for (SocialMessage message : messageRepository.findByTenantIdOrderByTimestampAsc(tenantId)) {
-                if (message.getSentiment() != null || !"inbound".equals(message.getDirection())) continue;
-                if (message.getText() == null || message.getText().isBlank()) continue;
+            for (SocialMessage message : messageRepository.findWithoutSentiment(tenantId)) {
                 if (analyse(message.getId()) != null) read++;
             }
             if (read > 0) log.info("Sentiment backfill for {} read {} messages", tenantId, read);

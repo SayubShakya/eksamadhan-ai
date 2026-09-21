@@ -33,6 +33,10 @@ public class MessageResponse {
     private boolean aiGenerated;  // the AI wrote this, not an agent
     private Double aiConfidence;
     private String aiSources;
+
+    /** Split so the inbox can say whether a slow reply was the model or the delivery. */
+    private Integer aiGeneratedMs;
+    private Integer aiWaitedMs;
     private String sentiment;    // inbound messages only
     private String transcript;   // what a voice note said
 

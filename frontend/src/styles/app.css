@@ -613,6 +613,11 @@
     color: var(--text-muted); font-size: 14px; line-height: 1.7;
 }
 
+/* How long the AI took, beside the timestamp. Quiet by default; the wait turns amber
+   because a long one means the message was not delivered live. */
+.msg__timing { margin-left: 6px; opacity: .75; }
+.msg__timing--warn { color: var(--warning); opacity: 1; }
+
 .field__control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
 .field__control + .field__note { color: var(--text-muted); }
 

@@ -125,9 +125,14 @@ app:
     # anyone else, then set EMAIL_FROM to an address at that domain.
     from: ${EMAIL_FROM:EkSamadhan AI <onboarding@resend.dev>}
     enabled: ${EMAIL_ENABLED:true}
+  # Two pools: one for answering customers, one for everything nobody is waiting on. Core size
+  # is the real concurrency — a Spring executor only grows past it once the queue is full.
+  async:
+    reply-threads: ${ASYNC_REPLY_THREADS:6}
+    background-threads: ${ASYNC_BACKGROUND_THREADS:3}
   # Catching up on messages the live webhook never delivered — see SyncService.answerMissed.
   sync:
-    catch-up-after-seconds: ${SYNC_CATCH_UP_AFTER:60}
+    catch-up-after-seconds: ${SYNC_CATCH_UP_AFTER:30}
     catch-up-window-hours: ${SYNC_CATCH_UP_WINDOW_HOURS:12}
   # Browser notifications for agents (FR-06), over the Web Push standard. Blank keys turn
   # the feature off cleanly: the dashboard never asks for permission and nothing is sent.

@@ -33,26 +33,15 @@ public class MessageIngestedListener {
         this.agentNotifications = agentNotifications;
     }
 
-    @Async("taskExecutor")
+    // The customer's own pool: this must never queue behind a crawl or a history sync.
+    @Async("replyExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onMessageIngested(MessageIngested event) {
-        // Embed it for the conversation's semantic memory.
-        try {
-            memoryService.remember(event.messageId());
-        } catch (Exception e) {
-            log.debug("Could not embed message {}: {}", event.messageId(), e.getMessage());
-        }
-
-        // How the customer feels, read for every inbound message — including while an agent
-        // is handling the conversation, where the AI never runs and the mood would otherwise
-        // never be assessed.
-        if (event.inbound()) {
-            try {
-                sentimentService.analyse(event.messageId());
-            } catch (Exception e) {
-                log.debug("Sentiment failed for message {}: {}", event.messageId(), e.getMessage());
-            }
-        }
+        // Order matters, and it is the customer's clock that decides it. Everything below runs
+        // one after another on one thread, and a local model serves one request at a time, so
+        // anything done before the answer is time the customer spends waiting. Only two things
+        // go first: buzzing whoever owns the conversation, which is not a model call, and the
+        // answer itself. Sentiment and the semantic memory are for us, not for them.
 
         // Buzz the owner if a person already has this conversation. Before the AI runs, so
         // the status read here is the one that held when the customer wrote: a conversation
@@ -69,6 +58,27 @@ public class MessageIngestedListener {
                 log.error("AI reply failed for message {}", event.messageId(), e);
                 aiReplyService.escalateAfterFailure(event.messageId(), "the AI could not produce a reply");
             }
+        }
+
+        // How the customer feels, read for every inbound message — including while an agent
+        // is handling the conversation, where the AI never runs and the mood would otherwise
+        // never be assessed. After the reply: it is a second model call, the reply does not
+        // read it, and nobody is watching the sentiment pill the moment a message lands.
+        if (event.inbound()) {
+            try {
+                sentimentService.analyse(event.messageId());
+            } catch (Exception e) {
+                log.debug("Sentiment failed for message {}: {}", event.messageId(), e.getMessage());
+            }
+        }
+
+        // Embed it for the conversation's semantic memory. Also after the reply, because
+        // recall only ever looks at *earlier* messages — embedding this one first buys the
+        // answer nothing and costs it a round trip to the embedding API.
+        try {
+            memoryService.remember(event.messageId());
+        } catch (Exception e) {
+            log.debug("Could not embed message {}: {}", event.messageId(), e.getMessage());
         }
     }
 }

@@ -108,6 +108,18 @@ public class SocialMessage {
      * The knowledge passages this reply was drawn from, as "Title (52%)" entries — the audit
      * trail behind an AI answer, shown beside the conversation.
      */
+    /**
+     * How long the AI's own work took: retrieval, the model, and sending. Kept apart from
+     * {@link #aiWaitedMs} because a slow model and a message that never arrived look identical
+     * from the outside and need completely different fixes.
+     */
+    @Column(name = "ai_generated_ms")
+    private Integer aiGeneratedMs;
+
+    /** How long the customer's message sat before the AI started on it. */
+    @Column(name = "ai_waited_ms")
+    private Integer aiWaitedMs;
+
     @Column(name = "ai_sources", columnDefinition = "TEXT")
     private String aiSources;
 

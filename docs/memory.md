@@ -187,6 +187,83 @@ status machine and authentication have all since been built — see the change l
   with the conversation, so they show as initials. Nothing to fix server-side — there is no
   picture to fetch.
 
+- **Every AI reply now records two numbers, and the split is the point.** `ai_generated_ms` is
+  the AI's own work — retrieval, model, send — and `ai_waited_ms` is how long the customer's
+  message sat before that work began. A four-minute reply says nothing on its own; the pair says
+  whether the model is slow or the message never arrived live, which are unrelated problems with
+  unrelated fixes. Shown under each AI bubble, with the wait in amber past three seconds.
+- **Webhooks only arrive for accounts with a role on the Meta app.** Measured over two days:
+  Manjit (an app tester) is answered in 13–35s; the second test account in 74–542s, every one of
+  them via the catch-up sync. The same permission boundary explains that account's missing
+  profile photo — `GET /{psid}?fields=profile_pic` returns error 100 subcode 33. Not a bug to
+  fix in code: add the account under App Roles → Testers and accept the invite.
+- **The retry memo must key on the message, not the conversation.** Keyed on the thread, a
+  customer's *next* question was locked out for the full ten-minute interval — one reply took
+  282 seconds for that reason alone. A message is retried at most once; a new message is new
+  work.
+- **The sync did almost all of its work to discover it had nothing to do.** Every thirty
+  seconds, for every open dashboard, it pulled the messages of all 25 conversations, ran one
+  database query *per message* to see whether it already had it (a hundred queries for four
+  conversations), fetched every customer's profile from Meta again, and read every message in
+  the workspace twice over for the memory and sentiment backfills. Four fixes, in order of
+  value: skip conversations whose `updated_time` Meta says has not moved — it was already being
+  requested and thrown away; one `findKnownMetaIds` query instead of one per message; refresh
+  profiles at most every six hours rather than twice a minute; and ask the database for the
+  messages actually missing an embedding or a sentiment (0.33ms, 17 rows) instead of loading all
+  193 and filtering in Java.
+- **A cheap sync can be polled harder.** With unchanged conversations skipped, the dashboard
+  polls every 10s rather than 30s — which is what decides how quickly a message is noticed at
+  all when its webhook never arrives, and roughly halves that wait.
+
+- **One reply embedded the same question twice.** `RetrievalService.search` embedded it to
+  search the knowledge base, and `ConversationMemoryService.recallForThread` embedded the exact
+  same text again to recall earlier messages — about 1.4s each against a hosted model, so a
+  fifth of a 6.7s reply went on computing the same 1536 numbers twice. `EmbeddingClient.embed`
+  now keeps a bounded LRU keyed on model + text, which is safe because an embedding is a pure
+  function of both. It also makes a repeated question free, and customers repeat themselves.
+- **Where a 6.7s reply actually goes**, measured: ~1.4s embed for retrieval, ~1.4s embed again
+  for recall (now removed), ~1.6s model, ~0.4s Meta send, the rest prompt assembly and database
+  writes. Retrieval and the model cannot overlap — the passages are the prompt — so the honest
+  floor for this path is around 3.5s, most of it network rather than compute.
+
+- **A Spring executor only grows past its core size once the queue is full.** `core 2, max 5,
+  queue 100` never ran more than two things at once, whatever the max said — and those two
+  threads were shared by replies, history sync, crawling and indexing, so a 25-page crawl with
+  its politeness delays held a worker while customers waited. There are now two pools:
+  `replyExecutor` (6, `CallerRunsPolicy` so a burst is never dropped) for the customer-facing
+  path, and `taskExecutor` (3) for work nobody is waiting on. Core size is the real concurrency;
+  the queue is only a burst buffer.
+- **The local model is the real serialisation point, and no amount of threads fixes it.**
+  Measured: three concurrent requests to Ollama finished at +1.4s, +2.8s and +4.4s — perfectly
+  sequential, because `llama-server` runs with `-np 1`. More app threads let unrelated
+  conversations overlap in retrieval and sending, but the model call still queues.
+  `OLLAMA_NUM_PARALLEL` raises it, at the cost of memory and of splitting the context window
+  between slots. Worth stating in the report as the honest limit of local inference.
+
+- **Measured, on the real prompt: the AI is not the slow part.** A reply against a 112-character
+  knowledge base generates in **1.6s** (304 tokens in, 25 out) and lands in **6.7s** end to end,
+  while the message spent **66.8s** waiting to be delivered. Knowledge base size is irrelevant
+  to this — the prompt is ~300 tokens either way. An earlier 28.8s figure came from a synthetic
+  prompt that invited a long answer; the real system prompt demands two or three sentences.
+- **Local model latency tracks output length, not prompt size.** Measured on gemma4: 12–15s
+  holding output to 200 tokens regardless of whether the context was 550 or 5,500 characters,
+  4.8s for a tight 54-token JSON answer, and 28.8s when allowed to ramble to 2,500. If replies
+  need to be faster, cap `CHAT_MAX_TOKENS` before touching `top-k` — but watch for a truncated
+  JSON reply, which fails the parse and escalates.
+
+- **Meta stops delivering webhooks after repeated failures, and does not tell you.** The
+  subscription still reads `active: true` and `subscribed_fields: [messages, ...]`, the callback
+  URL still verifies, and a signed POST through the whole chain still returns 200 — while no
+  deliveries arrive at all. The proxy's own traffic log is the instrument that settles it: if
+  Meta were sending, a POST would appear there. Re-subscribing the page
+  (`POST /{page-id}/subscribed_apps`) re-arms delivery. Restarting the backend repeatedly while
+  testing is enough to trigger the back-off, so expect it after a working session.
+- **Answer everything the customer has said since the last reply, not just the newest.** People
+  ask in two or three goes. "list products" was never answered because a second question arrived
+  before the catch-up ran, and the catch-up answers the latest message only. The prompt now
+  carries the whole outstanding run, capped at four messages within the last ten — a
+  conversation nobody has answered for fifty messages belongs to a person, not to a bulk reply.
+
 - **The AI only ever ran from the live webhook, so downtime meant silence.** `SyncService`
   published `MessageIngested` for outbound messages only; an inbound message it stored — which
   is what happens to anything that arrives while the app is down, or whose webhook Meta fails

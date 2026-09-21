@@ -34,12 +34,13 @@ public class SyncService {
     /**
      * How long the live path gets before the sync considers a message missed.
      *
-     * The floor is the slowest reply the live path can legitimately still be working on — a
-     * local model reading an image runs to about fifteen seconds — because a catch-up fired
-     * underneath one of those would answer the customer twice. Sixty leaves a wide margin and
-     * still recovers a missed message inside a minute and a half.
+     * The floor is the slowest reply the live path could still be working on, because a
+     * catch-up fired underneath one would answer the customer twice. Measured on this setup, a
+     * reply takes 1.6s to generate and 6.7s end to end including retrieval and the send, so
+     * thirty seconds is roughly four times the observed worst case — while halving what a
+     * customer waits when a webhook never arrives, which is the common case in development.
      */
-    @org.springframework.beans.factory.annotation.Value("${app.sync.catch-up-after-seconds:60}")
+    @org.springframework.beans.factory.annotation.Value("${app.sync.catch-up-after-seconds:30}")
     private long catchUpAfterSeconds;
 
     /**
@@ -51,15 +52,34 @@ public class SyncService {
     private long catchUpWindowHours;
 
     /**
-     * Conversations already retried, and when.
+     * Messages already retried, and when.
      *
-     * The unanswered count is not enough on its own: while a reply is being written the
-     * conversation still looks unanswered, so the next sync thirty seconds later asks for
-     * another one. That is not theoretical — it sent a customer the same answer three times.
-     * Remembering the attempt closes the window, and holding it in memory is right for what
-     * this is: after a restart one extra retry is the correct behaviour anyway.
+     * Keyed on the message, not the conversation. The unanswered count alone is not enough —
+     * while a reply is being written the conversation still looks unanswered, so the next sync
+     * asks for another one, which sent a customer the same answer three times. But keying the
+     * memo on the conversation was worse in the other direction: the customer's *next* question
+     * was then locked out for the full interval, once for 282 seconds. A message is retried at
+     * most once; a new message is new work.
      */
     private final Map<UUID, Instant> retried = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * The {@code updated_time} we last processed for each Meta conversation.
+     *
+     * Meta hands this to us in the conversation listing and it is exactly what we need: if it
+     * has not moved, nothing has been said, and pulling that conversation's messages again is a
+     * round trip to Meta plus a pile of database lookups to rediscover that. The sync did that
+     * for every conversation, every thirty seconds, for as long as a dashboard was open.
+     *
+     * In memory on purpose. It is a cache, not a record: losing it costs one full pass.
+     */
+    private final Map<String, String> conversationSeen = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** When each page's customer profiles were last read from Meta. */
+    private final Map<UUID, Instant> profilesRefreshed = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** How long a stored name and photo are trusted before Meta is asked again. */
+    private static final Duration PROFILE_FRESH_FOR = Duration.ofHours(6);
 
     /** Long enough to cover a slow local model and the sync interval behind it. */
     private static final Duration RETRY_INTERVAL = Duration.ofMinutes(10);
@@ -140,10 +160,25 @@ public class SyncService {
 
             log.info("✅ Found {} conversations for {}", conversations.size(), page.getPageName());
 
-            // For each conversation, fetch messages
+            // Only the conversations Meta says have moved since we last looked.
+            int skipped = 0;
             for (Map<String, Object> conversation : conversations) {
                 String conversationId = (String) conversation.get("id");
+                String updatedAt = (String) conversation.get("updated_time");
+
+                if (updatedAt != null && updatedAt.equals(conversationSeen.get(conversationId))) {
+                    skipped++;
+                    continue;
+                }
+
                 syncConversationMessages(conversationId, page, token);
+
+                // Recorded after the fetch, so a failure mid-way is retried next time rather
+                // than being marked as seen and quietly skipped forever.
+                if (updatedAt != null) conversationSeen.put(conversationId, updatedAt);
+            }
+            if (skipped > 0) {
+                log.debug("Skipped {} unchanged conversation(s) for {}", skipped, page.getPageName());
             }
             
             log.info("✅ Finished history sync for page: {}", page.getPageName());
@@ -170,9 +205,28 @@ public class SyncService {
                 return;
             }
 
-            log.info("📥 Processing {} messages from conversation {}", messages.size(), conversationId);
+            // One query to find out which of these we already hold, rather than one per
+            // message. Nearly all of them are always already held, so this is the difference
+            // between twenty-five round trips to the database and one.
+            List<String> ids = messages.stream()
+                    .map(m -> (String) m.get("id"))
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+            Set<String> known = new HashSet<>(ids.isEmpty()
+                    ? List.of() : messageRepository.findKnownMetaIds(ids));
 
-            for (Map<String, Object> messageData : messages) {
+            List<Map<String, Object>> fresh = messages.stream()
+                    .filter(m -> !known.contains((String) m.get("id")))
+                    .toList();
+
+            if (fresh.isEmpty()) {
+                log.debug("Conversation {}: all {} messages already stored", conversationId, messages.size());
+                return;
+            }
+            log.info("📥 {} new message(s) of {} in conversation {}",
+                    fresh.size(), messages.size(), conversationId);
+
+            for (Map<String, Object> messageData : fresh) {
                 try {
                     processSingleMessage(messageData, page);
                 } catch (Exception e) {
@@ -190,9 +244,10 @@ public class SyncService {
         String tenantId = page.getOrganization().getApiKey();
         String metaMessageId = (String) messageData.get("id");
 
-        // De-duplication: Check if message already exists
+        // Still checked per message even though the caller filtered: a webhook can store the
+        // same message between that query and this one.
         if (messageRepository.existsByMetaMessageId(metaMessageId)) {
-            log.info("⏭ De-dupe: Message {} already in DB. Skipping.", metaMessageId);
+            log.debug("⏭ De-dupe: Message {} already in DB. Skipping.", metaMessageId);
             return;
         }
 
@@ -353,10 +408,9 @@ public class SyncService {
         retried.values().removeIf(at -> at.isBefore(Instant.now().minus(RETRY_INTERVAL)));
 
         for (ConversationThread thread : waiting) {
-            if (retried.putIfAbsent(thread.getId(), Instant.now()) != null) continue;
-
             messageRepository.findLatestInbound(thread, org.springframework.data.domain.PageRequest.of(0, 1))
                     .stream().findFirst()
+                    .filter(message -> retried.putIfAbsent(message.getId(), Instant.now()) == null)
                     .ifPresent(message -> {
                         log.info("🔁 No reply went out for {} in conversation {} — answering it now",
                                 thread.getCustomerName(), thread.getId());
@@ -392,12 +446,20 @@ public class SyncService {
     /**
      * Fills in customer names and profile pictures.
      *
-     * Messages stored before profile lookup existed have neither, and Meta's photo URLs
-     * expire, so this refreshes them on every sync rather than only on first contact.
-     * One Graph call per customer, not per message.
+     * Messages stored before profile lookup existed have neither, and Meta's photo URLs go
+     * stale, so this refreshes rather than only filling in on first contact. One Graph call per
+     * customer, not per message — and, since the dashboard calls the sync every thirty seconds,
+     * not on every sync either: a customer whose profile was read an hour ago is read again
+     * tomorrow, not twice a minute. A name and a photo are not worth an API call a minute.
      */
     @Transactional
     public void refreshCustomerProfiles(SocialPage page) {
+        Instant refreshedAfter = Instant.now().minus(PROFILE_FRESH_FOR);
+        if (profilesRefreshed.getOrDefault(page.getId(), Instant.EPOCH).isAfter(refreshedAfter)) {
+            return;
+        }
+        profilesRefreshed.put(page.getId(), Instant.now());
+
         List<SocialMessage> messages = messageRepository.findByPageId(page.getPageId());
 
         Set<String> customerIds = messages.stream()

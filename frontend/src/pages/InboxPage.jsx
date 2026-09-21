@@ -63,6 +63,27 @@ function PersonAvatar({ name, url, size = 36, className = '' }) {
         : <span className={`avatar ${className}`} style={style} aria-hidden="true">{initials(name)}</span>;
 }
 
+/**
+ * Above this, the wait before the AI started is worth showing on its own.
+ *
+ * A webhook delivers in well under a second, so anything past a few seconds means the message
+ * was not delivered live and was picked up by the catch-up sync instead. That is a different
+ * problem from a slow model, and the whole point of showing the two numbers apart.
+ */
+const SLOW_DELIVERY_MS = 3000;
+
+/** Named apart from the recorder's formatDuration, which counts seconds, not milliseconds. */
+const formatMillis = (ms) => (ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`);
+
+const aiTimingDetail = (m) =>
+    `The AI took ${formatMillis(m.aiGeneratedMs)} to retrieve, answer and send.`
+    + (m.aiWaitedMs != null
+        ? ` The message waited ${formatMillis(m.aiWaitedMs)} before it reached the AI`
+          + (m.aiWaitedMs > SLOW_DELIVERY_MS
+              ? ' — that long a wait means it arrived through the catch-up sync rather than a live webhook.'
+              : '.')
+        : '');
+
 /** Long threads render in pages so the DOM stays small and scrolling stays smooth. */
 const PAGE_SIZE = 30;
 
@@ -548,6 +569,16 @@ export default function InboxPage({
                                                 )}
                                                 <div className="msg__meta">
                                                     {m.status === 'sending' ? 'Sending…' : formatTime(m.timestamp)}
+                                                    {isAi && m.aiGeneratedMs != null && (
+                                                        <span className="msg__timing" title={aiTimingDetail(m)}>
+                                                            {formatMillis(m.aiGeneratedMs)}
+                                                            {m.aiWaitedMs > SLOW_DELIVERY_MS && (
+                                                                <span className="msg__timing--warn">
+                                                                    {' '}· waited {formatMillis(m.aiWaitedMs)}
+                                                                </span>
+                                                            )}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
 

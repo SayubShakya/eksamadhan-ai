@@ -34,6 +34,42 @@ public interface SocialMessageRepository extends JpaRepository<SocialMessage, UU
             "SELECT m FROM SocialMessage m LEFT JOIN FETCH m.thread WHERE m.id = :id")
     java.util.Optional<SocialMessage> findWithThreadById(java.util.UUID id);
 
+    /**
+     * Which of these Meta ids we already hold.
+     *
+     * The sync used to ask that one message at a time, so a poll over four conversations ran a
+     * hundred queries to discover it had nothing to do. One query answers the same question.
+     */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT m.metaMessageId FROM SocialMessage m WHERE m.metaMessageId IN :ids")
+    java.util.List<String> findKnownMetaIds(java.util.Collection<String> ids);
+
+    /**
+     * Messages still missing their conversation-memory vector.
+     *
+     * The backfill used to read every message in the workspace on every sync and check each one
+     * in Java. Asking the database the actual question means a quiet workspace costs one
+     * indexed lookup that returns nothing.
+     */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT m FROM SocialMessage m WHERE m.tenantId = :tenantId "
+          + "AND NOT EXISTS (SELECT e FROM MessageEmbedding e WHERE e.socialMessageId = m.id) "
+          + "ORDER BY m.timestamp")
+    java.util.List<SocialMessage> findWithoutEmbedding(String tenantId);
+
+    /** Inbound messages whose sentiment has never been read. Same reasoning as above. */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT m FROM SocialMessage m WHERE m.tenantId = :tenantId AND m.sentiment IS NULL "
+          + "AND m.direction = 'inbound' AND m.text IS NOT NULL AND m.text <> '' "
+          + "ORDER BY m.timestamp")
+    java.util.List<SocialMessage> findWithoutSentiment(String tenantId);
+
+    /** The tail of a conversation, newest first — see {@code AiReplyService.outstanding}. */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT m FROM SocialMessage m WHERE m.thread = :thread ORDER BY m.timestamp DESC")
+    java.util.List<SocialMessage> findRecent(io.eksamadhan.model.ConversationThread thread,
+                                             org.springframework.data.domain.Pageable page);
+
     /** The customer's most recent message in a conversation — what the AI owes an answer to. */
     @org.springframework.data.jpa.repository.Query(
             "SELECT m FROM SocialMessage m WHERE m.thread = :thread AND m.direction = 'inbound' "
