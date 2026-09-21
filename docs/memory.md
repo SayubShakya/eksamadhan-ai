@@ -166,7 +166,9 @@ status machine and authentication have all since been built — see the change l
   key in the environment and no vendor in the path, and reaches Chrome, Firefox, Edge and an
   installed Android app through each browser's own push service. VAPID is the only credential.
   Belongs in the final report's Deviations section next to pgvector-for-Pinecone. The PRD was
-  rewritten to match on 2026-09-18 (§4.6, §6.1, §6.2, §7), along with §4.3 and §6.1's
+  rewritten to match on 2026-09-18 (§4.6, §6.1, §6.2, §7) and given a §9 "Changes from the
+  Original Proposal" recording all three substitutions with their justifications, along with
+  §4.3 and §6.1's
   Pinecone and "OpenAI API" entries — the PRD now names pgvector, local Ollama with OpenRouter
   as the alternative, and the hosted embedding model, so it matches what a marker running the
   repository would see.
@@ -278,6 +280,24 @@ status machine and authentication have all since been built — see the change l
   restart one extra retry is the right behaviour anyway. The window has a far end too (12
   hours): without it, connecting a page for the first time would answer everything it was ever
   sent.
+
+- **"We have no documentation for that" is not "that is none of our business".** Weak
+  retrieval was treated as proof a message was off-topic, so it counted toward the streak that
+  closes a conversation as spam. Caught on a real one: *"Is there ear pods air in your store?"*
+  retrieved nothing — because no product catalogue had been uploaded — and was escalated with
+  the reason "the question is not about this business", three of which would have shut a
+  genuine customer out. The model now returns a separate `related` flag, and only a message
+  that is both weakly retrieved *and* unrelated is counted. Measured on gemma4: "ear pods",
+  "do you sell laptops" → related; "who won the football", "capital of France" → unrelated.
+  The flag defaults to related when a model omits it: a needless handover costs an agent a
+  minute, while the other mistake closes the door on a customer.
+
+- **Every alert is recorded as well as pushed.** A browser notification is gone once
+  dismissed, never arrives at all where permission was declined, and cannot be shown to anyone
+  watching a demo. `AgentNotificationService.deliver` writes a `notifications` row and pushes in
+  the same call, so the bell in the header and the notification on a phone can never tell
+  different stories — and the VAPID path becomes visible without depending on VAPID working.
+  Opening the bell marks everything read in one UPDATE, not one per row.
 
 - **The permission prompt is asked by the app, not by the browser.** Signing in shows an
   explained dialog; `Notification.requestPermission()` only runs when someone clicks Enable.

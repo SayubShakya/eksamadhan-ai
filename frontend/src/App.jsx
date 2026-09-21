@@ -515,6 +515,11 @@ export default function App() {
                     showSearch={view === 'inbox'}
                     onEditProfile={() => setProfileOpen(true)}
                     onSignOut={handleSignOut}
+                    onOpenThread={(threadId) => {
+                        const match = allThreads.find(t => t.id === threadId);
+                        if (match) setActive(match);
+                        setView('inbox');
+                    }}
                 />
 
                 {view === 'home' && (

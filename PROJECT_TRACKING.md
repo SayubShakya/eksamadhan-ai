@@ -124,7 +124,7 @@ expire after 7 days — re-send if it lapses.
 
 ---
 
-## Week 2 — 2026-09-22 to 2026-09-28
+## Week 2 — 2026-09-17 to 2026-09-24
 
 **Accomplished**
 
@@ -192,7 +192,8 @@ expire after 7 days — re-send if it lapses.
       own prompt unannounced. The PRD's notification sections (§4.6, §6.1, §6.2, §7) now
       describe Web Push rather than FCM. Its §4.3 and §6.1 now also match what the code runs:
       pgvector rather than Pinecone, and local Ollama (`gemma4:latest`) with OpenRouter as the
-      hosted alternative rather than "OpenAI API".
+      hosted alternative rather than "OpenAI API". A new §9 records all three substitutions
+      with the reasoning, ready to lift into the final report's Deviations section
       Verified end to end against a stand-in browser that decrypted the payload and checked the
       VAPID signature, and unit-tested twice over: the encryption against RFC 8291's own worked
       example, and the send-or-not rules against the cases that fail silently. With nobody
@@ -204,6 +205,13 @@ expire after 7 days — re-send if it lapses.
       throttled to six hours, and the two backfills ask for the rows that need work instead of
       reading the whole workspace on every poll. The dashboard now polls every 10s, not 30s
 - [x] Embeddings are cached, removing a duplicate call that cost about a fifth of every reply
+- [x] **Fixed genuine customers being treated as spam** — a question about a product the
+      knowledge base does not cover was counted as off-topic, and three of them closed the
+      conversation. The AI now judges whether a message concerns the business separately from
+      whether it can answer it
+- [x] A notification bell in the header lists every alert an agent was sent, so the alerts are
+      readable in the dashboard as well as pushed to their devices
+- [x] Instagram linked and connected alongside Facebook — one inbox, one pipeline
 - [x] **Conversations are answered concurrently** — the customer-facing path has its own thread
       pool, sized for conversations in flight, so a reply can no longer queue behind a website
       crawl or a history sync. Measured limit documented: the local model serves one request at
@@ -258,11 +266,48 @@ expire after 7 days — re-send if it lapses.
 - [x] The conversation panel shows who is handling it, and which knowledge passages the AI's
       last answer used, with match scores
 
+**Commits this week**
+
+<!-- Regenerate before submitting:
+     git log --since=2026-09-17 --until=2026-09-25 --pretty='- %ad `%h` %s' --date=short -->
+
+- 2026-09-21 `e279d22` perf: stop the sync re-reading everything every thirty seconds
+- 2026-09-18 `3e69653` fix: fall back to initials when a customer photo will not load
+- 2026-09-18 `9a2f9ce` feat: alert agents by browser push when a customer needs a human
+- 2026-09-18 `3cad987` feat: notify agents on their own devices with Web Push
+- 2026-09-17 `f2dbba1` fix: crawler indexed a hidden modal instead of the page
+- 2026-09-17 `949efeb` feat: keep the text each knowledge source was read as
+- 2026-09-17 `4cce574` Crawl a website into the knowledge base
+- 2026-09-17 `473121a` fix: voice transcripts were never persisted
+- 2026-09-17 `37b2c51` Answer voice messages, and default local chat to gemma4
+- 2026-09-17 `347fddd` Switch chat provider with a single AI_CHAT_PROVIDER variable
+- 2026-09-17 `c2f0295` Store pictures in the knowledge base, paired with what they show
+- 2026-09-17 `3ea5e19` docs: add a product catalogue sample with measured retrieval
+- 2026-09-17 `bb41503` Rework the conversation panel, and answer image messages
+- 2026-09-17 `5c96b46` Distinguish your own messages from the AI's and colleagues'
+- 2026-09-17 `9b98139` Add accounts, RAG knowledge base, AI replies and human handover
+- 2026-09-17 `e450275` feat: manage the schema with flyway migrations
+- 2026-09-17 `5257bb0` feat: drive the inbox from server-side conversation threads
+- 2026-09-17 `9d6a4ad` feat: add conversation threads with a status machine
+- 2026-09-17 `ba57745` feat: blurred backdrop for dialogs
+
+_(pending commit: the sync, concurrency and embedding-cache work, and this report)_
+
+**Progress report**
+
+- [`docs/weekly-reports/week-02/`](docs/weekly-reports/week-02/) — report 2, covering
+  17–24 September 2026
+
 **Plan for next week**
 
-- Verify a sending domain so invitations reach real people
+- Add "Sign in with Google" via Firebase Authentication, alongside the existing email sign-in
+- Rework the interface to match the Figma prototype, and finish the phone layout
+- Make the dashboard installable as a Progressive Web App (PWA) — a manifest, icons and an
+  install prompt. The service worker already exists, added for push notifications
 - Agent availability (FR-05) so routing only considers members marked online, and the remaining
   escalation triggers (negative sentiment, an explicit "talk to a human")
+- The website chat widget (FR-10), the third channel after Facebook and Instagram
+- Verify a sending domain so invitations reach real people
 
 **Blockers**
 
@@ -278,10 +323,10 @@ expire after 7 days — re-send if it lapses.
   has no "Request review" action. The project proceeds in Development mode with
   authorised Testers — functionally identical, only the permitted senders differ. This
   belongs in the final report's Limitations section.
-- **Instagram↔Page link still blocked.** The restriction from 2026-09-16 had not lifted
-  by 2026-09-17. Retrying repeatedly extends it, so leave it a week and try once. If it
-  is still refused, Instagram is dropped: it shares the webhook, parser and inbox with
-  Facebook, so the architecture is demonstrated either way. Record as a limitation.
+- ~~**Instagram↔Page link blocked.**~~ Resolved — the restriction from 2026-09-16 lifted and
+  the Instagram account is linked and connected. Both channels share one webhook, parser and
+  inbox, so the multi-channel requirement (FR-01) is now demonstrated on real accounts rather
+  than argued from the architecture.
 
 ---
 

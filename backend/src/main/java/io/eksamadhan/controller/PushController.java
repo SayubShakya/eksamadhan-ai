@@ -28,13 +28,16 @@ public class PushController {
     private final PushSubscriptionRepository subscriptions;
     private final PushService pushService;
     private final CurrentUser currentUser;
+    private final io.eksamadhan.service.AgentNotificationService agentNotifications;
 
     public PushController(PushSubscriptionRepository subscriptions,
                           PushService pushService,
-                          CurrentUser currentUser) {
+                          CurrentUser currentUser,
+                          io.eksamadhan.service.AgentNotificationService agentNotifications) {
         this.subscriptions = subscriptions;
         this.pushService = pushService;
         this.currentUser = currentUser;
+        this.agentNotifications = agentNotifications;
     }
 
     /**
@@ -115,10 +118,7 @@ public class PushController {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "This browser is not subscribed yet.");
         }
-        pushService.notify(me, new PushService.Notification(
-                "Notifications are working",
-                "This is how a waiting conversation will reach you.",
-                "/dashboard/inbox", "test"));
+        agentNotifications.test(me);
         return Map.of("sent", true, "devices", devices);
     }
 }

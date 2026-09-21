@@ -1,6 +1,7 @@
 import { IconSearch, IconMenu, IconSignOut } from './icons.jsx';
 import { LogoMark } from './Logo.jsx';
 import Avatar from './Avatar.jsx';
+import NotificationBell from './NotificationBell.jsx';
 import { fullName } from '../lib/avatar.js';
 
 const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', AGENT: 'Agent' };
@@ -16,6 +17,7 @@ const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', AGENT: 'Agent' };
 export default function TopBar({
     query, onQueryChange, user,
     onToggleNav, onHome, unread = 0, navOpen, showSearch, onEditProfile, onSignOut,
+    onOpenThread,
 }) {
     const role = ROLE_LABEL[user?.role] ?? user?.role ?? '';
     return (
@@ -46,6 +48,10 @@ export default function TopBar({
                     />
                 </div>
             )}
+
+            {/* Before the account chip: the same alerts that go out as browser
+                notifications, readable here whatever a device did with them. */}
+            <NotificationBell onOpenThread={onOpenThread} />
 
             <button className="user" onClick={onEditProfile} aria-label="Edit profile">
                 <span className="user__text">

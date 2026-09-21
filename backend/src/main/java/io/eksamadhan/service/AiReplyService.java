@@ -65,7 +65,14 @@ public class AiReplyService {
             no markdown, no bullet points.
 
             Reply with JSON only, no code fence:
-            {"answered": true|false, "confidence": 0.0-1.0, "reply": "..."}
+            {"related": true|false, "answered": true|false, "confidence": 0.0-1.0, "reply": "..."}
+
+            "related" is whether the message has anything to do with this business at all — a \
+            question about its products, orders, prices, shipping or hours, or ordinary \
+            conversation with it. A question about a product you have not been given details \
+            of is still related: not knowing the answer is not the same as the customer asking \
+            about something else. Set it to false only for messages that have nothing to do \
+            with the business, such as football scores or politics.
 
             "confidence" is how well the context supports your reply. For a conversational \
             message, use 1.0.
@@ -214,15 +221,17 @@ public class AiReplyService {
             log.info("AI declined \"{}\" (answered={}, confidence={}, best passage {})",
                     abbreviate(question), verdict.answered(), round(verdict.confidence()), round(best));
 
-            // Declining with nothing relevant retrieved means the message was not about this
-            // business at all. Escalating those hands an agent someone else's entertainment,
-            // so they are counted instead, and a run of them closes the conversation.
-            if (weakContext) {
+            // Only a message that has nothing to do with the business is treated as a
+            // nuisance. Weak retrieval alone used to decide this, which was wrong in the case
+            // that matters most: "do you sell ear buds?" retrieves nothing when no product
+            // catalogue has been uploaded, and that is a real customer asking a real question.
+            // Counting them as off-topic closed their conversation after three.
+            if (weakContext && !verdict.related()) {
                 handleUnrelated(thread, page, message.getSenderId());
                 return;
             }
 
-            // Relevant content exists but does not answer it: a real question, for a person.
+            // A real question the AI cannot answer: a person takes it.
             resetOffTopic(thread);
             escalate(thread, page, message.getSenderId(), verdict.answered()
                     ? "the AI was not confident enough to answer"
@@ -403,7 +412,18 @@ public class AiReplyService {
         return prompt.toString();
     }
 
-    private record Verdict(boolean answered, double confidence, String reply) {}
+    /**
+     * @param related whether the message concerns this business at all. Separate from
+     *                {@code answered} on purpose: "we have no documentation for that" and
+     *                "that has nothing to do with us" look identical to retrieval and call for
+     *                opposite responses — a person, or the door.
+     */
+    private record Verdict(boolean related, boolean answered, double confidence, String reply) {}
+
+    /** A reply we could not read: treated as a refusal, and as a real customer. */
+    private static Verdict unreadable() {
+        return new Verdict(true, false, 0, "");
+    }
 
     /**
      * Models wrap JSON in prose or a code fence often enough that this has to be tolerant —
@@ -414,16 +434,21 @@ public class AiReplyService {
             String json = raw.strip();
             int start = json.indexOf('{');
             int end = json.lastIndexOf('}');
-            if (start < 0 || end <= start) return new Verdict(false, 0, "");
+            if (start < 0 || end <= start) return unreadable();
 
             JsonNode node = objectMapper.readTree(json.substring(start, end + 1));
             return new Verdict(
+                    // Defaults to related. A model that omits the field, or an older one that
+                    // does not know about it, must not have its silence read as "this customer
+                    // is a nuisance" — the cost of being wrong that way is a closed
+                    // conversation, against a needless handover the other way.
+                    node.path("related").asBoolean(true),
                     node.path("answered").asBoolean(false),
                     node.path("confidence").asDouble(0),
                     node.path("reply").asString(""));
         } catch (Exception e) {
             log.warn("Could not parse the model's reply as JSON: {}", abbreviate(raw));
-            return new Verdict(false, 0, "");
+            return unreadable();
         }
     }
 

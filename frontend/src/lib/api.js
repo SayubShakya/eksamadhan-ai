@@ -144,3 +144,5 @@ export const subscribeToPush = (subscription) =>
 export const unsubscribeFromPush = (subscription) =>
     axios.post('/api/push/unsubscribe', subscription).then(r => r.data);
 export const sendTestPush = () => axios.post('/api/push/test').then(r => r.data);
+export const getNotifications = () => axios.get('/api/notifications').then(r => r.data);
+export const markNotificationsRead = () => axios.post('/api/notifications/read').then(r => r.data);

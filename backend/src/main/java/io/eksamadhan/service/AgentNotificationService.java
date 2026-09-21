@@ -5,6 +5,8 @@ import io.eksamadhan.model.Organization;
 import io.eksamadhan.model.SocialMessage;
 import io.eksamadhan.model.ThreadStatus;
 import io.eksamadhan.model.User;
+import io.eksamadhan.model.Notification;
+import io.eksamadhan.repository.NotificationRepository;
 import io.eksamadhan.repository.SocialMessageRepository;
 import io.eksamadhan.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -35,13 +37,39 @@ public class AgentNotificationService {
     private final PushService pushService;
     private final SocialMessageRepository messageRepository;
     private final UserRepository userRepository;
+    private final NotificationRepository notificationRepository;
 
     public AgentNotificationService(PushService pushService,
                                     SocialMessageRepository messageRepository,
-                                    UserRepository userRepository) {
+                                    UserRepository userRepository,
+                                    NotificationRepository notificationRepository) {
         this.pushService = pushService;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
+        this.notificationRepository = notificationRepository;
+    }
+
+    /**
+     * Records the alert and pushes it, in that order.
+     *
+     * One method for both so the bell in the dashboard and the notification on a phone can
+     * never tell different stories. The record is what survives: a push is gone once dismissed,
+     * and never arrives at all on a device that declined permission.
+     */
+    private void deliver(User agent, Notification.Kind kind, java.util.UUID threadId,
+                         String title, String body, String url) {
+        try {
+            notificationRepository.save(Notification.builder()
+                    .user(agent).kind(kind).threadId(threadId)
+                    .title(title).body(body).url(url)
+                    .build());
+        } catch (Exception e) {
+            // A push that arrives without being recorded is still better than no push.
+            log.debug("Could not record the notification: {}", e.getMessage());
+        }
+
+        pushService.notify(agent, new PushService.Notification(
+                title, body, url, threadId == null ? "eksamadhan" : "thread-" + threadId));
     }
 
     /**
@@ -55,13 +83,12 @@ public class AgentNotificationService {
     public void escalated(User agent, ConversationThread thread, String reason) {
         if (agent == null || thread == null) return;
         try {
-            pushService.notify(agent, new PushService.Notification(
+            deliver(agent, Notification.Kind.ESCALATED, thread.getId(),
                     "🚨 " + customerOf(thread) + " needs human support",
                     reason == null || reason.isBlank()
                             ? preview(thread.getLastMessagePreview())
                             : "Handed to you because " + reason + ".",
-                    "/dashboard/inbox?thread=" + thread.getId(),
-                    "thread-" + thread.getId()));
+                    "/dashboard/inbox?thread=" + thread.getId());
         } catch (Exception e) {
             log.debug("Could not push the escalation: {}", e.getMessage());
         }
@@ -87,12 +114,11 @@ public class AgentNotificationService {
                 return;
             }
             for (User admin : admins) {
-                pushService.notify(admin, new PushService.Notification(
+                deliver(admin, Notification.Kind.ESCALATED, thread.getId(),
                         "🚨 " + customerOf(thread) + " needs human support",
                         "Nobody is assigned — " + (reason == null || reason.isBlank()
                                 ? preview(thread.getLastMessagePreview()) : reason + "."),
-                        "/dashboard/inbox?thread=" + thread.getId(),
-                        "thread-" + thread.getId()));
+                        "/dashboard/inbox?thread=" + thread.getId());
             }
         } catch (Exception e) {
             log.debug("Could not push an unassigned escalation: {}", e.getMessage());
@@ -111,14 +137,21 @@ public class AgentNotificationService {
         if (by != null && by.getId().equals(agent.getId())) return;
         try {
             String who = by == null ? "A colleague" : displayName(by);
-            pushService.notify(agent, new PushService.Notification(
+            deliver(agent, Notification.Kind.ASSIGNED, thread.getId(),
                     who + " assigned you a conversation",
                     customerOf(thread) + " — " + preview(thread.getLastMessagePreview()),
-                    "/dashboard/inbox?thread=" + thread.getId(),
-                    "thread-" + thread.getId()));
+                    "/dashboard/inbox?thread=" + thread.getId());
         } catch (Exception e) {
             log.debug("Could not push the assignment: {}", e.getMessage());
         }
+    }
+
+    /** The "Send a test" button, which should exercise the bell as well as the push. */
+    public void test(User agent) {
+        deliver(agent, Notification.Kind.TEST, null,
+                "Notifications are working",
+                "This is how a waiting conversation will reach you.",
+                "/dashboard/inbox");
     }
 
     private String displayName(User user) {
@@ -148,13 +181,12 @@ public class AgentNotificationService {
             if (agent == null) return;
 
             String text = message.getText() != null ? message.getText() : message.getContent();
-            pushService.notify(agent, new PushService.Notification(
+            // Tagged per conversation inside deliver(), so a customer sending four lines in a
+            // row replaces one notification rather than stacking four.
+            deliver(agent, Notification.Kind.CUSTOMER_REPLIED, thread.getId(),
                     customerOf(thread),
                     preview(text == null || text.isBlank() ? thread.getLastMessagePreview() : text),
-                    "/dashboard/inbox?thread=" + thread.getId(),
-                    // Tagged per conversation, so a customer sending four lines in a row
-                    // replaces one notification rather than stacking four.
-                    "thread-" + thread.getId()));
+                    "/dashboard/inbox?thread=" + thread.getId());
         } catch (Exception e) {
             log.debug("Could not push a customer reply: {}", e.getMessage());
         }

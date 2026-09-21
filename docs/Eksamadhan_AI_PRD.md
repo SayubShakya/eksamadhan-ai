@@ -139,3 +139,26 @@ The plaintext inside, readable only by that browser:
 1. **Deflection Rate**: % of queries solved by AI without human intervention (Target: >60%).
 2. **Response Time**: Average time for a human agent to pick up an escalated ticket.
 3. **Integration Success**: % of users successfully linking Meta accounts without OAuth errors.
+
+---
+
+## 9. Changes from the Original Proposal
+
+Three components named in the submitted report were replaced during implementation. Each is
+a substitution of tooling, not of scope: every requirement above is still met. The reasoning
+is recorded here because it belongs in the final report's Limitations and Deviations section.
+
+| Proposed | Built | Why |
+| :--- | :--- | :--- |
+| **Pinecone** (vector database) | **pgvector**, inside the PostgreSQL database already required by §6.1 | Removes a third-party account and a synchronisation path that can drift out of step. Deleting a customer's data becomes one cascading delete inside a single transaction, which matters for GDPR, rather than a best-effort call to a remote service. |
+| **Firebase Cloud Messaging** (alerts) | **Web Push with VAPID** — the browser standard FCM itself is built on | Needs no Google project and no service-account key, and reaches Chrome, Firefox, Edge and an installed Android app through each browser's own push service. The message is encrypted end to end (RFC 8291), so the push service relaying a customer's name and question cannot read either. |
+| **OpenAI API** (answer generation) | **A local model via Ollama**, with **OpenRouter** as a hosted alternative behind one setting | Running locally costs nothing per reply and keeps customer messages on the machine, which suits a student project with live customer data. Both speak the same API, so deployment can switch to the hosted model without a code change. Embeddings deliberately stay hosted: the database column is a fixed width, so a different embedding model would require a migration and a full re-index. |
+
+Two further points of record:
+
+- **Meta App Review could not be applied for.** It requires Business Verification, which this
+  account is blocked from completing and offers no appeal. The platform therefore runs in
+  Meta's Development mode with registered test accounts. This changes who is permitted to
+  message the page, not how anything works.
+- **The knowledge engine accepts more sources than §4.3 specified** — pasted text, PDF
+  uploads, images paired with a caption, and a website address that is crawled page by page.
