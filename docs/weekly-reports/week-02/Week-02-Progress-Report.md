@@ -1,78 +1,60 @@
-# Weekly Progress Report — Week 2
+**UNIVERSITY OF BEDFORDSHIRE**
+**DEPARTMENT OF COMPUTER SCIENCE AND TECHNOLOGY**
+**FINAL YEAR UG PROJECT**
+**WEEKLY PROGRESS REPORT FORM**
 
-**University of Bedfordshire · Department of Computer Science and Technology**
-Final Year UG Project
+Student's Name:    Sayub Shakya    Supervisor's Name:    Pawan KC
 
-| | |
-| :--- | :--- |
-| **Student** | Sayub Shakya |
-| **Supervisor** | Pawan KC |
-| **Project** | EkSamadhan AI: A SaaS Customer Support Platform with Hybrid AI Human Escalation for E-Commerce |
-| **Date** | 24 September 2026 |
-| **Report No.** | 2 |
-| **Period covered** | 17–24 September 2026 |
+Project Title:    EkSamadhan-AI: A SaaS Customer Support Platform with Hybrid AI Human Escalation for E Commerce
 
----
+Date:        24 September 2026    Report No.:    2
 
-## Summary of progress
 
-The AI now answers customers on Facebook and Instagram by itself, using the shop's own
-information, and hands the chat to a person when it cannot answer.
+**Summary of progress**
 
-### Tasks done
+The AI now answers customers on Facebook and Instagram by itself, using the shop's own information, and hands the chat to a person when it cannot answer.
 
-- **Login and teams.** Businesses sign up, invite staff, and see only their own chats.
-- **Knowledge base.** The shop adds its information as text, a PDF, a picture, or a website
-  address that the system reads page by page.
-- **AI replies.** Answered from that information. If something is not covered, the AI says
-  so and a human takes over instead of guessing.
-- **Handover.** One person owns a chat at a time and can pass it on, with a short summary
-  written automatically.
-- **Voice and photos.** Customers' voice notes are transcribed and answered, and photos are
-  read. Agents can record and send a voice reply of their own.
-- **Mood check.** Every message is checked for whether the customer sounds upset.
-- **Alerts.** Agents are notified on their phone or laptop, switchable per device. A bell in
-  the header lists the same alerts inside the dashboard.
-- **Reports.** How much the AI handled alone (target 60%), reply speed, and which channel
-  needs people most.
-- **Instagram connected**, sharing one inbox with Facebook.
+**Tasks Done:**
 
-### Services and accounts set up
+1.    **Login and teams**: Businesses sign up, invite staff, and see only their own chats.
+2.    **Knowledge base**: The shop adds its information as text, a PDF, a picture, or a website address that the system reads page by page.
+3.    **AI replies**: The AI answers customers using that information. If something is not covered, it says so and a human takes over, instead of guessing.
+4.    **Handover**: One person owns a chat at a time and can pass it on, with a short summary written automatically.
+5.    **Voice and photos**: Customer's voice notes are transcribed and answered, and photos are read.
+6.    **Mood check**: Every message is checked to see whether the customer sounds upset.
+7.    **Alerts**: Agents are notified on their phone or laptop, and each device can be switched on or off. A bell in the header lists the same alerts inside the dashboard.
+8.    **Search and filters**: Conversations have a reference number and can be searched by name, reference or message text, and filtered by status or channel.
+9.    **Reports**: The dashboard shows how much the AI handled on its own (the target is 60%), how fast replies go out, and which channel needs people most.
 
-All configured and working. No keys are kept in the repository.
+**Services and accounts set up:**
 
-- **Meta** — developer app, Facebook and Instagram page connection, message webhook.
-- **Proxy service** — a purpose-built service on Vercel, giving Meta one fixed address
-  because the development tunnel changes often.
-- **Resend** — email, for staff invitations and for telling an agent a chat is waiting.
-- **Web Push (VAPID)** — a generated signing key pair, used for the browser alerts.
-- **Ollama (local)** — the AI model on the development machine. This is what the system uses.
-- **OpenRouter** — a paid account kept as an optional fallback, since charging per reply
-  would cost money throughout development. One setting switches to it.
+1.    **Meta**: the developer app, the Facebook and Instagram page connection, and the link that sends new messages to the system.
+2.    **Proxy service**: a purpose-built service on Vercel, giving Meta one fixed address because the development tunnel changes often.
+3.    **Resend**: email, for staff invitations and for telling an agent a chat is waiting.
+4.    **Web Push (VAPID)**: a signing key pair that was generated for the browser alerts.
+5.    **AI model**: Gemma 4 runs on my own computer through Ollama, so replies cost nothing while developing. A paid online model (OpenRouter) is also set up and can be turned on with one setting when the system is deployed.
 
-### Change from the proposal
+**Changes from the proposal:**
 
-- **Search data** — pgvector inside the existing database instead of Pinecone: one less
-  outside service, and customer data is deleted in a single step.
-- **Alerts** — Web Push with VAPID instead of Firebase: no Google account needed, and the
-  message is encrypted so the delivery service cannot read it.
-- **AI model** — Gemma 4, run locally, instead of the paid OpenAI API: free per reply, and
-  customer messages never leave the machine.
+1.    **Search data**: pgvector inside the existing database instead of Pinecone, so there is one less outside service and customer data is deleted in a single step.
+2.    **Alerts**: Web Push with VAPID instead of Firebase, so no Google account is needed and the message is encrypted, meaning the delivery service cannot read it.
+3.    **AI model**: Gemma 4 run locally instead of the paid OpenAI API, so it is free per reply and customer messages never leave the machine.
 
----
 
-## Plan for next week
+**Plan for next week**
 
-- Add "Sign in with Google" using Firebase Authentication, so staff can join without
-  creating another password.
-- Match the Figma prototype, and make it work well on a phone.
-- Make the dashboard installable as a Progressive Web App (PWA), so it behaves like a
-  downloaded app.
-- Show which agents are online, so chats only go to people who are available.
-- Build the chat widget for websites — the third channel after Facebook and Instagram.
+1.    Add "Sign in with Google" using Firebase Authentication, so staff can join without creating another password.
+2.    Make the dashboard installable as a Progressive Web App (PWA), so it behaves like a downloaded app.
+3.    Match the Figma prototype, and make it work well on a mobile app as well.
+4.    Show which agents are online, so chats only go to people who are available.
 
----
 
-Student's signature ……………………………  Date …………………
+Supervisor's
+comments
 
-Supervisor's signature ………………………  Date …………………
+
+
+
+  Student's Signature …………………………………                    Date ………………………….
+
+  Supervisor's Signature ……………………………...                    Date ………………………….
