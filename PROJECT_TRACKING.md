@@ -226,9 +226,16 @@ expire after 7 days — re-send if it lapses.
 - [x] **Every Semester 2 diagram exported to draw.io** (`docs/system-design/draw.io/`) as real
       editable shapes rather than wrapped images, each with a rendered PNG beside it, and with
       the converter committed so the two formats cannot drift
-- [x] Conversation-list status pill no longer breaks inside itself — it moves to the next
-      line whole when the row is narrow, and shows the agent's first name ("Waiting for
-      Manjit"), with the full name on hover and in the conversation header
+- [x] **Fixed the message sync losing every attachment** — Meta's history API returns the
+      message text as a plain string with attachments beside it, and they were only read when
+      it was an object, so photos, voice notes and stickers fetched by the sync arrived empty.
+      Five customer messages recovered from Meta (3 stickers, a photo, a voice note)
+- [x] **Messenger "likes" and stickers are recognised** — shown as the sticker itself instead
+      of "Attachment could not be loaded", not counted as awaiting a reply, and not answered or
+      escalated by the AI. A like had been handed to a person as an unreadable attachment
+- [x] Conversation-list status pill is never cut short — it moves to the next line whole when
+      the row is narrow and always shows the full name; the unread count moved to the preview
+      line, where it no longer competes with the pill
 - [x] Show/hide password button on sign-in, sign-up and invite acceptance — keyboard reachable,
       and it tells a screen reader whether the password is showing
 - [x] **Photos open inside the inbox** — clicking one opened the raw file in a second browser

@@ -326,6 +326,16 @@ status machine and authentication have all since been built — see the change l
   has no layout problem to solve, so it is drawn directly in UML form — `alt` in the tab and
   the guard beside it, which Mermaid's export had crammed into an 80px tab.
 
+- **Meta's history API is shaped differently from its webhook, and the sync was reading the
+  webhook shape.** The Graph API returns `message` as a plain string with `attachments` and
+  `sticker` as siblings; the webhook nests attachments inside the message object. The sync
+  only looked for attachments inside `message`, so every photo, voice note and sticker it
+  fetched was stored empty — invisible while the tester account's webhooks delivered, and
+  exposed the moment a message arrived only through the sync. A "like" is a sticker, and an
+  empty one read as an unreadable attachment, so a thumbs-up was escalated to a person.
+  Stickers are now their own type: shown as the image, not counted as awaiting a reply, and
+  ignored by the AI.
+
 - **The design set was audited against the code, not against itself (2026-09-23).** The ER
   matches the live database column for column, key for key and relationship for relationship;
   every class, field and method in the class diagrams is declared in the source. What did not
