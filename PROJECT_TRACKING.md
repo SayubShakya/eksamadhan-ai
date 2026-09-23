@@ -7,6 +7,12 @@ Weekly log due: **every Monday** (next: 2026-09-21)
 > Rule from the supervisor: the weekly report **will not be signed** if the work is
 > not reflected in this Git repo. A log entry with no matching commits does not count.
 
+> Written on the week 1 report (2026-09-17):
+> 1. Document the progress so that it reflects the report, and the final report develops
+>    gradually — so `docs/FINAL_REPORT.md` is to be filled in week by week, not written at
+>    the end.
+> 2. Always test the functionality and make sure it works seamlessly.
+
 ---
 
 ## Standing requirements

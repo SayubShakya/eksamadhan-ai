@@ -39,7 +39,8 @@ This week the project environment was set up, and messages from Facebook Messeng
 Supervisor's
 comments
 
-
+1.    Document the progress so that it reflects the report, and the final report develops gradually.
+2.    Always test the functionality and make sure it works seamlessly.
 
 
   Student's Signature …………………………………                    Date ………………………….

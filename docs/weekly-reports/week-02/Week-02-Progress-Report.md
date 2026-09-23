@@ -26,6 +26,7 @@ The AI now answers customers on Facebook and Instagram by itself, using the shop
 8.    **Search and filters**: Conversations have a reference number and can be searched by name, reference or message text, and filtered by status or channel.
 9.    **Reports**: The dashboard shows how much the AI handled on its own (the target is 60%), how fast replies go out, and which channel needs people most.
 10.    **System design redrawn**: The diagrams drawn last semester were redrawn to match how the system really works now.
+11.    **Testing**: Tests were written that check the important parts of the system on their own, and every feature was also tried by hand with real messages before it was saved to the repository.
 
 **Services and accounts set up:**
 
