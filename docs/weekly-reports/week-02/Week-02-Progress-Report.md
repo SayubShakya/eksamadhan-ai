@@ -25,6 +25,7 @@ The AI now answers customers on Facebook and Instagram by itself, using the shop
 7.    **Alerts**: Agents are notified on their phone or laptop, and each device can be switched on or off. A bell in the header lists the same alerts inside the dashboard.
 8.    **Search and filters**: Conversations have a reference number and can be searched by name, reference or message text, and filtered by status or channel.
 9.    **Reports**: The dashboard shows how much the AI handled on its own (the target is 60%), how fast replies go out, and which channel needs people most.
+10.    **System design redrawn**: The diagrams drawn last semester were redrawn to match how the system really works now.
 
 **Services and accounts set up:**
 
