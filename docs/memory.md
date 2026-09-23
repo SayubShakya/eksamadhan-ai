@@ -281,6 +281,39 @@ status machine and authentication have all since been built — see the change l
   hours): without it, connecting a page for the first time would answer everything it was ever
   sent.
 
+- **The Semester 1 system design is now a historical document, and says so.** Redrawing it
+  against the build exposed fifteen differences, three of which are substitutions already
+  recorded (pgvector, Web Push, local Gemma 4). The other twelve are worth knowing before the
+  viva: the old design has **no conversation concept at all** — messages hang off a page, so
+  there is nowhere for a handover to live; it draws the dashboard link as **WebSocket** when
+  nothing but polling was built; it models the escalation trigger as one confidence threshold
+  rather than three gates; it shows the **web chat widget as finished** when it is still
+  FR-03; and it models no ingress, no async boundary and no deployment at all. Both sets live
+  under `docs/system-design/`, same folder names, so any view can be compared with its
+  predecessor. The Semester 1 class diagram is **reconstructed** — none was ever drawn — and
+  is labelled as such.
+
+- **Two views were added that Semester 1 never had: a sequence diagram and an activity
+  diagram.** The report outline asked for the sequence diagram by name, and both answer
+  questions a data flow diagram structurally cannot. The sequence diagram carries the two
+  facts most likely to be asked about at the viva — Meta is sent `200 OK` *before* any AI work
+  (it retries anything slow, and a retry means the customer is answered twice) and the event
+  is published inside the transaction but handled only after it commits, on another pool. The
+  activity diagram shows the three gates as decision nodes plus the separate "is this about
+  the business at all?" branch, which is the one that once closed a real customer's
+  conversation as spam. A commit-boundary picture that had been sitting inside the level 1
+  DFD folder was deleted: it was a sequence diagram in a data flow folder, and the sequence
+  diagram now covers it properly. Eight views in `new-system-design/`, six in
+  `old-system-design/`.
+- **Mermaid fails silently, so the diagrams are parse-tested, not eyeballed.** A syntax error
+  renders as a plain code block on GitHub and looks like nobody checked. All 14 blocks are
+  parsed with mermaid's own parser (jsdom + dompurify, mermaid imported *after* the DOM
+  exists, or it captures no window). Two constructs had to change: `float[]` and
+  `List~float[]~` are not documented Mermaid types, so the embedding fields read `Vector` with
+  the real Java type noted underneath. The ER diagram is also diffed against
+  `information_schema.columns` — every column drawn exists, and the one real column missing
+  was added.
+
 - **We considered an agentic harness and chose not to build one — this is the viva answer.**
   Agent = Model + Harness (tools, memory/state, guardrails, feedback loops). Two of those four
   are already here: memory and state (semantic recall, the thread state machine, handover

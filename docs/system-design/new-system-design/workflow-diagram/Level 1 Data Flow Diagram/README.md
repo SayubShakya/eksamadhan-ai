@@ -1,0 +1,132 @@
+# Data flow diagram — level 1
+
+The system opened up into eight processes and three data stores. Compare with
+[Semester 1](../../../old-system-design/workflow-diagram/Level%201%20Data%20Flow%20Diagram/Picture1.png),
+which had five processes and two stores.
+
+<!-- images -->
+![Level 1 data flow diagram](level-1-data-flow-diagram.png)
+
+*Rendered from the Mermaid source below.*
+
+```mermaid
+flowchart TB
+    customer["End User"]
+    agent["Support Agent"]
+    admin["Admin"]
+    meta["Meta platform"]
+
+    p1["1<br/>Channel Connector<br/>webhook + catch-up sync"]
+    p2["2<br/>Conversation &<br/>Thread Manager"]
+    p3["3<br/>Knowledge Ingestion<br/>extract · chunk · embed"]
+    p4["4<br/>RAG Answer Engine<br/>three gates"]
+    p5["5<br/>Escalation & Routing"]
+    p6["6<br/>Notification Service"]
+    p7["7<br/>Agent Dashboard"]
+    p8["8<br/>Analytics"]
+
+    d1[("D1  PostgreSQL<br/>organisations · users · pages<br/>threads · messages")]
+    d2[("D2  pgvector embeddings<br/>knowledge_chunks · message_embeddings<br/>same database as D1")]
+    d3[("D3  Media files<br/>local disk")]
+
+    customer --> meta
+    meta -->|"inbound message"| p1
+    p1 -->|"message + thread"| d1
+    p1 -->|"attachments"| d3
+
+    p1 ==>|"MessageIngested<br/>after commit"| p2
+    p2 -->|"thread state"| d1
+    p2 --> p4
+
+    admin -->|"text · PDF · image · website"| p3
+    p3 -->|"source + status"| d1
+    p3 -->|"passages + vectors"| d2
+    p3 -->|"images"| d3
+
+    p4 -->|"embed question, top-k search"| d2
+    p4 -->|"recall earlier messages"| d2
+    p4 -->|"answer"| p1
+    p1 -->|"send reply"| meta
+    meta --> customer
+
+    p4 -->|"cannot answer"| p5
+    p5 -->|"assign least-loaded agent"| d1
+    p5 --> p6
+    p6 -->|"push · email · bell row"| d1
+    p6 -->|"encrypted push"| agent
+    p6 -->|"handover notice"| p1
+
+    agent -->|"reply · take over · transfer · resolve"| p7
+    p7 --> p2
+    p7 -->|"reads"| d1
+    p7 -->|"reply to send"| p1
+
+    admin --> p8
+    p8 -->|"aggregate"| d1
+    p8 -->|"deflection · reply times · by channel"| admin
+
+    p1 -.->|"webhook never arrived:<br/>replay once"| p2
+```
+
+## The two flows Semester 1 had no equivalent of
+
+### The commit boundary
+
+Message ingestion publishes an event **inside** the database transaction, and every expensive
+thing happens only **after that transaction commits**, on a different thread pool. It has to be
+this way round. A worker thread cannot see rows the committing transaction has not released
+yet — an earlier version called these services directly from the ingestion path, and they
+looked for a message that did not exist and silently did nothing.
+
+The **order inside the pool is also deliberate**: the customer's answer goes before sentiment
+and embedding, because those are for us, not for them, and a local model serves one request at
+a time. Notifying the owner comes first because it is not a model call at all.
+
+That ordering is a question of *time*, not of data flow, so it is drawn where it belongs — in
+the [sequence diagram](../../sequence-diagram/), which shows the same boundary as a divider
+across the message's whole journey.
+
+### The catch-up loop
+
+The AI only ever ran from the live webhook. When a webhook was not delivered — the application
+restarting, or Meta simply not sending — the message was stored later by the sync and then
+answered by nobody. The conversation sat reading "AI is handling" indefinitely.
+
+Every sync now looks for conversations still owed a reply and replays the customer's last
+message down the same path, at most once per message. It is the dashed arrow from process 1
+back into process 2.
+
+## What each process does
+
+| # | Process | Responsibility |
+| :--- | :--- | :--- |
+| 1 | Channel Connector | Verifies webhook signatures, parses Meta payloads, de-duplicates redelivery, sends outbound messages, pulls history, and runs the catch-up pass |
+| 2 | Conversation & Thread Manager | Finds or creates the thread, keeps its preview and unanswered count, and owns the status machine |
+| 3 | Knowledge Ingestion | Extracts text from a paste, a PDF, an image description or a crawled page; splits it on headings; embeds each passage |
+| 4 | RAG Answer Engine | Retrieval, prompt assembly with recalled conversation memory, the model call, and the three gates |
+| 5 | Escalation & Routing | Moves the thread to a person, picks the least-loaded active agent, schedules the handover brief |
+| 6 | Notification Service | One call writes the in-app bell row and sends the encrypted push; email is sent alongside on escalation |
+| 7 | Agent Dashboard | Everything an agent does — reply, take over, transfer, resolve, read the brief |
+| 8 | Analytics | Deflection against the 60% target, median and 90th-percentile reply times, escalation volume by channel |
+
+## The three gates on process 4
+
+The Semester 1 design had one test: confidence below 70%. Three were needed.
+
+1. **Retrieval similarity.** If nothing in the knowledge base comes close, the model is never
+   called — an off-topic question costs nothing.
+2. **The model's own verdict.** It is asked whether the retrieved passages actually answer the
+   question, and told that declining is a correct outcome. A passage can be *about* the right
+   topic and still not contain the answer, and only reading it can tell.
+3. **Confidence**, below which an answer is not sent.
+
+A fourth signal sits beside them: whether the message is **related to the business at all**.
+Without it, a question about a product the knowledge base does not cover was counted as
+off-topic, and three of those closed the conversation as spam — on a real customer.
+
+## Data stores
+
+D1 and D2 are the **same PostgreSQL database**, drawn apart only because the vector columns
+and their HNSW indexes are worth showing as a distinct concern. Semester 1 drew a separate
+Pinecone store here; having one store is why deleting a knowledge source cannot leave its
+vectors behind.

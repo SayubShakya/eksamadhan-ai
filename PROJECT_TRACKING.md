@@ -205,6 +205,16 @@ expire after 7 days — re-send if it lapses.
       throttled to six hours, and the two backfills ask for the rows that need work instead of
       reading the whole workspace on every poll. The dashboard now polls every 10s, not 30s
 - [x] Embeddings are cached, removing a duplicate call that cost about a fifth of every reply
+- [x] **System design redrawn for Semester 2** (`docs/system-design/new-system-design/`) —
+      architecture, ER, class, use case and both data-flow levels, written as Mermaid so they
+      render on GitHub and diff in git. Scoped to what is actually built, with unbuilt
+      requirements dashed and labelled. A reconstructed Semester 1 class diagram was added
+      alongside so the two sets compare view for view, and the fifteen differences between the
+      designed and the built system are documented
+- [x] **Added the two views Semester 1 never had** — a sequence diagram of the reply-or-escalate
+      flow (asked for by name in the final report outline) and an activity diagram of the AI
+      decision, with all three gates and the off-topic branch as decisions. Eight views now,
+      each rendered as a PNG beside the source it was rendered from
 - [x] **Assessed whether an agentic harness (tools, feedback loops) is needed and decided
       against it**, on measured grounds — recorded in `docs/memory.md` for the viva. Built the
       two harness pieces that were genuinely missing instead: a retry loop for transient

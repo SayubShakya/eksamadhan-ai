@@ -45,14 +45,23 @@ version control practice._
 
 ## 6. System Design
 
-- **Architecture:** _TODO diagram_ — channel webhooks → ingestion → RAG → escalation
-  router → agent dashboard.
+All diagrams live in [`docs/system-design/new-system-design/`](system-design/new-system-design/),
+drawn against the system as built, with the Semester 1 originals kept beside them in
+[`old-system-design/`](system-design/old-system-design/) for comparison.
+
+- **Architecture:** channel webhooks → ingestion → RAG → escalation router → agent
+  dashboard — [`system-architecture/`](system-design/new-system-design/system-architecture/).
 - **Data model:** organisations, agents, threads, messages, knowledge chunks.
 - **RAG pipeline:** query → embed → semantic search → context assembly → LLM → reply.
 - **Escalation logic:** confidence threshold, sentiment score, explicit keywords;
   round-robin routing across online agents.
 
-_TODO: ER diagram, sequence diagram for the escalation flow, API surface._
+Eight views are drawn: system architecture, ER diagram, class diagram, use case, data flow
+levels 0 and 1, the [sequence diagram](system-design/new-system-design/sequence-diagram/) of
+the reply-or-escalate flow, and the
+[activity diagram](system-design/new-system-design/activity-diagram/) of the AI decision.
+
+_TODO: API surface._
 
 ## 7. Implementation
 
