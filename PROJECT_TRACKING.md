@@ -217,6 +217,23 @@ expire after 7 days — re-send if it lapses.
       requirements dashed and labelled. A reconstructed Semester 1 class diagram was added
       alongside so the two sets compare view for view, and the fifteen differences between the
       designed and the built system are documented
+- [x] **Audited every diagram against the code and the live database** — the ER and class
+      diagrams matched; the sequence and activity diagrams did not. Fixed the claim that a
+      weak retrieval skips the model (it does not, in five documents and a config comment), the
+      agent being picked by the wrong service, the missing email step, the off-topic condition,
+      and six missing escalation reasons. Added the "hand back to the AI" use case, which was
+      built but never drawn
+- [x] **Every Semester 2 diagram exported to draw.io** (`docs/system-design/draw.io/`) as real
+      editable shapes rather than wrapped images, each with a rendered PNG beside it, and with
+      the converter committed so the two formats cannot drift
+- [x] Conversation-list status pill no longer breaks inside itself — it moves to the next
+      line whole when the row is narrow, and shows the agent's first name ("Waiting for
+      Manjit"), with the full name on hover and in the conversation header
+- [x] Show/hide password button on sign-in, sign-up and invite acceptance — keyboard reachable,
+      and it tells a screen reader whether the password is showing
+- [x] **Photos open inside the inbox** — clicking one opened the raw file in a second browser
+      tab, which lost the conversation it belonged to. It now opens full size over the
+      conversation, closed by Escape or a click outside
 - [x] **Fixed the inbox badge that could not be cleared** — it counted messages awaiting a
       reply on resolved conversations too, so it showed 10 while the Active list was empty and
       no action could bring it down. Closing a conversation now clears its count, and the

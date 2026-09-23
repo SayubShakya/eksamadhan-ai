@@ -138,7 +138,7 @@ public class MetaService {
      * Fetch messages for a specific conversation
      */
     public Mono<Map> getMessages(String conversationId, String pageAccessToken, int limit) {
-        String uri = String.format("/%s/messages?access_token=%s&limit=%d&fields=id,from,to,message,created_time,attachments",
+        String uri = String.format("/%s/messages?access_token=%s&limit=%d&fields=id,from,to,message,created_time,attachments,sticker",
                 conversationId, (pageAccessToken != null ? "MASKED" : "NULL"), limit);
 
         log.info("📡 Requesting Meta (Messages): {}", uri);
@@ -147,7 +147,7 @@ public class MetaService {
                 .uri(uriBuilder -> uriBuilder.path("/{conversationId}/messages")
                         .queryParam("access_token", pageAccessToken)
                         .queryParam("limit", limit)
-                        .queryParam("fields", "id,from,to,message,created_time,attachments")
+                        .queryParam("fields", "id,from,to,message,created_time,attachments,sticker")
                         .build(conversationId))
                 .retrieve()
                 .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), 

@@ -307,21 +307,28 @@ public class SyncService {
             // the attachment speak.
             String attachmentType = null;
             String attachmentUrl = null;
-            if (msgObj instanceof Map) {
-                Object attachmentsField = ((Map<String, Object>) msgObj).get("attachments");
-                if (attachmentsField == null) attachmentsField = messageData.get("attachments");
-                if (attachmentsField instanceof Map<?, ?> wrapper
-                        && wrapper.get("data") instanceof List<?> items && !items.isEmpty()
-                        && items.get(0) instanceof Map<?, ?> first) {
-                    attachmentType = mediaTypeOf((String) first.get("mime_type"));
-                    if (first.get("image_data") instanceof Map<?, ?> image) {
-                        attachmentUrl = (String) image.get("url");
-                    } else if (first.get("video_data") instanceof Map<?, ?> video) {
-                        attachmentUrl = (String) video.get("url");
-                    } else if (first.get("file_url") != null) {
-                        attachmentUrl = (String) first.get("file_url");
-                    }
+            // Meta's history API returns `message` as a plain string and puts `attachments`
+            // beside it, not inside it. Reading attachments only when `message` was an object
+            // meant every photo, voice note and sticker fetched by the sync arrived empty.
+            Object attachmentsField = msgObj instanceof Map<?, ?> nested ? nested.get("attachments") : null;
+            if (attachmentsField == null) attachmentsField = messageData.get("attachments");
+            if (attachmentsField instanceof Map<?, ?> wrapper
+                    && wrapper.get("data") instanceof List<?> items && !items.isEmpty()
+                    && items.get(0) instanceof Map<?, ?> first) {
+                attachmentType = mediaTypeOf((String) first.get("mime_type"));
+                if (first.get("image_data") instanceof Map<?, ?> image) {
+                    attachmentUrl = (String) image.get("url");
+                } else if (first.get("video_data") instanceof Map<?, ?> video) {
+                    attachmentUrl = (String) video.get("url");
+                } else if (first.get("file_url") != null) {
+                    attachmentUrl = (String) first.get("file_url");
                 }
+            }
+            // A sticker — Messenger's "like" thumb is one — also appears in `attachments` as a
+            // PNG, but only the `sticker` field says it is not a photo the customer took.
+            if (messageData.get("sticker") instanceof String sticker && !sticker.isBlank()) {
+                attachmentType = "sticker";
+                attachmentUrl = sticker;
             }
             if (text != null && text.isBlank()) text = null;
 

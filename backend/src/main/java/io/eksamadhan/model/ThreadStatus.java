@@ -6,7 +6,7 @@ package io.eksamadhan.model;
  * AI_HANDLING    the AI answers; the default for a new conversation
  * OPEN_FOR_AGENT escalated — low confidence, negative sentiment, or an explicit request
  * AGENT_HANDLING a human has taken over; the AI stays silent on this thread
- * RESOLVED       closed; a new customer message reopens it as AI_HANDLING
+ * RESOLVED       closed for good; the customer's next message starts a new conversation
  */
 public enum ThreadStatus {
     AI_HANDLING,

@@ -51,6 +51,7 @@ flowchart LR
         b4["Transfer to a colleague"]
         b5["Read the handover brief"]
         b6["Resolve a conversation"]
+        b10["Hand back to the AI"]
         b7["Enable notifications on this device"]
         b8["Receive alert when needed<br/>FR-09"]
         b9["Toggle availability<br/>PLANNED · FR-05"]
@@ -61,6 +62,7 @@ flowchart LR
     agent --- b4
     agent --- b5
     agent --- b6
+    agent --- b10
     agent --- b7
     agent --- b8
     agent -.- b9

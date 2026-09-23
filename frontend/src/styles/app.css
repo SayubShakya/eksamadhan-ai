@@ -477,7 +477,24 @@
 }
 
 /* Row footer: state tag plus an unread dot for anything still awaiting a reply. */
-.conv__foot { display: flex; align-items: center; gap: 7px; margin-top: 6px; }
+.conv__foot {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 6px 7px; margin-top: 6px; min-width: 0;
+}
+
+/* The state pill is never cut short. When it does not fit beside the reference, the whole
+   pill moves to the next line; the name is always shown in full. Its text may wrap only if a
+   name is too long for the entire row — never a "…", which hid exactly who the conversation
+   was waiting for. */
+.conv__tag {
+    display: inline-flex; align-items: center;
+    max-width: 100%;
+}
+.conv__tag-text { min-width: 0; overflow-wrap: anywhere; }
+.conv__tag .conv__mood { flex-shrink: 0; }
+.conv__mid { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.conv__mid .conv__preview { flex: 1; min-width: 0; margin-top: 0; }
+.conv__mid .unread-count { flex-shrink: 0; }
 .conv__foot svg { display: block; flex-shrink: 0; }
 
 /* Centred against the bubble, not pinned to its top or bottom. */
@@ -740,14 +757,53 @@
 .bubble--media > span { padding: 0 6px 2px; }
 
 .media--audio { display: block; height: 38px; width: 260px; max-width: 100%; }
+
+/* A sticker stands alone, as it does in Messenger: no bubble behind it. */
+.bubble.bubble--sticker { background: none; border: 0; padding: 0; box-shadow: none; }
+.media--sticker { display: block; width: 96px; height: 96px; object-fit: contain; }
+.media--sticker-fallback { display: block; font-size: 56px; line-height: 1; }
 .media--image { display: block; border-radius: 10px; max-width: 280px; max-height: 320px; }
 .media--video { display: block; border-radius: 10px; max-width: 280px; }
 .media--file { display: inline-block; padding: 6px 10px; text-decoration: none; }
 .bubble--agent .media--file { color: #fff; }
 
+/* The thumbnail is a button so the photo opens in place; strip the button chrome. */
+.media__open {
+    display: block; padding: 0; border: 0; background: none;
+    cursor: zoom-in; border-radius: 10px;
+}
+.media__open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 @media (max-width: 760px) {
     .media--audio { width: 210px; }
     .media--image, .media--video { max-width: 220px; }
+}
+
+/* ── Photo viewer ──────────────────────────────────────────────────────── */
+/* Opening the raw file in a new tab lost the conversation the photo belonged to. */
+.lightbox {
+    position: fixed; inset: 0; z-index: 80;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; background: rgba(15, 18, 32, 0.82);
+    animation: fade 0.12s ease-out;
+    cursor: zoom-out;
+}
+.lightbox__img {
+    max-width: 100%; max-height: 100%;
+    border-radius: 12px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+    cursor: default;
+}
+.lightbox__close {
+    position: absolute; top: 16px; right: 20px;
+    width: 40px; height: 40px; border: 0; border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14); color: #fff;
+    font-size: 26px; line-height: 1; cursor: pointer;
+}
+.lightbox__close:hover { background: rgba(255, 255, 255, 0.26); }
+.lightbox__close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+@media (max-width: 760px) {
+    .lightbox { padding: 16px; }
 }
 
 /* ── Voice recording ───────────────────────────────────────────────────── */
@@ -1002,6 +1058,20 @@
     box-shadow: 0 0 0 3px var(--accent-weak);
 }
 .field__hint { color: var(--text-muted); font-weight: 400; font-size: 12px; }
+
+/* Password with a show/hide button sitting inside the right edge of the input. */
+.field__password { position: relative; display: flex; }
+.field__password input { flex: 1; min-width: 0; padding-right: 44px; }
+.field__reveal {
+    position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+    width: 32px; height: 32px;
+    display: grid; place-items: center;
+    border: 0; border-radius: var(--r-sm);
+    background: none; color: var(--text-muted);
+    cursor: pointer;
+}
+.field__reveal:hover { color: var(--text); background: var(--surface); }
+.field__reveal:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 420px) { .field-row { grid-template-columns: 1fr; } }
 

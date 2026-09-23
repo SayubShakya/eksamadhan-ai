@@ -195,6 +195,13 @@ public class AiReplyService {
         // rest of the pipeline can treat it as a question; anything we cannot read goes to a
         // person rather than being met with silence, which is what used to happen.
         String question = message.getText();
+        if ((question == null || question.isBlank()) && "sticker".equals(message.getAttachmentType())) {
+            // A "like" or a sticker is the customer acknowledging, not asking. Before stickers
+            // were recognised, one arrived as an unreadable attachment and was escalated —
+            // a thumbs-up handed to a person as though it needed an answer.
+            log.debug("Sticker on thread {}; nothing to answer", thread.getId());
+            return;
+        }
         if (question == null || question.isBlank()) {
             question = readAttachment(message);
             if (question == null) {

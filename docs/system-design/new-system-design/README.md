@@ -44,7 +44,7 @@ Fifteen differences, grouped by why they happened.
 | :--- | :--- | :--- | :--- |
 | Vector store | Pinecone, a separate service | **pgvector inside PostgreSQL** | One less account, no synchronisation path to drift, and deleting a customer's knowledge is one cascading delete in a single transaction rather than a best-effort remote call |
 | Notifications | Firebase Cloud Messaging | **Web Push with VAPID** | The browser standard FCM is built on. No Google project, no service-account key, and the payload is encrypted end to end (RFC 8291) so the relaying push service cannot read a customer's message |
-| LLM | OpenAI / Gemini, called directly | **Gemma 4 locally via Ollama**, OpenRouter as a hosted fallback behind one switch | Free per reply and customer messages never leave the machine. Embeddings stay hosted because the schema fixes them at 1536 dimensions |
+| LLM | OpenAI / Gemini, called directly | **Gemma 4 locally via Ollama**, OpenRouter as a hosted alternative behind one switch (`AI_CHAT_PROVIDER`) — a choice, not an automatic failover | Free per reply and customer messages never leave the machine. Embeddings stay hosted because the schema fixes them at 1536 dimensions |
 
 ### The model gained a concept the design did not have
 
@@ -71,7 +71,7 @@ Fifteen differences, grouped by why they happened.
 | Area | Semester 1 | Semester 2 |
 | :--- | :--- | :--- |
 | Dashboard transport | drawn as **WebSocket / REST** | **REST and polling only.** There are no websockets: messages and threads poll every 1.5s, connection status 5s, Meta sync 10s, the notification bell 15s |
-| Escalation trigger | a single "confidence < 70%" | **three gates** — retrieval similarity first (so an off-topic question costs nothing), then the model's own verdict on whether the passages answer it, then confidence. Plus a `related` flag so a question the knowledge base does not cover is passed to a person rather than treated as spam |
+| Escalation trigger | a single "confidence < 70%" | **three gates** — retrieval similarity first (weak retrieval drops the passages but the model still answers, so "hello" is met conversationally), then the model's own verdict on whether the passages answer it, then confidence. Plus a `related` flag so a question the knowledge base does not cover is passed to a person rather than treated as spam |
 | Web chat widget | drawn as a finished component | **not built** — FR-03 and FR-10 |
 | Deployment | not modelled | **one Docker service** (`pgvector/pgvector:pg16`). Backend, frontend and Ollama all run on the host |
 

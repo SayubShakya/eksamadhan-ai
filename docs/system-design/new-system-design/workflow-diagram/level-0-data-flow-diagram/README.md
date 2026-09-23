@@ -25,7 +25,7 @@ flowchart LR
     admin -->|"business knowledge, page connection, invitations"| system
     system -->|"analytics, retrieval scores, team state"| admin
 
-    agent -->|"replies, take over, transfer, resolve"| system
+    agent -->|"replies, take over, hand back, transfer, resolve"| system
     system -->|"inbox, handover brief, alerts"| agent
 ```
 

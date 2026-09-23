@@ -103,6 +103,12 @@ public class MetaMessageParser {
                     Map payload = (Map) first.get("payload");
                     if (payload != null) {
                         attachmentUrl = (String) payload.get("url");
+                        // A sticker (the "like" thumb is one) is delivered as an image with a
+                        // sticker_id. Recorded as a sticker so it is not read as a customer's
+                        // photo, described by the vision model, and answered.
+                        if (payload.get("sticker_id") != null || message.get("sticker_id") != null) {
+                            attachmentType = "sticker";
+                        }
                     }
                 }
 

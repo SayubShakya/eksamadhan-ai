@@ -91,6 +91,7 @@ const PAGE_SIZE = 30;
 const QUICK_EMOJI = ['😊', '😂', '👍', '🙏', '❤️', '😅', '🎉', '😢', '😮', '🔥', '✅', '👋'];
 
 const ATTACHMENT_LABEL = {
+    sticker: '👍 Sticker',
     audio: '🎤 Voice message',
     image: '📷 Photo',
     video: '🎬 Video',
@@ -108,18 +109,35 @@ function previewOf(message) {
  * Meta hosts attachments on a signed URL that eventually expires, so an old voice
  * note may stop playing. Nothing is lost that we ever had — we only store the link.
  */
-function Attachment({ message }) {
+/**
+ * A sticker, drawn as Messenger draws it: the image alone, no bubble. Meta's sticker links
+ * are signed and expire like any other attachment, so a dead one falls back to a thumbs-up —
+ * the "like" button is by far the sticker customers send most.
+ */
+function Sticker({ url }) {
+    const [broken, setBroken] = useState(false);
+    useEffect(() => { setBroken(false); }, [url]);
+    return broken
+        ? <span className="media--sticker-fallback" role="img" aria-label="Sticker">👍</span>
+        : <img className="media media--sticker" src={url} alt="Sticker" onError={() => setBroken(true)} />;
+}
+
+function Attachment({ message, onOpenImage }) {
     const { attachmentType: type, attachmentUrl: url } = message;
     if (!url) return null;
 
+    if (type === 'sticker') return <Sticker url={url} />;
     if (type === 'audio') {
         return <audio className="media media--audio" src={url} controls preload="none" />;
     }
     if (type === 'image') {
+        // A button, not a link: opening the raw file in a second tab loses the conversation
+        // the photo belongs to, and the agent has to find their way back to it.
         return (
-            <a href={url} target="_blank" rel="noreferrer noopener">
+            <button type="button" className="media__open" onClick={() => onOpenImage(url)}
+                    aria-label="View photo full size">
                 <img className="media media--image" src={url} alt="Photo from customer" loading="lazy" />
-            </a>
+            </button>
         );
     }
     if (type === 'video') {
@@ -147,6 +165,16 @@ export default function InboxPage({
     const [busy, setBusy] = useState(false);
     const [shown, setShown] = useState(PAGE_SIZE);   // messages rendered, newest first
     const [emojiOpen, setEmojiOpen] = useState(false);
+    const [lightbox, setLightbox] = useState(null);  // photo opened full size, or null
+
+    // Escape closes the photo. Without it the only way out is the button, and a viewer that
+    // covers the whole screen needs the key everyone already reaches for.
+    useEffect(() => {
+        if (!lightbox) return;
+        const onKey = (e) => { if (e.key === 'Escape') setLightbox(null); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [lightbox]);
     const endRef = useRef(null);
     const imageRef = useRef(null);
     const bodyRef = useRef(null);
@@ -337,22 +365,11 @@ export default function InboxPage({
                                         <span className="conv__name">{t.name}</span>
                                         <span className="conv__time">{formatTimestamp(t.last.timestamp)}</span>
                                     </div>
-                                    <div className="conv__preview">{previewOf(t.last)}</div>
-                                    <span className="conv__foot">
-                                        {/* Inline with the state tag so the two sit on one line. */}
-                                        <ChannelIcon platform={platform} size={13} />
-                                        {/* The same customer can have several conversations, so
-                                            the row needs the reference that tells them apart. */}
-                                        {t.id && <span className="conv__ref">CONV-{t.id.slice(0, 8)}</span>}
-                                        <span className={`tag ${STATUS_TONE[t.status] || 'tag--ai'}`}>
-                                            {ownershipLabel(t, me?.id) || STATUS_LABEL[t.status] || t.status}
-                                            {SENTIMENT[t.sentiment] && t.sentiment !== 'NEUTRAL' && (
-                                                <span className="conv__mood"
-                                                      title={`${SENTIMENT[t.sentiment].label} customer`}>
-                                                    {SENTIMENT[t.sentiment].face}
-                                                </span>
-                                            )}
-                                        </span>
+                                    {/* The unread count sits at the end of the preview line, where
+                                        messaging apps put it — in the footer it competed with the
+                                        state pill for space and ended up alone on a line. */}
+                                    <div className="conv__mid">
+                                        <div className="conv__preview">{previewOf(t.last)}</div>
                                         {t.unanswered > 0 && t.status !== 'RESOLVED' && (
                                             <span
                                                 className="unread-count"
@@ -361,6 +378,27 @@ export default function InboxPage({
                                                 {t.unanswered > 99 ? '99+' : t.unanswered}
                                             </span>
                                         )}
+                                    </div>
+                                    <span className="conv__foot">
+                                        {/* Inline with the state tag so the two sit on one line. */}
+                                        <ChannelIcon platform={platform} size={13} />
+                                        {/* The same customer can have several conversations, so
+                                            the row needs the reference that tells them apart. */}
+                                        {t.id && <span className="conv__ref">CONV-{t.id.slice(0, 8)}</span>}
+                                        <span className={`tag conv__tag ${STATUS_TONE[t.status] || 'tag--ai'}`}>
+                                            {/* Its own span so the text can wrap, if it ever must,
+                                                while the mood face beside it stays whole. */}
+                                            <span className="conv__tag-text">
+                                                {ownershipLabel(t, me?.id) || STATUS_LABEL[t.status] || t.status}
+                                            </span>
+                                            {SENTIMENT[t.sentiment] && t.sentiment !== 'NEUTRAL' && (
+                                                <span className="conv__mood"
+                                                      title={`${SENTIMENT[t.sentiment].label} customer`}>
+                                                    {SENTIMENT[t.sentiment].face}
+                                                </span>
+                                            )}
+                                        </span>
+
                                     </span>
                                 </div>
                             </button>
@@ -534,8 +572,8 @@ export default function InboxPage({
                                                     buttons centre on the bubble rather than
                                                     on the bubble plus its timestamp. */}
                                                 <div className="msg__line">
-                                                    <div className={`bubble ${!outbound ? 'bubble--customer' : isAi ? 'bubble--ai' : mine ? 'bubble--agent' : 'bubble--colleague'} ${m.attachmentUrl ? 'bubble--media' : ''}`}>
-                                                        <Attachment message={m} />
+                                                    <div className={`bubble ${!outbound ? 'bubble--customer' : isAi ? 'bubble--ai' : mine ? 'bubble--agent' : 'bubble--colleague'} ${m.attachmentType === 'sticker' ? 'bubble--sticker' : m.attachmentUrl ? 'bubble--media' : ''}`}>
+                                                        <Attachment message={m} onOpenImage={setLightbox} />
                                                         {/* What the voice note said, marked as
                                                             our reading rather than their words. */}
                                                         {m.transcript && (
@@ -893,6 +931,16 @@ export default function InboxPage({
                         </>
                     )}
                 </aside>
+            )}
+
+            {lightbox && (
+                <div className="lightbox" role="dialog" aria-modal="true" aria-label="Photo"
+                     onClick={() => setLightbox(null)}>
+                    <button type="button" className="lightbox__close"
+                            onClick={() => setLightbox(null)} aria-label="Close photo">×</button>
+                    <img className="lightbox__img" src={lightbox} alt="Photo from customer"
+                         onClick={(e) => e.stopPropagation()} />
+                </div>
             )}
         </div>
     );

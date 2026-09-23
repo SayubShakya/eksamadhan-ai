@@ -28,16 +28,16 @@ flowchart TB
     subgraph backend["3 · Backend — Spring Boot, Java 21"]
         direction TB
         api["REST controllers · webhook endpoint"]
-        sec["Security — JWT bearer · roles · tenant scoping"]
+        sec["Security — JWT bearer · roles · tenant scoping<br/>JwtService · AccountService · WebhookSignatureVerifier"]
         subgraph rowA[" "]
             direction LR
-            channel["Channel<br/>MetaService · MetaMessageParser · SyncService"]
-            convo["Conversation<br/>ThreadService · AgentRoutingService · SummaryService"]
+            channel["Channel<br/>MetaService · MetaMessageParser · SyncService<br/>AttachmentFetcher"]
+            convo["Conversation<br/>ThreadService · AgentRoutingService<br/>ConversationSummaryService"]
         end
         subgraph rowB[" "]
             direction LR
-            knowledge["Knowledge<br/>KnowledgeService · TextChunker · WebCrawler"]
-            ai["AI<br/>AiReplyService · RetrievalService · SentimentService"]
+            knowledge["Knowledge<br/>KnowledgeService · TextChunker · WebCrawler<br/>DocumentTextExtractor"]
+            ai["AI<br/>MessageIngestedListener · AiReplyService · RetrievalService<br/>ConversationMemoryService · SentimentService · VoiceMessageService<br/>LlmClient · EmbeddingClient"]
         end
         subgraph rowC[" "]
             direction LR
@@ -55,8 +55,8 @@ flowchart TB
         end
         subgraph dataB[" "]
             direction LR
-            ollama["Ollama · Gemma 4<br/>local, default"]
-            openrouter["OpenRouter<br/>hosted fallback + embeddings"]
+            ollama["Ollama · Gemma 4<br/>chat — in use locally"]
+            openrouter["OpenRouter<br/>embeddings · hosted chat alternative"]
             resend["Resend<br/>email"]
             push["Browser push services"]
         end
@@ -123,7 +123,11 @@ running the project will meet it.
 
 The Semester 1 diagram labelled the dashboard link "WebSocket / REST". No websockets were
 built. The dashboard polls — messages and threads every 1.5s, connection status every 5s, a
-server-side Meta sync every 10s, and the notification bell every 15s.
+Meta sync every 10s, and the notification bell every 15s.
+
+The sync is **triggered by the dashboard**, not scheduled on the server: there is no
+`@Scheduled` job anywhere in the backend. While nobody has the dashboard open, a message Meta
+failed to deliver by webhook is not fetched, and so not answered, until someone opens it.
 
 That is a real limitation and worth stating plainly: it costs requests that a socket would not,
 and it bounds how fresh the inbox can be. It is also why the sync was made cheap enough to run

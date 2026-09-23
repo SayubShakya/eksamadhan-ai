@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LogoMark } from '../components/Logo.jsx';
+import { IconEye, IconEyeOff } from '../components/icons.jsx';
 import * as api from '../lib/api.js';
 
 /**
@@ -9,6 +10,7 @@ import * as api from '../lib/api.js';
  * `mode` is 'login' | 'signup' | 'invite'. On success the parent receives the session.
  */
 export default function AuthPage({ mode, inviteToken, onSession, onNavigate }) {
+    const [showPassword, setShowPassword] = useState(false);
     const [form, setForm] = useState({
         organizationName: '', firstName: '', lastName: '', email: '', password: '',
     });
@@ -119,9 +121,21 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate }) {
 
                 <label className="field">
                     <span>Password</span>
-                    <input type="password" value={form.password} onChange={set('password')}
-                           autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                           minLength={mode === 'login' ? undefined : 8} required />
+                    <span className="field__password">
+                        <input type={showPassword ? 'text' : 'password'} value={form.password}
+                               onChange={set('password')}
+                               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                               minLength={mode === 'login' ? undefined : 8} required />
+                        {/* A button, not an icon: it must be reachable by keyboard and announce
+                            its state, or a screen-reader user cannot check what they typed. */}
+                        <button type="button" className="field__reveal"
+                                onClick={() => setShowPassword(v => !v)}
+                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                aria-pressed={showPassword}
+                                title={showPassword ? 'Hide password' : 'Show password'}>
+                            {showPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
+                        </button>
+                    </span>
                     {mode !== 'login' && <small className="field__hint">At least 8 characters.</small>}
                 </label>
 

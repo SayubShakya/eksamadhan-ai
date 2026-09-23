@@ -25,6 +25,7 @@ sequenceDiagram
     participant V as pgvector
     participant L as LlmClient
     participant T as ThreadService
+    participant AR as AgentRoutingService
     participant N as AgentNotificationService
     actor A as Support agent
 
@@ -43,30 +44,36 @@ sequenceDiagram
     Note over MP,AI: Transaction commits here.<br/>Everything below runs on the reply pool.
 
     MP->>AI: MessageIngested (after commit)
-    AI->>R: search(question, top-k 5)
+    AI->>R: search(question, 5 passages)
     R->>V: cosine nearest neighbour
     V-->>R: passages + similarity
     R-->>AI: best match
 
-    alt best similarity < 0.25
-        Note over AI: Gate 1 fails.<br/>Model is never called.
-    else
-        AI->>L: complete(system prompt, context + question)
-        L-->>AI: {related, answered, confidence, reply}
+    alt best similarity >= 0.25
+        AI->>L: complete(system prompt, passages + memory + question)
+    else weak retrieval
+        Note over AI: Passages dropped as irrelevant.<br/>The model still answers, so a greeting is not escalated.
+        AI->>L: complete(system prompt, memory + question)
     end
+    L-->>AI: {related, answered, confidence, reply}
 
     alt answered and confidence >= 0.55
         AI->>M: send reply
         M->>C: delivers the answer
         AI->>DB: store reply, sources, timings
+    else weak retrieval and not about the business
+        AI->>DB: off-topic streak + 1
+        Note over AI: Escalated below 3.<br/>At 3 the conversation is closed.
     else cannot answer
         AI->>T: escalate(thread, reason)
         T->>DB: status = OPEN_FOR_AGENT
-        AI->>T: pick least-loaded active agent
-        T->>DB: assign
+        AI->>AR: pickAgent(organization)
+        AR-->>AI: least-loaded active agent
+        AI->>DB: assign
         AI->>N: escalated(agent, thread, reason)
         N->>DB: write notification row
         N->>A: encrypted Web Push
+        AI->>A: email via Resend
         AI->>M: handover notice
         M->>C: "someone will reply shortly"
         A->>DB: takes over and replies
@@ -75,7 +82,7 @@ sequenceDiagram
 
 ## What this shows that the data flow diagrams cannot
 
-**Meta is answered first, in step 10.** The webhook returns `200 OK` before a single line of AI
+**Meta is answered first, in step 9.** The webhook returns `200 OK` before a single line of AI
 work happens. Meta retries anything it considers slow, and a retry would mean the customer
 being answered twice. A DFD has no way to express "this happens before that".
 
@@ -84,13 +91,15 @@ handled only after it commits, on a different thread pool. An earlier version ca
 directly from the ingestion path, and it looked up a message the committing transaction had
 not released yet — so it silently did nothing.
 
-**Gate 1 short-circuits the model.** When nothing in the knowledge base comes close, the model
-is never called at all. That is deliberate: an off-topic question should cost nothing.
+**Gate 1 changes what the model is given, not whether it is asked.** When nothing in the
+knowledge base comes close, the passages are dropped and the model answers from the question
+and conversation memory alone. Escalating on weak retrieval by itself would hand every
+"hello" to a person, since a greeting matches no policy document well.
 
-**The escalation branch is seven steps, not one.** Escalating means changing thread state,
-choosing an agent by current load, writing a notification row, pushing to that agent's
-devices, *and* telling the customer someone is coming — because a conversation that goes quiet
-after "let me check" is worse than no promise at all.
+**Escalation is a dozen steps, not one.** Escalating means changing thread state, choosing an
+agent by current load, recording the assignment, writing a notification row, pushing to that
+agent's devices, emailing them, *and* telling the customer someone is coming — because a
+conversation that goes quiet after "let me check" is worse than no promise at all.
 
 ## Matching the code
 
@@ -101,5 +110,8 @@ after "let me check" is worse than no promise at all.
 | Event after commit | `MessageIngested` + `MessageIngestedListener` |
 | Gate 1 at 0.25 | `app.ai.min-similarity` |
 | Gate 3 at 0.55 | `app.ai.min-confidence` |
+| Weak retrieval still calls the model | `AiReplyService.reply` — `weakContext` |
+| Off-topic streak, closed at 3 | `AiReplyService.handleUnrelated` |
 | Least-loaded assignment | `AgentRoutingService.pickAgent` |
+| Email to the agent | `AiReplyService.notifyAssignee` → Resend |
 | Notification row then push | `AgentNotificationService.deliver` |

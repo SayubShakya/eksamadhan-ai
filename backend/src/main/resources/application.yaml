@@ -101,9 +101,10 @@ app:
     # Answer generation. Set auto-reply to false to run the inbox purely manually.
     auto-reply: ${AI_AUTO_REPLY:true}
     chat-model: ${CHAT_MODEL:openai/gpt-4o-mini}
-    # The two escalation thresholds. min-similarity is checked before the model is called at
-    # all, so an off-topic question costs nothing; min-confidence is the model's own verdict
-    # on how well the retrieved passages support its answer. Below either, a human takes it.
+    # The two thresholds. Below min-similarity the retrieval is treated as weak: the passages
+    # are dropped and the model still answers, so "hello" is met conversationally rather than
+    # escalated. min-confidence is the model's own verdict on how well the passages support
+    # its answer; below it, a human takes the conversation.
     # Starting values come from the measurements in docs/sample-knowledge-base.md.
     min-similarity: ${AI_MIN_SIMILARITY:0.25}
     min-confidence: ${AI_MIN_CONFIDENCE:0.55}

@@ -56,7 +56,7 @@ flowchart TB
     p6 -->|"encrypted push"| agent
     p6 -->|"handover notice"| p1
 
-    agent -->|"reply · take over · transfer · resolve"| p7
+    agent -->|"reply · take over · hand back · transfer · resolve"| p7
     p7 --> p2
     p7 -->|"reads"| d1
     p7 -->|"reply to send"| p1
@@ -96,6 +96,10 @@ Every sync now looks for conversations still owed a reply and replays the custom
 message down the same path, at most once per message. It is the dashed arrow from process 1
 back into process 2.
 
+One limit, stated plainly: the sync runs when the **dashboard** asks for it, every 10 seconds
+while it is open. Nothing schedules it on the server, so with no dashboard open a message whose
+webhook never arrived waits until someone opens one.
+
 ## What each process does
 
 | # | Process | Responsibility |
@@ -106,15 +110,16 @@ back into process 2.
 | 4 | RAG Answer Engine | Retrieval, prompt assembly with recalled conversation memory, the model call, and the three gates |
 | 5 | Escalation & Routing | Moves the thread to a person, picks the least-loaded active agent, schedules the handover brief |
 | 6 | Notification Service | One call writes the in-app bell row and sends the encrypted push; email is sent alongside on escalation |
-| 7 | Agent Dashboard | Everything an agent does — reply, take over, transfer, resolve, read the brief |
+| 7 | Agent Dashboard | Everything an agent does — reply, take over, hand back to the AI, transfer, resolve, read the brief |
 | 8 | Analytics | Deflection against the 60% target, median and 90th-percentile reply times, escalation volume by channel |
 
 ## The three gates on process 4
 
 The Semester 1 design had one test: confidence below 70%. Three were needed.
 
-1. **Retrieval similarity.** If nothing in the knowledge base comes close, the model is never
-   called — an off-topic question costs nothing.
+1. **Retrieval similarity.** If nothing in the knowledge base comes close, the passages are
+   dropped and the model answers without them, so a greeting is met conversationally rather
+   than handed to a person.
 2. **The model's own verdict.** It is asked whether the retrieved passages actually answer the
    question, and told that declining is a correct outcome. A passage can be *about* the right
    topic and still not contain the answer, and only reading it can tell.

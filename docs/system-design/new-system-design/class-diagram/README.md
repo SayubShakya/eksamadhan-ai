@@ -210,7 +210,7 @@ classDiagram
     KnowledgeSource "1" o-- "*" KnowledgeChunk
     User "1" o-- "*" PushSubscription
     User "1" o-- "*" Notification
-    SocialMessage "1" -- "0..1" MessageEmbedding
+    SocialMessage "1" -- "0..1" MessageEmbedding : by socialMessageId
 
     User --> UserRole
     User --> UserStatus
@@ -314,8 +314,13 @@ classDiagram
         +chunk(text) List~String~
     }
 
+    class KnowledgeController {
+        +upload(file, title) SourceView
+    }
+
     class DocumentTextExtractor {
         +extract(file) String
+        +typeOf(file) KnowledgeSourceType
     }
 
     class WebCrawler {
@@ -387,10 +392,11 @@ classDiagram
     KnowledgeService --> TextChunker
     KnowledgeService --> EmbeddingClient
     KnowledgeService --> WebCrawler
-    KnowledgeService --> DocumentTextExtractor
+    KnowledgeController --> DocumentTextExtractor
+    KnowledgeController --> KnowledgeService
 
     AgentNotificationService --> PushService
-    PushService --> WebPushCrypto
+    PushService ..> WebPushCrypto : static calls
     SyncService --> MetaService
 ```
 

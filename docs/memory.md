@@ -300,6 +300,46 @@ status machine and authentication have all since been built — see the change l
   Closing a conversation *is* the answer, so `ThreadService.resolve` now zeroes it, `V20`
   cleared the ones already closed, and the badge and both message lists skip resolved threads.
 
+- **The diagrams also exist as editable draw.io files, with a PNG of each beside it.**
+  Converted by `docs/system-design/draw.io/mermaid-to-drawio.py` rather than exported as
+  pictures, so the shapes can be redrawn in draw.io or Visual Paradigm. Twelve files for eight
+  views: the class diagram has two and the use case one is split per actor. Every node and edge
+  was checked back against its source — the counts match exactly for all twelve.
+
+  Four things had to be learned the hard way, every one of them invisible in the XML and
+  visible only in a rendered image. **Both the layout and the edge routing are taken from
+  Mermaid's own SVG** — it records each edge's waypoints in a `data-points` attribute. A
+  recomputed layout collapsed cyclic graphs, and letting draw.io route the edges itself drew
+  every one as a straight line between node centres, which is what turned the level 1 data flow
+  diagram into spaghetti. **Routes are matched to edges by id, not by position**: Mermaid draws
+  an edge that touches a subgraph out of turn, so zipping the two lists by order handed routes
+  to the wrong edges and looped them through the middle of the architecture diagram. **An edge
+  may point at a subgraph** (`sec --> rowA`), which is the container, not a node — emitting
+  both put two cells under one id and draw.io drew four layers empty. And **Mermaid sizes an
+  entity box as a header plus one band per row**, so its height has to be divided the same way;
+  subtracting fixed rows from it left a header several times taller than the title inside it.
+
+  The ER and sequence diagrams are the exception: **both are laid out by the converter,
+  because Mermaid's version is worse.** Mermaid's ER layout spreads eleven tables so far apart
+  the text is unreadable; the converter ranks each table one row below the deepest table it
+  references and routes relationships through the gaps between tables. The sequence diagram
+  has no layout problem to solve, so it is drawn directly in UML form — `alt` in the tab and
+  the guard beside it, which Mermaid's export had crammed into an 80px tab.
+
+- **The design set was audited against the code, not against itself (2026-09-23).** The ER
+  matches the live database column for column, key for key and relationship for relationship;
+  every class, field and method in the class diagrams is declared in the source. What did not
+  match, and was fixed: the sequence diagram claimed a failed Gate 1 **skips the model** — it
+  does not; weak retrieval drops the passages and the model still answers, which is how a
+  greeting is not escalated. That false claim was in five documents, and its origin was a stale
+  comment in `application.yaml`, also fixed. The sequence also sent agent selection to
+  `ThreadService` (it is `AgentRoutingService`) and left out the email to the agent. The
+  activity diagram treated every decline as possibly off-topic, when it takes weak retrieval
+  *and* an "unrelated" verdict, and gave one escalation reason where there are seven.
+  `app.ai.top-k` does **not** set how many passages a reply uses — that is a constant 5 — and
+  the dashboard's 10-second Meta sync is client-triggered: with no `@Scheduled` job anywhere,
+  a missed webhook waits until someone opens the dashboard. Worth knowing before the viva.
+
 - **Two views were added that Semester 1 never had: a sequence diagram and an activity
   diagram.** The report outline asked for the sequence diagram by name, and both answer
   questions a data flow diagram structurally cannot. The sequence diagram carries the two

@@ -1,6 +1,6 @@
 # ER diagram — Semester 2
 
-Eleven tables, produced by 19 Flyway migrations. Verified against the running database, not
+Eleven tables, produced by 20 Flyway migrations. Verified against the running database, not
 from memory. Compare with [Semester 1](../../old-system-design/er-diagram/Picture1.png), which
 had six.
 
@@ -166,7 +166,7 @@ erDiagram
 
     MESSAGE_EMBEDDINGS {
         uuid id PK
-        uuid social_message_id UK "ON DELETE CASCADE"
+        uuid social_message_id FK,UK "ON DELETE CASCADE"
         uuid thread_id FK "ON DELETE CASCADE"
         varchar tenant_id "DENORMALISED, no FK"
         text content

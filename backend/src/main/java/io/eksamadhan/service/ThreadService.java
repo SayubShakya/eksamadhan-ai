@@ -54,7 +54,11 @@ public class ThreadService {
         if (inbound) {
             if (message.getSenderName() != null) thread.setCustomerName(message.getSenderName());
             if (message.getSenderAvatarUrl() != null) thread.setCustomerAvatarUrl(message.getSenderAvatarUrl());
-            thread.setUnanswered(thread.getUnanswered() + 1);
+            // A sticker — a "like", usually — acknowledges; it does not ask. Counting it would
+            // show the conversation as waiting for a reply that nobody owes.
+            if (!"sticker".equals(message.getAttachmentType())) {
+                thread.setUnanswered(thread.getUnanswered() + 1);
+            }
         } else {
             thread.setUnanswered(0);
         }
@@ -77,6 +81,7 @@ public class ThreadService {
         return switch (message.getAttachmentType() == null ? "" : message.getAttachmentType()) {
             case "audio" -> "Voice message";
             case "image" -> "Photo";
+            case "sticker" -> "Sticker";
             case "video" -> "Video";
             case "file"  -> "File";
             default -> "Attachment";

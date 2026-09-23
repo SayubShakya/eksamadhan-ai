@@ -1,0 +1,21 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Use case - customer">
+    <mxGraphModel dx="1100" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="s3" value="EkSamadhan AI platform" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;verticalAlign=top;align=left;spacingLeft=10;spacingTop=4;container=1;collapsible=0;" vertex="1" parent="1"><mxGeometry x="187" y="10" width="310" height="380" as="geometry"/></mxCell>
+        <mxCell id="customer" value="End User&lt;br/&gt;customer" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="32" y="215" width="81" height="81" as="geometry"/></mxCell>
+        <mxCell id="meta" value="Meta&lt;br/&gt;external system" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="8" y="8" width="129" height="129" as="geometry"/></mxCell>
+        <mxCell id="c1" value="Send a message" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="s3"><mxGeometry x="69" y="35" width="172" height="54" as="geometry"/></mxCell>
+        <mxCell id="c2" value="Receive an answer" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="s3"><mxGeometry x="59" y="139" width="192" height="54" as="geometry"/></mxCell>
+        <mxCell id="c3" value="Notify web visitor of a reply&lt;br/&gt;PLANNED · FR-10" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="s3"><mxGeometry x="25" y="243" width="260" height="102" as="geometry"/></mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=none;curved=1;html=1;endArrow=none;exitX=0.77;exitY=0.08;exitDx=0;exitDy=0;entryX=0.00;entryY=0.93;entryDx=0;entryDy=0;" edge="1" parent="1" source="customer" target="c1"><mxGeometry x="0.0" y="0" relative="1" as="geometry"><Array as="points"><mxPoint x="162" y="114"/><mxPoint x="187" y="114"/></Array><mxPoint as="offset"/></mxGeometry></mxCell>
+        <mxCell id="e3" value="" style="edgeStyle=none;curved=1;html=1;endArrow=none;exitX=0.98;exitY=0.36;exitDx=0;exitDy=0;entryX=0.10;entryY=1.00;entryDx=0;entryDy=0;" edge="1" parent="1" source="customer" target="c2"><mxGeometry x="0.0" y="0" relative="1" as="geometry"><Array as="points"><mxPoint x="162" y="230"/><mxPoint x="187" y="230"/></Array><mxPoint as="offset"/></mxGeometry></mxCell>
+        <mxCell id="e4" value="" style="edgeStyle=none;curved=1;html=1;dashed=1;endArrow=none;exitX=0.94;exitY=0.74;exitDx=0;exitDy=0;entryX=0.00;entryY=0.50;entryDx=0;entryDy=0;" edge="1" parent="1" source="customer" target="c3"><mxGeometry x="0.0" y="0" relative="1" as="geometry"><Array as="points"><mxPoint x="162" y="304"/><mxPoint x="187" y="304"/></Array><mxPoint as="offset"/></mxGeometry></mxCell>
+        <mxCell id="e5" value="" style="edgeStyle=none;curved=1;html=1;endArrow=none;exitX=1.00;exitY=0.44;exitDx=0;exitDy=0;entryX=0.00;entryY=0.39;entryDx=0;entryDy=0;" edge="1" parent="1" source="meta" target="c1"><mxGeometry x="0.0" y="0" relative="1" as="geometry"><Array as="points"><mxPoint x="162" y="61"/><mxPoint x="187" y="61"/></Array><mxPoint as="offset"/></mxGeometry></mxCell>
+        <mxCell id="e6" value="" style="edgeStyle=none;curved=1;html=1;endArrow=none;exitX=0.91;exitY=0.78;exitDx=0;exitDy=0;entryX=0.00;entryY=0.02;entryDx=0;entryDy=0;" edge="1" parent="1" source="meta" target="c2"><mxGeometry x="0.0" y="0" relative="1" as="geometry"><Array as="points"><mxPoint x="162" y="134"/><mxPoint x="187" y="134"/></Array><mxPoint as="offset"/></mxGeometry></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
