@@ -217,6 +217,10 @@ expire after 7 days — re-send if it lapses.
       requirements dashed and labelled. A reconstructed Semester 1 class diagram was added
       alongside so the two sets compare view for view, and the fifteen differences between the
       designed and the built system are documented
+- [x] **Fixed the inbox badge that could not be cleared** — it counted messages awaiting a
+      reply on resolved conversations too, so it showed 10 while the Active list was empty and
+      no action could bring it down. Closing a conversation now clears its count, and the
+      twenty already closed were cleared by a migration
 - [x] **Added the two views Semester 1 never had** — a sequence diagram of the reply-or-escalate
       flow (asked for by name in the final report outline) and an activity diagram of the AI
       decision, with all three gates and the off-topic branch as decisions. Eight views now,

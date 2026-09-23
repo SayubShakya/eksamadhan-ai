@@ -353,7 +353,7 @@ export default function InboxPage({
                                                 </span>
                                             )}
                                         </span>
-                                        {t.unanswered > 0 && (
+                                        {t.unanswered > 0 && t.status !== 'RESOLVED' && (
                                             <span
                                                 className="unread-count"
                                                 aria-label={`${t.unanswered} message${t.unanswered === 1 ? '' : 's'} waiting for a reply`}

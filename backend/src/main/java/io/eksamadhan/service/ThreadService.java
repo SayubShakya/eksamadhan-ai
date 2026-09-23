@@ -171,6 +171,10 @@ public class ThreadService {
         return transition(threadId, ThreadStatus.RESOLVED, t -> {
             t.setResolvedAt(ZonedDateTime.now());
             t.setAssignedAgentId(null);
+            // Closing the conversation is the answer. Left standing, the count kept the
+            // conversation in the "waiting for a reply" total forever, and no action in the
+            // Active list could bring it down.
+            t.setUnanswered(0);
         });
     }
 

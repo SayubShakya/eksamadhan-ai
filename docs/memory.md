@@ -293,6 +293,13 @@ status machine and authentication have all since been built — see the change l
   predecessor. The Semester 1 class diagram is **reconstructed** — none was ever drawn — and
   is labelled as such.
 
+- **`unanswered` means "awaiting a reply", not "unread", and resolving a conversation has to
+  clear it.** The sidebar badge read 10 while the Active list showed nothing, because all ten
+  sat on resolved conversations — and since the count only falls when a reply is sent, and a
+  resolved conversation never gets one, no action in the dashboard could ever bring it down.
+  Closing a conversation *is* the answer, so `ThreadService.resolve` now zeroes it, `V20`
+  cleared the ones already closed, and the badge and both message lists skip resolved threads.
+
 - **Two views were added that Semester 1 never had: a sequence diagram and an activity
   diagram.** The report outline asked for the sequence diagram by name, and both answer
   questions a data flow diagram structurally cannot. The sequence diagram carries the two

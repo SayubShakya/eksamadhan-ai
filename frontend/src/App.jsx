@@ -338,8 +338,13 @@ export default function App() {
         return allThreads.filter(t => new Date(t.last.timestamp).toDateString() === today).length;
     }, [allThreads]);
 
+    // Conversations still owed a reply. Resolved ones are excluded: closing a conversation
+    // is the answer, so their unanswered count is history, not work waiting to be done —
+    // counting it left a badge nobody could clear, because nothing in the Active list
+    // accounted for it.
     const unread = useMemo(
-        () => allThreads.reduce((sum, t) => sum + (t.unanswered || 0), 0),
+        () => allThreads.reduce(
+            (sum, t) => sum + (t.status === 'RESOLVED' ? 0 : (t.unanswered || 0)), 0),
         [allThreads],
     );
 

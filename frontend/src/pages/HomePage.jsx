@@ -179,7 +179,7 @@ export default function HomePage({
                                         </span>
                                     </span>
 
-                                    {t.unanswered > 0 && (
+                                    {t.unanswered > 0 && t.status !== 'RESOLVED' && (
                                         <span className="unread-count">{t.unanswered}</span>
                                     )}
                                 </button>
