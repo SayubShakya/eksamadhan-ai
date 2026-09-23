@@ -61,4 +61,29 @@ public interface ConversationThreadRepository extends JpaRepository<Conversation
 
     @org.springframework.data.jpa.repository.Modifying
     void deleteByTenantId(String tenantId);
+
+    // Narrow writes. Each background path that annotates a conversation — sentiment, the
+    // handover brief, the off-topic count — writes only its own columns. Saving the whole
+    // entity instead merged a copy loaded before a slow model call back over the row, and
+    // silently undid an escalation that had happened in the meantime: the conversation went
+    // back to "AI is handling" with nobody assigned, after the handover had been announced.
+
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(
+            "UPDATE ConversationThread t SET t.sentiment = :sentiment, t.sentimentAt = :at WHERE t.id = :id")
+    int updateSentiment(UUID id, String sentiment, java.time.ZonedDateTime at);
+
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(
+            "UPDATE ConversationThread t SET t.summary = :summary, t.summaryAt = :at, "
+          + "t.summaryMessageCount = :messageCount WHERE t.id = :id")
+    int updateSummary(UUID id, String summary, java.time.ZonedDateTime at, Integer messageCount);
+
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(
+            "UPDATE ConversationThread t SET t.offTopicStreak = :streak, t.unrelated = :unrelated WHERE t.id = :id")
+    int updateOffTopic(UUID id, int streak, boolean unrelated);
 }

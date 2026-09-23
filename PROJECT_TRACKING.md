@@ -226,6 +226,26 @@ expire after 7 days — re-send if it lapses.
 - [x] **Every Semester 2 diagram exported to draw.io** (`docs/system-design/draw.io/`) as real
       editable shapes rather than wrapped images, each with a rendered PNG beside it, and with
       the converter committed so the two formats cannot drift
+- [x] **Fixed handovers being silently undone** — the AI announced "someone from our team will
+      reply" and assigned an agent, then the conversation reverted to "AI is handling" with
+      nobody assigned. Background paths (sentiment, the handover brief, the off-topic count)
+      saved a whole copy of the conversation loaded before their slow model call, overwriting
+      an escalation made meanwhile. Each now writes only its own columns; a test recreates the
+      race and was confirmed to fail on the old code. Sentiment is also no longer computed
+      three times per message by overlapping paths
+- [x] **Fixed the AI sending a payment QR code in reply to unrelated messages** — a
+      knowledge-base picture was attached to every reply from the closest passage, even when
+      retrieval was too weak for the model to be given any passages. Pictures and sources now
+      go only with answers that actually used them
+- [x] Added a Messenger history cutoff (`SYNC_IGNORE_BEFORE`), so cleared test data is not
+      fetched straight back from Facebook; cleared the test knowledge, conversations and
+      messages behind a full backup
+- [x] **Added a Jev decision-model firewall in front of the reply model**, running in shadow
+      mode. Evaluated on every real customer message first: 97% agreement with the current
+      sentiment model, and clean separation for requests for a person and injection attempts —
+      the person question only separated once it carried examples, and the plain wording was
+      measured to overlap. Records what it would do in a new `message_triage` table; switching
+      it on removes the separate sentiment model call entirely. See `docs/jev-firewall.md`
 - [x] **Fixed the message sync losing every attachment** — Meta's history API returns the
       message text as a plain string with attachments beside it, and they were only read when
       it was an object, so photos, voice notes and stickers fetched by the sync arrived empty.

@@ -101,6 +101,7 @@ public class AiReplyService {
     private final AttachmentFetcher attachments;
     private final VoiceMessageService mediaService;
     private final ObjectMapper objectMapper;
+    private final MessageTriageService triageService;
 
     private final boolean enabled;
     private final double minSimilarity;
@@ -110,6 +111,8 @@ public class AiReplyService {
     private final int offTopicLimit;
     private final int maxContextChars;
     private final String frontendUrl;
+    private final String greetingReply;
+    private final String thanksReply;
 
     public AiReplyService(SocialMessageRepository messageRepository,
                           SocialPageRepository pageRepository,
@@ -127,6 +130,7 @@ public class AiReplyService {
                           AttachmentFetcher attachments,
                           VoiceMessageService mediaService,
                           ObjectMapper objectMapper,
+                          MessageTriageService triageService,
                           @Value("${app.ai.auto-reply:true}") boolean enabled,
                           @Value("${app.ai.min-similarity:0.25}") double minSimilarity,
                           @Value("${app.ai.min-confidence:0.55}") double minConfidence,
@@ -134,7 +138,9 @@ public class AiReplyService {
                           @Value("${app.ai.unrelated-message:}") String unrelatedMessage,
                           @Value("${app.ai.off-topic-limit:3}") int offTopicLimit,
                           @Value("${app.ai.max-context-chars:6000}") int maxContextChars,
-                          @Value("${app.frontend-url}") String frontendUrl) {
+                          @Value("${app.frontend-url}") String frontendUrl,
+                          @Value("${app.triage.greeting-reply:Hi! How can I help you today?}") String greetingReply,
+                          @Value("${app.triage.thanks-reply:You're welcome!}") String thanksReply) {
         this.messageRepository = messageRepository;
         this.pageRepository = pageRepository;
         this.threadRepository = threadRepository;
@@ -151,6 +157,7 @@ public class AiReplyService {
         this.attachments = attachments;
         this.mediaService = mediaService;
         this.objectMapper = objectMapper;
+        this.triageService = triageService;
         this.enabled = enabled;
         this.minSimilarity = minSimilarity;
         this.minConfidence = minConfidence;
@@ -159,6 +166,8 @@ public class AiReplyService {
         this.offTopicLimit = offTopicLimit;
         this.maxContextChars = maxContextChars;
         this.frontendUrl = frontendUrl;
+        this.greetingReply = greetingReply;
+        this.thanksReply = thanksReply;
     }
 
     /**
@@ -215,7 +224,16 @@ public class AiReplyService {
         // People send a question in two or three goes, and a reply that only addresses the last
         // one leaves the earlier ones answered by nobody — "list products" sat unanswered
         // forever because a second question arrived before the first was picked up.
+        String ownQuestion = question;
         question = outstanding(thread, message, question);
+
+        // The Jev firewall, in "on" mode: settle what needs no generation before the model is
+        // asked anything. Only when this message stands alone — "hello" after an unanswered
+        // "delivery cost?" is not a greeting to reply to, it is a question still owed an answer.
+        if (triageService.mode() == MessageTriageService.Mode.ON && question.equals(ownQuestion)
+                && firewall(message, thread, page)) {
+            return;
+        }
 
         List<RetrievalService.Passage> passages =
                 retrievalService.search(organization, question, KNOWLEDGE_PASSAGES);
@@ -274,7 +292,12 @@ public class AiReplyService {
         log.info("AI will answer (confidence {}, best passage {}{}): {}",
                 round(verdict.confidence()), round(best), weakContext ? ", conversational" : "",
                 abbreviate(verdict.reply()));
-        send(message, page, verdict, summarise(passages), pictureFor(passages), startedAt);
+        // The picture and the sources belong to the passages the model actually answered
+        // from. With weak retrieval it was given none, so attaching the closest one anyway
+        // sent a payment QR code in reply to an insult — the QR was simply the least
+        // unrelated thing in a two-item knowledge base.
+        List<RetrievalService.Passage> used = weakContext ? List.of() : passages;
+        send(message, page, verdict, summarise(used), pictureFor(used), startedAt);
     }
 
     /** "Payment methods (46%), Returns (42%)" — readable beside the conversation. */
@@ -676,12 +699,44 @@ public class AiReplyService {
      * chatbot, and the AI closes the conversation itself rather than paying for every turn and
      * eventually putting it in front of an agent.
      */
+    /**
+     * Acts on the triage when it is sure, and reports whether it did. Anything it is not sure
+     * of — and any failure to reach Jev — returns false and the normal pipeline answers.
+     */
+    private boolean firewall(SocialMessage message, ConversationThread thread, SocialPage page) {
+        MessageTriageService.Action action = triageService.triage(message.getId())
+                .map(MessageTriageService::actionOf)
+                .orElse(MessageTriageService.Action.NONE);
+        String customerId = message.getSenderId();
+        switch (action) {
+            case ESCALATE_INJECTION -> escalate(thread, page, customerId,
+                    "the message tried to change the AI's instructions");
+            case ESCALATE_HUMAN -> escalate(thread, page, customerId,
+                    "the customer asked to speak to a person");
+            case GREET -> {
+                sendNotice(page, customerId, greetingReply);
+                resetOffTopic(thread);
+            }
+            case THANK -> {
+                sendNotice(page, customerId, thanksReply);
+                resetOffTopic(thread);
+            }
+            case OFF_TOPIC -> handleUnrelated(thread, page, customerId);
+            case NONE -> {
+                return false;
+            }
+        }
+        log.info("Firewall handled message {} as {} — the reply model was not called",
+                message.getId(), action);
+        return true;
+    }
+
     private void handleUnrelated(ConversationThread thread, SocialPage page, String customerId) {
         int streak = thread.getOffTopicStreak() + 1;
         thread.setOffTopicStreak(streak);
 
         if (streak < offTopicLimit) {
-            threadRepository.save(thread);
+            threadRepository.updateOffTopic(thread.getId(), streak, thread.isUnrelated());
             log.info("Unrelated message {} of {} on thread {}", streak, offTopicLimit, thread.getId());
             escalateQuietlyOrWait(thread, page, customerId);
             return;
@@ -690,7 +745,7 @@ public class AiReplyService {
         log.info("Closing thread {} as unrelated after {} off-topic messages", thread.getId(), streak);
         thread.setUnrelated(true);
         thread.setOffTopicStreak(streak);
-        threadRepository.save(thread);
+        threadRepository.updateOffTopic(thread.getId(), streak, true);
 
         if (page != null && customerId != null && unrelatedMessage != null && !unrelatedMessage.isBlank()) {
             sendNotice(page, customerId, unrelatedMessage);
@@ -710,7 +765,9 @@ public class AiReplyService {
     private void resetOffTopic(ConversationThread thread) {
         if (thread.getOffTopicStreak() != 0) {
             thread.setOffTopicStreak(0);
-            threadRepository.save(thread);
+            // Only the streak: `thread` was loaded when this reply began, and another
+            // message's reply may have escalated the conversation since.
+            threadRepository.updateOffTopic(thread.getId(), 0, thread.isUnrelated());
         }
     }
 

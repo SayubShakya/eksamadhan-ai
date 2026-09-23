@@ -326,6 +326,44 @@ status machine and authentication have all since been built — see the change l
   has no layout problem to solve, so it is drawn directly in UML form — `alt` in the tab and
   the guard beside it, which Mermaid's export had crammed into an 80px tab.
 
+- **Never `save()` a conversation loaded before a slow call — write only your own columns.**
+  With `open-in-view` off, a thread loaded in one call is detached, and `save()` on it is a
+  JPA merge that copies *every* field back. Sentiment, the handover brief and the off-topic
+  counter each loaded the thread, spent seconds on a model call, then saved it — so an
+  escalation made in those seconds was reverted: status back to "AI is handling", nobody
+  assigned, after the customer had been told a person was coming. Seen in the log to the
+  millisecond (escalated at .033, stale save at .551). `@DynamicUpdate` would *not* have
+  helped: merge copies the stale status onto the managed entity, so it counts as changed.
+  The fix is `ConversationThreadRepository.update*` — narrow JPQL updates — and
+  `ThreadNarrowUpdateTest` recreates the race.
+
+- **Clearing the database does not clear Facebook.** The sync fetches the last 25
+  conversations from Meta, held back only by an in-memory "already seen" map — so after a
+  restart, or the next time a customer wrote, every cleared message came straight back, and
+  the catch-up could answer ones from before the reset. `SYNC_IGNORE_BEFORE` stops history
+  older than a timestamp being imported. Test data was cleared on 2026-09-23 with the cutoff
+  set to that moment; a full backup of the cleared rows is in the home directory
+  (`eksamadhan-db-backup-20260923-191114.sql`).
+- **A reply's picture must come from a passage the model actually used.** `pictureFor` took
+  the top retrieved passage regardless of whether retrieval was weak — and when it is weak the
+  model is given no passages at all. In a two-source knowledge base the payment QR was always
+  the "closest" match, so an insult was answered with a QR code.
+
+- **A decision model (TypeSafe's Jev) now sits in front of the generative one — in shadow mode.**
+  The pipeline was paying a generative model for decisions: sentiment is a four-way
+  classification done by Gemma, one extra call per message on a local model that serves one
+  request at a time. Jev returns typed judgments instead, in ~0.5s. Evaluated on the project's
+  own 77 messages before anything was built; the evaluation changed the design twice. The
+  plain "is this person asking for a human?" question **overlapped** — an insult outscored a
+  genuine request — and only separated once it carried yes/no examples, including romanized
+  Nepali. And the business description blurred that question and the injection one, so those
+  two are asked on the message alone, in a second call run in parallel. Jev is not
+  deterministic (±0.03), so thresholds sit mid-gap. The rule it keeps: **act only when sure**,
+  and never on "off-topic" — closing a real customer's chat is the mistake worth never making.
+  Weakness to state honestly: romanized-Nepali profanity reads as neutral. It is also a second
+  outside processor of customer text, which the PRD's "messages never leave the machine"
+  claim does not yet reflect. Full numbers: `docs/jev-firewall.md`.
+
 - **Meta's history API is shaped differently from its webhook, and the sync was reading the
   webhook shape.** The Graph API returns `message` as a plain string with `attachments` and
   `sticker` as siblings; the webhook nests attachments inside the message object. The sync

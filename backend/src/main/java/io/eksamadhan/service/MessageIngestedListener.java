@@ -22,15 +22,18 @@ public class MessageIngestedListener {
     private final AiReplyService aiReplyService;
     private final SentimentService sentimentService;
     private final AgentNotificationService agentNotifications;
+    private final MessageTriageService triageService;
 
     public MessageIngestedListener(ConversationMemoryService memoryService,
                                    AiReplyService aiReplyService,
                                    SentimentService sentimentService,
-                                   AgentNotificationService agentNotifications) {
+                                   AgentNotificationService agentNotifications,
+                                   MessageTriageService triageService) {
         this.memoryService = memoryService;
         this.aiReplyService = aiReplyService;
         this.sentimentService = sentimentService;
         this.agentNotifications = agentNotifications;
+        this.triageService = triageService;
     }
 
     // The customer's own pool: this must never queue behind a crawl or a history sync.
@@ -57,6 +60,17 @@ public class MessageIngestedListener {
             } catch (Exception e) {
                 log.error("AI reply failed for message {}", event.messageId(), e);
                 aiReplyService.escalateAfterFailure(event.messageId(), "the AI could not produce a reply");
+            }
+        }
+
+        // Shadow mode: judge the message with Jev and record what the firewall would have
+        // done, after the customer has already been answered — so the evaluation can never
+        // slow a reply down. In "on" mode the reply itself runs the triage, before answering.
+        if (event.inbound() && triageService.mode() == MessageTriageService.Mode.SHADOW) {
+            try {
+                triageService.triage(event.messageId());
+            } catch (Exception e) {
+                log.debug("Shadow triage failed for message {}: {}", event.messageId(), e.getMessage());
             }
         }
 

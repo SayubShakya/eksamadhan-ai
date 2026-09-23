@@ -195,11 +195,16 @@ public class ConversationSummaryService {
             String summary = llmClient
                     .complete(resolved ? RESOLVED_PROMPT : SYSTEM_PROMPT, transcript.toString())
                     .strip();
+            // Only the brief's columns. The model call above takes seconds, and the conversation
+            // can be escalated or taken over meanwhile; saving the whole thread loaded before it
+            // would silently undo that.
+            ZonedDateTime at = ZonedDateTime.now();
+            threadRepository.updateSummary(thread.getId(), summary, at, messages.size());
             thread.setSummary(summary);
-            thread.setSummaryAt(ZonedDateTime.now());
+            thread.setSummaryAt(at);
             thread.setSummaryMessageCount(messages.size());
             log.info("Summarised thread {} over {} messages", threadId, messages.size());
-            return threadRepository.save(thread);
+            return threadRepository.findById(thread.getId()).orElse(thread);
         } catch (Exception e) {
             log.warn("Could not summarise thread {}: {}", threadId, e.getMessage());
             return thread;

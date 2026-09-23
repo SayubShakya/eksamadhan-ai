@@ -44,13 +44,18 @@ public class SentimentService {
     private final SocialMessageRepository messageRepository;
     private final ConversationThreadRepository threadRepository;
     private final LlmClient llmClient;
+    private final MessageTriageService triageService;
+    private final java.util.Set<UUID> inFlight = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final java.util.Set<String> backfilling = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     public SentimentService(SocialMessageRepository messageRepository,
                             ConversationThreadRepository threadRepository,
-                            LlmClient llmClient) {
+                            LlmClient llmClient,
+                            MessageTriageService triageService) {
         this.messageRepository = messageRepository;
         this.threadRepository = threadRepository;
         this.llmClient = llmClient;
+        this.triageService = triageService;
     }
 
     /**
@@ -60,26 +65,49 @@ public class SentimentService {
      *         missing reading must not cost the message it was reading.
      */
     public Sentiment analyse(UUID messageId) {
-        if (!llmClient.isConfigured()) return null;
+        // One reading per message. The reply path and the sync's backfill both reach every new
+        // message, and two syncs can overlap, so the same "Hello" was once sent to the local
+        // model three times at once — each run a model call that customers queue behind.
+        if (!inFlight.add(messageId)) return null;
+        try {
+            return analyseOnce(messageId);
+        } finally {
+            inFlight.remove(messageId);
+        }
+    }
+
+    private Sentiment analyseOnce(UUID messageId) {
+        boolean jev = triageService.mode() == MessageTriageService.Mode.ON;
+        if (!jev && !llmClient.isConfigured()) return null;
 
         SocialMessage message = messageRepository.findWithThreadById(messageId).orElse(null);
         if (message == null || !"inbound".equals(message.getDirection())) return null;
 
         String text = message.getText();
         if (text == null || text.isBlank()) return null;
+        // Already read by whichever path got here first.
+        if (message.getSentiment() != null) return message.getSentiment();
 
         try {
-            Sentiment sentiment = parse(llmClient.complete(SYSTEM_PROMPT, text));
+            // With the firewall on, the sentiment was read in the same Jev call that triaged
+            // the message — or is read now, if the AI never ran (an agent owns the thread).
+            // That takes one generative call per message off the local model's queue. If Jev
+            // cannot be reached, the generative model reads it as before.
+            Sentiment sentiment = jev ? fromTriage(messageId) : null;
+            if (sentiment == null) {
+                if (!llmClient.isConfigured()) return null;
+                sentiment = parse(llmClient.complete(SYSTEM_PROMPT, text));
+            }
             if (sentiment == null) return null;
 
             message.setSentiment(sentiment);
             messageRepository.save(message);
 
+            // Only the sentiment columns: this thread was loaded before the model call, and
+            // saving all of it would put back whatever status it had then.
             ConversationThread thread = message.getThread();
             if (thread != null) {
-                thread.setSentiment(sentiment.name());
-                thread.setSentimentAt(ZonedDateTime.now());
-                threadRepository.save(thread);
+                threadRepository.updateSentiment(thread.getId(), sentiment.name(), ZonedDateTime.now());
             }
 
             log.info("Sentiment {} for \"{}\"", sentiment, abbreviate(text));
@@ -90,6 +118,18 @@ public class SentimentService {
         }
     }
 
+    private Sentiment fromTriage(UUID messageId) {
+        return triageService.triage(messageId)
+                .map(t -> {
+                    try {
+                        return Sentiment.valueOf(t.getSentiment());
+                    } catch (RuntimeException e) {
+                        return null;
+                    }
+                })
+                .orElse(null);
+    }
+
     /**
      * Reads messages that arrived before this existed, so a conversation shows a mood
      * immediately rather than only after the customer writes again.
@@ -98,7 +138,18 @@ public class SentimentService {
      */
     @org.springframework.scheduling.annotation.Async("taskExecutor")
     public java.util.concurrent.CompletableFuture<Void> backfillAsync(String tenantId) {
-        if (llmClient.isConfigured()) {
+        // A backfill already running for this workspace covers these messages too.
+        if (!backfilling.add(tenantId)) return java.util.concurrent.CompletableFuture.completedFuture(null);
+        try {
+            backfill(tenantId);
+        } finally {
+            backfilling.remove(tenantId);
+        }
+        return java.util.concurrent.CompletableFuture.completedFuture(null);
+    }
+
+    private void backfill(String tenantId) {
+        if (llmClient.isConfigured() || triageService.mode() == MessageTriageService.Mode.ON) {
             // Only the messages that have never been read — the same reasoning as the memory
             // backfill: this runs on every sync, so it must cost nothing when there is nothing
             // to do, rather than scanning the whole workspace to discover that.
@@ -108,7 +159,6 @@ public class SentimentService {
             }
             if (read > 0) log.info("Sentiment backfill for {} read {} messages", tenantId, read);
         }
-        return java.util.concurrent.CompletableFuture.completedFuture(null);
     }
 
     /** Models add punctuation or a sentence around the word often enough to be tolerant. */

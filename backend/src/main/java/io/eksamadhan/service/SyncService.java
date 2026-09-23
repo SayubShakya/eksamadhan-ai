@@ -52,6 +52,17 @@ public class SyncService {
     private long catchUpWindowHours;
 
     /**
+     * Messenger history older than this is never imported. Blank imports everything.
+     *
+     * Clearing the database does not clear Facebook: the sync would fetch the same
+     * conversations straight back — on the next restart, or the next time the customer
+     * wrote — and the catch-up could then answer messages from before the reset. Set this to
+     * the moment the data was cleared and the slate stays clean.
+     */
+    @org.springframework.beans.factory.annotation.Value("${app.sync.ignore-before:}")
+    private String ignoreBefore;
+
+    /**
      * Messages already retried, and when.
      *
      * Keyed on the message, not the conversation. The unanswered count alone is not enough —
@@ -239,6 +250,16 @@ public class SyncService {
     }
 
     @Transactional
+    private ZonedDateTime historyCutoff() {
+        if (ignoreBefore == null || ignoreBefore.isBlank()) return null;
+        try {
+            return ZonedDateTime.parse(ignoreBefore.trim());
+        } catch (Exception e) {
+            log.warn("Ignoring app.sync.ignore-before '{}': not an ISO timestamp", ignoreBefore);
+            return null;
+        }
+    }
+
     private void processSingleMessage(Map<String, Object> messageData, SocialPage page) {
         // Log organization access to ensure session is active
         String tenantId = page.getOrganization().getApiKey();
@@ -353,6 +374,12 @@ public class SyncService {
                 }
             } catch (Exception e) {
                 log.warn("Final failure parsing timestamp {}: {}", createdTimeStr, e.getMessage());
+            }
+
+            ZonedDateTime cutoff = historyCutoff();
+            if (cutoff != null && timestamp.isBefore(cutoff)) {
+                log.debug("Skipping message from {} — before the history cutoff {}", timestamp, cutoff);
+                return;
             }
 
             // Determine direction

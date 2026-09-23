@@ -126,6 +126,24 @@ app:
       max-attempts: ${AI_RETRY_ATTEMPTS:3}
     unrelated-message: ${AI_UNRELATED_MESSAGE:I can only help with questions about our products and orders, so I will close this conversation here. Message us again any time you need something.}
     handover-message: ${AI_HANDOVER_MESSAGE:Let me check that with a colleague — someone from our team will reply here shortly.}
+  # The Jev firewall (TypeSafe): one decision-model call per customer message, before the
+  # reply model. off | shadow | on. Shadow judges every message and records what it would
+  # have done, while the existing pipeline answers as usual — run it first, and compare.
+  # On acts on what it is sure of and falls through to the pipeline for everything else.
+  # With no API key the mode is off, whatever this says.
+  triage:
+    mode: ${TRIAGE_MODE:shadow}
+    api-key: ${TYPESAFE_API_KEY:}
+    model: ${TRIAGE_MODEL:jev-latest}
+    # Short on purpose: in "on" mode the customer waits for this. A timeout falls back to
+    # the normal pipeline rather than failing the reply.
+    timeout-ms: ${TRIAGE_TIMEOUT_MS:3000}
+    # Measured on the real messages in the database; see MessageTriageService.
+    intent-threshold: ${TRIAGE_INTENT_THRESHOLD:0.9}
+    human-threshold: ${TRIAGE_HUMAN_THRESHOLD:0.65}
+    injection-threshold: ${TRIAGE_INJECTION_THRESHOLD:0.7}
+    greeting-reply: ${TRIAGE_GREETING_REPLY:Hi! How can I help you today?}
+    thanks-reply: ${TRIAGE_THANKS_REPLY:You're welcome! Let me know if there is anything else I can help with.}
   email:
     resend-key: ${RESEND_API_KEY:}
     # Until a domain is verified at resend.com/domains, Resend allows only this sender and
@@ -142,6 +160,9 @@ app:
   sync:
     catch-up-after-seconds: ${SYNC_CATCH_UP_AFTER:30}
     catch-up-window-hours: ${SYNC_CATCH_UP_WINDOW_HOURS:12}
+    # Messenger history older than this ISO timestamp is never imported. Blank imports
+    # everything. Set it when clearing test data, or the sync fetches it straight back.
+    ignore-before: ${SYNC_IGNORE_BEFORE:}
   # Browser notifications for agents (FR-06), over the Web Push standard. Blank keys turn
   # the feature off cleanly: the dashboard never asks for permission and nothing is sent.
   # A new key pair invalidates every stored subscription, so agents must re-enable them.

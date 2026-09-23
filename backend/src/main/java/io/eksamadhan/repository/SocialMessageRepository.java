@@ -34,6 +34,12 @@ public interface SocialMessageRepository extends JpaRepository<SocialMessage, UU
             "SELECT m FROM SocialMessage m LEFT JOIN FETCH m.thread WHERE m.id = :id")
     java.util.Optional<SocialMessage> findWithThreadById(java.util.UUID id);
 
+    /** The message with its page and that page's organisation — the triage needs all three. */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT m FROM SocialMessage m LEFT JOIN FETCH m.thread "
+          + "LEFT JOIN FETCH m.socialPage p LEFT JOIN FETCH p.organization WHERE m.id = :id")
+    java.util.Optional<SocialMessage> findWithPageById(java.util.UUID id);
+
     /**
      * Which of these Meta ids we already hold.
      *
