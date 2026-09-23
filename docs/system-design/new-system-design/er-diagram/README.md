@@ -1,6 +1,6 @@
 # ER diagram — Semester 2
 
-Eleven tables, produced by 20 Flyway migrations. Verified against the running database, not
+Twelve tables, produced by 21 Flyway migrations. Verified against the running database, not
 from memory. Compare with [Semester 1](../../old-system-design/er-diagram/Picture1.png), which
 had six.
 
@@ -26,6 +26,7 @@ erDiagram
     CONVERSATION_THREADS ||--o{ MESSAGE_EMBEDDINGS : remembers
     CONVERSATION_THREADS ||--o{ NOTIFICATIONS : concerns
     SOCIAL_MESSAGES ||--|| MESSAGE_EMBEDDINGS : embedded_as
+    SOCIAL_MESSAGES ||--o| MESSAGE_TRIAGE : judged_as
     KNOWLEDGE_SOURCES ||--o{ KNOWLEDGE_CHUNKS : split_into
 
     ORGANIZATIONS {
@@ -172,6 +173,22 @@ erDiagram
         text content
         vector embedding "1536 dims, HNSW cosine"
         varchar embedding_model
+        timestamptz created_at
+    }
+
+    MESSAGE_TRIAGE {
+        uuid id PK
+        uuid social_message_id FK,UK "ON DELETE CASCADE"
+        varchar mode "shadow on"
+        varchar intent "greeting thanks_or_ack business_question complaint wants_human off_topic abusive"
+        double intent_confidence
+        double wants_human "probability 0..1"
+        double injection "probability 0..1"
+        varchar sentiment
+        double sentiment_confidence
+        varchar action "NONE GREET THANK ESCALATE_HUMAN ESCALATE_INJECTION OFF_TOPIC"
+        integer latency_ms
+        integer input_tokens
         timestamptz created_at
     }
 

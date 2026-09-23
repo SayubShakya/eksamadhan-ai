@@ -1,6 +1,6 @@
 # Data flow diagram — level 1
 
-The system opened up into eight processes and three data stores. Compare with
+The system opened up into nine processes and three data stores. Compare with
 [Semester 1](../../../old-system-design/workflow-diagram/Level%201%20Data%20Flow%20Diagram/Picture1.png),
 which had five processes and two stores.
 
@@ -24,8 +24,10 @@ flowchart TB
     p6["6<br/>Notification Service"]
     p7["7<br/>Agent Dashboard"]
     p8["8<br/>Analytics"]
+    p9["9<br/>Message Triage<br/>Jev firewall"]
+    jev["TypeSafe Jev<br/>hosted decision model"]
 
-    d1[("D1  PostgreSQL<br/>organisations · users · pages<br/>threads · messages")]
+    d1[("D1  PostgreSQL<br/>organisations · users · pages<br/>threads · messages · triage")]
     d2[("D2  pgvector embeddings<br/>knowledge_chunks · message_embeddings<br/>same database as D1")]
     d3[("D3  Media files<br/>local disk")]
 
@@ -66,6 +68,13 @@ flowchart TB
     p8 -->|"deflection · reply times · by channel"| admin
 
     p1 -.->|"webhook never arrived:<br/>replay once"| p2
+
+    p2 -.->|"every customer message"| p9
+    p9 -->|"message text"| jev
+    jev -->|"intent · sentiment ·<br/>asks for a person · injection"| p9
+    p9 -->|"triage record"| d1
+    p9 -.->|"on mode: asks for a person,<br/>injection"| p5
+    p9 -.->|"on mode: greeting, thanks"| p1
 ```
 
 ## The two flows Semester 1 had no equivalent of
@@ -100,6 +109,19 @@ One limit, stated plainly: the sync runs when the **dashboard** asks for it, eve
 while it is open. Nothing schedules it on the server, so with no dashboard open a message whose
 webhook never arrived waits until someone opens one.
 
+### The firewall in front of process 4
+
+Process 9 puts a decision model before the generative one. The dotted flows are the ones that
+only exist in `on` mode: settling a greeting or a thank-you without calling the model, and
+sending a request for a person — or an attempt to steer the AI — straight to escalation. In
+shadow mode, the default, process 9 still judges every message and records what it would have
+done, but the flow runs through process 4 exactly as before. See
+[`docs/jev-firewall.md`](../../../../jev-firewall.md) for the measured thresholds.
+
+The catch-up loop also has a far edge now. Clearing test data does not clear Facebook, and the
+sync would fetch the same conversations straight back; `SYNC_IGNORE_BEFORE` stops history older
+than that moment being imported at all.
+
 ## What each process does
 
 | # | Process | Responsibility |
@@ -112,6 +134,7 @@ webhook never arrived waits until someone opens one.
 | 6 | Notification Service | One call writes the in-app bell row and sends the encrypted push; email is sent alongside on escalation |
 | 7 | Agent Dashboard | Everything an agent does — reply, take over, hand back to the AI, transfer, resolve, read the brief |
 | 8 | Analytics | Deflection against the 60% target, median and 90th-percentile reply times, escalation volume by channel |
+| 9 | Message Triage | One Jev decision per customer message — intent, sentiment, whether they are asking for a person, whether they are trying to steer the AI. In shadow mode (the default) it only records what it would do; in on mode it settles greetings, thanks and handovers before process 4 is ever called |
 
 ## The three gates on process 4
 

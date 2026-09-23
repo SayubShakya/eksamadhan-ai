@@ -326,6 +326,12 @@ status machine and authentication have all since been built — see the change l
   has no layout problem to solve, so it is drawn directly in UML form — `alt` in the tab and
   the guard beside it, which Mermaid's export had crammed into an 80px tab.
 
+- **The context diagram now shows what leaves the machine.** Level 0 had four external
+  entities and never drew the hosted AI services, which the "the model runs locally" story made
+  easy to miss: every message and knowledge passage goes to OpenRouter to be embedded, and every
+  customer message now goes to TypeSafe Jev to be triaged. Both are one "Hosted AI services"
+  entity, and the level 1 DFD has the firewall as process 9.
+
 - **Never `save()` a conversation loaded before a slow call — write only your own columns.**
   With `open-in-view` off, a thread loaded in one call is detached, and `save()` on it is a
   JPA merge that copies *every* field back. Sentiment, the handover brief and the off-topic

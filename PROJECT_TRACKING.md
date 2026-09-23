@@ -226,6 +226,13 @@ expire after 7 days — re-send if it lapses.
 - [x] **Every Semester 2 diagram exported to draw.io** (`docs/system-design/draw.io/`) as real
       editable shapes rather than wrapped images, each with a rendered PNG beside it, and with
       the converter committed so the two formats cannot drift
+- [x] **System design updated for the Jev firewall** — all eight views: a Triage group and
+      TypeSafe in the architecture, the `message_triage` table, the new classes, the firewall
+      and shadow steps in the sequence, the firewall and sticker branches in the activity
+      diagram, hosted AI services as an external entity in the context diagram, and a new
+      process 9 in the level 1 DFD. Re-checked against the code and the live database — the ER
+      matches all 12 tables and 17 relationships, the class diagrams all 41 classes — and the
+      draw.io set rebuilt to match
 - [x] **Fixed handovers being silently undone** — the AI announced "someone from our team will
       reply" and assigned an agent, then the conversation reverted to "AI is handling" with
       nobody assigned. Background paths (sentiment, the handover brief, the off-topic count)

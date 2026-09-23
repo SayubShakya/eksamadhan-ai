@@ -122,6 +122,22 @@ classDiagram
         +String embeddingModel
     }
 
+    class MessageTriage {
+        +UUID id
+        +UUID socialMessageId
+        +String mode
+        +String intent
+        +Double intentConfidence
+        +Double wantsHuman
+        +Double injection
+        +String sentiment
+        +Double sentimentConfidence
+        +String action
+        +Integer latencyMs
+        +Integer inputTokens
+        +OffsetDateTime createdAt
+    }
+
     class MessageEmbedding {
         +UUID id
         +UUID socialMessageId
@@ -211,6 +227,7 @@ classDiagram
     User "1" o-- "*" PushSubscription
     User "1" o-- "*" Notification
     SocialMessage "1" -- "0..1" MessageEmbedding : by socialMessageId
+    SocialMessage "1" -- "0..1" MessageTriage : by socialMessageId
 
     User --> UserRole
     User --> UserStatus
@@ -364,6 +381,18 @@ classDiagram
         +saveOutboundMessage(...)
     }
 
+    class MessageTriageService {
+        +triage(messageId) Optional~MessageTriage~
+        +mode() Mode
+        ~decide(triage) Action
+        -describe(organization) String
+    }
+
+    class TypeSafeClient {
+        +evaluate(state, questions) JsonNode
+        +evaluateAsync(state, questions) Mono~JsonNode~
+    }
+
     class MessageIngestedListener {
         +onMessageIngested(event)
     }
@@ -372,8 +401,12 @@ classDiagram
     MessageIngestedListener --> AiReplyService
     MessageIngestedListener --> SentimentService
     MessageIngestedListener --> ConversationMemoryService
+    MessageIngestedListener --> MessageTriageService
 
     AiReplyService --> RetrievalService
+    AiReplyService --> MessageTriageService
+    SentimentService --> MessageTriageService
+    MessageTriageService --> TypeSafeClient
     AiReplyService --> LlmClient
     AiReplyService --> ConversationMemoryService
     AiReplyService --> ThreadService

@@ -43,6 +43,7 @@ flowchart TB
             direction LR
             notify["Notification<br/>AgentNotificationService · PushService · EmailService"]
             analytics["Analytics<br/>AnalyticsService"]
+            triage["Triage — Jev firewall<br/>MessageTriageService · TypeSafeClient<br/>shadow mode by default"]
         end
     end
 
@@ -59,6 +60,7 @@ flowchart TB
             openrouter["OpenRouter<br/>embeddings · hosted chat alternative"]
             resend["Resend<br/>email"]
             push["Browser push services"]
+            typesafe["TypeSafe · Jev<br/>decision model — hosted"]
         end
     end
 
@@ -79,6 +81,8 @@ flowchart TB
     knowledge --> openrouter
     notify --> resend
     notify --> push
+    ai --> triage
+    triage -->|"message text"| typesafe
     push -.->|"encrypted"| agent
 
     rowA --> pg

@@ -24,6 +24,7 @@ sequenceDiagram
     participant R as RetrievalService
     participant V as pgvector
     participant L as LlmClient
+    participant J as Jev (TypeSafe)
     participant T as ThreadService
     participant AR as AgentRoutingService
     participant N as AgentNotificationService
@@ -44,6 +45,13 @@ sequenceDiagram
     Note over MP,AI: Transaction commits here.<br/>Everything below runs on the reply pool.
 
     MP->>AI: MessageIngested (after commit)
+
+    opt firewall on
+        AI->>J: triage(message) — two calls in parallel
+        J-->>AI: intent · asks for a person · injection · sentiment
+        Note over AI,J: Acts only when sure — greet, thank, or hand over.<br/>Anything else carries on below, unchanged.
+    end
+
     AI->>R: search(question, 5 passages)
     R->>V: cosine nearest neighbour
     V-->>R: passages + similarity
@@ -78,6 +86,12 @@ sequenceDiagram
         M->>C: "someone will reply shortly"
         A->>DB: takes over and replies
     end
+
+    opt shadow mode (the default)
+        AI->>J: triage(message), after the customer has their answer
+        J-->>AI: intent · asks for a person · injection · sentiment
+        AI->>DB: record what the firewall would have done
+    end
 ```
 
 ## What this shows that the data flow diagrams cannot
@@ -95,6 +109,12 @@ not released yet — so it silently did nothing.
 knowledge base comes close, the passages are dropped and the model answers from the question
 and conversation memory alone. Escalating on weak retrieval by itself would hand every
 "hello" to a person, since a greeting matches no policy document well.
+
+**The firewall sits before the model, and only acts when sure.** In `on` mode one Jev
+decision settles greetings, thanks, requests for a person and injection attempts before
+anything is generated; everything it is unsure of runs down the path below exactly as before.
+In shadow mode — the default — the same judgment is made *after* the customer has been
+answered, and only recorded, so the evaluation can never slow a reply.
 
 **Escalation is a dozen steps, not one.** Escalating means changing thread state, choosing an
 agent by current load, recording the assignment, writing a notification row, pushing to that
@@ -114,4 +134,6 @@ conversation that goes quiet after "let me check" is worse than no promise at al
 | Off-topic streak, closed at 3 | `AiReplyService.handleUnrelated` |
 | Least-loaded assignment | `AgentRoutingService.pickAgent` |
 | Email to the agent | `AiReplyService.notifyAssignee` → Resend |
+| Firewall, on mode | `AiReplyService.firewall` → `MessageTriageService.triage` |
+| Firewall, shadow mode | `MessageIngestedListener`, after the reply |
 | Notification row then push | `AgentNotificationService.deliver` |

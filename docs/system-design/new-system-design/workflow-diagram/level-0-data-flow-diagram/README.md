@@ -14,6 +14,7 @@ flowchart LR
     agent["Support Agent"]
     admin["Account Owner<br/>/ Admin"]
     meta["Meta platform<br/>Facebook · Instagram"]
+    hosted["Hosted AI services<br/>OpenRouter · TypeSafe Jev"]
 
     system((("0<br/>EkSamadhan AI<br/>system")))
 
@@ -26,6 +27,9 @@ flowchart LR
     system -->|"analytics, retrieval scores, team state"| admin
 
     agent -->|"replies, take over, hand back, transfer, resolve"| system
+
+    system -->|"message and knowledge text"| hosted
+    hosted -->|"embeddings, triage judgments"| system
     system -->|"inbox, handover brief, alerts"| agent
 ```
 
@@ -46,5 +50,12 @@ deliver. Everything that follows from that is real and was discovered by buildin
 - In development, Meta only delivers messages from accounts registered to the developer app,
   which is why testing requires a second account.
 
-Drawing the customer as if they spoke to the system directly hides all three. The old diagram
+Drawing the customer as if they spoke to the system directly hides all three.
+
+**Hosted AI services are a fifth external entity** — the one the original design never drew,
+because it assumed nothing about where the model ran. The reply model runs on this machine,
+but two things leave it: every message and knowledge passage is sent to **OpenRouter** to be
+embedded, and every customer message is sent to **TypeSafe Jev** to be triaged. A context
+diagram exists to show exactly what crosses the boundary, and customer text does — so it is
+drawn, rather than letting "the model runs locally" suggest that nothing leaves. The old diagram
 did, and that is exactly the class of detail a context diagram exists to expose.

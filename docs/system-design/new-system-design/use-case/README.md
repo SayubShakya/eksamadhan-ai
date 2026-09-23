@@ -103,7 +103,9 @@ flowchart LR
         d7["Write the handover brief"]
         d8["Close an off-topic conversation"]
         d9["Alert the assigned agent<br/>FR-09"]
+        d10["Triage a message<br/>Jev firewall"]
     end
+    ai --- d10
     ai --- d1
     ai --- d2
     ai --- d3
@@ -114,6 +116,7 @@ flowchart LR
     d5 -.->|"includes"| d6
     d5 -.->|"includes"| d7
     d6 -.->|"includes"| d9
+    d10 -.->|"extends"| d5
 ```
 
 ## Requirement coverage

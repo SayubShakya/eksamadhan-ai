@@ -49,6 +49,7 @@ The AI now answers customers on Facebook and Instagram by itself, using the shop
 2.    Make the dashboard installable as a Progressive Web App (PWA), so it behaves like a downloaded app.
 3.    Match the Figma prototype, and make it work well on a mobile app as well.
 4.    Show which agents are online, so chats only go to people who are available.
+5.    Add Jev, a fast decision model by TypeSafe, in front of the AI. It will sort each message first (a greeting, spam, or a request to talk to a person) and read the customer's mood, so the main AI is only used when it is needed.
 
 
 Supervisor's
