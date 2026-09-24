@@ -8,10 +8,11 @@ actors and eight use cases. Dashed items are designed but **not built**.
 ![Support Agent](use-case-diagram-support-agent.png)
 ![End User and Meta](use-case-diagram-end-user-and-meta.png)
 ![AI System](use-case-diagram-ai-system.png)
+![System Admin](use-case-diagram-system-admin.png)
 
 *Rendered from the Mermaid source below.*
 
-Mermaid cannot lay out a classic UML use-case diagram, so the actors are split into four
+Mermaid cannot lay out a classic UML use-case diagram, so the actors are split into five
 views rather than crammed into one. Redrawn in Visual Paradigm they belong on a single canvas,
 with these actors down the left and the ovals inside one system boundary.
 
@@ -117,6 +118,27 @@ flowchart LR
     d5 -.->|"includes"| d7
     d6 -.->|"includes"| d9
     d10 -.->|"extends"| d5
+```
+
+### System Admin
+
+The platform operator, above the workspaces. Made only from configuration — no signup,
+invitation or profile edit can create one — because this actor reads every workspace's
+conversations.
+
+```mermaid
+flowchart LR
+    sa(("System Admin"))
+    subgraph s5["EkSamadhan AI platform"]
+        e1["Browse customer messages<br/>across every workspace"]
+        e2["See a message's AI flow<br/>step by step"]
+        e3["Open a step's input and output<br/>prompt · passages · reply · judgments"]
+        e4["See why it was handed over<br/>and to whom"]
+    end
+    sa --- e1
+    sa --- e2
+    e2 -.->|"includes"| e3
+    e2 -.->|"includes"| e4
 ```
 
 ## Requirement coverage

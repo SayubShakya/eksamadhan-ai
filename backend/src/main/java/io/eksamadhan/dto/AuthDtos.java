@@ -33,7 +33,8 @@ public final class AuthDtos {
             String lastName,
             String email,
             UserRole role,
-            String avatar) {
+            String avatar,
+            boolean systemAdmin) {
 
         public static Profile of(User user) {
             return new Profile(
@@ -42,7 +43,8 @@ public final class AuthDtos {
                     user.getLastName(),
                     user.getEmail(),
                     user.getRole(),
-                    user.getAvatar());
+                    user.getAvatar(),
+                    user.isSystemAdmin());
         }
     }
 

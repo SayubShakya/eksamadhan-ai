@@ -15,7 +15,7 @@ class MessageTriageDecisionTest {
 
     private final MessageTriageService service = new MessageTriageService(
             new TypeSafeClient("", "https://api.typesafe.ai/v1", "jev-latest", 3000, null),
-            null, null, null, "shadow", 0.9, 0.65, 0.7);
+            null, null, null, null, "shadow", 0.9, 0.65, 0.7);
 
     private static MessageTriage judged(String intent, double confidence, double human, double injection) {
         return MessageTriage.builder().intent(intent).intentConfidence(confidence)

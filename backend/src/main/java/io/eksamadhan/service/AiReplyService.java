@@ -102,6 +102,7 @@ public class AiReplyService {
     private final VoiceMessageService mediaService;
     private final ObjectMapper objectMapper;
     private final MessageTriageService triageService;
+    private final TraceRecorder trace;
 
     private final boolean enabled;
     private final double minSimilarity;
@@ -131,6 +132,7 @@ public class AiReplyService {
                           VoiceMessageService mediaService,
                           ObjectMapper objectMapper,
                           MessageTriageService triageService,
+                          TraceRecorder trace,
                           @Value("${app.ai.auto-reply:true}") boolean enabled,
                           @Value("${app.ai.min-similarity:0.25}") double minSimilarity,
                           @Value("${app.ai.min-confidence:0.55}") double minConfidence,
@@ -158,6 +160,7 @@ public class AiReplyService {
         this.mediaService = mediaService;
         this.objectMapper = objectMapper;
         this.triageService = triageService;
+        this.trace = trace;
         this.enabled = enabled;
         this.minSimilarity = minSimilarity;
         this.minConfidence = minConfidence;
@@ -177,7 +180,20 @@ public class AiReplyService {
      * not from the ingestion path directly, because the row would not yet be visible.
      */
     public void reply(UUID messageId, UUID pageId) {
-        if (!enabled || !llmClient.isConfigured()) return;
+        trace.begin(messageId);
+        try {
+            replyTraced(messageId, pageId);
+        } finally {
+            trace.end();
+        }
+    }
+
+    private void replyTraced(UUID messageId, UUID pageId) {
+        if (!enabled || !llmClient.isConfigured()) {
+            trace.here(TraceRecorder.Kind.END, "Auto-reply is off", "no AI reply",
+                    TraceRecorder.of("auto-reply", enabled, "model configured", llmClient.isConfigured()), null);
+            return;
+        }
 
         // Recorded on the reply so a slow answer can be explained rather than argued about:
         // this marks when the AI actually started, which is not when the customer wrote.
@@ -189,10 +205,22 @@ public class AiReplyService {
         ConversationThread thread = message.getThread();
         if (thread == null) return;
 
+        trace.here(TraceRecorder.Kind.TRIGGER, "Customer message received",
+                message.getPlatform() == null ? "facebook" : message.getPlatform(),
+                received(message), TraceRecorder.of("conversation", "CONV-" + thread.getId().toString().substring(0, 8),
+                        "status", thread.getStatus().name()));
+
         // The gate that already existed and had no caller: once an agent has taken over, or
         // the conversation is closed, the AI stays quiet.
-        if (!thread.getStatus().aiMayReply()) {
+        boolean mayReply = thread.getStatus().aiMayReply();
+        trace.here(TraceRecorder.Kind.DECISION, "Is a person already handling it?",
+                mayReply ? "no" : "yes",
+                TraceRecorder.of("status", thread.getStatus().name(),
+                       "assigned agent", thread.getAssignedAgentId() == null ? "nobody" : thread.getAssignedAgentId()),
+                TraceRecorder.of("AI may reply", mayReply));
+        if (!mayReply) {
             log.debug("Thread {} is {}; AI stays quiet", thread.getId(), thread.getStatus());
+            trace.here(TraceRecorder.Kind.END, "AI stays silent", "the agent owns it", null, null);
             return;
         }
 
@@ -209,6 +237,8 @@ public class AiReplyService {
             // were recognised, one arrived as an unreadable attachment and was escalated —
             // a thumbs-up handed to a person as though it needed an answer.
             log.debug("Sticker on thread {}; nothing to answer", thread.getId());
+            trace.here(TraceRecorder.Kind.END, "Only a sticker or a like", "nothing to answer",
+                    TraceRecorder.of("attachment", "sticker"), TraceRecorder.of("counted as waiting", false));
             return;
         }
         if (question == null || question.isBlank()) {
@@ -226,6 +256,9 @@ public class AiReplyService {
         // forever because a second question arrived before the first was picked up.
         String ownQuestion = question;
         question = outstanding(thread, message, question);
+        trace.here(TraceRecorder.Kind.ACTION, "Gather unanswered messages",
+                question.equals(ownQuestion) ? "just this one" : "earlier messages folded in",
+                TraceRecorder.of("this message", ownQuestion), TraceRecorder.of("question answered", question));
 
         // The Jev firewall, in "on" mode: settle what needs no generation before the model is
         // asked anything. Only when this message stands alone — "hello" after an unanswered
@@ -235,21 +268,43 @@ public class AiReplyService {
             return;
         }
 
+        long searchStarted = System.nanoTime();
         List<RetrievalService.Passage> passages =
                 retrievalService.search(organization, question, KNOWLEDGE_PASSAGES);
         double best = passages.isEmpty() ? 0 : passages.get(0).similarity();
+        trace.here(TraceRecorder.Kind.RETRIEVAL, "Knowledge search", passages.size() + " passages",
+                TraceRecorder.of("query", question, "passages asked for", KNOWLEDGE_PASSAGES,
+                       "workspace", organization.getName() == null ? "" : organization.getName()),
+                passagesForTrace(passages), TraceRecorder.since(searchStarted));
 
         // Weak retrieval is not by itself a reason to escalate: "hello" matches a shipping
         // policy poorly, but it is not a question and does not need one. The passages are
         // still passed along, marked as possibly irrelevant, and the model decides whether it
         // is answering conversationally or needs documentation it has not been given.
         boolean weakContext = passages.isEmpty() || best < minSimilarity;
+        trace.here(TraceRecorder.Kind.DECISION, "Gate 1 — is the best passage close enough?",
+                weakContext ? "no — weak retrieval" : "yes",
+                TraceRecorder.of("best similarity", round(best), "threshold", minSimilarity),
+                TraceRecorder.of("passages sent to the model", weakContext ? 0 : passages.size()));
         String prompt = buildPrompt(question, weakContext ? List.of() : passages, thread, weakContext);
 
         Verdict verdict;
+        long modelStarted = System.nanoTime();
         try {
-            verdict = parse(llmClient.complete(SYSTEM_PROMPT, prompt));
+            String raw = llmClient.complete(SYSTEM_PROMPT, prompt);
+            verdict = parse(raw);
+            trace.here(TraceRecorder.Kind.MODEL, llmClient.isLocal() ? "Local model" : "Hosted model",
+                    llmClient.modelName(),
+                    TraceRecorder.of("model", llmClient.modelName(), "system prompt", SYSTEM_PROMPT, "prompt", prompt),
+                    TraceRecorder.of("raw reply", raw, "parsed", TraceRecorder.of("related", verdict.related(),
+                            "answered", verdict.answered(), "confidence", verdict.confidence(),
+                            "reply", verdict.reply())),
+                    TraceRecorder.since(modelStarted));
         } catch (LlmClient.TruncatedReplyException e) {
+            trace.here(TraceRecorder.Kind.ERROR, llmClient.isLocal() ? "Local model" : "Hosted model",
+                    "answer cut off",
+                    TraceRecorder.of("model", llmClient.modelName(), "system prompt", SYSTEM_PROMPT, "prompt", prompt),
+                    TraceRecorder.of("error", String.valueOf(e.getMessage())), TraceRecorder.since(modelStarted));
             // Distinguished from every other refusal on purpose: this one is our fault, not a
             // gap in the knowledge base, and the agent who reads the reason is the person best
             // placed to report it.
@@ -260,6 +315,14 @@ public class AiReplyService {
         }
 
         // Gates 2 and 3: the model's own verdict, and the confidence threshold.
+        trace.here(TraceRecorder.Kind.DECISION, "Gate 2 — did the model say it answered?",
+                verdict.answered() && !verdict.reply().isBlank() ? "yes" : "no",
+                TraceRecorder.of("answered", verdict.answered(), "reply empty", verdict.reply().isBlank()), null);
+        if (verdict.answered() && !verdict.reply().isBlank()) {
+            trace.here(TraceRecorder.Kind.DECISION, "Gate 3 — confident enough?",
+                    verdict.confidence() >= minConfidence ? "yes" : "no",
+                    TraceRecorder.of("confidence", round(verdict.confidence()), "threshold", minConfidence), null);
+        }
         if (!verdict.answered() || verdict.confidence() < minConfidence || verdict.reply().isBlank()) {
             log.info("AI declined \"{}\" (answered={}, confidence={}, best passage {})",
                     abbreviate(question), verdict.answered(), round(verdict.confidence()), round(best));
@@ -269,6 +332,9 @@ public class AiReplyService {
             // that matters most: "do you sell ear buds?" retrieves nothing when no product
             // catalogue has been uploaded, and that is a real customer asking a real question.
             // Counting them as off-topic closed their conversation after three.
+            trace.here(TraceRecorder.Kind.DECISION, "Weak retrieval and not about the business?",
+                    weakContext && !verdict.related() ? "yes — off-topic" : "no — a real question",
+                    TraceRecorder.of("weak retrieval", weakContext, "related", verdict.related()), null);
             if (weakContext && !verdict.related()) {
                 handleUnrelated(thread, page, message.getSenderId());
                 return;
@@ -298,6 +364,29 @@ public class AiReplyService {
         // unrelated thing in a two-item knowledge base.
         List<RetrievalService.Passage> used = weakContext ? List.of() : passages;
         send(message, page, verdict, summarise(used), pictureFor(used), startedAt);
+    }
+
+    /** What arrived, as the visualizer's first box shows it. */
+    private static Map<String, Object> received(SocialMessage message) {
+        Map<String, Object> in = new java.util.LinkedHashMap<>();
+        in.put("customer", message.getSenderName() == null ? message.getSenderId() : message.getSenderName());
+        in.put("channel", message.getPlatform() == null ? "facebook" : message.getPlatform());
+        in.put("text", message.getText() == null ? "" : message.getText());
+        if (message.getAttachmentType() != null) in.put("attachment", message.getAttachmentType());
+        in.put("sent at", String.valueOf(message.getTimestamp()));
+        return in;
+    }
+
+    /** The retrieved passages, with enough of each to see why it matched. */
+    private static List<Map<String, Object>> passagesForTrace(List<RetrievalService.Passage> passages) {
+        return passages.stream().map(p -> {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            row.put("source", p.sourceTitle());
+            row.put("similarity", round(p.similarity()));
+            row.put("text", p.content() == null ? "" : p.content());
+            if (p.isImage()) row.put("picture", p.imagePath());
+            return row;
+        }).toList();
     }
 
     /** "Payment methods (46%), Returns (42%)" — readable beside the conversation. */
@@ -374,6 +463,11 @@ public class AiReplyService {
 
     private void send(SocialMessage inbound, SocialPage page, Verdict verdict, String sources,
                       String picture, java.time.Instant startedAt) {
+        trace.here(TraceRecorder.Kind.ACTION, "Reply sent to the customer", "answered",
+                TraceRecorder.of("reply", verdict.reply(), "confidence", round(verdict.confidence())),
+                TraceRecorder.of("sources", sources == null ? "none — answered conversationally" : sources,
+                       "picture", picture == null ? "none" : picture,
+                       "total time", millisSince(startedAt) + " ms"));
         Map<String, Object> response = metaService.sendMessage(
                 inbound.getSenderId(), verdict.reply(), page.getAccessToken(), null).block();
 
@@ -547,6 +641,9 @@ public class AiReplyService {
 
         ConversationThread escalated = threadService.escalate(thread.getId(), reason);
         escalated.setEscalationReason(reason);
+        trace.here(TraceRecorder.Kind.HANDOVER, "Escalated to a person", reason,
+                TraceRecorder.of("reason", reason, "already waiting for a person", alreadyWaiting),
+                TraceRecorder.of("status", String.valueOf(escalated.getStatus())));
 
         // Assign the least-loaded member, so the conversation belongs to someone rather than
         // sitting in a queue nobody owns.
@@ -556,6 +653,15 @@ public class AiReplyService {
             if (assignee != null) {
                 escalated.setAssignedAgentId(assignee.getId().toString());
             }
+            trace.here(TraceRecorder.Kind.HANDOVER, "Assign the least-loaded agent",
+                    assignee == null ? "nobody available" : assignee.getFirstName() + " " + assignee.getLastName(),
+                    TraceRecorder.of("rule", "fewest open conversations among active members; ties broken at random"),
+                    assignee == null ? TraceRecorder.of("assigned", "nobody — owners and admins are alerted instead")
+                                     : TraceRecorder.of("assigned", assignee.getFirstName() + " " + assignee.getLastName(),
+                                              "email", assignee.getEmail(), "role", assignee.getRole().name()));
+        } else if (escalated.getAssignedAgentId() != null) {
+            trace.here(TraceRecorder.Kind.HANDOVER, "Assign the least-loaded agent", "already assigned",
+                    null, TraceRecorder.of("assigned agent id", escalated.getAssignedAgentId()));
         }
         threadRepository.save(escalated);
 
@@ -570,7 +676,16 @@ public class AiReplyService {
 
         if (assignee != null && !alreadyWaiting) {
             notifyAssignee(assignee, escalated, reason);
+            trace.here(TraceRecorder.Kind.NOTIFY, "Alert the agent",
+                    assignee.getFirstName() + " — push, bell, email",
+                    TraceRecorder.of("to", assignee.getEmail(), "reason", reason),
+                    TraceRecorder.of("channels", List.of("browser push", "notification bell", "email")));
+        } else if (alreadyWaiting) {
+            trace.here(TraceRecorder.Kind.NOTIFY, "Alert the agent", "not repeated",
+                    null, TraceRecorder.of("why", "the conversation was already waiting for a person; one alert per handover"));
         } else if (!alreadyWaiting && page != null && escalated.getAssignedAgentId() == null) {
+            trace.here(TraceRecorder.Kind.NOTIFY, "Alert owners and admins", "nobody to assign",
+                    TraceRecorder.of("reason", reason), TraceRecorder.of("channels", List.of("browser push", "notification bell")));
             // Nobody owns it: routing found no active member. Someone still has to hear about
             // it, so the workspace's owners and admins do. Checked on the thread rather than on
             // `assignee`, which is also null for a conversation that already had an owner —
@@ -630,6 +745,8 @@ public class AiReplyService {
             Map<String, Object> response = metaService
                     .sendMessage(customerId, text, page.getAccessToken(), null).block();
             String metaMessageId = response == null ? null : (String) response.get("message_id");
+            trace.here(TraceRecorder.Kind.ACTION, "Message sent to the customer", "sent",
+                    TraceRecorder.of("text", text), TraceRecorder.of("meta message id", String.valueOf(metaMessageId)));
             syncService.saveOutboundMessage(metaMessageId, customerId, text,
                     page.getId(), null, page.getOrganization().getApiKey());
             if (metaMessageId != null) {
@@ -642,6 +759,8 @@ public class AiReplyService {
             // The handover itself already succeeded; failing to announce it is not a reason
             // to lose that.
             log.warn("Could not send the notice: {}", e.getMessage());
+            trace.here(TraceRecorder.Kind.ERROR, "Message sent to the customer", "failed",
+                    TraceRecorder.of("text", text), TraceRecorder.of("error", String.valueOf(e.getMessage())));
         }
     }
 
@@ -652,6 +771,19 @@ public class AiReplyService {
      *         attachment cannot be read — a voice note, a video, a file
      */
     private String readAttachment(SocialMessage message) {
+        long started = System.nanoTime();
+        String read = readAttachmentUntraced(message);
+        trace.here(TraceRecorder.Kind.MODEL,
+                "audio".equals(message.getAttachmentType()) ? "Transcribe the voice note" : "Describe the photo",
+                read == null ? "could not be read" : "read",
+                TraceRecorder.of("attachment", String.valueOf(message.getAttachmentType()),
+                       "model", "image".equals(message.getAttachmentType()) ? "vision model" : "speech-to-text"),
+                read == null ? TraceRecorder.of("result", "nothing readable") : TraceRecorder.of("text", read),
+                TraceRecorder.since(started));
+        return read;
+    }
+
+    private String readAttachmentUntraced(SocialMessage message) {
         String type = message.getAttachmentType();
         byte[] bytes = attachments.fetch(message.getAttachmentUrl());
         if (bytes == null) return null;
@@ -707,6 +839,9 @@ public class AiReplyService {
         MessageTriageService.Action action = triageService.triage(message.getId())
                 .map(MessageTriageService::actionOf)
                 .orElse(MessageTriageService.Action.NONE);
+        trace.here(TraceRecorder.Kind.DECISION, "Firewall — sure of an action?",
+                action == MessageTriageService.Action.NONE ? "not sure — answer normally" : action.name(),
+                TraceRecorder.of("mode", "on"), TraceRecorder.of("action", action.name()));
         String customerId = message.getSenderId();
         switch (action) {
             case ESCALATE_INJECTION -> escalate(thread, page, customerId,
@@ -734,6 +869,10 @@ public class AiReplyService {
     private void handleUnrelated(ConversationThread thread, SocialPage page, String customerId) {
         int streak = thread.getOffTopicStreak() + 1;
         thread.setOffTopicStreak(streak);
+        trace.here(TraceRecorder.Kind.DECISION, "Off-topic streak",
+                streak < offTopicLimit ? streak + " of " + offTopicLimit + " — escalate, keep counting"
+                                       : streak + " of " + offTopicLimit + " — close the conversation",
+                TraceRecorder.of("streak", streak, "limit", offTopicLimit), null);
 
         if (streak < offTopicLimit) {
             threadRepository.updateOffTopic(thread.getId(), streak, thread.isUnrelated());
@@ -751,6 +890,8 @@ public class AiReplyService {
             sendNotice(page, customerId, unrelatedMessage);
         }
         threadService.resolve(thread.getId());
+        trace.here(TraceRecorder.Kind.END, "Conversation closed", "off-topic three times in a row",
+                null, TraceRecorder.of("status", "RESOLVED", "marked unrelated", true));
     }
 
     /**
@@ -773,12 +914,16 @@ public class AiReplyService {
 
     /** Used when the reply itself blew up: a customer must not be left with silence. */
     public void escalateAfterFailure(UUID messageId, String reason) {
+        trace.begin(messageId);
+        trace.here(TraceRecorder.Kind.ERROR, "The reply failed", reason, null, null);
         try {
             messageRepository.findWithThreadById(messageId)
                     .map(SocialMessage::getThread)
                     .ifPresent(thread -> escalate(thread, null, null, reason));
         } catch (Exception e) {
             log.error("Could not escalate after a failed AI reply", e);
+        } finally {
+            trace.end();
         }
     }
 

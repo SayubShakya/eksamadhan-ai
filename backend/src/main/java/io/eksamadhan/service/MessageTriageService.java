@@ -78,6 +78,7 @@ public class MessageTriageService {
     private final MessageTriageRepository triageRepository;
     private final SocialMessageRepository messageRepository;
     private final KnowledgeSourceRepository sourceRepository;
+    private final TraceRecorder trace;
     private final Mode mode;
     private final double intentThreshold;
     private final double humanThreshold;
@@ -87,6 +88,7 @@ public class MessageTriageService {
                                 MessageTriageRepository triageRepository,
                                 SocialMessageRepository messageRepository,
                                 KnowledgeSourceRepository sourceRepository,
+                                TraceRecorder trace,
                                 @Value("${app.triage.mode:shadow}") String mode,
                                 @Value("${app.triage.intent-threshold:0.9}") double intentThreshold,
                                 @Value("${app.triage.human-threshold:0.65}") double humanThreshold,
@@ -95,6 +97,7 @@ public class MessageTriageService {
         this.triageRepository = triageRepository;
         this.messageRepository = messageRepository;
         this.sourceRepository = sourceRepository;
+        this.trace = trace;
         // Without a key there is nothing to call, whatever the setting says.
         Mode configured = parseMode(mode);
         this.mode = typeSafe.isConfigured() ? configured : Mode.OFF;
@@ -130,15 +133,18 @@ public class MessageTriageService {
         long started = System.nanoTime();
         JsonNode aboutBusiness;
         JsonNode aboutMessage;
+        Map<String, Object> businessState = null;
+        Map<String, Object> messageState = null;
         try {
             // Two calls side by side, one round trip. Whether someone is asking for a person,
             // or trying to steer the AI, has nothing to do with the business — and the
             // business description measurably blurred both, as TypeSafe's own notes warn
             // unrelated state does. So those two see the message alone.
+            businessState = Map.of("business", describe(organization), "message", text);
+            messageState = Map.of("message", text);
             var both = reactor.core.publisher.Mono.zip(
-                    typeSafe.evaluateAsync(Map.of("business", describe(organization), "message", text),
-                            businessQuestions()),
-                    typeSafe.evaluateAsync(Map.of("message", text), messageQuestions()))
+                    typeSafe.evaluateAsync(businessState, businessQuestions()),
+                    typeSafe.evaluateAsync(messageState, messageQuestions()))
                     .block(typeSafe.timeout());
             if (both == null) throw new IllegalStateException("no answer from TypeSafe");
             aboutBusiness = both.getT1();
@@ -146,6 +152,10 @@ public class MessageTriageService {
         } catch (RuntimeException e) {
             log.warn("Triage unavailable for message {}, using the normal pipeline: {}",
                     messageId, e.getMessage());
+            trace.step(messageId, TraceRecorder.Kind.ERROR, "Jev — System One triage", "unavailable",
+                    TraceRecorder.of("mode", mode.name().toLowerCase(Locale.ROOT)),
+                    TraceRecorder.of("error", e.getMessage(), "fallback", "the normal pipeline answers"),
+                    TraceRecorder.since(started));
             return Optional.empty();
         }
         int latencyMs = (int) ((System.nanoTime() - started) / 1_000_000);
@@ -153,6 +163,25 @@ public class MessageTriageService {
         try {
             MessageTriage triage = read(aboutBusiness, aboutMessage, messageId, latencyMs);
             triage.setAction(decide(triage).name());
+            trace.step(messageId, TraceRecorder.Kind.JEV, "Jev — System One triage",
+                    triage.getIntent() + " · " + triage.getAction(),
+                    TraceRecorder.of("mode", mode.name().toLowerCase(Locale.ROOT),
+                            "model", "jev (TypeSafe System One)",
+                            "call 1 — judged against the business",
+                            TraceRecorder.of("state", businessState, "questions", businessQuestions()),
+                            "call 2 — judged on the message alone",
+                            TraceRecorder.of("state", messageState, "questions", messageQuestions())),
+                    TraceRecorder.of("call 1 answers", aboutBusiness.get("answers"),
+                            "call 2 answers", aboutMessage.get("answers"),
+                            "decided", TraceRecorder.of("intent", triage.getIntent(),
+                                    "intent confidence", triage.getIntentConfidence(),
+                                    "asks for a person", triage.getWantsHuman(),
+                                    "injection", triage.getInjection(),
+                                    "sentiment", triage.getSentiment(),
+                                    "action", triage.getAction(),
+                                    "acted on", mode == Mode.ON ? "yes" : "no — shadow mode only records it"),
+                            "input tokens", triage.getInputTokens()),
+                    latencyMs);
             log.info("Triage [{}] {} ({}) human={} injection={} sentiment={} -> {} in {}ms: {}",
                     mode, triage.getIntent(), round(triage.getIntentConfidence()),
                     round(triage.getWantsHuman()), round(triage.getInjection()),

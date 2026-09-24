@@ -23,7 +23,12 @@ const DOCKED = '(min-width: 1024px)';
  * Selecting a destination closes it only when it is overlaying the content — on a
  * desktop that would mean re-opening the nav for every move.
  */
-export default function NavRail({ view, onNavigate, unread = 0, open, onClose, onToggle, onHome }) {
+/**
+ * `items` defaults to the workspace menu. The system admin console passes its own, and
+ * `showSettings={false}` because workspace settings have no meaning outside a workspace.
+ */
+export default function NavRail({ view, onNavigate, unread = 0, open, onClose, onToggle, onHome,
+                                  items = ITEMS, showSettings = true }) {
     useEffect(() => {
         if (!open) return;
         const onKey = (e) => {
@@ -67,7 +72,7 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                     </button>
                 </div>
 
-                {ITEMS.map(({ id, label, Icon }) => (
+                {items.map(({ id, label, Icon }) => (
                     <button
                         key={id}
                         className="rail__item"
@@ -84,14 +89,16 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
 
                 <div className="rail__spacer" />
 
-                <button
-                    className="rail__item"
-                    aria-current={view === 'settings' ? 'page' : undefined}
-                    onClick={() => go('settings')}
-                >
-                    <IconSettings />
-                    <span>Settings</span>
-                </button>
+                {showSettings && (
+                    <button
+                        className="rail__item"
+                        aria-current={view === 'settings' ? 'page' : undefined}
+                        onClick={() => go('settings')}
+                    >
+                        <IconSettings />
+                        <span>Settings</span>
+                    </button>
+                )}
             </nav>
         </>
     );

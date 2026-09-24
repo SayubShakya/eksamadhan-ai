@@ -64,6 +64,15 @@ public class CurrentUser {
         return organization().getApiKey();
     }
 
+    /** The platform operator — the only caller allowed to read across workspaces. */
+    public User requireSystemAdmin() {
+        User user = require();
+        if (!user.isSystemAdmin()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only a system admin can see this");
+        }
+        return user;
+    }
+
     public User requireTeamManager() {
         User user = require();
         if (!user.getRole().canManageTeam()) {

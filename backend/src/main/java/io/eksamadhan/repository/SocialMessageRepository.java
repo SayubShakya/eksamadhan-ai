@@ -41,6 +41,17 @@ public interface SocialMessageRepository extends JpaRepository<SocialMessage, UU
     java.util.Optional<SocialMessage> findWithPageById(java.util.UUID id);
 
     /**
+     * The newest customer messages across every workspace, for the system admin's
+     * conversation visualizer. Page, workspace and thread are fetched with them: the list
+     * shows all three, and nothing lazy can load once the query returns.
+     */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT m FROM SocialMessage m LEFT JOIN FETCH m.thread "
+          + "LEFT JOIN FETCH m.socialPage p LEFT JOIN FETCH p.organization "
+          + "WHERE m.direction = 'inbound' ORDER BY m.timestamp DESC")
+    java.util.List<SocialMessage> findRecentInbound(org.springframework.data.domain.Pageable page);
+
+    /**
      * Which of these Meta ids we already hold.
      *
      * The sync used to ask that one message at a time, so a poll over four conversations ran a

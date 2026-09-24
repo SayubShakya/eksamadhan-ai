@@ -41,8 +41,11 @@ class Doc:
         self.name, self.cells, self.n = name, [], 1
 
     def uid(self, prefix='c'):
+        # A Mermaid id always starts with a word character, so a leading '~' can never
+        # collide with one. Plain `e2` did: a diagram with nodes e1..e4 had its edges
+        # overwrite its boxes, and three of the four links vanished from the drawing.
         self.n += 1
-        return f'{prefix}{self.n}'
+        return f'~{prefix}{self.n}'
 
     def node(self, ident, label, style, x, y, w, h, parent='1'):
         self.cells.append(

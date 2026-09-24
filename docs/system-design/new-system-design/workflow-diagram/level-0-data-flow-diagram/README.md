@@ -15,6 +15,7 @@ flowchart LR
     admin["Account Owner<br/>/ Admin"]
     meta["Meta platform<br/>Facebook · Instagram"]
     hosted["Hosted AI services<br/>OpenRouter · TypeSafe Jev"]
+    sysadmin["System Admin<br/>(platform operator)"]
 
     system((("0<br/>EkSamadhan AI<br/>system")))
 
@@ -30,6 +31,9 @@ flowchart LR
 
     system -->|"message and knowledge text"| hosted
     hosted -->|"embeddings, triage judgments"| system
+
+    sysadmin -->|"choose a message"| system
+    system -->|"every message's AI flow, step by step"| sysadmin
     system -->|"inbox, handover brief, alerts"| agent
 ```
 

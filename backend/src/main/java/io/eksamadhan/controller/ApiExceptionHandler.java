@@ -27,6 +27,18 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", message));
     }
 
+    /**
+     * A body that cannot be read — malformed JSON, or a value outside an enum such as a role
+     * that does not exist. That is the caller's mistake, not a server failure: it used to fall
+     * through to the 500 below, so a bad invite role looked like the server had crashed.
+     */
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, String>> handleUnreadable(
+            org.springframework.http.converter.HttpMessageNotReadableException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "The request could not be read. Check the values sent."));
+    }
+
     /** Anything unplanned: logged in full, but described to the caller in one line. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleUnexpected(Exception e) {

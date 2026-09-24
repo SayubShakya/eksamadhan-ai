@@ -56,6 +56,14 @@ public class User {
     @Column(nullable = false, length = 20)
     private UserStatus status;
 
+    /**
+     * Operates the platform rather than one workspace. Set only from configuration at
+     * startup — see SystemAdminBootstrap — never through an invite, signup or profile edit.
+     */
+    @Builder.Default
+    @Column(name = "system_admin", nullable = false)
+    private boolean systemAdmin = false;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 

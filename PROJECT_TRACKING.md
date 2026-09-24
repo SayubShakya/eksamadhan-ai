@@ -272,6 +272,28 @@ expire after 7 days — re-send if it lapses.
       reply on resolved conversations too, so it showed 10 while the Active list was empty and
       no action could bring it down. Closing a conversation now clears its count, and the
       twenty already closed were cleared by a migration
+- [x] **Conversation visualizer** — every customer message drawn as a flow of the steps the AI
+      actually took: the trigger, each gate as a decision, the Jev triage, the knowledge search,
+      the local or hosted model call, and the handover, assignment and alert. Clicking a step
+      shows exactly what went in and what came out — the system prompt, the passages, the raw
+      model reply, Jev's judgments. Recorded in a new write-once `ai_trace_steps` table (V22);
+      three integration tests pin the recorded sequence for an answered, an escalated and an
+      owned message, and a live message was traced end to end
+- [x] The visualizer draws each flow on a single line on a canvas that pans and zooms — drag to
+      move, pinch or Ctrl+scroll to zoom, a Fit button — and the message list folds away to give
+      the flow the full width
+- [x] **System admin login** — a separate platform account, created from environment variables
+      and never through sign-up or invites, with its own console in the same layout as a
+      workspace; its only page for now is the conversation visualizer. Workspace owners get 403
+      on its endpoints, checked live
+- [x] An invitation with an unknown role now returns a 400 with a readable message instead of a
+      500
+- [x] **System design updated for the visualizer and system admin** — the trace table in the ER
+      diagram, the new classes, a System Admin use case, the operator in the architecture and
+      both DFDs, and the tracing note in the sequence diagram. Re-checked against the code and
+      the live database: the ER matches all 13 tables and 18 relationships, the class diagrams
+      all 45 classes. Fixed the draw.io converter, which had dropped three of the four links in
+      the new use case
 - [x] **Added the two views Semester 1 never had** — a sequence diagram of the reply-or-escalate
       flow (asked for by name in the final report outline) and an activity diagram of the AI
       decision, with all three gates and the off-topic branch as decisions. Eight views now,
@@ -346,6 +368,19 @@ expire after 7 days — re-send if it lapses.
 <!-- Regenerate before submitting:
      git log --since=2026-09-17 --until=2026-09-25 --pretty='- %ad `%h` %s' --date=short -->
 
+- 2026-09-23 `d0a73ba` docs: updated system design diagram
+- 2026-09-23 `78aafb9` feat: added Jev
+- 2026-09-23 `5ca9263` fix: keep synced attachments and recognise Messenger stickers
+- 2026-09-23 `41a55cb` updated draw.io diagram
+- 2026-09-23 `9a021e9` fix: stop resolved conversations counting toward the inbox badge
+- 2026-09-23 `abad775` docs: updated week 2 report
+- 2026-09-23 `92be1bc` docs: record the system design redraw in the week 2 report
+- 2026-09-23 `acba46a` added system design diagrams
+- 2026-09-22 `bc1baf6` docs: rewrite week 2 report to the university form
+- 2026-09-22 `7bd343d` docs: rewrite week 1 report to the university form
+- 2026-09-21 `6f73c34` chore: record reply-length preference
+- 2026-09-21 `4f4ce2f` docs: add the week 2 report and tidy week 1
+- 2026-09-21 `10bb0b0` feat: added notification, upadated week-02 report
 - 2026-09-21 `e279d22` perf: stop the sync re-reading everything every thirty seconds
 - 2026-09-18 `3e69653` fix: fall back to initials when a customer photo will not load
 - 2026-09-18 `9a2f9ce` feat: alert agents by browser push when a customer needs a human
@@ -364,9 +399,8 @@ expire after 7 days — re-send if it lapses.
 - 2026-09-17 `e450275` feat: manage the schema with flyway migrations
 - 2026-09-17 `5257bb0` feat: drive the inbox from server-side conversation threads
 - 2026-09-17 `9d6a4ad` feat: add conversation threads with a status machine
-- 2026-09-17 `ba57745` feat: blurred backdrop for dialogs
 
-_(pending commit: the sync, concurrency and embedding-cache work, and this report)_
+_(pending commit: the conversation visualizer, system admin login and trace recording)_
 
 **Progress report**
 

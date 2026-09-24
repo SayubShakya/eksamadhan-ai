@@ -1,6 +1,6 @@
 # Data flow diagram — level 1
 
-The system opened up into nine processes and three data stores. Compare with
+The system opened up into ten processes and three data stores. Compare with
 [Semester 1](../../../old-system-design/workflow-diagram/Level%201%20Data%20Flow%20Diagram/Picture1.png),
 which had five processes and two stores.
 
@@ -25,9 +25,11 @@ flowchart TB
     p7["7<br/>Agent Dashboard"]
     p8["8<br/>Analytics"]
     p9["9<br/>Message Triage<br/>Jev firewall"]
+    p10["10<br/>AI Trace &<br/>Conversation Visualizer"]
+    sysadmin["System Admin"]
     jev["TypeSafe Jev<br/>hosted decision model"]
 
-    d1[("D1  PostgreSQL<br/>organisations · users · pages<br/>threads · messages · triage")]
+    d1[("D1  PostgreSQL<br/>organisations · users · pages<br/>threads · messages · triage · traces")]
     d2[("D2  pgvector embeddings<br/>knowledge_chunks · message_embeddings<br/>same database as D1")]
     d3[("D3  Media files<br/>local disk")]
 
@@ -75,6 +77,13 @@ flowchart TB
     p9 -->|"triage record"| d1
     p9 -.->|"on mode: asks for a person,<br/>injection"| p5
     p9 -.->|"on mode: greeting, thanks"| p1
+
+    p4 -.->|"each step"| p10
+    p5 -.->|"each step"| p10
+    p9 -.->|"each step"| p10
+    p10 -->|"trace steps"| d1
+    sysadmin -->|"choose a message"| p10
+    p10 -->|"flow · each step's input and output"| sysadmin
 ```
 
 ## The two flows Semester 1 had no equivalent of
@@ -134,6 +143,7 @@ than that moment being imported at all.
 | 6 | Notification Service | One call writes the in-app bell row and sends the encrypted push; email is sent alongside on escalation |
 | 7 | Agent Dashboard | Everything an agent does — reply, take over, hand back to the AI, transfer, resolve, read the brief |
 | 8 | Analytics | Deflection against the 60% target, median and 90th-percentile reply times, escalation volume by channel |
+| 10 | AI Trace & Conversation Visualizer | Writes every step processes 4, 5 and 9 take on a message — the Jev triage, the knowledge search, the model's exact prompt and raw reply, each gate, the escalation, the assignment, the alerts — with what went in and what came out. The system admin reads it back as a flow, across every workspace |
 | 9 | Message Triage | One Jev decision per customer message — intent, sentiment, whether they are asking for a person, whether they are trying to steer the AI. In shadow mode (the default) it only records what it would do; in on mode it settles greetings, thanks and handovers before process 4 is ever called |
 
 ## The three gates on process 4

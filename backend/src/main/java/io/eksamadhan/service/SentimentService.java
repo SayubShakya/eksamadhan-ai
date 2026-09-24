@@ -45,17 +45,20 @@ public class SentimentService {
     private final ConversationThreadRepository threadRepository;
     private final LlmClient llmClient;
     private final MessageTriageService triageService;
+    private final TraceRecorder trace;
     private final java.util.Set<UUID> inFlight = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private final java.util.Set<String> backfilling = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     public SentimentService(SocialMessageRepository messageRepository,
                             ConversationThreadRepository threadRepository,
                             LlmClient llmClient,
-                            MessageTriageService triageService) {
+                            MessageTriageService triageService,
+                            TraceRecorder trace) {
         this.messageRepository = messageRepository;
         this.threadRepository = threadRepository;
         this.llmClient = llmClient;
         this.triageService = triageService;
+        this.trace = trace;
     }
 
     /**
@@ -93,12 +96,23 @@ public class SentimentService {
             // the message — or is read now, if the AI never ran (an agent owns the thread).
             // That takes one generative call per message off the local model's queue. If Jev
             // cannot be reached, the generative model reads it as before.
+            long started = System.nanoTime();
             Sentiment sentiment = jev ? fromTriage(messageId) : null;
+            boolean byJev = sentiment != null;
+            String raw = null;
             if (sentiment == null) {
                 if (!llmClient.isConfigured()) return null;
-                sentiment = parse(llmClient.complete(SYSTEM_PROMPT, text));
+                raw = llmClient.complete(SYSTEM_PROMPT, text);
+                sentiment = parse(raw);
             }
             if (sentiment == null) return null;
+            trace.step(messageId, byJev ? TraceRecorder.Kind.JEV : TraceRecorder.Kind.MODEL,
+                    "Read the customer's mood", sentiment.name(),
+                    byJev ? TraceRecorder.of("model", "jev (TypeSafe System One)", "text", text,
+                                    "note", "read in the same Jev call as the triage")
+                          : TraceRecorder.of("model", llmClient.modelName(), "system prompt", SYSTEM_PROMPT, "text", text),
+                    TraceRecorder.of("sentiment", sentiment.name(), "raw reply", raw),
+                    TraceRecorder.since(started));
 
             message.setSentiment(sentiment);
             messageRepository.save(message);

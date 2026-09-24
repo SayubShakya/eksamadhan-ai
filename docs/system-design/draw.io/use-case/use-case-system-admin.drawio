@@ -1,0 +1,20 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Use case - system admin">
+    <mxGraphModel dx="1100" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="s5" value="EkSamadhan AI platform" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;verticalAlign=top;align=left;spacingLeft=10;spacingTop=4;container=1;collapsible=0;" vertex="1" parent="1"><mxGeometry x="172" y="8" width="672" height="376" as="geometry"/></mxCell>
+        <mxCell id="sa" value="System Admin" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="8" y="113" width="114" height="114" as="geometry"/></mxCell>
+        <mxCell id="e1" value="Browse customer messages&lt;br/&gt;across every workspace" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="s5"><mxGeometry x="25" y="35" width="254" height="78" as="geometry"/></mxCell>
+        <mxCell id="e2" value="See a message&#x27;s AI flow&lt;br/&gt;step by step" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="s5"><mxGeometry x="39" y="187" width="226" height="78" as="geometry"/></mxCell>
+        <mxCell id="e3" value="Open a step&#x27;s input and output&lt;br/&gt;prompt · passages · reply · judgments" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="s5"><mxGeometry x="387" y="87" width="260" height="126" as="geometry"/></mxCell>
+        <mxCell id="e4" value="See why it was handed over&lt;br/&gt;and to whom" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="s5"><mxGeometry x="388" y="263" width="259" height="78" as="geometry"/></mxCell>
+        <mxCell id="~e2" value="" style="edgeStyle=none;curved=1;html=1;endArrow=none;exitX=0.84;exitY=0.13;exitDx=0;exitDy=0;entryX=0.00;entryY=0.50;entryDx=0;entryDy=0;" edge="1" parent="1" source="sa" target="e1"><mxGeometry x="0.0" y="0" relative="1" as="geometry"><Array as="points"><mxPoint x="147" y="82"/><mxPoint x="172" y="82"/></Array><mxPoint as="offset"/></mxGeometry></mxCell>
+        <mxCell id="~e3" value="" style="edgeStyle=none;curved=1;html=1;endArrow=none;exitX=0.89;exitY=0.81;exitDx=0;exitDy=0;entryX=0.00;entryY=0.50;entryDx=0;entryDy=0;" edge="1" parent="1" source="sa" target="e2"><mxGeometry x="0.0" y="0" relative="1" as="geometry"><Array as="points"><mxPoint x="147" y="234"/><mxPoint x="172" y="234"/></Array><mxPoint as="offset"/></mxGeometry></mxCell>
+        <mxCell id="~e4" value="includes" style="edgeStyle=none;curved=1;html=1;dashed=1;exitX=0.91;exitY=0.00;exitDx=0;exitDy=0;entryX=0.00;entryY=0.50;entryDx=0;entryDy=0;labelBackgroundColor=#FFFFFF;fontSize=11;" edge="1" parent="1" source="e2" target="e3"><mxGeometry x="0.0" y="0" relative="1" as="geometry"><Array as="points"><mxPoint x="505" y="158"/></Array><mxPoint as="offset"/></mxGeometry></mxCell>
+        <mxCell id="~e5" value="includes" style="edgeStyle=none;curved=1;html=1;dashed=1;exitX=0.91;exitY=1.00;exitDx=0;exitDy=0;entryX=0.00;entryY=0.50;entryDx=0;entryDy=0;labelBackgroundColor=#FFFFFF;fontSize=11;" edge="1" parent="1" source="e2" target="e4"><mxGeometry x="0.0" y="0" relative="1" as="geometry"><Array as="points"><mxPoint x="505" y="310"/></Array><mxPoint as="offset"/></mxGeometry></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

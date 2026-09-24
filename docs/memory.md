@@ -4,7 +4,7 @@ Living context for any AI assistant joining this project. **Read this first.**
 Update it in the same turn as any meaningful change — decisions, progress, gotchas.
 Newest entries at the top of each list.
 
-**Last updated:** 2026-09-17
+**Last updated:** 2026-09-24
 
 ---
 
@@ -369,6 +369,33 @@ status machine and authentication have all since been built — see the change l
   Weakness to state honestly: romanized-Nepali profanity reads as neutral. It is also a second
   outside processor of customer text, which the PRD's "messages never leave the machine"
   claim does not yet reflect. Full numbers: `docs/jev-firewall.md`.
+
+- **System admin is a flag, not a role — on purpose.** `users.system_admin` (V22) is set only by
+  `SystemAdminBootstrap` from `SYSTEM_ADMIN_EMAIL` / `SYSTEM_ADMIN_PASSWORD` in `backend/.env`.
+  Invites take their role from the request body, so a `SYSTEM_ADMIN` role value would have let
+  any workspace owner mint one. The flag is re-read from the database on every request
+  (`CurrentUser.requireSystemAdmin`), not trusted from the JWT. A system admin sees only the
+  system console (the conversation visualizer); the workspace screens, polling and sync are
+  never started for them. Verified live: owner → 403, no token → 401, an invite carrying
+  `"systemAdmin":true` is ignored.
+
+- **Every AI decision is recorded in `ai_trace_steps`, and recording must never break a reply.**
+  `TraceRecorder` writes one row per step (trigger, gate, Jev call, retrieval, model call,
+  handover, assignment, alert) with the exact input and output as JSON, trimmed at 24,000
+  characters. It swallows every exception, and its `of(...)` helper accepts nulls — `Map.of`
+  throws on a null *before* the recorder's try/catch is reached, which would have turned a
+  missing sender name into a failed reply. The current message is held in a ThreadLocal, set
+  and cleared in a `finally`. Messages from before V22 show "not recorded". Sentiment and
+  shadow-mode Jev run concurrently from the sync, so the visualizer draws them in a side lane
+  rather than in the main chain, where they interleaved by timestamp.
+  The canvas is one line, panned and zoomed by CSS transform (`usePanZoom`); it refits only
+  when a different message opens, not on each 4-second poll, or the view would jump back.
+
+- **The draw.io converter's edge ids collided with Mermaid node ids.** Generated ids were
+  `e2`, `e3`…; the system-admin use case named its nodes `e1`–`e4`, so edges overwrote boxes
+  and three of four links vanished from the draw.io copy while the Mermaid PNG looked fine.
+  Generated ids now start with `~`, which a Mermaid id cannot. Look at the draw.io PNGs, not
+  only the Mermaid ones.
 
 - **Meta's history API is shaped differently from its webhook, and the sync was reading the
   webhook shape.** The Graph API returns `message` as a plain string with `attachments` and

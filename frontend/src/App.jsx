@@ -8,6 +8,7 @@ import TeamPage from './pages/TeamPage.jsx';
 import KnowledgePage from './pages/KnowledgePage.jsx';
 import AnalyticsPage from './pages/AnalyticsPage.jsx';
 import AuthPage from './pages/AuthPage.jsx';
+import SystemConsole from './pages/SystemConsole.jsx';
 import ProfilePanel from './components/ProfilePanel.jsx';
 import ConfirmDialog from './components/ConfirmDialog.jsx';
 import NotificationPrompt from './components/NotificationPrompt.jsx';
@@ -124,6 +125,9 @@ export default function App() {
     // localStorage because there were no accounts; that key is now only read once, to carry
     // an existing name over into the first real account.
     const user = session?.user ?? null;
+    // A system admin runs the platform, not a workspace: none of the inbox's polling,
+    // syncing or notification prompts apply to them. Each of those effects keys off this.
+    const workspaceSession = session && !session.user?.systemAdmin ? session : null;
 
     const [profileOpen, setProfileOpen] = useState(false);
     const [confirmDisconnect, setConfirmDisconnect] = useState(false);
@@ -165,13 +169,13 @@ export default function App() {
     const [askNotifications, setAskNotifications] = useState(false);
 
     useEffect(() => {
-        if (!session) return;
+        if (!workspaceSession) return;
         let cancelled = false;
         push.state()
             .then(next => { if (!cancelled) setAskNotifications(next === 'ask'); })
             .catch(() => { /* notifications are never worth an error in the agent's face */ });
         return () => { cancelled = true; };
-    }, [session]);
+    }, [workspaceSession]);
 
     // Any 401 anywhere clears the token and raises this, so the dashboard stops polling
     // into a wall of failures and shows the sign-in screen instead.
@@ -185,11 +189,11 @@ export default function App() {
     // fetched once rather than polled.
     const [team, setTeam] = useState([]);
     useEffect(() => {
-        if (!session) return;
+        if (!workspaceSession) return;
         api.getTeam()
             .then(data => setTeam(data.members.filter(m => m.status === 'ACTIVE')))
             .catch(() => setTeam([]));
-    }, [session]);
+    }, [workspaceSession]);
 
     const [summarising, setSummarising] = useState(false);
 
@@ -252,7 +256,7 @@ export default function App() {
     }, []);
 
     useEffect(() => {
-        if (!session) return undefined;
+        if (!workspaceSession) return undefined;
         refreshStatus();
         refreshMessages();
         refreshThreads();
@@ -277,17 +281,17 @@ export default function App() {
         }
 
         return () => { clearInterval(m); clearInterval(t); clearInterval(s); };
-    }, [session, refreshStatus, refreshMessages, refreshThreads]);
+    }, [workspaceSession, refreshStatus, refreshMessages, refreshThreads]);
 
     // Meta only pushes webhooks for live events, so poll the Graph API as well to
     // pick up anything delivered while we were offline.
     useEffect(() => {
-        if (!session || !status?.connected) return;
+        if (!workspaceSession || !status?.connected) return;
         const sync = () => api.syncMessages().then(refreshMessages).catch(e => console.error('Sync failed', e));
         sync();
         const id = setInterval(sync, SYNC_MS);
         return () => clearInterval(id);
-    }, [session, status?.connected, refreshMessages]);
+    }, [workspaceSession, status?.connected, refreshMessages]);
 
     const visibleMessages = useMemo(
         () => (hiddenIds.size ? messages.filter(m => !hiddenIds.has(m.id)) : messages),
@@ -495,6 +499,10 @@ export default function App() {
                 }}
             />
         );
+    }
+
+    if (session.user?.systemAdmin) {
+        return <SystemConsole user={session.user} onSignOut={handleSignOut} />;
     }
 
     return (

@@ -32,6 +32,7 @@ DIAGRAMS = [
     ('use-case', 1, 'use-case', 'use-case-support-agent', 'Use case - support agent'),
     ('use-case', 2, 'use-case', 'use-case-customer', 'Use case - customer'),
     ('use-case', 3, 'use-case', 'use-case-system', 'Use case - system'),
+    ('use-case', 4, 'use-case', 'use-case-system-admin', 'Use case - system admin'),
     ('workflow-diagram/level-0-data-flow-diagram', 0,
      'workflow-diagram/level-0-data-flow-diagram',
      'level-0-data-flow-diagram', 'Level 0 data flow diagram'),

@@ -36,7 +36,7 @@ Instagram as a supported channel because the software supports it.
 
 ## What changed since Semester 1
 
-Seventeen differences, grouped by why they happened.
+Twenty differences, grouped by why they happened.
 
 ### Deliberate technology substitutions
 
@@ -56,6 +56,8 @@ Seventeen differences, grouped by why they happened.
 | Conversation memory | absent | `MessageEmbedding` — every message embedded, so a follow-up like "and the blue one?" can recall what it refers to without resending the thread |
 | Push plumbing | absent | `PushSubscription` and `Notification` tables |
 | Triage record | absent | `MessageTriage` — what the firewall judged about each message and what it did, or would have done |
+| AI trace | absent | `AiTraceStep` — every step the AI took on a message, with its input and output |
+| Platform operator | absent | a **system admin** flag on `User`, set only from configuration, never by signup or invite |
 
 ### Things the design was silent about, which the build had to answer
 
@@ -66,6 +68,7 @@ Seventeen differences, grouped by why they happened.
 | Concurrency | Work happens after the ingesting transaction commits, on **two separate thread pools** so a 25-page website crawl cannot delay a customer's answer |
 | Multimodal | Voice notes are transcribed, customers' photos are read, and a knowledge-base picture can be the answer |
 | Measurement | Every AI reply records how long it took and how long it waited, which is what turned "the AI is slow" into a number |
+| Observability | A **conversation visualizer** for the system admin draws every customer message as the flow it actually took — Jev, the knowledge search, the model's exact prompt and reply, each gate, the handover — and opens any step's input and output |
 | Decision model | A **Jev firewall** (TypeSafe) judges every customer message before the reply model — greeting, thanks, request for a person, injection attempt, sentiment — as typed decisions rather than generated text. It runs in shadow mode by default, recording what it would do; switched on, it settles what needs no generation and takes sentiment off the local model. Evaluated on the project's own messages first — see `docs/jev-firewall.md` |
 
 ### Where the design was simply wrong about the build

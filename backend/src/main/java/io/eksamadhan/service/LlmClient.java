@@ -135,6 +135,15 @@ public class LlmClient {
     }
 
     /** A local provider such as Ollama needs no key; a hosted one does. */
+    /** Which chat model answers, for the conversation visualizer. */
+    public String modelName() {
+        return model;
+    }
+
+    public boolean isLocal() {
+        return local;
+    }
+
     public boolean isConfigured() {
         return !apiKey.isEmpty() || local;
     }

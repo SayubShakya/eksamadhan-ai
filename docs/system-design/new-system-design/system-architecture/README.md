@@ -15,6 +15,7 @@ flowchart TB
         agent["Support agent / Admin<br/>React + Vite dashboard"]
         customer["End user<br/>customer"]
         widget["Web chat widget<br/>PLANNED · FR-03"]
+        sysadmin["System admin console<br/>conversation visualizer"]
     end
 
     subgraph external["2 · External platform and ingress"]
@@ -44,6 +45,7 @@ flowchart TB
             notify["Notification<br/>AgentNotificationService · PushService · EmailService"]
             analytics["Analytics<br/>AnalyticsService"]
             triage["Triage — Jev firewall<br/>MessageTriageService · TypeSafeClient<br/>shadow mode by default"]
+            tracing["AI trace — every step's input and output<br/>TraceRecorder · SystemController<br/>SystemAdminBootstrap"]
         end
     end
 
@@ -67,6 +69,7 @@ flowchart TB
     customer --> meta
     agent -->|"REST + polling"| api
     widget -.->|"planned"| api
+    sysadmin -->|"REST — system admin only"| api
     meta --> proxy --> tunnel --> api
     proxy -.-> redis
 
@@ -83,6 +86,7 @@ flowchart TB
     notify --> push
     ai --> triage
     triage -->|"message text"| typesafe
+    ai -->|"each step"| tracing
     push -.->|"encrypted"| agent
 
     rowA --> pg

@@ -16,7 +16,7 @@ is at the same path in both:
 | `system-architecture/` | `system-architecture` |
 | `er-diagram/` | `er-diagram` |
 | `class-diagram/` | `class-diagram-domain-model`, `class-diagram-service-layer` |
-| `use-case/` | `use-case-account-owner`, `use-case-support-agent`, `use-case-customer`, `use-case-system` |
+| `use-case/` | `use-case-account-owner`, `use-case-support-agent`, `use-case-customer`, `use-case-system`, `use-case-system-admin` |
 | `workflow-diagram/level-0-data-flow-diagram/` | `level-0-data-flow-diagram` |
 | `workflow-diagram/Level 1 Data Flow Diagram/` | `level-1-data-flow-diagram` |
 | `sequence-diagram/` | `sequence-diagram-reply-or-escalate` |
@@ -24,7 +24,7 @@ is at the same path in both:
 
 Each name is both a `.drawio` and a `.png`. The converter lives in [`tools/`](tools/).
 
-Eight views, twelve files: the class diagram has two, and the use case diagram is split
+Eight views, thirteen files: the class diagram has two, and the use case diagram is split
 one file per actor, exactly as the Mermaid sources are.
 
 ## These are shapes, not pictures

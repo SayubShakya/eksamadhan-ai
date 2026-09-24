@@ -33,6 +33,7 @@ classDiagram
         +UserStatus status
         +String avatar
         +OffsetDateTime lastLoginAt
+        +boolean systemAdmin
         +displayName() String
     }
 
@@ -120,6 +121,19 @@ classDiagram
         +String content
         +Vector embedding
         +String embeddingModel
+    }
+
+    class AiTraceStep {
+        +UUID id
+        +UUID socialMessageId
+        +Long seq
+        +String kind
+        +String title
+        +String outcome
+        +String input
+        +String output
+        +Integer durationMs
+        +OffsetDateTime createdAt
     }
 
     class MessageTriage {
@@ -228,6 +242,7 @@ classDiagram
     User "1" o-- "*" Notification
     SocialMessage "1" -- "0..1" MessageEmbedding : by socialMessageId
     SocialMessage "1" -- "0..1" MessageTriage : by socialMessageId
+    SocialMessage "1" -- "*" AiTraceStep : by socialMessageId
 
     User --> UserRole
     User --> UserStatus
@@ -388,6 +403,22 @@ classDiagram
         -describe(organization) String
     }
 
+    class TraceRecorder {
+        +step(messageId, kind, title, outcome, input, output)
+        +here(kind, title, outcome, input, output)
+        +begin(messageId)
+        +end()
+    }
+
+    class SystemAdminBootstrap {
+        +ensureSystemAdmin()
+    }
+
+    class SystemController {
+        +messages(limit, q) List~MessageSummary~
+        +trace(id) Trace
+    }
+
     class TypeSafeClient {
         +evaluate(state, questions) JsonNode
         +evaluateAsync(state, questions) Mono~JsonNode~
@@ -407,6 +438,9 @@ classDiagram
     AiReplyService --> MessageTriageService
     SentimentService --> MessageTriageService
     MessageTriageService --> TypeSafeClient
+    AiReplyService --> TraceRecorder
+    MessageTriageService --> TraceRecorder
+    SentimentService --> TraceRecorder
     AiReplyService --> LlmClient
     AiReplyService --> ConversationMemoryService
     AiReplyService --> ThreadService

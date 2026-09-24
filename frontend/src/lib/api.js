@@ -146,3 +146,10 @@ export const unsubscribeFromPush = (subscription) =>
 export const sendTestPush = () => axios.post('/api/push/test').then(r => r.data);
 export const getNotifications = () => axios.get('/api/notifications').then(r => r.data);
 export const markNotificationsRead = () => axios.post('/api/notifications/read').then(r => r.data);
+
+// ── System admin ────────────────────────────────────────────────────────────
+// Across every workspace; the server refuses anyone who is not a system admin.
+export const getSystemMessages = (q) =>
+    axios.get('/api/system/messages', { params: { limit: 100, ...(q ? { q } : {}) } }).then(r => r.data);
+export const getMessageTrace = (id) =>
+    axios.get(`/api/system/messages/${id}/trace`).then(r => r.data);

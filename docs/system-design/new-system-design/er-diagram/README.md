@@ -1,6 +1,6 @@
 # ER diagram — Semester 2
 
-Twelve tables, produced by 21 Flyway migrations. Verified against the running database, not
+Thirteen tables, produced by 22 Flyway migrations. Verified against the running database, not
 from memory. Compare with [Semester 1](../../old-system-design/er-diagram/Picture1.png), which
 had six.
 
@@ -27,6 +27,7 @@ erDiagram
     CONVERSATION_THREADS ||--o{ NOTIFICATIONS : concerns
     SOCIAL_MESSAGES ||--|| MESSAGE_EMBEDDINGS : embedded_as
     SOCIAL_MESSAGES ||--o| MESSAGE_TRIAGE : judged_as
+    SOCIAL_MESSAGES ||--o{ AI_TRACE_STEPS : traced_by
     KNOWLEDGE_SOURCES ||--o{ KNOWLEDGE_CHUNKS : split_into
 
     ORGANIZATIONS {
@@ -48,6 +49,7 @@ erDiagram
         varchar status "ACTIVE INVITED DISABLED"
         timestamptz created_at
         timestamptz last_login_at
+        boolean system_admin "set only from configuration"
     }
 
     INVITATIONS {
@@ -189,6 +191,19 @@ erDiagram
         varchar action "NONE GREET THANK ESCALATE_HUMAN ESCALATE_INJECTION OFF_TOPIC"
         integer latency_ms
         integer input_tokens
+        timestamptz created_at
+    }
+
+    AI_TRACE_STEPS {
+        uuid id PK
+        uuid social_message_id FK "ON DELETE CASCADE"
+        bigint seq "order within the message"
+        varchar kind "TRIGGER DECISION JEV RETRIEVAL MODEL ACTION HANDOVER NOTIFY END ERROR"
+        text title
+        text outcome "the branch taken"
+        text input "what went in, as JSON"
+        text output "what came out, as JSON"
+        integer duration_ms
         timestamptz created_at
     }
 

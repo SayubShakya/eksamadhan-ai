@@ -45,6 +45,7 @@ sequenceDiagram
     Note over MP,AI: Transaction commits here.<br/>Everything below runs on the reply pool.
 
     MP->>AI: MessageIngested (after commit)
+    Note over AI: From here every step is also written to ai_trace_steps,<br/>with its input and output, for the conversation visualizer.
 
     opt firewall on
         AI->>J: triage(message) — two calls in parallel

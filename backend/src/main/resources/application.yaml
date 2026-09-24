@@ -144,6 +144,12 @@ app:
     injection-threshold: ${TRIAGE_INJECTION_THRESHOLD:0.7}
     greeting-reply: ${TRIAGE_GREETING_REPLY:Hi! How can I help you today?}
     thanks-reply: ${TRIAGE_THANKS_REPLY:You're welcome! Let me know if there is anything else I can help with.}
+  # The platform operator. Created at startup from these two, in a workspace of its own; never
+  # through signup or an invitation. Blank email means there is no system admin. The password
+  # is read only to create the account (12 characters at least) and never overwrites it after.
+  system-admin:
+    email: ${SYSTEM_ADMIN_EMAIL:}
+    password: ${SYSTEM_ADMIN_PASSWORD:}
   email:
     resend-key: ${RESEND_API_KEY:}
     # Until a domain is verified at resend.com/domains, Resend allows only this sender and
