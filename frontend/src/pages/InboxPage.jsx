@@ -7,17 +7,19 @@ import {
 import { isRecordingSupported, startRecording, formatDuration } from '../lib/recorder.js';
 import MessageActions from '../components/MessageActions.jsx';
 import AssigneePicker from '../components/AssigneePicker.jsx';
-import { formatTimestamp, formatTime, formatDay, initials, STATUS_LABEL, ownershipLabel, SENTIMENT, participantsOf } from '../lib/format.js';
+import { formatTimestamp, formatTime, formatDay, initials, STATUS_LABEL, ownershipLabel, SENTIMENT, PRIORITY, SPAM_KIND, participantsOf } from '../lib/format.js';
 
 /**
  * Active first, and the default: an agent opens the inbox to work, and a resolved
  * conversation is a record rather than something to do. "Needs agent" was dropped — since
  * escalation assigns a named person, the list already says whose it is, and a filter that
- * repeated that was one chip too many.
+ * repeated that was one chip too many. Spam is kept apart from both, so junk never sits in
+ * the work queue but is one click away for anyone checking Jev's judgment.
  */
 const FILTERS = [
     { id: 'active', label: 'Active' },
     { id: 'resolved', label: 'Resolved' },
+    { id: 'spam', label: 'Spam' },
 ];
 
 const PLATFORMS = [
@@ -29,7 +31,7 @@ const PLATFORMS = [
 /** The count has to describe what is actually listed, or "3 active" lies on the Resolved tab. */
 function countLabel(status, platform, n) {
     const where = platform === 'all' ? '' : ` on ${PLATFORMS.find(p => p.id === platform)?.label ?? platform}`;
-    return `${n} ${status === 'resolved' ? 'resolved' : 'active'}${where}`;
+    return `${n} ${status === 'resolved' ? 'resolved' : status === 'spam' ? 'spam' : 'active'}${where}`;
 }
 
 /** Tag colour per conversation state. */
@@ -370,7 +372,7 @@ export default function InboxPage({
                                         state pill for space and ended up alone on a line. */}
                                     <div className="conv__mid">
                                         <div className="conv__preview">{previewOf(t.last)}</div>
-                                        {t.unanswered > 0 && t.status !== 'RESOLVED' && (
+                                        {t.unanswered > 0 && t.status !== 'RESOLVED' && !t.spam && (
                                             <span
                                                 className="unread-count"
                                                 aria-label={`${t.unanswered} message${t.unanswered === 1 ? '' : 's'} waiting for a reply`}
@@ -385,7 +387,16 @@ export default function InboxPage({
                                         {/* The same customer can have several conversations, so
                                             the row needs the reference that tells them apart. */}
                                         {t.id && <span className="conv__ref">CONV-{t.id.slice(0, 8)}</span>}
-                                        <span className={`tag conv__tag ${STATUS_TONE[t.status] || 'tag--ai'}`}>
+                                        {PRIORITY[t.priority] && !t.spam && (
+                                            <span className={`pill conv__prio ${PRIORITY[t.priority].tone}`}
+                                                  title={`Priority ${t.priority} — ${PRIORITY[t.priority].label}`}>
+                                                {PRIORITY[t.priority].short}
+                                            </span>
+                                        )}
+                                        {t.spam && <span className="pill conv__prio pill--negative">Spam</span>}
+                                        {/* A spam conversation has no owner worth naming — the
+                                            Spam pill above says everything. */}
+                                        {!t.spam && <span className={`tag conv__tag ${STATUS_TONE[t.status] || 'tag--ai'}`}>
                                             {/* Its own span so the text can wrap, if it ever must,
                                                 while the mood face beside it stays whole. */}
                                             <span className="conv__tag-text">
@@ -397,7 +408,7 @@ export default function InboxPage({
                                                     {SENTIMENT[t.sentiment].face}
                                                 </span>
                                             )}
-                                        </span>
+                                        </span>}
 
                                     </span>
                                 </div>
@@ -471,7 +482,13 @@ export default function InboxPage({
                             </div>
 
                             <div className="thread__actions">
-                                {activeThread.status === 'AI_HANDLING' && (
+                                {activeThread.spam && (
+                                    <button className="btn btn--sm btn--secondary"
+                                            onClick={() => onThreadAction(activeThread, 'not-spam')}>
+                                        Not spam
+                                    </button>
+                                )}
+                                {activeThread.status === 'AI_HANDLING' && !activeThread.spam && (
                                     <button className="btn btn--sm btn--secondary"
                                             onClick={() => onThreadAction(activeThread, 'take-over')}>
                                         Take over
@@ -629,12 +646,12 @@ export default function InboxPage({
 
                         <div className="composer">
                             <div className="composer__status">
-                                <span className={`dot ${activeThread.status === 'OPEN_FOR_AGENT' ? 'dot--busy' : activeThread.status === 'RESOLVED' ? 'dot--offline' : 'dot--online'}`} />
+                                <span className={`dot ${activeThread.spam || activeThread.status === 'RESOLVED' ? 'dot--offline' : activeThread.status === 'OPEN_FOR_AGENT' ? 'dot--busy' : 'dot--online'}`} />
                                 {/* Bolder when it is yours: an agent scanning the inbox needs
                                     "mine" to register before the words are read. */}
                                 <span className={activeThread.assignedAgentId === me?.id
                                     ? 'composer__owner composer__owner--me' : 'composer__owner'}>
-                                    {ownershipLabel(activeThread, me?.id)
+                                    {activeThread.spam ? 'Spam — the AI does not answer it' : ownershipLabel(activeThread, me?.id)
                                         || STATUS_LABEL[activeThread.status] || activeThread.status}
                                 </span>
 
@@ -848,6 +865,56 @@ export default function InboxPage({
                             </span>
                         ) : (
                             <span className="pill pill--neutral">Not analysed yet</span>
+                        )}
+                    </div>
+
+                    {/* Read by Jev from the customer's most urgent message, so a "thanks"
+                        after "my order never came" does not lower it. */}
+                    <div className="context__row">
+                        <div className="context__key">Priority</div>
+                        {PRIORITY[activeThread.priority] ? (
+                            <span className={`pill ${PRIORITY[activeThread.priority].tone}`}>
+                                {PRIORITY[activeThread.priority].short} · {PRIORITY[activeThread.priority].label}
+                            </span>
+                        ) : (
+                            <span className="pill pill--neutral">Not judged yet</span>
+                        )}
+                    </div>
+
+                    <div className="context__row">
+                        <div className="context__key">Spam</div>
+                        {activeThread.spam ? (
+                            <div className="spam">
+                                <span className="pill pill--negative">Marked as spam</span>
+                                <p className="spam__why">
+                                    {SPAM_KIND[activeThread.spamKind] || SPAM_KIND.spam}
+                                    {activeThread.spamScore != null && (
+                                        <> — Jev was {Math.round(activeThread.spamScore * 100)}% sure</>
+                                    )}
+                                </p>
+                                {activeThread.spamMessage && (
+                                    <blockquote className="spam__msg">
+                                        “{activeThread.spamMessage.text}”
+                                        <span className="spam__at">{formatTimestamp(activeThread.spamMessage.timestamp)}</span>
+                                    </blockquote>
+                                )}
+                                <p className="spam__note">The AI does not answer it and nobody is alerted.</p>
+                                <button className="btn btn--sm btn--secondary"
+                                        onClick={() => onThreadAction(activeThread, 'not-spam')}>
+                                    Not spam — move to Active
+                                </button>
+                            </div>
+                        ) : activeThread.spamCleared ? (
+                            <div className="spam">
+                                <span className="pill pill--neutral">No — a person decided</span>
+                                {activeThread.spamKind && (
+                                    <p className="spam__why">
+                                        Jev had judged it: {(SPAM_KIND[activeThread.spamKind] || SPAM_KIND.spam).toLowerCase()}
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <span className="pill pill--positive">No</span>
                         )}
                     </div>
 

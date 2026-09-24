@@ -53,6 +53,8 @@ flowchart LR
         b5["Read the handover brief"]
         b6["Resolve a conversation"]
         b10["Hand back to the AI"]
+        b11["Review the Spam tab<br/>mark a conversation not spam"]
+        b12["See priority and sentiment"]
         b7["Enable notifications on this device"]
         b8["Receive alert when needed<br/>FR-09"]
         b9["Toggle availability<br/>PLANNED · FR-05"]
@@ -64,6 +66,8 @@ flowchart LR
     agent --- b5
     agent --- b6
     agent --- b10
+    agent --- b11
+    agent --- b12
     agent --- b7
     agent --- b8
     agent -.- b9
@@ -98,13 +102,15 @@ flowchart LR
         d1["Answer from the knowledge base<br/>FR-07"]
         d2["Transcribe a voice note"]
         d3["Read a photo"]
-        d4["Judge sentiment"]
+        d4["Judge sentiment<br/>Jev"]
         d5["Hand over to a human<br/>FR-07"]
         d6["Route to the least-loaded agent<br/>FR-08"]
         d7["Write the handover brief"]
         d8["Close an off-topic conversation"]
         d9["Alert the assigned agent<br/>FR-09"]
         d10["Triage a message<br/>Jev firewall"]
+        d11["Flag a spam conversation"]
+        d12["Set the priority 1–3"]
     end
     ai --- d10
     ai --- d1
@@ -118,6 +124,9 @@ flowchart LR
     d5 -.->|"includes"| d7
     d6 -.->|"includes"| d9
     d10 -.->|"extends"| d5
+    d10 -.->|"includes"| d4
+    d10 -.->|"includes"| d11
+    d10 -.->|"includes"| d12
 ```
 
 ### System Admin

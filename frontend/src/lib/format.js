@@ -88,6 +88,21 @@ export const SENTIMENT = {
     ANGRY:    { label: 'Angry', face: '😡', tone: 'pill--negative' },
 };
 
+/** Priority 1-3, as Jev reads the urgency of the customer's most urgent message. */
+export const PRIORITY = {
+    1: { label: 'Urgent', short: 'P1', tone: 'pill--negative' },
+    2: { label: 'Normal', short: 'P2', tone: 'pill--warning' },
+    3: { label: 'Low', short: 'P3', tone: 'pill--neutral' },
+};
+
+/** Why a conversation was judged spam, in words an agent can check against the message. */
+export const SPAM_KIND = {
+    promotion: 'Advertising or selling something to the business',
+    scam: 'A scam or phishing attempt',
+    gibberish: 'Random characters with no meaning',
+    spam: 'Not from a customer',
+};
+
 export const STATUS_LABEL = {
     AI_HANDLING: 'AI handling',
     OPEN_FOR_AGENT: 'Needs agent',
@@ -114,6 +129,9 @@ export function mergeThreads(threads, messages, { status = 'all', platform = 'al
             // Status and channel are independent questions, so they are answered separately
             // rather than as one list of mutually exclusive chips.
             if (platform !== 'all' && t.platform !== platform) return false;
+            // Spam is its own tab whatever its status, so junk never sits in the work queue.
+            if (status === 'spam') return t.spam;
+            if (t.spam && status !== 'all') return false;
             if (status === 'active') return t.status !== 'RESOLVED';
             if (status === 'resolved') return t.status === 'RESOLVED';
             return true;

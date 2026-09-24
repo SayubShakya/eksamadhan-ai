@@ -20,6 +20,12 @@ import java.util.UUID;
  * sarcasm and negation ("great, another delay") invert a word list; and emoji carry the mood
  * on their own, often as the entire message. A model handles all of that without a dictionary
  * to maintain.
+ *
+ * Which model: Jev (TypeSafe System One) whenever it is configured, and then only Jev — the
+ * mood is read in the same call that triages the message, so it costs nothing extra, where
+ * the generative model was a second call on a local model that serves one request at a time.
+ * If Jev cannot be reached the message is left unread and the sync's backfill tries again.
+ * The generative model reads it only when there is no TypeSafe key at all.
  */
 @Service
 @Slf4j
@@ -80,7 +86,7 @@ public class SentimentService {
     }
 
     private Sentiment analyseOnce(UUID messageId) {
-        boolean jev = triageService.mode() == MessageTriageService.Mode.ON;
+        boolean jev = triageService.mode() != MessageTriageService.Mode.OFF;
         if (!jev && !llmClient.isConfigured()) return null;
 
         SocialMessage message = messageRepository.findWithThreadById(messageId).orElse(null);
@@ -92,16 +98,16 @@ public class SentimentService {
         if (message.getSentiment() != null) return message.getSentiment();
 
         try {
-            // With the firewall on, the sentiment was read in the same Jev call that triaged
-            // the message — or is read now, if the AI never ran (an agent owns the thread).
-            // That takes one generative call per message off the local model's queue. If Jev
-            // cannot be reached, the generative model reads it as before.
+            // With Jev configured the sentiment was read in the same call that triaged the
+            // message, before the reply. Only Jev: no generative fallback, so the local model is
+            // never asked for it — an unread message is picked up again by the backfill.
             long started = System.nanoTime();
-            Sentiment sentiment = jev ? fromTriage(messageId) : null;
-            boolean byJev = sentiment != null;
+            boolean byJev = jev;
             String raw = null;
-            if (sentiment == null) {
-                if (!llmClient.isConfigured()) return null;
+            Sentiment sentiment;
+            if (jev) {
+                sentiment = fromTriage(messageId);
+            } else {
                 raw = llmClient.complete(SYSTEM_PROMPT, text);
                 sentiment = parse(raw);
             }
@@ -163,7 +169,14 @@ public class SentimentService {
     }
 
     private void backfill(String tenantId) {
-        if (llmClient.isConfigured() || triageService.mode() == MessageTriageService.Mode.ON) {
+        // Open conversations' messages Jev never judged get a priority and a spam check first;
+        // their mood then comes from the same judgment.
+        try {
+            triageService.backfill(tenantId);
+        } catch (RuntimeException e) {
+            log.debug("Triage backfill for {} failed: {}", tenantId, e.getMessage());
+        }
+        if (llmClient.isConfigured() || triageService.mode() != MessageTriageService.Mode.OFF) {
             // Only the messages that have never been read — the same reasoning as the memory
             // backfill: this runs on every sync, so it must cost nothing when there is nothing
             // to do, rather than scanning the whole workspace to discover that.

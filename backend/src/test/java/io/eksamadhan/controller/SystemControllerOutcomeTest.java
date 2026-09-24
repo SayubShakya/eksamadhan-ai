@@ -40,6 +40,13 @@ class SystemControllerOutcomeTest {
     }
 
     @Test
+    void spamIsNotMistakenForAConversationAPersonOwns() {
+        assertEquals("spam", SystemController.outcome(List.of(
+                step("SPAM", "Conversation marked as spam"),
+                AiTraceStep.builder().kind("END").title("AI stays silent").outcome("marked as spam").build())));
+    }
+
+    @Test
     void messagesFromBeforeTracingSayWhy() {
         assertEquals("not recorded", SystemController.outcome(List.of()));
     }

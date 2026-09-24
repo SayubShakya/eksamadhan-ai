@@ -26,7 +26,7 @@ public class TraceRecorder {
     /** Each side of a step, as stored. A full RAG prompt fits comfortably. */
     private static final int MAX_CHARS = 24_000;
 
-    public enum Kind { TRIGGER, DECISION, JEV, RETRIEVAL, MODEL, ACTION, HANDOVER, NOTIFY, END, ERROR }
+    public enum Kind { TRIGGER, DECISION, JEV, RETRIEVAL, MODEL, ACTION, HANDOVER, NOTIFY, SPAM, END, ERROR }
 
     private final AiTraceStepRepository repository;
     private final ObjectMapper objectMapper;

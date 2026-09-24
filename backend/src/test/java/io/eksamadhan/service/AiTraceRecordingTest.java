@@ -107,6 +107,7 @@ class AiTraceRecordingTest {
         assertEquals(List.of(
                 "Customer message received",
                 "Is a person already handling it?",
+                "Marked as spam?",
                 "Gather unanswered messages",
                 "Knowledge search",
                 "Gate 1 — is the best passage close enough?",

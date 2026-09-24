@@ -370,6 +370,26 @@ status machine and authentication have all since been built — see the change l
   outside processor of customer text, which the PRD's "messages never leave the machine"
   claim does not yet reflect. Full numbers: `docs/jev-firewall.md`.
 
+- **Spam and priority come from Jev, and Jev now runs before every reply, in every mode.**
+  Shadow mode used to judge a message *after* it was answered, so it could never stop a spam
+  message being replied to; the triage now runs first (~0.5s) and its labels — sentiment,
+  priority 1–3, spam — apply in shadow as well as on. Only the firewall's own shortcuts wait
+  for `on`. Sentiment is **Jev only** while a TypeSafe key is set: no local-model fallback, an
+  unread message is retried by the backfill. Spam is per conversation: it needs spam ≥ 0.88 and
+  nobody in the conversation having asked for anything real, it is undone by the customer's
+  next genuine request, and a person's "Not spam" (`spam_cleared`) is final. Spam threads are
+  excluded from the AI, from `findAwaitingAi` (the catch-up), from agent alerts and from the
+  unread badge — "Not spam" makes the catch-up answer it on the next sync. Priority only rises
+  (`raisePriority`). Measured first: spam 0.91–0.98 vs every real message ≤ 0.81, a narrow gap;
+  see `docs/jev-firewall.md`. Rows judged before V23 have `urgency` null and are re-judged in
+  place by `MessageTriageService.backfill`, open conversations only.
+- **`smallint` columns need `@JdbcTypeCode(SqlTypes.SMALLINT)`** on an `Integer` field, or
+  `ddl-auto: validate` refuses to start (it expects `integer`). And HQL will not take a
+  boolean expression in `SET` (`spamCleared = (spamCleared OR :x)`) — write two updates.
+- **The full-context tests boot the whole app**, schedulers and all, against the dev database
+  with the real TypeSafe key: the triage backfill ran during `mvn test` and judged the real
+  open conversations for real. Harmless here, but tests are not isolated from the network.
+
 - **System admin is a flag, not a role — on purpose.** `users.system_admin` (V22) is set only by
   `SystemAdminBootstrap` from `SYSTEM_ADMIN_EMAIL` / `SYSTEM_ADMIN_PASSWORD` in `backend/.env`.
   Invites take their role from the request body, so a `SYSTEM_ADMIN` role value would have let

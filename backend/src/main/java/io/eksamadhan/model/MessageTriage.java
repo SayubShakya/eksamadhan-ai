@@ -52,6 +52,20 @@ public class MessageTriage {
     @Column(nullable = false, length = 32)
     private String action;
 
+    /** Probability that the message is spam. Null on rows judged before the question existed. */
+    private Double spam;
+
+    /** customer, promotion, scam or gibberish. */
+    @Column(name = "spam_kind", length = 16)
+    private String spamKind;
+
+    /** 1 urgent, 2 normal, 3 low. */
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.SMALLINT)
+    private Integer urgency;
+
+    @Column(name = "urgency_confidence")
+    private Double urgencyConfidence;
+
     @Column(name = "latency_ms", nullable = false)
     private Integer latencyMs;
 

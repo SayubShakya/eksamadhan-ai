@@ -1,6 +1,6 @@
 # ER diagram — Semester 2
 
-Thirteen tables, produced by 22 Flyway migrations. Verified against the running database, not
+Thirteen tables, produced by 23 Flyway migrations. Verified against the running database, not
 from memory. Compare with [Semester 1](../../old-system-design/er-diagram/Picture1.png), which
 had six.
 
@@ -28,6 +28,7 @@ erDiagram
     SOCIAL_MESSAGES ||--|| MESSAGE_EMBEDDINGS : embedded_as
     SOCIAL_MESSAGES ||--o| MESSAGE_TRIAGE : judged_as
     SOCIAL_MESSAGES ||--o{ AI_TRACE_STEPS : traced_by
+    SOCIAL_MESSAGES |o--o{ CONVERSATION_THREADS : decided_spam
     KNOWLEDGE_SOURCES ||--o{ KNOWLEDGE_CHUNKS : split_into
 
     ORGANIZATIONS {
@@ -91,6 +92,13 @@ erDiagram
         varchar escalation_reason
         integer off_topic_streak "closes the chat at 3"
         boolean unrelated
+        smallint priority "1 urgent 2 normal 3 low, from Jev"
+        boolean spam "off the Active tab, AI silent"
+        varchar spam_kind "promotion scam gibberish"
+        double spam_score
+        uuid spam_message_id FK "the message that decided it, ON DELETE SET NULL"
+        timestamptz spam_at
+        boolean spam_cleared "a person said not spam"
         text summary "handover brief"
         timestamptz summary_at
         integer summary_message_count
@@ -189,6 +197,10 @@ erDiagram
         varchar sentiment
         double sentiment_confidence
         varchar action "NONE GREET THANK ESCALATE_HUMAN ESCALATE_INJECTION OFF_TOPIC"
+        double spam "probability 0..1"
+        varchar spam_kind "customer promotion scam gibberish"
+        smallint urgency "1 urgent 2 normal 3 low"
+        double urgency_confidence
         integer latency_ms
         integer input_tokens
         timestamptz created_at
@@ -258,6 +270,11 @@ weakness worth naming rather than hiding.
 `orphanRemoval` anywhere in the entity model; every association is a lazy `@ManyToOne` from
 the child. Deletion is `ON DELETE CASCADE` in the schema. That is what makes removing a
 knowledge source a single transaction that takes its vectors with it.
+
+**5. A thread and a message point at each other.** A message belongs to a thread, and a thread
+flagged as spam points back at the message that decided it (`spam_message_id`). The back
+reference is `ON DELETE SET NULL`, not cascade: deleting a message must not delete the
+conversation it was in, only the evidence for one judgment about it.
 
 ## Against Semester 1
 

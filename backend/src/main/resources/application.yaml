@@ -130,6 +130,8 @@ app:
   # reply model. off | shadow | on. Shadow judges every message and records what it would
   # have done, while the existing pipeline answers as usual — run it first, and compare.
   # On acts on what it is sure of and falls through to the pipeline for everything else.
+  # In both, Jev's labels apply: sentiment (Jev only — the local model is not asked), a
+  # priority of 1-3, and spam, which takes a conversation out of Active and silences the AI.
   # With no API key the mode is off, whatever this says.
   triage:
     mode: ${TRIAGE_MODE:shadow}
@@ -142,6 +144,8 @@ app:
     intent-threshold: ${TRIAGE_INTENT_THRESHOLD:0.9}
     human-threshold: ${TRIAGE_HUMAN_THRESHOLD:0.65}
     injection-threshold: ${TRIAGE_INJECTION_THRESHOLD:0.7}
+    # Spam >= 0.91, every real message <= 0.81 on this project's data; see MessageTriageService.
+    spam-threshold: ${TRIAGE_SPAM_THRESHOLD:0.88}
     greeting-reply: ${TRIAGE_GREETING_REPLY:Hi! How can I help you today?}
     thanks-reply: ${TRIAGE_THANKS_REPLY:You're welcome! Let me know if there is anything else I can help with.}
   # The platform operator. Created at startup from these two, in a workspace of its own; never

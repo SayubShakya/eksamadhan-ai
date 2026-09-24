@@ -13,9 +13,16 @@ Semester 1 produced no activity diagram, so there is nothing to compare this aga
 
 ```mermaid
 flowchart TD
-    start(["Customer message arrives"]) --> owned{"Is a human<br/>already handling<br/>this conversation?"}
+    start(["Customer message arrives"]) --> judge["Jev judges it first, in every mode:<br/>spam · urgency · sentiment ·<br/>intent · person · injection"]
+    judge --> prio["Priority 1–3: the most<br/>urgent message so far"]
+    prio --> isSpam{"Spam ≥ 0.88, nobody here<br/>asked for anything real,<br/>no person cleared it?"}
+    isSpam -->|yes| markSpam["Mark the conversation spam,<br/>keeping the kind and the message"]
+    isSpam -->|no| owned
+    markSpam --> owned{"Is a human<br/>already handling<br/>this conversation?"}
     owned -->|yes| quiet(["AI stays silent —<br/>the agent owns it"])
-    owned -->|no| sticker{"Only a sticker<br/>or a like?"}
+    owned -->|no| spamGate{"Conversation<br/>marked spam?"}
+    spamGate -->|yes| quietSpam(["AI stays silent, nobody alerted —<br/>it waits in the Spam tab"])
+    spamGate -->|no| sticker{"Only a sticker<br/>or a like?"}
     sticker -->|yes| quietSticker(["Nothing to answer —<br/>not counted as waiting"])
     sticker -->|no| hasText{"Does it<br/>have text?"}
 
@@ -27,7 +34,7 @@ flowchart TD
     hasText -->|yes| gather["Gather any earlier messages<br/>we never answered"]
     gather --> fw{"Firewall on, and<br/>this message<br/>stands alone?"}
     fw -->|no| retrieve
-    fw -->|yes| jev["Jev judges it:<br/>intent · asks for a person ·<br/>injection · sentiment"]
+    fw -->|yes| jev["Act on Jev's judgment<br/>from the first step"]
     jev --> sure{"Sure of<br/>an action?"}
     sure -->|"injection ≥ 0.7"| escInj(["Escalate: tried to change<br/>the AI's instructions"])
     sure -->|"asks for a person ≥ 0.65"| escHuman(["Escalate: asked<br/>for a person"])
@@ -61,6 +68,7 @@ flowchart TD
 
     style quiet fill:#eee
     style quietSticker fill:#eee
+    style quietSpam fill:#f9d7d7
     style greet fill:#d7f5dd
     style thank fill:#d7f5dd
     style escInj fill:#fdf0d5
@@ -114,6 +122,14 @@ relatedness is judged against the real knowledge base further down, and closing 
 customer's conversation is the mistake worth never making. Measured thresholds and results are
 in [`docs/jev-firewall.md`](../../../jev-firewall.md).
 
+**Spam is decided per conversation, and a real customer always wins.** A message Jev is at
+least 88% sure is spam flags the conversation — but only if nobody in it has asked the
+business for anything real. A customer who asked about delivery and then sent "asdf" is still a
+customer; a conversation flagged earlier returns to Active the moment its customer asks for
+something; and once a person says "not spam" it is never flagged automatically again. Spam
+gets no reply and no alert, because answering tells a bot the page is live and escalating puts
+it in front of a person.
+
 **A sticker asks nothing.** A Messenger "like" is a sticker: it is shown, not answered, and it
 does not count the conversation as waiting for a reply.
 
@@ -136,6 +152,7 @@ rebuild:
 | Firewall — injection attempt | `app.triage.injection-threshold` | 0.7 |
 | Firewall — asks for a person | `app.triage.human-threshold` | 0.65 |
 | Firewall — greeting, thanks, abuse | `app.triage.intent-threshold` | 0.9 |
+| Spam | `app.triage.spam-threshold` | 0.88 |
 
 The number of passages retrieved for a reply is **fixed at 5** (`KNOWLEDGE_PASSAGES` in
 `AiReplyService`). `app.ai.top-k` looks as if it controls this but does not: it only sets the

@@ -45,8 +45,18 @@ import java.util.UUID;
  *    insult ("lado muji", 0.74) outscoring a real request (0.68).
  *  - injection: attempts >= 0.92, everything else <= 0.43, when judged on the message alone.
  *
+ *  - spam: 15 spam messages (prizes, work-from-home, follower selling, fake Meta warnings,
+ *    keyboard mash, in English and romanized Nepali) >= 0.91; every real message and eight
+ *    held-out look-alikes ("is this a scam? I paid and nothing arrived", "can I resell your
+ *    products?") <= 0.81. The highest real ones were a misspelled insult and a two-letter
+ *    reply, which is why the conversation-level rule below exists as well.
+ *
  * Jev is not deterministic — identical calls vary by about ±0.03 — so each threshold sits in
  * the middle of its gap rather than at its edge.
+ *
+ * Two of the judgments are labels rather than firewall actions — spam and urgency, and the
+ * sentiment — so they apply in shadow mode as well as on. Only the firewall's own shortcuts
+ * (greet, thank, escalate without asking the reply model) wait for "on".
  */
 @Service
 @Slf4j
@@ -66,6 +76,9 @@ public class MessageTriageService {
         OFF_TOPIC
     }
 
+    /** Kinds of spam, as the spam_kind choice names them. "customer" is the no-match answer. */
+    public static final String NOT_SPAM = "customer";
+
     /** Level order is the order of the Score criteria below. */
     private static final Sentiment[] LEVELS =
             { Sentiment.ANGRY, Sentiment.NEGATIVE, Sentiment.NEUTRAL, Sentiment.POSITIVE };
@@ -79,7 +92,9 @@ public class MessageTriageService {
     private final SocialMessageRepository messageRepository;
     private final KnowledgeSourceRepository sourceRepository;
     private final TraceRecorder trace;
+    private final io.eksamadhan.repository.ConversationThreadRepository threadRepository;
     private final Mode mode;
+    private final double spamThreshold;
     private final double intentThreshold;
     private final double humanThreshold;
     private final double injectionThreshold;
@@ -89,15 +104,19 @@ public class MessageTriageService {
                                 SocialMessageRepository messageRepository,
                                 KnowledgeSourceRepository sourceRepository,
                                 TraceRecorder trace,
+                                io.eksamadhan.repository.ConversationThreadRepository threadRepository,
                                 @Value("${app.triage.mode:shadow}") String mode,
                                 @Value("${app.triage.intent-threshold:0.9}") double intentThreshold,
                                 @Value("${app.triage.human-threshold:0.65}") double humanThreshold,
-                                @Value("${app.triage.injection-threshold:0.7}") double injectionThreshold) {
+                                @Value("${app.triage.injection-threshold:0.7}") double injectionThreshold,
+                                @Value("${app.triage.spam-threshold:0.88}") double spamThreshold) {
         this.typeSafe = typeSafe;
         this.triageRepository = triageRepository;
         this.messageRepository = messageRepository;
         this.sourceRepository = sourceRepository;
         this.trace = trace;
+        this.threadRepository = threadRepository;
+        this.spamThreshold = spamThreshold;
         // Without a key there is nothing to call, whatever the setting says.
         Mode configured = parseMode(mode);
         this.mode = typeSafe.isConfigured() ? configured : Mode.OFF;
@@ -119,8 +138,10 @@ public class MessageTriageService {
     public Optional<MessageTriage> triage(UUID messageId) {
         if (mode == Mode.OFF) return Optional.empty();
 
+        // Judged once. A row from before the spam and urgency questions existed is judged
+        // again, in place, so its conversation gets a priority too.
         Optional<MessageTriage> existing = triageRepository.findBySocialMessageId(messageId);
-        if (existing.isPresent()) return existing;
+        if (existing.isPresent() && existing.get().getUrgency() != null) return existing;
 
         SocialMessage message = messageRepository.findWithPageById(messageId).orElse(null);
         if (message == null || !"inbound".equals(message.getDirection())) return Optional.empty();
@@ -163,6 +184,7 @@ public class MessageTriageService {
         try {
             MessageTriage triage = read(aboutBusiness, aboutMessage, messageId, latencyMs);
             triage.setAction(decide(triage).name());
+            existing.ifPresent(old -> triage.setId(old.getId()));
             trace.step(messageId, TraceRecorder.Kind.JEV, "Jev — System One triage",
                     triage.getIntent() + " · " + triage.getAction(),
                     TraceRecorder.of("mode", mode.name().toLowerCase(Locale.ROOT),
@@ -178,15 +200,21 @@ public class MessageTriageService {
                                     "asks for a person", triage.getWantsHuman(),
                                     "injection", triage.getInjection(),
                                     "sentiment", triage.getSentiment(),
+                                    "spam", triage.getSpam(),
+                                    "spam kind", triage.getSpamKind(),
+                                    "priority", triage.getUrgency(),
                                     "action", triage.getAction(),
                                     "acted on", mode == Mode.ON ? "yes" : "no — shadow mode only records it"),
                             "input tokens", triage.getInputTokens()),
                     latencyMs);
-            log.info("Triage [{}] {} ({}) human={} injection={} sentiment={} -> {} in {}ms: {}",
+            log.info("Triage [{}] {} ({}) human={} injection={} sentiment={} spam={} P{} -> {} in {}ms: {}",
                     mode, triage.getIntent(), round(triage.getIntentConfidence()),
                     round(triage.getWantsHuman()), round(triage.getInjection()),
-                    triage.getSentiment(), triage.getAction(), latencyMs, abbreviate(text));
-            return Optional.of(triageRepository.save(triage));
+                    triage.getSentiment(), round(triage.getSpam()), triage.getUrgency(),
+                    triage.getAction(), latencyMs, abbreviate(text));
+            MessageTriage saved = triageRepository.save(triage);
+            label(message, saved);
+            return Optional.of(saved);
         } catch (DataIntegrityViolationException raced) {
             // Two paths judged the same message at once; the first one stored wins.
             return triageRepository.findBySocialMessageId(messageId);
@@ -194,6 +222,71 @@ public class MessageTriageService {
             log.warn("Could not read the triage for message {}: {}", messageId, e.getMessage());
             return Optional.empty();
         }
+    }
+
+    /**
+     * What the judgments mean for the conversation: its priority, and whether it is spam.
+     *
+     * Spam is decided per conversation, not per message: a conversation in which the customer
+     * has asked the business for anything real is never spam, and one flagged earlier comes
+     * back to Active the moment they do. That is the ear-buds lesson again — a real customer
+     * must never be silenced on one odd message.
+     */
+    private void label(SocialMessage message, MessageTriage t) {
+        UUID threadId = message.getThread() == null ? null : message.getThread().getId();
+        if (threadId == null) return;
+        try {
+            if (t.getUrgency() != null) threadRepository.raisePriority(threadId, t.getUrgency());
+
+            boolean customer = triageRepository.threadHasCustomerRequest(threadId, spamThreshold);
+            switch (spamDecision(t.getSpam(), spamThreshold, customer)) {
+                case FLAG -> {
+                    String kind = NOT_SPAM.equals(t.getSpamKind()) ? "spam" : t.getSpamKind();
+                    if (threadRepository.markSpam(threadId, kind, t.getSpam(), message.getId(),
+                            java.time.ZonedDateTime.now()) == 1) {
+                        trace.step(message.getId(), TraceRecorder.Kind.SPAM, "Conversation marked as spam", kind,
+                                TraceRecorder.of("spam", t.getSpam(), "threshold", spamThreshold,
+                                        "kind", kind, "anyone asked for something real", false),
+                                TraceRecorder.of("moved to", "the Spam tab",
+                                        "AI", "does not answer it", "agents", "are not alerted"),
+                                null);
+                        log.info("Conversation {} marked as spam ({}, {})", threadId, kind, round(t.getSpam()));
+                    }
+                }
+                case RESTORE -> {
+                    if (threadRepository.restoreFromSpam(threadId) == 1) {
+                        trace.step(message.getId(), TraceRecorder.Kind.SPAM, "Back out of spam",
+                                "the customer asked for something real",
+                                TraceRecorder.of("intent", t.getIntent(), "spam", t.getSpam()),
+                                TraceRecorder.of("moved to", "the Active tab"), null);
+                        log.info("Conversation {} is no longer spam: the customer asked for something", threadId);
+                    }
+                }
+                case KEEP -> { }
+            }
+        } catch (RuntimeException e) {
+            // A label is never worth a reply: the pipeline carries on without it.
+            log.warn("Could not label conversation {}: {}", threadId, e.getMessage());
+        }
+    }
+
+    enum SpamDecision { FLAG, RESTORE, KEEP }
+
+    /** The spam rule on its own, so it can be tested without a database. */
+    static SpamDecision spamDecision(Double spam, double threshold, boolean customerAskedForSomething) {
+        if (customerAskedForSomething) return SpamDecision.RESTORE;
+        if (spam != null && spam >= threshold) return SpamDecision.FLAG;
+        return SpamDecision.KEEP;
+    }
+
+    /** For the sync: judges open conversations' messages that were never judged. */
+    public void backfill(String tenantId) {
+        if (mode == Mode.OFF) return;
+        int judged = 0;
+        for (UUID id : triageRepository.findNeedingTriage(tenantId)) {
+            if (triage(id).isPresent()) judged++;
+        }
+        if (judged > 0) log.info("Triage backfill for {} judged {} messages", tenantId, judged);
     }
 
     public static Action actionOf(MessageTriage triage) {
@@ -243,6 +336,9 @@ public class MessageTriageService {
             }
         }
 
+        // Urgency levels run most urgent first, so the level's index + 1 is the priority.
+        int urgency = argmax(answers.get("urgency").get("probabilities"), 3, 1) + 1;
+
         Integer tokens = tokens(aboutBusiness);
         Integer more = tokens(aboutMessage);
         if (tokens != null && more != null) tokens += more;
@@ -255,11 +351,31 @@ public class MessageTriageService {
                 .injection(messageAnswers.get("injection").get("noul").asDouble())
                 .sentiment(LEVELS[level].name())
                 .sentimentConfidence(sentiment.get("confidence").asDouble())
+                .spam(answers.get("spam").get("noul").asDouble())
+                .spamKind(answers.get("spam_kind").get("choice").asString())
+                .urgency(urgency)
+                .urgencyConfidence(answers.get("urgency").get("confidence").asDouble())
                 .latencyMs(latencyMs)
                 .inputTokens(tokens)
                 .createdAt(OffsetDateTime.now())
                 .action(Action.NONE.name())
                 .build();
+    }
+
+    /** The most likely level of a Score, or {@code fallback} if its distribution is unreadable. */
+    private static int argmax(JsonNode probabilities, int levels, int fallback) {
+        int level = fallback;
+        double best = -1;
+        if (probabilities == null) return fallback;
+        for (Map.Entry<String, JsonNode> entry : probabilities.properties()) {
+            int index = Integer.parseInt(entry.getKey());
+            double p = entry.getValue().asDouble();
+            if (p > best && index >= 0 && index < levels) {
+                best = p;
+                level = index;
+            }
+        }
+        return level;
     }
 
     private static Integer tokens(JsonNode response) {
@@ -305,6 +421,48 @@ public class MessageTriageService {
                         "Negative: unhappy, disappointed, frustrated, or complaining.",
                         "Neutral: a plain question, a fact, a greeting, or no clear feeling.",
                         "Positive: pleased, grateful, or satisfied.")));
+
+        // The examples in "true" are deliberately not the ones it was tested on. "false" names
+        // the look-alikes: a customer asking whether something is a scam is not a scammer.
+        q.put("spam", Map.of("type", "noul",
+                "instructions", "Is `message` spam: sent to the business in `business` by someone who is not a "
+                              + "real or potential customer writing about their own needs? Spam is advertising or "
+                              + "selling something TO the business, scams, phishing or fake security warnings, "
+                              + "prize or lottery claims, get-rich or work-from-home offers, selling followers or "
+                              + "likes, links to unrelated pages, or random characters with no meaning. " + LANGUAGE,
+                "criteria", Map.of(
+                        "true", "Spam, e.g. 'Congratulations, you won a prize, click this link to claim it', 'Earn "
+                              + "money from home every day, message me on WhatsApp', 'I can grow your page to "
+                              + "thousands of followers', 'Your page will be disabled, verify your account at this "
+                              + "link', 'ghar bata kaam garera paisa kamaunus', 'qwpeoriu'.",
+                        "false", "A real or potential customer, however short, rude, angry or off-topic: questions, "
+                               + "orders, complaints, insults, greetings, thanks, small talk, asking whether something "
+                               + "is a scam, or asking about any product.")));
+
+        // Only read when the answer above is yes: it is what the agent is told as the reason.
+        Map<String, String> kinds = new LinkedHashMap<>();
+        kinds.put(NOT_SPAM, "A message from a real or potential customer, whatever its tone or topic.");
+        kinds.put("promotion", "Advertising or selling something to the business: followers, likes, marketing, SEO, services, or links to other pages.");
+        kinds.put("scam", "A scam or phishing: prizes, lotteries, investment or work-from-home offers, fake security or account warnings, or asking for logins or money.");
+        kinds.put("gibberish", "Random characters or text with no meaning at all.");
+        q.put("spam_kind", Map.of("type", "choice",
+                "instructions", "Which kind of message is `message`, sent to the business in `business`? " + LANGUAGE,
+                "criteria", kinds));
+
+        // What has happened to the customer, not how they say it: "muji saman nai aayena"
+        // (the goods never came) is urgent however it is worded, and "fuck you" is not.
+        q.put("urgency", Map.of("type", "score",
+                "instructions", "How urgently does the customer in `message` need the business to act? Judge what "
+                              + "has happened to the customer, not how politely or rudely they write. " + LANGUAGE,
+                "criteria", List.of(
+                        "Urgent: something has gone wrong for the customer and needs action soon: an order not "
+                      + "delivered or late, a wrong, damaged or missing item, money taken or charged twice, a refund "
+                      + "owed, an account or security problem, or a deadline the customer states.",
+                        "Normal: a real question or request that deserves an answer, but nothing has gone wrong: "
+                      + "prices, stock, delivery cost or time, how to order or pay, opening hours, store details, "
+                      + "product lists.",
+                        "Low: nothing needs doing: greetings, thanks, acknowledgements, small talk, insults with no "
+                      + "request, or no request at all.")));
         return q;
     }
 

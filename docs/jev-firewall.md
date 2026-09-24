@@ -10,12 +10,15 @@ this pipeline was paying a generative model to make.
 
 ## What it decides
 
-Four questions, in two calls made side by side so the customer waits for one round trip:
+Seven questions, in two calls made side by side so the customer waits for one round trip:
 
 | Question | Type | Seen with |
 | :--- | :--- | :--- |
 | What is the customer doing? greeting · thanks/ack · business question · complaint · wants a human · off-topic · abusive | Choice | the business |
 | How do they feel? angry → negative → neutral → positive | Score | the business |
+| Is it spam? | Yes/no | the business |
+| What kind? customer · promotion · scam · gibberish — the reason an agent is shown | Choice | the business |
+| How urgently must the business act? urgent → normal → low, read as priority 1–3 | Score | the business |
 | Are they asking for a person? | Yes/no | the message alone |
 | Are they trying to change the AI's instructions? | Yes/no | the message alone |
 
@@ -79,14 +82,56 @@ yes/no questions.
   commits not to train on it; zero data retention is offered to enterprise customers only.
   Embeddings already go to OpenRouter, so this is a second processor, not the first.
 
+## Spam and priority
+
+Two labels for agents, applied in every mode because they change no reply on a guess:
+
+- **Priority** is the most urgent customer message in the conversation, and only ever rises —
+  a "thanks" after "my order never came" leaves it at 1. Resolving ends it, since the next
+  message starts a new conversation.
+- **Spam** takes the conversation out of Active into its own tab, and the AI neither answers
+  nor escalates it — answering tells a bot the page is live, escalating puts it in front of a
+  person. It is decided **per conversation**: a message at or above 0.88 flags it only if
+  nobody in the conversation has asked for anything real (a business question, a complaint, a
+  request for a person). A flagged conversation returns to Active the moment its customer asks
+  for something, and once a person clicks **Not spam** it is never flagged automatically
+  again. What Jev judged, how sure it was and the message that decided it are kept and shown.
+
+Measured before building, with the exact state production sends:
+
+| Set | Spam probability |
+| :--- | :--- |
+| 15 spam messages — prizes, lotteries, work-from-home, follower selling, fake Meta warnings, keyboard mash, English and romanized Nepali | 0.91 – 0.98 |
+| 8 held-out look-alikes — "is this a scam? I paid and nothing arrived", "can I resell your products?", "do you sell bitcoin mining rigs?" | ≤ 0.12 |
+| 115 distinct real customer messages | ≤ 0.81 |
+
+The highest real ones were "Sgupid bitvhh" (0.81), "Pp" (0.79) and "thikba" (0.66) — a
+misspelled insult, a two-letter reply and romanized Nepali for "okay". The gap is 0.10, which
+is why the threshold sits in its middle and why the conversation rule exists as well.
+
+Urgency: all 7 synthetic urgent cases (late order, charged twice, broken item, wrong size in
+romanized Nepali, a stated deadline, account misuse) scored urgent at ≥ 0.99. Among the real
+messages "muji saman nai aayena" (the goods never came, with an insult) and "why are you
+sending QR again and again i already paid" came out urgent; price and hours questions normal;
+greetings, thanks and insults low. The question asks what has happened to the customer, not
+how they write, and that is what made abuse score low and the Nepali complaint score high.
+
+## Sentiment: Jev only
+
+Whenever TypeSafe is configured, the sentiment comes from the triage call and nowhere else —
+the local model is no longer asked, so every customer message costs it one call fewer. A
+message Jev could not be reached for is left unread and picked up by the sync's backfill.
+The generative model reads sentiment only when there is no TypeSafe key at all.
+
 ## Modes
 
-`TRIAGE_MODE` in `backend/.env`:
+`TRIAGE_MODE` in `backend/.env`. In every mode but `off`, Jev judges each message **before**
+the reply — about half a second, against several for the reply model — and its labels apply:
+sentiment, priority and spam.
 
-- `shadow` (default) — judges every message **after** it has been answered and records what the
-  firewall *would* have done. Behaviour does not change and no reply is slowed.
-- `on` — acts, before the reply model. Sentiment comes from Jev too, taking one generative call
-  per message off the local model's queue; the generative model reads it only if Jev is down.
+- `shadow` (default) — the firewall's own shortcuts (greet, thank, hand over without the
+  model) are only recorded, as what it *would* have done.
+- `on` — the shortcuts act, before the reply model.
 - `off` — nothing is called. Also the effective mode whenever `TYPESAFE_API_KEY` is empty.
 
 ## Reading the shadow results

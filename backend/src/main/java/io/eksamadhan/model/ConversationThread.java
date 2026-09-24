@@ -94,6 +94,38 @@ public class ConversationThread {
     @Builder.Default
     private boolean unrelated = false;
 
+    /**
+     * 1 urgent, 2 normal, 3 low — the most urgent customer message in the conversation, as
+     * judged by Jev. Null until a message has been judged.
+     */
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.SMALLINT)
+    private Integer priority;
+
+    /** Judged spam: kept off the Active tab, and the AI does not answer it. */
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean spam = false;
+
+    /** Why it was flagged: promotion, scam or gibberish. Kept after a person clears it. */
+    @Column(name = "spam_kind", length = 16)
+    private String spamKind;
+
+    /** How sure Jev was, 0–1. */
+    @Column(name = "spam_score")
+    private Double spamScore;
+
+    /** The message that decided it. */
+    @Column(name = "spam_message_id")
+    private UUID spamMessageId;
+
+    @Column(name = "spam_at")
+    private ZonedDateTime spamAt;
+
+    /** A person said it is not spam; it is never flagged automatically again. */
+    @Column(name = "spam_cleared", nullable = false)
+    @Builder.Default
+    private boolean spamCleared = false;
+
     /** A short brief for whoever picks this up, so they need not read the whole thread. */
     @Column(columnDefinition = "TEXT")
     private String summary;

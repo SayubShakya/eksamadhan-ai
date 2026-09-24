@@ -286,6 +286,24 @@ expire after 7 days — re-send if it lapses.
       and never through sign-up or invites, with its own console in the same layout as a
       workspace; its only page for now is the conversation visualizer. Workspace owners get 403
       on its endpoints, checked live
+- [x] **Spam tab and conversation priority, both from Jev** — every conversation gets a priority
+      1–3 from the urgency of its most urgent message, shown in the list and the customer panel.
+      Spam gets its own tab: the AI does not answer it and nobody is alerted, and the panel says
+      why — the kind, how sure Jev was, and the message that decided it — with a **Not spam**
+      button that moves it back to Active for good. A conversation in which the customer asked
+      for anything real is never spam. Measured on every real message before building: spam
+      0.91–0.98, real messages at most 0.81
+- [x] **Sentiment now comes from Jev alone** — the local model is no longer asked, one call fewer
+      per customer message. Jev runs before every reply, in every mode, so spam is caught
+      before the AI answers it
+- [x] Migration V23; 11 new tests (4 against the database for the spam and priority rules, 4 for
+      the spam rule itself, 2 for reading Jev's answer, 1 for the visualizer's label), 40 in all
+      passing; checked end to end with a signed test webhook
+      carrying a scam message — flagged in under a second, never answered, then cleared with
+      Not spam — and the test conversation deleted
+- [x] System design updated for spam and priority — ER (13 tables, 19 relationships, matched to
+      the live database), classes (45, matched to the source), sequence, activity, use case and
+      level 1 DFD
 - [x] An invitation with an unknown role now returns a 400 with a readable message instead of a
       500
 - [x] **System design updated for the visualizer and system admin** — the trace table in the ER
@@ -368,6 +386,7 @@ expire after 7 days — re-send if it lapses.
 <!-- Regenerate before submitting:
      git log --since=2026-09-17 --until=2026-09-25 --pretty='- %ad `%h` %s' --date=short -->
 
+- 2026-09-24 `997f270` feat: add a system admin console with a conversation visualizer
 - 2026-09-23 `d0a73ba` docs: updated system design diagram
 - 2026-09-23 `78aafb9` feat: added Jev
 - 2026-09-23 `5ca9263` fix: keep synced attachments and recognise Messenger stickers
@@ -396,11 +415,8 @@ expire after 7 days — re-send if it lapses.
 - 2026-09-17 `bb41503` Rework the conversation panel, and answer image messages
 - 2026-09-17 `5c96b46` Distinguish your own messages from the AI's and colleagues'
 - 2026-09-17 `9b98139` Add accounts, RAG knowledge base, AI replies and human handover
-- 2026-09-17 `e450275` feat: manage the schema with flyway migrations
-- 2026-09-17 `5257bb0` feat: drive the inbox from server-side conversation threads
-- 2026-09-17 `9d6a4ad` feat: add conversation threads with a status machine
 
-_(pending commit: the conversation visualizer, system admin login and trace recording)_
+_(pending commit: spam tab, priority and Jev-only sentiment)_
 
 **Progress report**
 

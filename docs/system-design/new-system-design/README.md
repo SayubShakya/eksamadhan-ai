@@ -36,7 +36,7 @@ Instagram as a supported channel because the software supports it.
 
 ## What changed since Semester 1
 
-Twenty differences, grouped by why they happened.
+Twenty-one differences, grouped by why they happened.
 
 ### Deliberate technology substitutions
 
@@ -69,7 +69,8 @@ Twenty differences, grouped by why they happened.
 | Multimodal | Voice notes are transcribed, customers' photos are read, and a knowledge-base picture can be the answer |
 | Measurement | Every AI reply records how long it took and how long it waited, which is what turned "the AI is slow" into a number |
 | Observability | A **conversation visualizer** for the system admin draws every customer message as the flow it actually took — Jev, the knowledge search, the model's exact prompt and reply, each gate, the handover — and opens any step's input and output |
-| Decision model | A **Jev firewall** (TypeSafe) judges every customer message before the reply model — greeting, thanks, request for a person, injection attempt, sentiment — as typed decisions rather than generated text. It runs in shadow mode by default, recording what it would do; switched on, it settles what needs no generation and takes sentiment off the local model. Evaluated on the project's own messages first — see `docs/jev-firewall.md` |
+| Decision model | A **Jev firewall** (TypeSafe) judges every customer message before the reply model — greeting, thanks, request for a person, injection attempt, sentiment, spam, urgency — as typed decisions rather than generated text. Sentiment now comes from Jev alone, off the local model. Its firewall shortcuts run in shadow mode by default, recording what they would do; switched on, they settle what needs no generation. Evaluated on the project's own messages first — see `docs/jev-firewall.md` |
+| Triage for agents | Every conversation carries a **priority 1–3** from the urgency of its most urgent message, and **spam** has its own tab: flagged by Jev, silent to the AI and to alerts, cleared by a person with one click. Semester 1 had one queue, ordered by time |
 
 ### Where the design was simply wrong about the build
 

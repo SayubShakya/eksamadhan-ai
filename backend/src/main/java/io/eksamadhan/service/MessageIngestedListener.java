@@ -46,6 +46,19 @@ public class MessageIngestedListener {
         // go first: buzzing whoever owns the conversation, which is not a model call, and the
         // answer itself. Sentiment and the semantic memory are for us, not for them.
 
+        // Jev first, whenever it is configured: about half a second, against the several the
+        // reply model takes. It decides things the reply needs to know before it starts —
+        // whether this is spam, which keeps the AI and the alerts quiet — and it reads the
+        // priority and the mood in the same call. In "on" mode the reply's firewall reuses
+        // this judgment rather than asking again.
+        if (event.inbound() && triageService.mode() != MessageTriageService.Mode.OFF) {
+            try {
+                triageService.triage(event.messageId());
+            } catch (Exception e) {
+                log.debug("Triage failed for message {}: {}", event.messageId(), e.getMessage());
+            }
+        }
+
         // Buzz the owner if a person already has this conversation. Before the AI runs, so
         // the status read here is the one that held when the customer wrote: a conversation
         // the AI is about to escalate is notified once, by the escalation, not twice.
@@ -63,21 +76,10 @@ public class MessageIngestedListener {
             }
         }
 
-        // Shadow mode: judge the message with Jev and record what the firewall would have
-        // done, after the customer has already been answered — so the evaluation can never
-        // slow a reply down. In "on" mode the reply itself runs the triage, before answering.
-        if (event.inbound() && triageService.mode() == MessageTriageService.Mode.SHADOW) {
-            try {
-                triageService.triage(event.messageId());
-            } catch (Exception e) {
-                log.debug("Shadow triage failed for message {}: {}", event.messageId(), e.getMessage());
-            }
-        }
-
         // How the customer feels, read for every inbound message — including while an agent
         // is handling the conversation, where the AI never runs and the mood would otherwise
-        // never be assessed. After the reply: it is a second model call, the reply does not
-        // read it, and nobody is watching the sentiment pill the moment a message lands.
+        // never be assessed. With Jev it is already in the triage above and this only stores
+        // it; without Jev it is a generative call, so it waits until after the reply.
         if (event.inbound()) {
             try {
                 sentimentService.analyse(event.messageId());

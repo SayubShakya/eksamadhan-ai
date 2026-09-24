@@ -174,6 +174,8 @@ public class AgentNotificationService {
 
             ConversationThread thread = message.getThread();
             if (thread == null || thread.getAssignedAgentId() == null) return;
+            // Nobody is woken for spam; it waits in the Spam tab for whoever looks.
+            if (thread.isSpam()) return;
             if (thread.getStatus() != ThreadStatus.AGENT_HANDLING
                     && thread.getStatus() != ThreadStatus.OPEN_FOR_AGENT) return;
 

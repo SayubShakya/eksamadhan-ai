@@ -53,7 +53,7 @@ public interface ConversationThreadRepository extends JpaRepository<Conversation
     @org.springframework.data.jpa.repository.Query(
             "SELECT t FROM ConversationThread t WHERE t.socialPage = :page "
           + "AND t.status = io.eksamadhan.model.ThreadStatus.AI_HANDLING "
-          + "AND t.unanswered > 0 AND t.lastMessageDirection = 'inbound' "
+          + "AND t.unanswered > 0 AND t.lastMessageDirection = 'inbound' AND t.spam = false "
           + "AND t.lastMessageAt < :settled AND t.lastMessageAt > :oldest")
     List<ConversationThread> findAwaitingAi(SocialPage page,
                                             java.time.ZonedDateTime settled,
@@ -86,4 +86,35 @@ public interface ConversationThreadRepository extends JpaRepository<Conversation
     @org.springframework.data.jpa.repository.Query(
             "UPDATE ConversationThread t SET t.offTopicStreak = :streak, t.unrelated = :unrelated WHERE t.id = :id")
     int updateOffTopic(UUID id, int streak, boolean unrelated);
+
+    /** Only ever raises it: the conversation is as urgent as its most urgent message. */
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(
+            "UPDATE ConversationThread t SET t.priority = :priority "
+          + "WHERE t.id = :id AND (t.priority IS NULL OR t.priority > :priority)")
+    int raisePriority(UUID id, int priority);
+
+    /** A no-op, returning 0, if it is already spam or a person has said it is not. */
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(
+            "UPDATE ConversationThread t SET t.spam = true, t.spamKind = :kind, t.spamScore = :score, "
+          + "t.spamMessageId = :messageId, t.spamAt = :at "
+          + "WHERE t.id = :id AND t.spam = false AND t.spamCleared = false")
+    int markSpam(UUID id, String kind, double score, UUID messageId, java.time.ZonedDateTime at);
+
+    /** A person says it is not spam: out of the Spam tab, and never flagged automatically again. */
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(
+            "UPDATE ConversationThread t SET t.spam = false, t.spamCleared = true WHERE t.id = :id")
+    int clearSpam(UUID id);
+
+    /** The customer's own genuine request brought it back. Returns 0 if it was not spam. */
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(
+            "UPDATE ConversationThread t SET t.spam = false WHERE t.id = :id AND t.spam = true")
+    int restoreFromSpam(UUID id);
 }

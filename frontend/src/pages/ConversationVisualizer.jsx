@@ -30,6 +30,7 @@ const KIND = {
     ACTION:    { Icon: IconSend,     tone: 'action',   label: 'Action' },
     HANDOVER:  { Icon: IconUser,     tone: 'handover', label: 'Handover' },
     NOTIFY:    { Icon: IconBell,     tone: 'handover', label: 'Alert' },
+    SPAM:      { Icon: IconStop,     tone: 'error',    label: 'Spam' },
     END:       { Icon: IconStop,     tone: 'end',      label: 'End' },
     ERROR:     { Icon: IconClose,    tone: 'error',    label: 'Error' },
 };
@@ -42,6 +43,7 @@ const OUTCOME_TONE = {
     'failed': 'bad',
     'silent — a person owns it': 'quiet',
     'sticker': 'quiet',
+    'spam': 'bad',
     'not recorded': 'none',
     'in progress': 'quiet',
 };
@@ -60,12 +62,20 @@ function modelChip(step) {
  * the model is still thinking, so drawn inline they would look like steps of the reply.
  */
 function isSideStep(step) {
-    if (step.title === "Read the customer's mood") return true;
-    if (step.kind === 'JEV') {
-        const input = parse(step.input);
-        return !(input && input.mode === 'on');
-    }
-    return false;
+    // Jev's triage runs before the reply in every mode — it decides spam, which the reply
+    // checks — so it belongs on the main line. Only the mood, stored after the reply from
+    // that same judgment, runs beside it.
+    return step.title === "Read the customer's mood";
+}
+
+/**
+ * The trigger first. Jev judges a message before the reply starts, so its step is recorded
+ * before "Customer message received" — but a flow that starts anywhere but the message
+ * reads wrong.
+ */
+function mainLine(steps) {
+    const main = steps.filter(s => !isSideStep(s));
+    return [...main.filter(s => s.kind === 'TRIGGER'), ...main.filter(s => s.kind !== 'TRIGGER')];
 }
 
 function parse(text) {
@@ -234,7 +244,7 @@ export default function ConversationVisualizer() {
 
     const steps = trace?.steps ?? [];
     const step = useMemo(() => steps.find(s => s.id === stepId) ?? null, [steps, stepId]);
-    const mainSteps = useMemo(() => steps.filter(s => !isSideStep(s)), [steps]);
+    const mainSteps = useMemo(() => mainLine(steps), [steps]);
     const sideSteps = useMemo(() => steps.filter(isSideStep), [steps]);
     // Refit when another message opens, or once its steps first arrive.
     const canvas = usePanZoom(`${selectedId}:${steps.length > 0}:${listOpen}`);

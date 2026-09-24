@@ -224,6 +224,19 @@ public class AiReplyService {
             return;
         }
 
+        // Spam gets no answer and no handover: answering teaches a bot the page is live, and
+        // escalating puts it in front of a person. Jev has already judged this message, before
+        // the reply started, so a conversation this message made spam is already marked.
+        trace.here(TraceRecorder.Kind.DECISION, "Marked as spam?", thread.isSpam() ? "yes" : "no",
+                TraceRecorder.of("spam", thread.isSpam(), "kind", thread.getSpamKind(),
+                        "cleared by a person", thread.isSpamCleared()),
+                TraceRecorder.of("AI may reply", !thread.isSpam()));
+        if (thread.isSpam()) {
+            log.debug("Thread {} is spam; AI stays quiet", thread.getId());
+            trace.here(TraceRecorder.Kind.END, "AI stays silent", "marked as spam", null, null);
+            return;
+        }
+
         SocialPage page = pageRepository.findWithOrganizationById(pageId).orElse(null);
         if (page == null) return;
         Organization organization = page.getOrganization();

@@ -107,6 +107,8 @@ public class SystemController {
         if (steps.stream().anyMatch(s -> "Conversation closed".equals(s.getTitle()))) return "closed as off-topic";
         if (handedOver) return "handed to a person";
         if (steps.stream().anyMatch(s -> "Message sent to the customer".equals(s.getTitle()))) return "firewall reply";
+        if (steps.stream().anyMatch(s -> "AI stays silent".equals(s.getTitle())
+                && "marked as spam".equals(s.getOutcome()))) return "spam";
         if (steps.stream().anyMatch(s -> "AI stays silent".equals(s.getTitle()))) return "silent — a person owns it";
         if (steps.stream().anyMatch(s -> "Only a sticker or a like".equals(s.getTitle()))) return "sticker";
         if (steps.stream().anyMatch(s -> "ERROR".equals(s.getKind()))) return "failed";

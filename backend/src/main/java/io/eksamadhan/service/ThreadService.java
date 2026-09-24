@@ -144,6 +144,18 @@ public class ThreadService {
         return transition(threadId, ThreadStatus.AI_HANDLING, t -> t.setAssignedAgentId(null));
     }
 
+    /**
+     * A person says this is not spam. It goes back to the Active tab, is never flagged
+     * automatically again, and — since the AI skipped it while it was spam — the next sync's
+     * catch-up answers whatever the customer is still waiting on.
+     */
+    public ConversationThread notSpam(UUID threadId) {
+        threadRepository.clearSpam(threadId);
+        log.info("Conversation {} marked as not spam by a person", threadId);
+        return threadRepository.findById(threadId)
+                .orElseThrow(() -> new IllegalArgumentException("No such conversation: " + threadId));
+    }
+
     private java.util.Optional<ConversationThread> findActive(SocialPage page, String customerId) {
         return threadRepository.findActive(page, customerId).stream().findFirst();
     }

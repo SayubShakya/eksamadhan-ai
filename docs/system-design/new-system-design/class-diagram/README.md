@@ -71,6 +71,11 @@ classDiagram
         +String sentiment
         +int offTopicStreak
         +boolean unrelated
+        +Integer priority
+        +boolean spam
+        +String spamKind
+        +UUID spamMessageId
+        +boolean spamCleared
         +String summary
         +int unanswered
         +ZonedDateTime escalatedAt
@@ -147,6 +152,9 @@ classDiagram
         +String sentiment
         +Double sentimentConfidence
         +String action
+        +Double spam
+        +String spamKind
+        +Integer urgency
         +Integer latencyMs
         +Integer inputTokens
         +OffsetDateTime createdAt
@@ -319,6 +327,7 @@ classDiagram
         +returnToAi(threadId)
         +escalate(threadId, reason)
         +resolve(threadId)
+        +notSpam(threadId)
         +visibleTo(user) List~ConversationThread~
     }
 
@@ -398,8 +407,11 @@ classDiagram
 
     class MessageTriageService {
         +triage(messageId) Optional~MessageTriage~
+        +backfill(tenantId)
         +mode() Mode
         ~decide(triage) Action
+        ~spamDecision(spam, threshold, customerAsked)$ SpamDecision
+        -label(message, triage)
         -describe(organization) String
     }
 

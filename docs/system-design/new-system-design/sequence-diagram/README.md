@@ -47,11 +47,15 @@ sequenceDiagram
     MP->>AI: MessageIngested (after commit)
     Note over AI: From here every step is also written to ai_trace_steps,<br/>with its input and output, for the conversation visualizer.
 
-    opt firewall on
-        AI->>J: triage(message) — two calls in parallel
-        J-->>AI: intent · asks for a person · injection · sentiment
-        Note over AI,J: Acts only when sure — greet, thank, or hand over.<br/>Anything else carries on below, unchanged.
-    end
+    AI->>J: triage(message) — two calls in parallel, before the reply
+    J-->>AI: intent · person · injection · sentiment · spam · urgency
+    AI->>DB: sentiment, priority 1-3, spam flag with its reason
+
+    alt conversation is spam
+        Note over AI: No reply, no handover, no alert.<br/>It waits in the Spam tab until a person says otherwise.
+    else firewall on, and sure
+        Note over AI,J: Greet, thank, or hand over without the model.
+    else everything else
 
     AI->>R: search(question, 5 passages)
     R->>V: cosine nearest neighbour
@@ -87,11 +91,6 @@ sequenceDiagram
         M->>C: "someone will reply shortly"
         A->>DB: takes over and replies
     end
-
-    opt shadow mode (the default)
-        AI->>J: triage(message), after the customer has their answer
-        J-->>AI: intent · asks for a person · injection · sentiment
-        AI->>DB: record what the firewall would have done
     end
 ```
 
@@ -111,11 +110,13 @@ knowledge base comes close, the passages are dropped and the model answers from 
 and conversation memory alone. Escalating on weak retrieval by itself would hand every
 "hello" to a person, since a greeting matches no policy document well.
 
-**The firewall sits before the model, and only acts when sure.** In `on` mode one Jev
-decision settles greetings, thanks, requests for a person and injection attempts before
-anything is generated; everything it is unsure of runs down the path below exactly as before.
-In shadow mode — the default — the same judgment is made *after* the customer has been
-answered, and only recorded, so the evaluation can never slow a reply.
+**Jev judges every message before the reply, in every mode.** It costs about half a second
+against the several the reply model takes, and it decides one thing the reply must know first:
+whether the conversation is spam, in which case the AI says nothing and nobody is alerted. The
+same call gives the sentiment (Jev only — the local model is no longer asked) and the
+priority. What still waits for `on` mode is the firewall acting on its own — greeting,
+thanking or handing over without the model; everything it is unsure of runs down the path
+below exactly as before.
 
 **Escalation is a dozen steps, not one.** Escalating means changing thread state, choosing an
 agent by current load, recording the assignment, writing a notification row, pushing to that
@@ -135,6 +136,8 @@ conversation that goes quiet after "let me check" is worse than no promise at al
 | Off-topic streak, closed at 3 | `AiReplyService.handleUnrelated` |
 | Least-loaded assignment | `AgentRoutingService.pickAgent` |
 | Email to the agent | `AiReplyService.notifyAssignee` → Resend |
-| Firewall, on mode | `AiReplyService.firewall` → `MessageTriageService.triage` |
-| Firewall, shadow mode | `MessageIngestedListener`, after the reply |
+| Jev triage, before the reply | `MessageIngestedListener` → `MessageTriageService.triage` |
+| Priority and spam flag | `MessageTriageService.label` |
+| Spam: the AI stays silent | `AiReplyService.reply` — "Marked as spam?" |
+| Firewall, on mode | `AiReplyService.firewall`, reusing the stored triage |
 | Notification row then push | `AgentNotificationService.deliver` |

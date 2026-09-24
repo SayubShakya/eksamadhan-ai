@@ -27,4 +27,13 @@ public class ThreadResponse {
     private int unanswered;
     private String summary;          // the handover brief
     private boolean summaryStale;    // messages have arrived since it was written
+    private Integer priority;        // 1 urgent, 2 normal, 3 low; null until Jev has judged a message
+    private boolean spam;
+    private String spamKind;         // promotion | scam | gibberish | spam
+    private Double spamScore;        // how sure Jev was, 0-1
+    private String spamAt;           // ISO 8601
+    private boolean spamCleared;     // a person said it is not spam
+    private SpamMessage spamMessage; // the message that decided it
+
+    public record SpamMessage(String id, String text, String timestamp) {}
 }

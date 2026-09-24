@@ -73,8 +73,9 @@ flowchart TB
 
     p2 -.->|"every customer message"| p9
     p9 -->|"message text"| jev
-    jev -->|"intent · sentiment ·<br/>asks for a person · injection"| p9
-    p9 -->|"triage record"| d1
+    jev -->|"intent · sentiment · spam ·<br/>urgency · person · injection"| p9
+    p9 -->|"triage record ·<br/>priority · spam flag"| d1
+    p9 -.->|"spam: stay silent"| p4
     p9 -.->|"on mode: asks for a person,<br/>injection"| p5
     p9 -.->|"on mode: greeting, thanks"| p1
 
@@ -144,7 +145,7 @@ than that moment being imported at all.
 | 7 | Agent Dashboard | Everything an agent does — reply, take over, hand back to the AI, transfer, resolve, read the brief |
 | 8 | Analytics | Deflection against the 60% target, median and 90th-percentile reply times, escalation volume by channel |
 | 10 | AI Trace & Conversation Visualizer | Writes every step processes 4, 5 and 9 take on a message — the Jev triage, the knowledge search, the model's exact prompt and raw reply, each gate, the escalation, the assignment, the alerts — with what went in and what came out. The system admin reads it back as a flow, across every workspace |
-| 9 | Message Triage | One Jev decision per customer message — intent, sentiment, whether they are asking for a person, whether they are trying to steer the AI. In shadow mode (the default) it only records what it would do; in on mode it settles greetings, thanks and handovers before process 4 is ever called |
+| 9 | Message Triage | One Jev decision per customer message, made before process 4 runs — intent, sentiment, spam, urgency, whether they are asking for a person, whether they are trying to steer the AI. In every mode it stores the sentiment, sets the conversation's priority (1–3) and flags spam, which keeps process 4 silent; in on mode it also settles greetings, thanks and handovers before process 4 is ever called |
 
 ## The three gates on process 4
 

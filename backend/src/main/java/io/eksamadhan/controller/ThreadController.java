@@ -31,6 +31,7 @@ public class ThreadController {
     private final CurrentUser currentUser;
     private final ConversationSummaryService summaryService;
     private final io.eksamadhan.service.AgentNotificationService agentNotifications;
+    private final io.eksamadhan.repository.SocialMessageRepository messageRepository;
 
     @GetMapping
     public List<ThreadResponse> list() {
@@ -59,6 +60,13 @@ public class ThreadController {
         // conversation needs rather than a list of what is still outstanding.
         summaryService.summariseNow(threadId);
         return ResponseEntity.ok(toDto(resolved));
+    }
+
+    /** Out of the Spam tab and back to Active, overruling Jev. */
+    @PostMapping("/{threadId}/not-spam")
+    public ResponseEntity<?> notSpam(@PathVariable UUID threadId) {
+        requireOwnThread(threadId);
+        return ResponseEntity.ok(toDto(threadService.notSpam(threadId)));
     }
 
     /** Writes or rewrites the handover brief for a conversation. */
@@ -165,7 +173,24 @@ public class ThreadController {
                 .summary(t.getSummary())
                 .summaryStale(t.getSummary() != null && t.getSummaryMessageCount() != null
                         && summaryService.messageCount(t) > t.getSummaryMessageCount())
+                .priority(t.getPriority())
+                .spam(t.isSpam())
+                .spamKind(t.getSpamKind())
+                .spamScore(t.getSpamScore())
+                .spamAt(t.getSpamAt() == null ? null : t.getSpamAt().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+                .spamCleared(t.isSpamCleared())
+                .spamMessage(spamMessage(t))
                 .build();
+    }
+
+    /** The message that made it spam, so the reason can be quoted rather than asserted. */
+    private ThreadResponse.SpamMessage spamMessage(ConversationThread t) {
+        if (t.getSpamMessageId() == null) return null;
+        return messageRepository.findById(t.getSpamMessageId())
+                .map(m -> new ThreadResponse.SpamMessage(m.getId().toString(),
+                        m.getText() != null ? m.getText() : m.getContent(),
+                        m.getTimestamp() == null ? null : m.getTimestamp().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)))
+                .orElse(null);
     }
 
     /** Threads taken over before the user model existed hold non-UUID ids; those show as null. */
