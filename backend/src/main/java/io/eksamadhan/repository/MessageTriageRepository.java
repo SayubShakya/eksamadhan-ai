@@ -43,4 +43,18 @@ public interface MessageTriageRepository extends JpaRepository<MessageTriage, UU
             LIMIT 25
             """, nativeQuery = true)
     java.util.List<UUID> findNeedingTriage(String tenantId);
+
+    /**
+     * Spam probability of the conversation's latest customer messages with text, newest first —
+     * null for one never judged. How many in a row were spam decides whether spam after a real
+     * question is one odd message or the conversation turning into spam again.
+     */
+    @org.springframework.data.jpa.repository.Query(value = """
+            SELECT mt.spam FROM social_messages m
+            LEFT JOIN message_triage mt ON mt.social_message_id = m.id
+            WHERE m.thread_id = :threadId AND m.direction = 'inbound' AND COALESCE(m.text, '') <> ''
+            ORDER BY m.timestamp DESC
+            LIMIT :limit
+            """, nativeQuery = true)
+    java.util.List<Double> recentSpamScores(UUID threadId, int limit);
 }

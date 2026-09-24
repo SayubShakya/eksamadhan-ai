@@ -91,11 +91,20 @@ Two labels for agents, applied in every mode because they change no reply on a g
   message starts a new conversation.
 - **Spam** takes the conversation out of Active into its own tab, and the AI neither answers
   nor escalates it — answering tells a bot the page is live, escalating puts it in front of a
-  person. It is decided **per conversation**: a message at or above 0.88 flags it only if
-  nobody in the conversation has asked for anything real (a business question, a complaint, a
-  request for a person). A flagged conversation returns to Active the moment its customer asks
-  for something, and once a person clicks **Not spam** it is never flagged automatically
-  again. What Jev judged, how sure it was and the message that decided it are kept and shown.
+  person. It works at two levels:
+  - **the message** — at or above 0.88 it is always left alone: no reply, no handover, not
+    counted as waiting, and not folded into the next question the model is given;
+  - **the conversation** — flagged when nobody in it has asked for anything real (a business
+    question, a complaint, a request for a person), or, if someone has, when spam arrives
+    **twice in a row** (`TRIAGE_SPAM_REPEAT`).
+
+  A flagged conversation returns to Active the moment its customer asks for something real (a
+  greeting does not count), and once a person clicks **Not spam** none of it applies again.
+  What Jev judged, how sure it was and the message that decided it are kept and shown.
+
+  The two-in-a-row rule came from testing: the first version flagged per conversation only, so
+  a prize message, then "Store name?", then the same prize message three times left the
+  conversation in Active, and each prize message was escalated to an agent.
 
 Measured before building, with the exact state production sends:
 

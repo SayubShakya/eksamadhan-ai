@@ -226,12 +226,16 @@ public class AiReplyService {
 
         // Spam gets no answer and no handover: answering teaches a bot the page is live, and
         // escalating puts it in front of a person. Jev has already judged this message, before
-        // the reply started, so a conversation this message made spam is already marked.
-        trace.here(TraceRecorder.Kind.DECISION, "Marked as spam?", thread.isSpam() ? "yes" : "no",
-                TraceRecorder.of("spam", thread.isSpam(), "kind", thread.getSpamKind(),
-                        "cleared by a person", thread.isSpamCleared()),
-                TraceRecorder.of("AI may reply", !thread.isSpam()));
-        if (thread.isSpam()) {
+        // the reply started — so both the conversation's flag and this message's own score are
+        // known. A spam message inside a real conversation is left alone too.
+        boolean spamMessage = !thread.isSpam() && triageService.ignoreAsSpam(message.getId(), thread);
+        boolean silent = thread.isSpam() || spamMessage;
+        trace.here(TraceRecorder.Kind.DECISION, "Marked as spam?",
+                thread.isSpam() ? "yes — the conversation" : spamMessage ? "yes — this message" : "no",
+                TraceRecorder.of("conversation is spam", thread.isSpam(), "this message is spam", spamMessage,
+                        "kind", thread.getSpamKind(), "cleared by a person", thread.isSpamCleared()),
+                TraceRecorder.of("AI may reply", !silent));
+        if (silent) {
             log.debug("Thread {} is spam; AI stays quiet", thread.getId());
             trace.here(TraceRecorder.Kind.END, "AI stays silent", "marked as spam", null, null);
             return;
@@ -446,6 +450,9 @@ public class AiReplyService {
                 if (m.getId().equals(trigger.getId())) continue;   // already have it
                 if (m.getTimestamp() != null && trigger.getTimestamp() != null
                         && m.getTimestamp().isAfter(trigger.getTimestamp())) continue;
+                // Spam left unanswered is not a question still owed: folding a prize claim into
+                // the next real question would hand it to the model.
+                if (triageService.ignoreAsSpam(m.getId(), thread)) continue;
                 String text = m.getText() == null ? m.getContent() : m.getText();
                 if (text != null && !text.isBlank()) earlier.add(text.strip());
                 if (earlier.size() >= OUTSTANDING_LIMIT) break;

@@ -377,7 +377,10 @@ status machine and authentication have all since been built — see the change l
   for `on`. Sentiment is **Jev only** while a TypeSafe key is set: no local-model fallback, an
   unread message is retried by the backfill. Spam is per conversation: it needs spam ≥ 0.88 and
   nobody in the conversation having asked for anything real, it is undone by the customer's
-  next genuine request, and a person's "Not spam" (`spam_cleared`) is final. Spam threads are
+  next genuine request, and a person's "Not spam" (`spam_cleared`) is final. A spam message
+  inside a real conversation is ignored on its own (`ignoreAsSpam`: no reply, unanswered
+  decremented, skipped by `outstanding`), and 2 in a row (`spam-repeat`) re-flag the
+  conversation — added after Sayub beat the first version with prize → "Store name?" → prize ×3. Spam threads are
   excluded from the AI, from `findAwaitingAi` (the catch-up), from agent alerts and from the
   unread badge — "Not spam" makes the catch-up answer it on the next sync. Priority only rises
   (`raisePriority`). Measured first: spam 0.91–0.98 vs every real message ≤ 0.81, a narrow gap;

@@ -104,6 +104,13 @@ public interface ConversationThreadRepository extends JpaRepository<Conversation
           + "WHERE t.id = :id AND t.spam = false AND t.spamCleared = false")
     int markSpam(UUID id, String kind, double score, UUID messageId, java.time.ZonedDateTime at);
 
+    /** A spam message ignored on its own: it is not waiting for a reply. */
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(
+            "UPDATE ConversationThread t SET t.unanswered = t.unanswered - 1 WHERE t.id = :id AND t.unanswered > 0")
+    int forgetOneWaiting(UUID id);
+
     /** A person says it is not spam: out of the Spam tab, and never flagged automatically again. */
     @org.springframework.transaction.annotation.Transactional
     @org.springframework.data.jpa.repository.Modifying

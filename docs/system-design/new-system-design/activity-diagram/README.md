@@ -15,12 +15,15 @@ Semester 1 produced no activity diagram, so there is nothing to compare this aga
 flowchart TD
     start(["Customer message arrives"]) --> judge["Jev judges it first, in every mode:<br/>spam · urgency · sentiment ·<br/>intent · person · injection"]
     judge --> prio["Priority 1–3: the most<br/>urgent message so far"]
-    prio --> isSpam{"Spam ≥ 0.88, nobody here<br/>asked for anything real,<br/>no person cleared it?"}
-    isSpam -->|yes| markSpam["Mark the conversation spam,<br/>keeping the kind and the message"]
+    prio --> isSpam{"Spam ≥ 0.88, and no<br/>person cleared this<br/>conversation?"}
     isSpam -->|no| owned
+    isSpam -->|yes| real{"Did anyone here ask for<br/>something real, and is this<br/>the first spam in a row?"}
+    real -->|no| markSpam["Mark the conversation spam,<br/>keeping the kind and the message"]
+    real -->|yes| ignoreMsg["Ignore this message only —<br/>not counted as waiting"]
+    ignoreMsg --> owned
     markSpam --> owned{"Is a human<br/>already handling<br/>this conversation?"}
     owned -->|yes| quiet(["AI stays silent —<br/>the agent owns it"])
-    owned -->|no| spamGate{"Conversation<br/>marked spam?"}
+    owned -->|no| spamGate{"Conversation, or<br/>this message, spam?"}
     spamGate -->|yes| quietSpam(["AI stays silent, nobody alerted —<br/>it waits in the Spam tab"])
     spamGate -->|no| sticker{"Only a sticker<br/>or a like?"}
     sticker -->|yes| quietSticker(["Nothing to answer —<br/>not counted as waiting"])
@@ -122,11 +125,13 @@ relatedness is judged against the real knowledge base further down, and closing 
 customer's conversation is the mistake worth never making. Measured thresholds and results are
 in [`docs/jev-firewall.md`](../../../jev-firewall.md).
 
-**Spam is decided per conversation, and a real customer always wins.** A message Jev is at
-least 88% sure is spam flags the conversation — but only if nobody in it has asked the
-business for anything real. A customer who asked about delivery and then sent "asdf" is still a
-customer; a conversation flagged earlier returns to Active the moment its customer asks for
-something; and once a person says "not spam" it is never flagged automatically again. Spam
+**Spam is judged per message and per conversation.** A message Jev is at least 88% sure is
+spam is always left alone — no reply, no handover, not counted as waiting, and never folded
+into the next question the model is asked. The conversation is flagged when nobody in it has
+asked the business for anything real, or, if someone has, when spam arrives twice in a row:
+one real question must not buy a spammer a normal conversation, which is exactly how the first
+version was beaten in testing. A genuine request brings a flagged conversation back, and once
+a person says "not spam" none of this applies to it again. Spam
 gets no reply and no alert, because answering tells a bot the page is live and escalating puts
 it in front of a person.
 
@@ -153,6 +158,7 @@ rebuild:
 | Firewall — asks for a person | `app.triage.human-threshold` | 0.65 |
 | Firewall — greeting, thanks, abuse | `app.triage.intent-threshold` | 0.9 |
 | Spam | `app.triage.spam-threshold` | 0.88 |
+| Spam in a row that re-flags a conversation with a real question in it | `app.triage.spam-repeat` | 2 |
 
 The number of passages retrieved for a reply is **fixed at 5** (`KNOWLEDGE_PASSAGES` in
 `AiReplyService`). `app.ai.top-k` looks as if it controls this but does not: it only sets the

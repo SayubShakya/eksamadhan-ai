@@ -146,6 +146,9 @@ app:
     injection-threshold: ${TRIAGE_INJECTION_THRESHOLD:0.7}
     # Spam >= 0.91, every real message <= 0.81 on this project's data; see MessageTriageService.
     spam-threshold: ${TRIAGE_SPAM_THRESHOLD:0.88}
+    # Spam in a row that turns a conversation with a real question in it back into spam.
+    # Below this, each spam message is ignored on its own and the conversation stays put.
+    spam-repeat: ${TRIAGE_SPAM_REPEAT:2}
     greeting-reply: ${TRIAGE_GREETING_REPLY:Hi! How can I help you today?}
     thanks-reply: ${TRIAGE_THANKS_REPLY:You're welcome! Let me know if there is anything else I can help with.}
   # The platform operator. Created at startup from these two, in a workspace of its own; never

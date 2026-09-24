@@ -410,7 +410,8 @@ classDiagram
         +backfill(tenantId)
         +mode() Mode
         ~decide(triage) Action
-        ~spamDecision(spam, threshold, customerAsked)$ SpamDecision
+        +ignoreAsSpam(messageId, thread) boolean
+        ~spamDecision(spam, threshold, customerAsked, isRequest, streak, repeat, cleared)$ SpamDecision
         -label(message, triage)
         -describe(organization) String
     }

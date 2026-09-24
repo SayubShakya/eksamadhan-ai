@@ -22,7 +22,7 @@ class MessageTriageDecisionTest {
 
     private final MessageTriageService service = new MessageTriageService(
             new TypeSafeClient("", "https://api.typesafe.ai/v1", "jev-latest", 3000, null),
-            null, null, null, null, null, "shadow", 0.9, 0.65, 0.7, 0.88);
+            null, null, null, null, null, "shadow", 0.9, 0.65, 0.7, 0.88, 2);
 
     private static MessageTriage judged(String intent, double confidence, double human, double injection) {
         return MessageTriage.builder().intent(intent).intentConfidence(confidence)
@@ -72,28 +72,47 @@ class MessageTriageDecisionTest {
     }
 
     // ---- spam, per conversation ----
+    // spamDecision(spam, threshold, customerAsked, isRequest, streak, repeat, cleared)
 
     @Test
-    void theWeakestSpamMeasuredIsFlagged() {
+    void theWeakestSpamMeasuredFlagsAConversationNobodyAskedAnythingIn() {
         // "Check out my new YouTube channel and subscribe!!", 0.91.
-        assertEquals(SpamDecision.FLAG, MessageTriageService.spamDecision(0.91, 0.88, false));
+        assertEquals(SpamDecision.FLAG, MessageTriageService.spamDecision(0.91, 0.88, false, false, 1, 2, false));
     }
 
     @Test
-    void theMostSpamLikeRealMessageIsNot() {
+    void theMostSpamLikeRealMessageIsNotSpam() {
         // "Sgupid bitvhh" — a misspelled insult from a real customer, 0.81.
-        assertEquals(SpamDecision.KEEP, MessageTriageService.spamDecision(0.81, 0.88, false));
+        assertEquals(SpamDecision.KEEP, MessageTriageService.spamDecision(0.81, 0.88, false, false, 0, 2, false));
     }
 
     @Test
-    void aConversationWithAGenuineRequestIsNeverSpamAndComesBackIfItWas() {
-        // Asked about delivery, then sent keyboard mash: still a customer.
-        assertEquals(SpamDecision.RESTORE, MessageTriageService.spamDecision(0.95, 0.88, true));
+    void oneSpamMessageAfterARealQuestionIsIgnoredOnItsOwn() {
+        // Asked the store name, then sent the prize message: that message gets no reply and no
+        // handover, but the customer's conversation stays in Active.
+        assertEquals(SpamDecision.IGNORE_MESSAGE, MessageTriageService.spamDecision(0.98, 0.88, true, false, 1, 2, false));
     }
 
     @Test
-    void aRowFromBeforeTheSpamQuestionIsNeitherFlaggedNorCleared() {
-        assertEquals(SpamDecision.KEEP, MessageTriageService.spamDecision(null, 0.88, false));
+    void spamTwiceInARowAfterARealQuestionMakesItSpamAgain() {
+        // One real question must not buy a spammer a normal conversation.
+        assertEquals(SpamDecision.FLAG, MessageTriageService.spamDecision(0.98, 0.88, true, false, 2, 2, false));
+    }
+
+    @Test
+    void aRealRequestBringsItBackButAGreetingDoesNot() {
+        assertEquals(SpamDecision.RESTORE, MessageTriageService.spamDecision(0.02, 0.88, true, true, 0, 2, false));
+        assertEquals(SpamDecision.KEEP, MessageTriageService.spamDecision(0.03, 0.88, true, false, 0, 2, false));
+    }
+
+    @Test
+    void aPersonsNotSpamOutranksEverySpamScore() {
+        assertEquals(SpamDecision.KEEP, MessageTriageService.spamDecision(0.98, 0.88, false, false, 5, 2, true));
+    }
+
+    @Test
+    void aRowFromBeforeTheSpamQuestionIsLeftAlone() {
+        assertEquals(SpamDecision.KEEP, MessageTriageService.spamDecision(null, 0.88, false, false, 0, 2, false));
     }
 
     // ---- reading Jev's answer ----

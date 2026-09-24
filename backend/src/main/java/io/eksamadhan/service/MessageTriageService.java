@@ -1,5 +1,6 @@
 package io.eksamadhan.service;
 
+import io.eksamadhan.model.ConversationThread;
 import io.eksamadhan.model.MessageTriage;
 import io.eksamadhan.model.Organization;
 import io.eksamadhan.model.Sentiment;
@@ -95,6 +96,7 @@ public class MessageTriageService {
     private final io.eksamadhan.repository.ConversationThreadRepository threadRepository;
     private final Mode mode;
     private final double spamThreshold;
+    private final int spamRepeat;
     private final double intentThreshold;
     private final double humanThreshold;
     private final double injectionThreshold;
@@ -109,7 +111,8 @@ public class MessageTriageService {
                                 @Value("${app.triage.intent-threshold:0.9}") double intentThreshold,
                                 @Value("${app.triage.human-threshold:0.65}") double humanThreshold,
                                 @Value("${app.triage.injection-threshold:0.7}") double injectionThreshold,
-                                @Value("${app.triage.spam-threshold:0.88}") double spamThreshold) {
+                                @Value("${app.triage.spam-threshold:0.88}") double spamThreshold,
+                                @Value("${app.triage.spam-repeat:2}") int spamRepeat) {
         this.typeSafe = typeSafe;
         this.triageRepository = triageRepository;
         this.messageRepository = messageRepository;
@@ -117,6 +120,7 @@ public class MessageTriageService {
         this.trace = trace;
         this.threadRepository = threadRepository;
         this.spamThreshold = spamThreshold;
+        this.spamRepeat = spamRepeat;
         // Without a key there is nothing to call, whatever the setting says.
         Mode configured = parseMode(mode);
         this.mode = typeSafe.isConfigured() ? configured : Mode.OFF;
@@ -227,31 +231,53 @@ public class MessageTriageService {
     /**
      * What the judgments mean for the conversation: its priority, and whether it is spam.
      *
-     * Spam is decided per conversation, not per message: a conversation in which the customer
-     * has asked the business for anything real is never spam, and one flagged earlier comes
-     * back to Active the moment they do. That is the ear-buds lesson again — a real customer
-     * must never be silenced on one odd message.
+     * Spam is judged at two levels. A spam message is always ignored on its own — no reply, no
+     * handover, not counted as waiting — even inside a real conversation. The conversation as a
+     * whole is flagged only when nobody in it has asked for anything real, or, if someone has,
+     * once spam arrives {@code spamRepeat} times in a row: asking one real question must not
+     * buy a spammer a normal conversation. A genuine request brings a flagged conversation
+     * back, and a person's "not spam" overrides all of it — the ear-buds lesson, that a real
+     * customer must never be silenced on a guess.
      */
     private void label(SocialMessage message, MessageTriage t) {
-        UUID threadId = message.getThread() == null ? null : message.getThread().getId();
-        if (threadId == null) return;
+        ConversationThread thread = message.getThread();
+        if (thread == null) return;
+        UUID threadId = thread.getId();
         try {
             if (t.getUrgency() != null) threadRepository.raisePriority(threadId, t.getUrgency());
 
-            boolean customer = triageRepository.threadHasCustomerRequest(threadId, spamThreshold);
-            switch (spamDecision(t.getSpam(), spamThreshold, customer)) {
+            boolean customerAsked = triageRepository.threadHasCustomerRequest(threadId, spamThreshold);
+            boolean isRequest = GENUINE.contains(t.getIntent());
+            int streak = streak(triageRepository.recentSpamScores(threadId, spamRepeat));
+            String kind = NOT_SPAM.equals(t.getSpamKind()) ? "spam" : t.getSpamKind();
+
+            switch (spamDecision(t.getSpam(), spamThreshold, customerAsked, isRequest, streak, spamRepeat,
+                    thread.isSpamCleared())) {
                 case FLAG -> {
-                    String kind = NOT_SPAM.equals(t.getSpamKind()) ? "spam" : t.getSpamKind();
                     if (threadRepository.markSpam(threadId, kind, t.getSpam(), message.getId(),
                             java.time.ZonedDateTime.now()) == 1) {
+                        String why = customerAsked ? streak + " spam messages in a row" : "nobody asked for anything real";
                         trace.step(message.getId(), TraceRecorder.Kind.SPAM, "Conversation marked as spam", kind,
-                                TraceRecorder.of("spam", t.getSpam(), "threshold", spamThreshold,
-                                        "kind", kind, "anyone asked for something real", false),
+                                TraceRecorder.of("spam", t.getSpam(), "threshold", spamThreshold, "kind", kind,
+                                        "anyone asked for something real", customerAsked,
+                                        "spam in a row", streak, "why", why),
                                 TraceRecorder.of("moved to", "the Spam tab",
                                         "AI", "does not answer it", "agents", "are not alerted"),
                                 null);
-                        log.info("Conversation {} marked as spam ({}, {})", threadId, kind, round(t.getSpam()));
+                        log.info("Conversation {} marked as spam ({}, {}): {}", threadId, kind, round(t.getSpam()), why);
                     }
+                }
+                case IGNORE_MESSAGE -> {
+                    // Not waiting for anything: the badge and the catch-up must not count it.
+                    threadRepository.forgetOneWaiting(threadId);
+                    trace.step(message.getId(), TraceRecorder.Kind.SPAM, "Spam message ignored", kind,
+                            TraceRecorder.of("spam", t.getSpam(), "threshold", spamThreshold, "kind", kind,
+                                    "spam in a row", streak, "flags the conversation at", spamRepeat),
+                            TraceRecorder.of("AI", "does not answer this message",
+                                    "conversation", "stays where it is — someone in it asked for something real"),
+                            null);
+                    log.info("Spam message {} ignored in conversation {} ({} of {} in a row)",
+                            message.getId(), threadId, streak, spamRepeat);
                 }
                 case RESTORE -> {
                     if (threadRepository.restoreFromSpam(threadId) == 1) {
@@ -270,13 +296,50 @@ public class MessageTriageService {
         }
     }
 
-    enum SpamDecision { FLAG, RESTORE, KEEP }
+    /** Intents that mean the customer wants something from the business. */
+    private static final java.util.Set<String> GENUINE = java.util.Set.of("business_question", "complaint", "wants_human");
 
-    /** The spam rule on its own, so it can be tested without a database. */
-    static SpamDecision spamDecision(Double spam, double threshold, boolean customerAskedForSomething) {
-        if (customerAskedForSomething) return SpamDecision.RESTORE;
-        if (spam != null && spam >= threshold) return SpamDecision.FLAG;
+    enum SpamDecision { FLAG, IGNORE_MESSAGE, RESTORE, KEEP }
+
+    /**
+     * The spam rule on its own, so it can be tested without a database.
+     *
+     * @param customerAsked whether anyone in the conversation has asked for something real,
+     *                      counting only messages that were not themselves spam
+     * @param isRequest     whether this message is such a request
+     * @param streak        how many of the latest customer messages in a row, this one
+     *                      included, were spam
+     * @param cleared       a person has said this conversation is not spam
+     */
+    static SpamDecision spamDecision(Double spam, double threshold, boolean customerAsked, boolean isRequest,
+                                     int streak, int repeat, boolean cleared) {
+        boolean isSpam = spam != null && spam >= threshold;
+        if (isSpam && !cleared) {
+            return !customerAsked || streak >= repeat ? SpamDecision.FLAG : SpamDecision.IGNORE_MESSAGE;
+        }
+        if (!isSpam && isRequest) return SpamDecision.RESTORE;
         return SpamDecision.KEEP;
+    }
+
+    /** Leading run of spam scores, newest first. */
+    private int streak(List<Double> newestFirst) {
+        int n = 0;
+        for (Double s : newestFirst) {
+            if (s == null || s < spamThreshold) break;
+            n++;
+        }
+        return n;
+    }
+
+    /**
+     * Whether the AI should leave this one message alone: Jev judged it spam and no person has
+     * overruled that for its conversation. Reads the stored judgment; never calls Jev.
+     */
+    public boolean ignoreAsSpam(UUID messageId, ConversationThread thread) {
+        if (mode == Mode.OFF || (thread != null && thread.isSpamCleared())) return false;
+        return triageRepository.findBySocialMessageId(messageId)
+                .map(t -> t.getSpam() != null && t.getSpam() >= spamThreshold)
+                .orElse(false);
     }
 
     /** For the sync: judges open conversations' messages that were never judged. */

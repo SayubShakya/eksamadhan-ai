@@ -49,6 +49,8 @@ class SpamAndPriorityTest {
             "Where is my order? It has been two weeks", new Judged("complaint", 0.01, "customer", 0),
             "asdfghjkl", new Judged("off_topic", 0.95, "gibberish", 2),
             "Delivery cost?", new Judged("business_question", 0.01, "customer", 1),
+            "Store name?", new Judged("business_question", 0.01, "customer", 1),
+            "hi", new Judged("greeting", 0.03, "customer", 2),
             "Buy 1000 followers for Rs 100", new Judged("off_topic", 0.96, "promotion", 2));
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
@@ -79,7 +81,7 @@ class SpamAndPriorityTest {
             }
         };
         triage = new MessageTriageService(jev, triageRepository, messages, sources, trace, threads,
-                "shadow", 0.9, 0.65, 0.7, 0.88);
+                "shadow", 0.9, 0.65, 0.7, 0.88, 2);
     }
 
     private ConversationThread conversation() {
@@ -139,14 +141,37 @@ class SpamAndPriorityTest {
     }
 
     @Test
-    void aConversationWithARealQuestionIsNeverFlaggedAndPriorityNeverDrops() {
+    void oneSpamMessageAfterARealQuestionIsIgnoredAndPriorityNeverDrops() {
         ConversationThread thread = conversation();
         says(thread, "Delivery cost?");
-        says(thread, "Buy 1000 followers for Rs 100");
+        UUID spam = says(thread, "Buy 1000 followers for Rs 100");
 
         ConversationThread now = reload(thread);
-        assertFalse(now.isSpam());
+        assertFalse(now.isSpam(), "one odd message does not make a customer a spammer");
+        assertTrue(triage.ignoreAsSpam(spam, now), "but the AI leaves that message alone");
         assertEquals(2, now.getPriority(), "a low-priority message after a normal one leaves it normal");
+    }
+
+    @Test
+    void spamFirstThenARealQuestionThenSpamTwiceIsSpamAgain() {
+        // The sequence from the inbox: prize, hi, a real question, then the prize again.
+        ConversationThread thread = conversation();
+        says(thread, "Congratulations! You won Rs 50,000, claim at bit.ly/x");
+        assertTrue(reload(thread).isSpam());
+
+        says(thread, "hi");
+        assertTrue(reload(thread).isSpam(), "a greeting is not a request");
+
+        says(thread, "Store name?");
+        assertFalse(reload(thread).isSpam(), "a real question brings it back");
+
+        says(thread, "Congratulations! You won Rs 50,000, claim at bit.ly/x");
+        assertFalse(reload(thread).isSpam(), "the first spam after it is ignored on its own");
+
+        UUID second = says(thread, "Congratulations! You won Rs 50,000, claim at bit.ly/x");
+        ConversationThread now = reload(thread);
+        assertTrue(now.isSpam(), "twice in a row: spam again");
+        assertEquals(second, now.getSpamMessageId(), "and the reason points at the message that decided it");
     }
 
     @Test
