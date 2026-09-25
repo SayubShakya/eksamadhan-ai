@@ -294,6 +294,11 @@ expire after 7 days — re-send if it lapses.
       notification badge and 42 iPhone/iPad launch images are generated from the logo. Checked:
       Chrome's installability audit (no errors), offline start, slow 3G (splash at 1.3s,
       bundle at 3.3s) and the dev server (no caching, edits appear live)
+- [x] **Phone layout fixed across every screen** — the top bar, page titles, the setup
+      checklist, team and knowledge rows, the conversation header and messages, and the
+      notification list, which opened off the edge of the screen. The cause was one ordering
+      problem in the stylesheet that let desktop rules override the phone ones; checked at phone
+      width on every screen with nothing running off the edge
 - [x] Home-screen icon kept full blue, and the installed app now shows its logo once: the loading
       screen no longer repeats the logo (or a spinner) after Android's own launch screen
 - [x] **Installed and used on a real Android phone**, through an HTTPS tunnel. Two fixes on the

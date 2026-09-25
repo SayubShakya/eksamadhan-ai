@@ -72,6 +72,11 @@ the viva.
 sidebar (300px, collapsible). Below 1024px the sidebar collapses; below 768px the
 thread list becomes a back-navigable screen.
 
+**Phone (≤760px):** one pane at a time; the top bar is icons only (name and role live in the
+profile panel); every page title is 22px; list rows put their actions on a second line when
+both do not fit; overlays (the notification list) open as full-width sheets under the top bar.
+Phone rules live in the last block of `app.css` so later desktop rules cannot override them.
+
 **Widget:** 380×560px anchored bottom-right, 20px inset; full-screen below 480px.
 Must respect `env(safe-area-inset-bottom)` on mobile.
 

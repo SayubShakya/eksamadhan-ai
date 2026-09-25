@@ -475,10 +475,10 @@ export default function InboxPage({
                             <PersonAvatar name={activeThread.name} url={activeThread.avatarUrl} size={38} />
                             <div className="thread__who">
                                 <div className="thread__name">
-                                    {activeThread.name}
+                                    <span className="thread__nametext">{activeThread.name}</span>
                                     <span className="badge">
                                         <ChannelIcon platform={platformOf(activeThread.pageId)} size={11} />
-                                        {platformOf(activeThread.pageId) === 'instagram' ? 'Instagram' : 'Facebook Messenger'}
+                                        <span className="badge__text">{platformOf(activeThread.pageId) === 'instagram' ? 'Instagram' : 'Facebook Messenger'}</span>
                                     </span>
                                 </div>
                                 <div className="thread__meta">

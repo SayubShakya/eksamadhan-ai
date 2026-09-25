@@ -1607,3 +1607,63 @@
     background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md);
     box-shadow: var(--shadow-md); font-size: 13px;
 }
+
+/* ── Phone layout ──────────────────────────────────────────────────────────────────────
+   Last in the file on purpose. Several desktop rules above are declared after the older mobile
+   queries and silently beat them — the name beside the avatar stayed on phones although a query
+   hid it. Anything placed here wins. Same 760px breakpoint as the single-pane inbox. */
+@media (max-width: 760px) {
+    /* Top bar: icons only. The name and role are one tap away, in the profile panel. */
+    .topbar { gap: 6px; padding: 0 8px; }
+    .user__text { display: none; }
+    .user { padding: 2px; }
+
+    /* One title size on every screen: Home used 21px, the other pages a 16px section title. */
+    .page__title, .page h1.section-title { font-size: 22px; font-weight: 650; letter-spacing: -.02em; line-height: 1.25; margin: 0 0 6px; }
+    .page .section-sub { font-size: 14px; }
+
+    /* Setup checklist: the title above its description (the old rule laid them side by side and
+       squeezed "Finish setting up" onto two lines), then the progress line under both. */
+    .checklist__head > div:first-child { display: block; }
+
+    /* List rows — team members, knowledge sources, escalation by channel. The details take the
+       width they need and the actions drop to a line of their own when both do not fit, instead
+       of the Remove button running off the screen. */
+    .member { flex-wrap: wrap; row-gap: 10px; padding: 12px; }
+    .member > div:not(.member__actions) { flex: 1 1 190px; min-width: 0; }
+    .member__email { overflow-wrap: anywhere; }
+    .member__actions { flex-wrap: wrap; justify-content: flex-end; }
+    .member__actions .btn { white-space: nowrap; }
+    .an__bar { width: 120px; }
+
+    /* Knowledge: the form's buttons the same width, stacked, instead of three ragged widths. */
+    .knowledge__actions { flex-direction: column; align-items: stretch; }
+    .knowledge__actions .btn { justify-content: center; }
+
+    /* Conversation header: the name on one line with "…", the channel as its icon only. */
+    .thread__head { padding: 10px 12px; gap: 10px; }
+    .thread__name { flex-wrap: nowrap; }
+    .thread__nametext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .thread__name .badge { flex-shrink: 0; padding: 3px 5px; }
+    .thread__name .badge__text { display: none; }
+    .thread__actions { gap: 6px; }
+
+    /* The notification list was pinned to the bell and opened off the left of the screen. On a
+       phone it is a sheet under the top bar, the full width minus a margin. */
+    .bell__panel {
+        position: fixed; top: calc(var(--topbar) + env(safe-area-inset-top) + 6px);
+        left: 8px; right: 8px; width: auto; max-height: 70vh;
+    }
+
+    /* Messages: the react/reply/more buttons kept their space beside every bubble even while
+       invisible, a quarter of a phone's width, so every message wrapped into a narrow column. On a
+       phone they take no space until the message is tapped. */
+    .thread__body { padding: 16px 12px; }
+    .msg { max-width: 92%; gap: 8px; }
+    .msg__reply { display: none; }
+    .msg:hover .msg__reply, .msg:focus-within .msg__reply { display: inline-flex; }
+
+    /* Touch targets: the small buttons and filter chips people tap all day, no shorter than 34–36px. */
+    .btn--sm { min-height: 36px; }
+    .chip { min-height: 34px; }
+}

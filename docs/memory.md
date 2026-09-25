@@ -393,6 +393,18 @@ status machine and authentication have all since been built — see the change l
   with the real TypeSafe key: the triage backfill ran during `mvn test` and judged the real
   open conversations for real. Harmless here, but tests are not isolated from the network.
 
+- **Phone layout (2026-09-25).** The "messy" mobile design had one root cause: desktop rules
+  declared *after* the old mobile media queries in `app.css` silently beat them (the name beside
+  the avatar, hidden below 900px, still showed). All phone rules now sit in one block at the
+  very end of `app.css`. Fixed there: icon-only top bar; one 22px page title everywhere (pages
+  used `h1.section-title`); the checklist title stacked over its description (an old rule
+  targeted the wrong child); `.member` rows (team, knowledge sources, channel breakdown) wrap
+  their actions to a second line — Remove had run off the Team screen; knowledge buttons one
+  width; the conversation header name ellipsised with the channel as an icon; the notification
+  list, which opened off the left edge, is a full-width sheet; hover-only message buttons take
+  no space until a message is tapped, so bubbles use ~92% of the width. Checked at 412px on
+  every screen: no horizontal overflow anywhere (Team overflowed by 18px before).
+
 - **Testing on a phone (2026-09-25).** The phone needs HTTPS to install. Use a Cloudflare quick
   tunnel to the frontend: `cloudflared tunnel --url http://localhost:5174` (no account, no
   warning page, no time limit; the address changes each start). **Not a second Pinggy tunnel:**
