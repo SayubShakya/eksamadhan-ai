@@ -6,7 +6,7 @@ import NotificationBell from './NotificationBell.jsx';
 import AvailabilityMenu from './AvailabilityMenu.jsx';
 import { fullName } from '../lib/avatar.js';
 
-const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', AGENT: 'Agent' };
+import { ROLE_LABEL } from '../lib/format.js';
 
 
 /**

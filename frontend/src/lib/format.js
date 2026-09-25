@@ -63,6 +63,14 @@ export function initials(name) {
  * Who owns this conversation, from the viewer's point of view. The status alone cannot say
  * "you" — AGENT_HANDLING is equally true for a colleague's conversation.
  */
+/**
+ * What each role is called on screen (Sayub, 2026-09-26): the workspace owner is the Tenant and
+ * an agent is Staff. The stored values stay OWNER, ADMIN and AGENT; see UserRole.java.
+ */
+export const ROLE_LABEL = { OWNER: 'Tenant', ADMIN: 'Admin', AGENT: 'Staff' };
+/** As it reads in a sentence: "invited as staff". */
+export const ROLE_IN_SENTENCE = { OWNER: 'the tenant', ADMIN: 'an admin', AGENT: 'staff' };
+
 export function ownershipLabel(thread, meId) {
     if (!thread) return '';
     if (thread.status === 'AI_HANDLING') return 'AI is handling';
@@ -72,7 +80,7 @@ export function ownershipLabel(thread, meId) {
     if (thread.status === 'AGENT_HANDLING') {
         return who ? `${who} ${mine ? 'are' : 'is'} handling` : 'Being handled';
     }
-    return who ? `Waiting for ${mine ? 'you' : who}` : 'Needs agent';
+    return who ? `Waiting for ${mine ? 'you' : who}` : 'Needs staff';
 }
 
 /** How a sentiment reads, and how it should look. Colour is always paired with a word. */
@@ -131,7 +139,7 @@ export const SPAM_KIND = {
 
 export const STATUS_LABEL = {
     AI_HANDLING: 'AI handling',
-    OPEN_FOR_AGENT: 'Needs agent',
+    OPEN_FOR_AGENT: 'Needs staff',
     AGENT_HANDLING: 'Being handled',
     RESOLVED: 'Resolved',
 };

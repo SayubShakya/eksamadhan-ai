@@ -7,7 +7,7 @@ import { useHeldLoading, useResource } from '../lib/loading.js';
 import { PRESENCE } from '../components/AvailabilityMenu.jsx';
 import { timeAgo } from '../lib/format.js';
 
-const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', AGENT: 'Agent' };
+import { ROLE_LABEL } from '../lib/format.js';
 
 /**
  * The workspace team (PRD FR-04).
@@ -123,7 +123,7 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
         <div className="page">
             <h1 className="section-title" style={{ marginTop: 0 }}>Team</h1>
             <p className="muted" style={{ marginTop: -4 }}>
-                Everyone here shares the same inbox. Agents handle conversations; admins can also
+                Everyone here shares the same inbox. Staff handle conversations; admins can also
                 invite and remove people.
             </p>
 
@@ -137,7 +137,7 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                     <label className="field" style={{ flex: '0 0 auto', minWidth: 0 }}>
                         <span>Role</span>
                         <select value={role} onChange={e => setRole(e.target.value)}>
-                            <option value="AGENT">Agent</option>
+                            <option value="AGENT">Staff</option>
                             <option value="ADMIN">Admin</option>
                         </select>
                     </label>
@@ -173,7 +173,7 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
             {!loading && !team.members.some(m => m.status === 'ACTIVE' && m.presence === 'AVAILABLE') && (
                 <p className="notice notice--warn">
                     Nobody is available right now. Conversations the AI hands over will wait, and go to
-                    the first person who becomes available. Owners and admins are alerted meanwhile.
+                    the first person who becomes available. The tenant and admins are alerted meanwhile.
                 </p>
             )}
             {loading && (loadError && !firstLoad ? (

@@ -220,11 +220,11 @@ public class AiReplyService {
         trace.here(TraceRecorder.Kind.DECISION, "Is a person already handling it?",
                 mayReply ? "no" : "yes",
                 TraceRecorder.of("status", thread.getStatus().name(),
-                       "assigned agent", thread.getAssignedAgentId() == null ? "nobody" : thread.getAssignedAgentId()),
+                       "assigned staff member", thread.getAssignedAgentId() == null ? "nobody" : thread.getAssignedAgentId()),
                 TraceRecorder.of("AI may reply", mayReply));
         if (!mayReply) {
             log.debug("Thread {} is {}; AI stays quiet", thread.getId(), thread.getStatus());
-            trace.here(TraceRecorder.Kind.END, "AI stays silent", "the agent owns it", null, null);
+            trace.here(TraceRecorder.Kind.END, "AI stays silent", "a staff member owns it", null, null);
             return;
         }
 
@@ -694,15 +694,15 @@ public class AiReplyService {
             if (assignee != null) {
                 escalated.setAssignedAgentId(assignee.getId().toString());
             }
-            trace.here(TraceRecorder.Kind.HANDOVER, "Assign the least-loaded agent",
+            trace.here(TraceRecorder.Kind.HANDOVER, "Assign the least-loaded staff member",
                     assignee == null ? "nobody available" : assignee.getFirstName() + " " + assignee.getLastName(),
                     TraceRecorder.of("rule", "fewest open conversations among members who are available and online; ties broken at random"),
-                    assignee == null ? TraceRecorder.of("assigned", "nobody available (owners and admins are alerted; it goes to the first person who becomes available)")
+                    assignee == null ? TraceRecorder.of("assigned", "nobody available (the tenant and admins are alerted; it goes to the first person who becomes available)")
                                      : TraceRecorder.of("assigned", assignee.getFirstName() + " " + assignee.getLastName(),
                                               "email", assignee.getEmail(), "role", assignee.getRole().name()));
         } else if (escalated.getAssignedAgentId() != null) {
-            trace.here(TraceRecorder.Kind.HANDOVER, "Assign the least-loaded agent", "already assigned",
-                    null, TraceRecorder.of("assigned agent id", escalated.getAssignedAgentId()));
+            trace.here(TraceRecorder.Kind.HANDOVER, "Assign the least-loaded staff member", "already assigned",
+                    null, TraceRecorder.of("assigned staff member id", escalated.getAssignedAgentId()));
         }
         threadRepository.save(escalated);
 
@@ -717,15 +717,15 @@ public class AiReplyService {
 
         if (assignee != null && !alreadyWaiting) {
             notifyAssignee(assignee, escalated, reason);
-            trace.here(TraceRecorder.Kind.NOTIFY, "Alert the agent",
+            trace.here(TraceRecorder.Kind.NOTIFY, "Alert the staff member",
                     assignee.getFirstName() + ": push, bell, email",
                     TraceRecorder.of("to", assignee.getEmail(), "reason", reason),
                     TraceRecorder.of("channels", List.of("browser push", "notification bell", "email")));
         } else if (alreadyWaiting) {
-            trace.here(TraceRecorder.Kind.NOTIFY, "Alert the agent", "not repeated",
+            trace.here(TraceRecorder.Kind.NOTIFY, "Alert the staff member", "not repeated",
                     null, TraceRecorder.of("why", "the conversation was already waiting for a person; one alert per handover"));
         } else if (!alreadyWaiting && page != null && escalated.getAssignedAgentId() == null) {
-            trace.here(TraceRecorder.Kind.NOTIFY, "Alert owners and admins", "nobody to assign",
+            trace.here(TraceRecorder.Kind.NOTIFY, "Alert the tenant and admins", "nobody to assign",
                     TraceRecorder.of("reason", reason), TraceRecorder.of("channels", List.of("browser push", "notification bell")));
             // Nobody owns it: routing found no active member. Someone still has to hear about
             // it, so the workspace's owners and admins do. Checked on the thread rather than on

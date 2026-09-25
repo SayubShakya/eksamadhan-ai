@@ -157,7 +157,7 @@ function Terms() {
             <ul>
                 <li>Keep your sign-in details to yourself. You are responsible for what happens under your
                     account.</li>
-                <li>A workspace owner is responsible for the people they invite and can remove them at any
+                <li>The tenant, who created the workspace, is responsible for the people invited to it and can remove them at any
                     time.</li>
             </ul>
 

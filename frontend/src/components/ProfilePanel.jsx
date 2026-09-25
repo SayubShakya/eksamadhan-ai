@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ROLE_LABEL } from '../lib/format.js';
 import { IconClose, IconPlus } from './icons.jsx';
 import Avatar from './Avatar.jsx';
 import { fileToAvatar } from '../lib/avatar.js';
@@ -171,7 +172,7 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
                     <div className="field">
                         <span className="field__label">Role</span>
                         <p className="field__static">
-                            {draft.role}
+                            {ROLE_LABEL[draft.role] || draft.role}
                             <span className="field__note">Set by your workspace admin</span>
                         </p>
                     </div>

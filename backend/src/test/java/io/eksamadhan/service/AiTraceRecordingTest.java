@@ -136,7 +136,7 @@ class AiTraceRecordingTest {
         List<String> steps = titles(id);
         assertTrue(steps.contains("Weak retrieval and not about the business?"), steps.toString());
         int handover = steps.indexOf("Escalated to a person");
-        int assign = steps.indexOf("Assign the least-loaded agent");
+        int assign = steps.indexOf("Assign the least-loaded staff member");
         assertTrue(handover >= 0 && assign > handover, "handover, then assignment: " + steps);
         assertTrue(steps.stream().anyMatch(t -> t.startsWith("Alert ")), "someone is alerted: " + steps);
         assertEquals("Message sent to the customer", steps.get(steps.size() - 1), "the handover notice closes it");

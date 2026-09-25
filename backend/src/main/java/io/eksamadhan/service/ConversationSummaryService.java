@@ -184,7 +184,7 @@ public class ConversationSummaryService {
         String customer = thread.getCustomerName() == null ? "Customer" : thread.getCustomerName();
         for (SocialMessage message : recent) {
             boolean inbound = "inbound".equals(message.getDirection());
-            String who = inbound ? customer : (message.isAiGenerated() ? "AI" : "Agent");
+            String who = inbound ? customer : (message.isAiGenerated() ? "AI" : "Staff");
             transcript.append(who).append(": ").append(message.getText().strip()).append('\n');
         }
 

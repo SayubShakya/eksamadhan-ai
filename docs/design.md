@@ -60,6 +60,13 @@ the viva.
 - Weights: 400 body, 500 labels, 600 headings. Nothing heavier.
 - Line height 1.5 body, 1.25 headings. Message bodies cap at ~70ch.
 
+## Role names
+
+On screen the roles are **Tenant** (created the workspace), **Admin** and **Staff**. Never
+"Owner" or "Agent" in visible text. The stored values stay `OWNER`, `ADMIN`, `AGENT`, the
+PRD's names; the display names come from `ROLE_LABEL` in `lib/format.js` and `UserRole.label()`
+on the server. "Your AI agent" means the AI and is not a role, so it stays.
+
 ## Never
 
 Required by the project owner, 2026-09-25, and repeated in `CLAUDE.md`: no purple gradients or

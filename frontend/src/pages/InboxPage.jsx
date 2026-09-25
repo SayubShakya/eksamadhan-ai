@@ -707,7 +707,7 @@ export default function InboxPage({
                                                 </span>
                                             ) : (
                                                 <PersonAvatar
-                                                    name={outbound ? (m.authorName || 'Agent') : activeThread.name}
+                                                    name={outbound ? (m.authorName || 'Staff') : activeThread.name}
                                                     url={outbound ? m.authorAvatar : activeThread.avatarUrl}
                                                     size={28}
                                                     className="msg__avatar"

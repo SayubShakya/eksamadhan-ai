@@ -412,6 +412,17 @@ status machine and authentication have all since been built — see the change l
   Needs a backend restart; the V25 migration has already been applied to the dev database by
   the test run.
 
+- **Roles are shown as Tenant, Admin, Staff (2026-09-26, Sayub).** Display only: the enum, the
+  `users.role` values, the JWT `role` claim and the PRD/report keep OWNER, ADMIN, AGENT, so no
+  migration, no signed-in session breaks, and the graded documents still match. One mapping on
+  each side: `ROLE_LABEL` / `ROLE_IN_SENTENCE` in `lib/format.js`, `UserRole.label()` /
+  `asRole()` in Java. Changed: header, profile panel (it showed the raw "OWNER"), Team, invite
+  form, invite email ("as staff"), invite page, "Needs staff" status, Home "Invite staff",
+  Knowledge, Terms, server errors, visualizer step names ("Assign the least-loaded staff
+  member", "Alert the staff member"). Not changed: Jev's triage question, which lists "agent,
+  owner" as words customers use; its thresholds were measured on that text. The system-design
+  actors still say "Account Owner/Admin" and "Support Agent", the PRD's names; not renamed.
+
 - **Notifications page has no sidebar item, by decision (2026-09-26).** The bell is its entry, as
   in most apps; on that page the bell gets `.bell__button--current` + `aria-current="page"` and
   opens no dropdown (the dropdown on top of the full list showed the same alerts twice). V26

@@ -344,7 +344,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                     <p className="muted">
                         Nothing here yet. {canManage
                             ? 'Add your policies or FAQs above and the AI can start answering from them.'
-                            : 'An owner or admin can add your policies and FAQs here.'}
+                            : 'The tenant or an admin can add your policies and FAQs here.'}
                     </p>
                 </div>
             )}

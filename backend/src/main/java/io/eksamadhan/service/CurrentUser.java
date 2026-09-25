@@ -76,7 +76,7 @@ public class CurrentUser {
     public User requireTeamManager() {
         User user = require();
         if (!user.getRole().canManageTeam()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only owners and admins can manage the team");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the tenant and admins can manage the team");
         }
         return user;
     }

@@ -262,7 +262,7 @@ public class MessageTriageService {
                                         "anyone asked for something real", customerAsked,
                                         "spam in a row", streak, "why", why),
                                 TraceRecorder.of("moved to", "the Spam tab",
-                                        "AI", "does not answer it", "agents", "are not alerted"),
+                                        "AI", "does not answer it", "staff", "are not alerted"),
                                 null);
                         log.info("Conversation {} marked as spam ({}, {}): {}", threadId, kind, round(t.getSpam()), why);
                     }

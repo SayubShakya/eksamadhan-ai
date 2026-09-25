@@ -62,7 +62,7 @@ export default function HomePage({
             // Done once anyone else is in the workspace or has been invited.
             done: Boolean(team.data && (team.data.members.filter(m => m.status === 'ACTIVE').length > 1
                 || team.data.invites?.length > 0)),
-            cta: 'Invite an agent',
+            cta: 'Invite staff',
             action: () => onNavigate('team'),
         },
     ];

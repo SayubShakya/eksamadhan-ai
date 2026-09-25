@@ -244,7 +244,7 @@ public class AccountService {
         } else if (!user.getFirebaseUid().equals(google.uid())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "This account is linked to a different Google account. Sign in with your password, "
-                  + "or ask your workspace owner for help.");
+                  + "or ask your workspace tenant for help.");
         }
     }
 

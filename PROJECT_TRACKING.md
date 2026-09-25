@@ -489,6 +489,9 @@ expire after 7 days — re-send if it lapses.
 - [x] Fixed two copies of the notifications on the notifications page: the bell no longer opens
       its dropdown there, and is highlighted as the current page instead. Old alerts stored with
       a siren emoji in the title (13 rows) cleaned by migration V26
+- [x] Roles renamed on screen: the workspace creator is the **Tenant** and an agent is
+      **Staff** (Admin unchanged), in every screen, the invite email, server messages and the
+      visualizer's step names. Stored values unchanged, so nothing had to be migrated
 
 **Commits this week**
 

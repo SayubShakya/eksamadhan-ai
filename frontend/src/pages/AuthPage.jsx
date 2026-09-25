@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ROLE_IN_SENTENCE } from '../lib/format.js';
 import { LogoMark } from '../components/Logo.jsx';
 import { IconEye, IconEyeOff } from '../components/icons.jsx';
 import * as api from '../lib/api.js';
@@ -121,7 +122,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate }) {
 
     const subtitle = mode === 'login' ? 'Sign in to your support inbox.'
         : mode === 'signup' ? 'One inbox for your Facebook and Instagram messages.'
-        : invite ? `You were invited as ${invite.role.toLowerCase()}, using ${invite.email}.` : '';
+        : invite ? `You were invited as ${ROLE_IN_SENTENCE[invite.role] || 'staff'}, using ${invite.email}.` : '';
 
     if (loadingInvite) {
         return <div className="auth"><div className="auth__card"><CenteredSpinner label="Checking your invite" /></div></div>;

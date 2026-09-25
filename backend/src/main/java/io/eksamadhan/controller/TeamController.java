@@ -115,7 +115,7 @@ public class TeamController {
         // Only an owner can create another owner, so an admin cannot promote themselves.
         UserRole role = request.role() == null ? UserRole.AGENT : request.role();
         if (role == UserRole.OWNER && me.getRole() != UserRole.OWNER) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can invite another owner");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the tenant can invite another tenant");
         }
 
         // Re-inviting the same address replaces the outstanding link rather than stacking up.
@@ -161,7 +161,7 @@ public class TeamController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot remove yourself");
         }
         if (member.getRole() == UserRole.OWNER) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The owner cannot be removed");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The tenant cannot be removed");
         }
 
         // Disabled rather than deleted: threads they handled still reference them.
@@ -195,12 +195,12 @@ public class TeamController {
                   If you were not expecting it, you can ignore this email.
                 </p>
                 """.formatted(escape(inviter), escape(organization.getName()),
-                        invite.role() == UserRole.ADMIN ? "an admin" : "an agent",
+                        invite.role().asRole(),
                         emailService.button(invite.inviteUrl(), "Join " + organization.getName()));
 
         String text = "%s invited you to join %s on EkSamadhan AI as %s.%n%nAccept here: %s%n%n"
                 .formatted(inviter, organization.getName(),
-                        invite.role().name().toLowerCase(Locale.ROOT), invite.inviteUrl())
+                        invite.role().asRole(), invite.inviteUrl())
                 + "This link works once and expires in seven days.";
 
         return emailService.send(invite.email(),
