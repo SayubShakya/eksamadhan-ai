@@ -158,7 +158,7 @@ export default function TeamPage() {
                                     {copied === pending.id ? 'Copied' : 'Copy link'}
                                 </button>
                             </div>
-                            <small className="muted">Send this link yourself — it works once, and expires in seven days.</small>
+                            <small className="muted">Send this link yourself. It works once and expires in seven days.</small>
                         </div>
                     ))}
                 </>

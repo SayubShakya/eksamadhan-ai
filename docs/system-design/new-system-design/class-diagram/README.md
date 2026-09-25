@@ -433,6 +433,13 @@ classDiagram
         +trace(id) Trace
     }
 
+    class AuthRateLimiter {
+        +allowRequest(clientAddress) boolean
+        +loginPausedFor(email) Duration
+        +recordFailure(email)
+        +recordSuccess(email)
+    }
+
     class FirebaseTokenVerifier {
         +verify(idToken) GoogleIdentity
         +isConfigured() boolean

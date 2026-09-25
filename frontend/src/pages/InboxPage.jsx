@@ -82,7 +82,7 @@ const aiTimingDetail = (m) =>
     + (m.aiWaitedMs != null
         ? ` The message waited ${formatMillis(m.aiWaitedMs)} before it reached the AI`
           + (m.aiWaitedMs > SLOW_DELIVERY_MS
-              ? ' — that long a wait means it arrived through the catch-up sync rather than a live webhook.'
+              ? '. That long a wait means it arrived through the catch-up sync rather than a live webhook.'
               : '.')
         : '');
 
@@ -93,18 +93,18 @@ const PAGE_SIZE = 30;
 const QUICK_EMOJI = ['😊', '😂', '👍', '🙏', '❤️', '😅', '🎉', '😢', '😮', '🔥', '✅', '👋'];
 
 const ATTACHMENT_LABEL = {
-    sticker: '👍 Sticker',
-    audio: '🎤 Voice message',
-    image: '📷 Photo',
-    video: '🎬 Video',
-    file: '📎 File',
+    sticker: 'Sticker',
+    audio: 'Voice message',
+    image: 'Photo',
+    video: 'Video',
+    file: 'File',
 };
 
 /** What to show in the conversation list for a message that is not plain text. */
 function previewOf(message) {
     const text = message.text || message.content;
     if (text) return text;
-    return ATTACHMENT_LABEL[message.attachmentType] || '📎 Attachment';
+    return ATTACHMENT_LABEL[message.attachmentType] || 'Attachment';
 }
 
 /**
@@ -120,7 +120,7 @@ function Sticker({ url }) {
     const [broken, setBroken] = useState(false);
     useEffect(() => { setBroken(false); }, [url]);
     return broken
-        ? <span className="media--sticker-fallback" role="img" aria-label="Sticker">👍</span>
+        ? <span className="media--sticker-fallback" role="img" aria-label="Sticker"><IconThumb size={40} /></span>
         : <img className="media media--sticker" src={url} alt="Sticker" onError={() => setBroken(true)} />;
 }
 
@@ -147,7 +147,7 @@ function Attachment({ message, onOpenImage }) {
     }
     return (
         <a className="media media--file" href={url} target="_blank" rel="noreferrer noopener">
-            📎 Open attachment
+            Open attachment
         </a>
     );
 }
@@ -394,7 +394,7 @@ export default function InboxPage({
                                         {t.id && <span className="conv__ref">CONV-{t.id.slice(0, 8)}</span>}
                                         {PRIORITY[t.priority] && !t.spam && (
                                             <span className={`pill conv__prio ${PRIORITY[t.priority].tone}`}
-                                                  title={`Priority ${t.priority} — ${PRIORITY[t.priority].label}`}>
+                                                  title={`Priority ${t.priority}: ${PRIORITY[t.priority].label}`}>
                                                 {PRIORITY[t.priority].short}
                                             </span>
                                         )}
@@ -402,18 +402,17 @@ export default function InboxPage({
                                         {/* A spam conversation has no owner worth naming — the
                                             Spam pill above says everything. */}
                                         {!t.spam && <span className={`tag conv__tag ${STATUS_TONE[t.status] || 'tag--ai'}`}>
-                                            {/* Its own span so the text can wrap, if it ever must,
-                                                while the mood face beside it stays whole. */}
                                             <span className="conv__tag-text">
                                                 {ownershipLabel(t, me?.id) || STATUS_LABEL[t.status] || t.status}
                                             </span>
-                                            {SENTIMENT[t.sentiment] && t.sentiment !== 'NEUTRAL' && (
-                                                <span className="conv__mood"
-                                                      title={`${SENTIMENT[t.sentiment].label} customer`}>
-                                                    {SENTIMENT[t.sentiment].face}
-                                                </span>
-                                            )}
                                         </span>}
+                                        {/* The customer's mood as a word, only when it is worth noticing. */}
+                                        {SENTIMENT[t.sentiment] && t.sentiment !== 'NEUTRAL' && (
+                                            <span className={`tag conv__mood ${SENTIMENT[t.sentiment].tag}`}
+                                                  title={`${SENTIMENT[t.sentiment].label} customer`}>
+                                                {SENTIMENT[t.sentiment].label}
+                                            </span>
+                                        )}
 
                                     </span>
                                 </div>
@@ -427,7 +426,7 @@ export default function InboxPage({
                             </p>
                             <p className="empty__text" style={{ fontSize: 13, marginBottom: 14 }}>
                                 {search
-                                    ? `Nothing matches “${search}” — try a name, a reference like CONV-ae19042d, or something that was said.`
+                                    ? `Nothing matches “${search}”. Try a name, a reference like CONV-ae19042d, or something that was said.`
                                     : 'No conversations on this channel yet.'}
                             </p>
                             <button
@@ -656,7 +655,7 @@ export default function InboxPage({
                                     "mine" to register before the words are read. */}
                                 <span className={activeThread.assignedAgentId === me?.id
                                     ? 'composer__owner composer__owner--me' : 'composer__owner'}>
-                                    {activeThread.spam ? 'Spam — the AI does not answer it' : ownershipLabel(activeThread, me?.id)
+                                    {activeThread.spam ? 'Spam: the AI does not answer it' : ownershipLabel(activeThread, me?.id)
                                         || STATUS_LABEL[activeThread.status] || activeThread.status}
                                 </span>
 
@@ -829,7 +828,7 @@ export default function InboxPage({
                         <div className="context__key">Conversation</div>
                         <button
                             className="convid"
-                            title={`${activeThread.id} — click to copy`}
+                            title={`${activeThread.id} (click to copy)`}
                             onClick={() => {
                                 navigator.clipboard?.writeText(activeThread.id)
                                     .then(() => setCopiedId(true))
@@ -863,9 +862,6 @@ export default function InboxPage({
                             colour vision alone. */}
                         {SENTIMENT[activeThread.sentiment] ? (
                             <span className={`pill ${SENTIMENT[activeThread.sentiment].tone}`}>
-                                {/* The face is decoration; the word carries the meaning, so a
-                                    screen reader is not read a lone emoji. */}
-                                <span aria-hidden="true">{SENTIMENT[activeThread.sentiment].face}</span>
                                 {SENTIMENT[activeThread.sentiment].label}
                             </span>
                         ) : (
@@ -894,7 +890,7 @@ export default function InboxPage({
                                 <p className="spam__why">
                                     {SPAM_KIND[activeThread.spamKind] || SPAM_KIND.spam}
                                     {activeThread.spamScore != null && (
-                                        <> — Jev was {Math.round(activeThread.spamScore * 100)}% sure</>
+                                        <>. Jev was {Math.round(activeThread.spamScore * 100)}% sure.</>
                                     )}
                                 </p>
                                 {activeThread.spamMessage && (
@@ -906,12 +902,12 @@ export default function InboxPage({
                                 <p className="spam__note">The AI does not answer it and nobody is alerted.</p>
                                 <button className="btn btn--sm btn--secondary"
                                         onClick={() => onThreadAction(activeThread, 'not-spam')}>
-                                    Not spam — move to Active
+                                    Not spam, move to Active
                                 </button>
                             </div>
                         ) : activeThread.spamCleared ? (
                             <div className="spam">
-                                <span className="pill pill--neutral">No — a person decided</span>
+                                <span className="pill pill--neutral">No, a person decided</span>
                                 {activeThread.spamKind && (
                                     <p className="spam__why">
                                         Jev had judged it: {(SPAM_KIND[activeThread.spamKind] || SPAM_KIND.spam).toLowerCase()}

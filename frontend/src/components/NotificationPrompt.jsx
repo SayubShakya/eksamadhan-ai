@@ -50,8 +50,8 @@ export default function NotificationPrompt({ open, onClose }) {
                 <div className="confirm__body">
                     <p className="confirm__message">
                         The AI answers what it can and hands the rest to a person. Turn on notifications
-                        and this device will tell you the moment a conversation is yours — without
-                        keeping the dashboard open.
+                        and this device will tell you the moment a conversation is yours, even when
+                        the dashboard is closed.
                     </p>
                     <ul className="notify__list">
                         <li>A conversation is handed to you, or assigned by a colleague</li>

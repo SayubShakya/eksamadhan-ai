@@ -35,7 +35,7 @@ class SystemControllerOutcomeTest {
     @Test
     void aFirewallGreetingIsNotMistakenForAnAnswer() {
         assertEquals("firewall reply", SystemController.outcome(List.of(
-                step("JEV", "Jev — System One triage"),
+                step("JEV", "Jev: System One triage"),
                 step("ACTION", "Message sent to the customer"))));
     }
 

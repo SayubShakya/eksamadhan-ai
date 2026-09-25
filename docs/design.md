@@ -60,6 +60,14 @@ the viva.
 - Weights: 400 body, 500 labels, 600 headings. Nothing heavier.
 - Line height 1.5 body, 1.25 headings. Message bodies cap at ~70ch.
 
+## Never
+
+Required by the project owner, 2026-09-25, and repeated in `CLAUDE.md`: no purple gradients or
+accents, no pill-shaped buttons, no fake reviews, metrics or counters, no vague or filler copy,
+no emoji used as icons, no em or en dashes in visible text, no heavy scroll or cursor
+animation, no "made with AI" tag, no AI stock photos. Status is shown in words with a colour,
+never a face emoji.
+
 ## Spacing & shape
 
 - 4px base unit; use 4/8/12/16/24/32/48 only.

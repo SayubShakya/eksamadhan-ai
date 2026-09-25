@@ -75,7 +75,7 @@ class AgentNotificationServiceTest {
     @DisplayName("an escalation is marked urgent and names the customer")
     void escalationIsUrgent() {
         notifications.escalated(agent, thread(), "the question is outside the knowledge base");
-        assertEquals(List.of("agent@acme.test :: 🚨 Rita Gurung needs human support"), push.sent);
+        assertEquals(List.of("agent@acme.test :: Rita Gurung needs human support"), push.sent);
     }
 
     @Test

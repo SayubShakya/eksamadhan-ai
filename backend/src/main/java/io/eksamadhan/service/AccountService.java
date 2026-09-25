@@ -178,7 +178,7 @@ public class AccountService {
         String email = normaliseEmail(google.email());
         if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "That email already has an account — use Sign in with Google instead");
+                    "That email already has an account. Use Sign in with Google instead.");
         }
         String[] name = splitName(google);
         User owner = userRepository.save(User.builder()

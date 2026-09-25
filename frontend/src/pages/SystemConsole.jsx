@@ -37,7 +37,7 @@ export default function SystemConsole({ user, onSignOut }) {
                     </button>
                     <span className="brand" aria-hidden="true">
                         <LogoMark size={28} color="#2563eb" />
-                        <span className="brand__name">Eksamadhan AI</span>
+                        <span className="brand__name">EkSamadhan AI</span>
                     </span>
                     <span className="tag sys__badge">System admin</span>
                     <div className="user">

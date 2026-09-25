@@ -393,6 +393,41 @@ status machine and authentication have all since been built — see the change l
   with the real TypeSafe key: the triage backfill ran during `mvn test` and judged the real
   open conversations for real. Harmless here, but tests are not isolated from the network.
 
+- **"Not vibe coded" rules (2026-09-25)** — now in `CLAUDE.md` and `docs/design.md`. Applied
+  across the site: every em/en dash removed from visible text (74 lines in 21 files: screens,
+  errors, alerts, the customer handover message, visualizer step names — tests updated to the
+  new step names); emoji icons replaced (mood faces → word tags, 🎤📷📎 previews → words, 🚨 in
+  alert titles removed, broken-sticker 👍 → the line icon); emoji as content kept (reactions,
+  emoji keyboard, the sent like). Filter buttons lost their pill shape; the visualizer's purple
+  (Jev, model) is now sky and brand blue. Copy that claimed things the app does not do was
+  rewritten: comment management, Instagram comments, a "24/7" website widget, "the AI can
+  learn", the sign-up line promising "your website", and the "Phase 1, not built yet"
+  placeholders. The reply prompt now asks for plain punctuation, no emoji and none of the stock
+  lines Sayub disliked, and `AiReplyService.plainPunctuation` removes dashes from every AI reply
+  before it is sent (ranges become hyphens), 5 tests. Brand name spelled "EkSamadhan AI"
+  everywhere. Old messages already sent keep their dashes: they are the record.
+
+- **Legal, abuse and launch checklist (2026-09-25).** Sayub asked for only what this app
+  needs. Added: `/privacy` and `/terms` (frontend `LegalPage.jsx`, public whether signed in or
+  not), written from what the code does — the processors listed are the ones really called
+  (Meta, OpenRouter, TypeSafe, Firebase, Resend, push services, Cloudflare/Vercel/Upstash);
+  operator Sayub Shakya, contact shakya.sayub123@gmail.com. The Meta-facing backend pages are
+  one short summary each (`PrivacyController`: /api/auth/privacy, /terms, /data-deletion)
+  linking to the full text; the old duplicate /privacy in AuthController ("proof of concept",
+  contact mnzitshakya@gmail.com) is gone, and run.sh now gives Meta a real Terms URL. Sign-up
+  and invite pages say "By creating a workspace, you agree to…" under the button (covers the
+  Google button too). `AuthRateLimiter` + `AuthRateLimitFilter`: 5 wrong passwords per account
+  in 15 min pauses that account; 20 attempts per device per minute on sign-in, sign-up, Google
+  and invite acceptance (Vite proxy `xfwd: true` passes the real client address). Status-pill
+  colours darkened to pass WCAG AA (success/warning were ~3.1:1).
+  **Checked, nothing to fix:** no secrets in the frontend bundle or git history (the Firebase
+  web key is public by design — restrict it to the site's domain in Google Cloud once there is
+  one); alt text correct; keyboard order and focus rings on the auth forms; no broken links.
+  **Deliberately not added** (not needed for a signed-in dashboard, or decided): cookie banner
+  and cookie page (only strictly necessary storage — explained in the policy's storage section),
+  analytics (none), SEO meta, social image, sitemap/robots, 404 page, CTA changes; HTTPS is
+  enforced by the host at deployment (the tunnels are HTTPS-only already).
+
 - **Phone layout (2026-09-25).** The "messy" mobile design had one root cause: desktop rules
   declared *after* the old mobile media queries in `app.css` silently beat them (the name beside
   the avatar, hidden below 900px, still showed). All phone rules now sit in one block at the

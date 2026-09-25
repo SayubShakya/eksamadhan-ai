@@ -47,7 +47,7 @@ public class AiReplyService {
     private static final String SYSTEM_PROMPT = """
             You are a customer support agent replying inside Facebook Messenger or Instagram.
 
-            A message is either CONVERSATIONAL (a greeting, thanks, goodbye — nothing to look \
+            A message is either CONVERSATIONAL (a greeting, thanks or goodbye, with nothing to look \
             up) or a QUESTION about the business.
 
             For a conversational message, reply naturally and briefly and set "answered" to \
@@ -59,7 +59,7 @@ public class AiReplyService {
             Do not guess and do not use general knowledge about other companies.
 
             Declining is a correct outcome when the context genuinely does not cover the \
-            question — but if the answer IS in the context, give it.
+            question. But if the answer IS in the context, give it.
 
             Write like a person in a chat: two or three short sentences, no sign-off, \
             no markdown, no bullet points.
@@ -67,7 +67,7 @@ public class AiReplyService {
             Reply with JSON only, no code fence:
             {"related": true|false, "answered": true|false, "confidence": 0.0-1.0, "reply": "..."}
 
-            "related" is whether the message has anything to do with this business at all — a \
+            "related" is whether the message has anything to do with this business at all: a \
             question about its products, orders, prices, shipping or hours, or ordinary \
             conversation with it. A question about a product you have not been given details \
             of is still related: not knowing the answer is not the same as the customer asking \
@@ -76,6 +76,10 @@ public class AiReplyService {
 
             "confidence" is how well the context supports your reply. For a conversational \
             message, use 1.0.
+
+            Write the reply the way a person at the business would type it: plain words, full \
+            stops and commas. No em dashes, no emoji, and no stock lines such as "I'm here to \
+            help if you have any questions" or "Is there anything else I can help you with?".
             """;
 
     private final SocialMessageRepository messageRepository;
@@ -231,7 +235,7 @@ public class AiReplyService {
         boolean spamMessage = !thread.isSpam() && triageService.ignoreAsSpam(message.getId(), thread);
         boolean silent = thread.isSpam() || spamMessage;
         trace.here(TraceRecorder.Kind.DECISION, "Marked as spam?",
-                thread.isSpam() ? "yes — the conversation" : spamMessage ? "yes — this message" : "no",
+                thread.isSpam() ? "yes, the conversation" : spamMessage ? "yes, this message" : "no",
                 TraceRecorder.of("conversation is spam", thread.isSpam(), "this message is spam", spamMessage,
                         "kind", thread.getSpamKind(), "cleared by a person", thread.isSpamCleared()),
                 TraceRecorder.of("AI may reply", !silent));
@@ -299,8 +303,8 @@ public class AiReplyService {
         // still passed along, marked as possibly irrelevant, and the model decides whether it
         // is answering conversationally or needs documentation it has not been given.
         boolean weakContext = passages.isEmpty() || best < minSimilarity;
-        trace.here(TraceRecorder.Kind.DECISION, "Gate 1 — is the best passage close enough?",
-                weakContext ? "no — weak retrieval" : "yes",
+        trace.here(TraceRecorder.Kind.DECISION, "Gate 1: is the best passage close enough?",
+                weakContext ? "no, weak retrieval" : "yes",
                 TraceRecorder.of("best similarity", round(best), "threshold", minSimilarity),
                 TraceRecorder.of("passages sent to the model", weakContext ? 0 : passages.size()));
         String prompt = buildPrompt(question, weakContext ? List.of() : passages, thread, weakContext);
@@ -332,11 +336,11 @@ public class AiReplyService {
         }
 
         // Gates 2 and 3: the model's own verdict, and the confidence threshold.
-        trace.here(TraceRecorder.Kind.DECISION, "Gate 2 — did the model say it answered?",
+        trace.here(TraceRecorder.Kind.DECISION, "Gate 2: did the model say it answered?",
                 verdict.answered() && !verdict.reply().isBlank() ? "yes" : "no",
                 TraceRecorder.of("answered", verdict.answered(), "reply empty", verdict.reply().isBlank()), null);
         if (verdict.answered() && !verdict.reply().isBlank()) {
-            trace.here(TraceRecorder.Kind.DECISION, "Gate 3 — confident enough?",
+            trace.here(TraceRecorder.Kind.DECISION, "Gate 3: confident enough?",
                     verdict.confidence() >= minConfidence ? "yes" : "no",
                     TraceRecorder.of("confidence", round(verdict.confidence()), "threshold", minConfidence), null);
         }
@@ -350,7 +354,7 @@ public class AiReplyService {
             // catalogue has been uploaded, and that is a real customer asking a real question.
             // Counting them as off-topic closed their conversation after three.
             trace.here(TraceRecorder.Kind.DECISION, "Weak retrieval and not about the business?",
-                    weakContext && !verdict.related() ? "yes — off-topic" : "no — a real question",
+                    weakContext && !verdict.related() ? "yes, off-topic" : "no, a real question",
                     TraceRecorder.of("weak retrieval", weakContext, "related", verdict.related()), null);
             if (weakContext && !verdict.related()) {
                 handleUnrelated(thread, page, message.getSenderId());
@@ -483,16 +487,17 @@ public class AiReplyService {
 
     private void send(SocialMessage inbound, SocialPage page, Verdict verdict, String sources,
                       String picture, java.time.Instant startedAt) {
+        String reply = plainPunctuation(verdict.reply());
         trace.here(TraceRecorder.Kind.ACTION, "Reply sent to the customer", "answered",
-                TraceRecorder.of("reply", verdict.reply(), "confidence", round(verdict.confidence())),
-                TraceRecorder.of("sources", sources == null ? "none — answered conversationally" : sources,
+                TraceRecorder.of("reply", reply, "confidence", round(verdict.confidence())),
+                TraceRecorder.of("sources", sources == null ? "none (answered conversationally)" : sources,
                        "picture", picture == null ? "none" : picture,
                        "total time", millisSince(startedAt) + " ms"));
         Map<String, Object> response = metaService.sendMessage(
-                inbound.getSenderId(), verdict.reply(), page.getAccessToken(), null).block();
+                inbound.getSenderId(), reply, page.getAccessToken(), null).block();
 
         String metaMessageId = response == null ? null : (String) response.get("message_id");
-        syncService.saveOutboundMessage(metaMessageId, inbound.getSenderId(), verdict.reply(),
+        syncService.saveOutboundMessage(metaMessageId, inbound.getSenderId(), reply,
                 page.getId(), null, page.getOrganization().getApiKey());
 
         // Marked after the fact so saveOutboundMessage keeps one signature for every sender.
@@ -616,6 +621,22 @@ public class AiReplyService {
      */
     private record Verdict(boolean related, boolean answered, double confidence, String reply) {}
 
+    /**
+     * The reply as a person at the business would type it: no em or en dashes, which models
+     * reach for constantly and which read as machine-written. The prompt asks for this too; this
+     * makes sure. A range ("9–6", "Mon–Fri") becomes a hyphen; any other dash becomes a comma.
+     */
+    static String plainPunctuation(String text) {
+        if (text == null || text.isEmpty()) return text;
+        String s = text.replaceAll("(\\d)\\s*[\u2013\u2014]\\s*(\\d)", "$1-$2")
+                       .replaceAll("(?<=\\p{L})\u2013(?=\\p{L})", "-")
+                       .replaceAll("\\s*[\u2013\u2014]+\\s*", ", ")
+                       .replaceAll("^,\\s*", "")
+                       .replaceAll(",\\s*([,.!?:;])", "$1")
+                       .replaceAll(" {2,}", " ");
+        return s.strip();
+    }
+
     /** A reply we could not read: treated as a refusal, and as a real customer. */
     private static Verdict unreadable() {
         return new Verdict(true, false, 0, "");
@@ -676,7 +697,7 @@ public class AiReplyService {
             trace.here(TraceRecorder.Kind.HANDOVER, "Assign the least-loaded agent",
                     assignee == null ? "nobody available" : assignee.getFirstName() + " " + assignee.getLastName(),
                     TraceRecorder.of("rule", "fewest open conversations among active members; ties broken at random"),
-                    assignee == null ? TraceRecorder.of("assigned", "nobody — owners and admins are alerted instead")
+                    assignee == null ? TraceRecorder.of("assigned", "nobody (owners and admins are alerted instead)")
                                      : TraceRecorder.of("assigned", assignee.getFirstName() + " " + assignee.getLastName(),
                                               "email", assignee.getEmail(), "role", assignee.getRole().name()));
         } else if (escalated.getAssignedAgentId() != null) {
@@ -697,7 +718,7 @@ public class AiReplyService {
         if (assignee != null && !alreadyWaiting) {
             notifyAssignee(assignee, escalated, reason);
             trace.here(TraceRecorder.Kind.NOTIFY, "Alert the agent",
-                    assignee.getFirstName() + " — push, bell, email",
+                    assignee.getFirstName() + ": push, bell, email",
                     TraceRecorder.of("to", assignee.getEmail(), "reason", reason),
                     TraceRecorder.of("channels", List.of("browser push", "notification bell", "email")));
         } else if (alreadyWaiting) {
@@ -859,8 +880,8 @@ public class AiReplyService {
         MessageTriageService.Action action = triageService.triage(message.getId())
                 .map(MessageTriageService::actionOf)
                 .orElse(MessageTriageService.Action.NONE);
-        trace.here(TraceRecorder.Kind.DECISION, "Firewall — sure of an action?",
-                action == MessageTriageService.Action.NONE ? "not sure — answer normally" : action.name(),
+        trace.here(TraceRecorder.Kind.DECISION, "Firewall: sure of an action?",
+                action == MessageTriageService.Action.NONE ? "not sure, answer normally" : action.name(),
                 TraceRecorder.of("mode", "on"), TraceRecorder.of("action", action.name()));
         String customerId = message.getSenderId();
         switch (action) {
@@ -890,8 +911,8 @@ public class AiReplyService {
         int streak = thread.getOffTopicStreak() + 1;
         thread.setOffTopicStreak(streak);
         trace.here(TraceRecorder.Kind.DECISION, "Off-topic streak",
-                streak < offTopicLimit ? streak + " of " + offTopicLimit + " — escalate, keep counting"
-                                       : streak + " of " + offTopicLimit + " — close the conversation",
+                streak < offTopicLimit ? streak + " of " + offTopicLimit + ", escalate and keep counting"
+                                       : streak + " of " + offTopicLimit + ", close the conversation",
                 TraceRecorder.of("streak", streak, "limit", offTopicLimit), null);
 
         if (streak < offTopicLimit) {

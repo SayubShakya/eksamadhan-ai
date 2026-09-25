@@ -82,10 +82,12 @@ export function participantsOf(messages = []) {
 }
 
 export const SENTIMENT = {
-    POSITIVE: { label: 'Happy', face: '😊', tone: 'pill--positive' },
-    NEUTRAL:  { label: 'Neutral', face: '😐', tone: 'pill--neutral' },
-    NEGATIVE: { label: 'Unhappy', face: '😞', tone: 'pill--warning' },
-    ANGRY:    { label: 'Angry', face: '😡', tone: 'pill--negative' },
+    // Words, not emoji faces: the word is what an agent reads, and a face means a different
+    // thing on every platform that draws it.
+    POSITIVE: { label: 'Happy', tone: 'pill--positive', tag: 'tag--ai' },
+    NEUTRAL:  { label: 'Neutral', tone: 'pill--neutral', tag: 'tag--resolved' },
+    NEGATIVE: { label: 'Unhappy', tone: 'pill--warning', tag: 'tag--agent' },
+    ANGRY:    { label: 'Angry', tone: 'pill--negative', tag: 'tag--danger' },
 };
 
 /** Priority 1-3, as Jev reads the urgency of the customer's most urgent message. */

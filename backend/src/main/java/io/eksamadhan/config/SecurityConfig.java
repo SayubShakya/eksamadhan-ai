@@ -45,7 +45,7 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         // Meta signs these itself (X-Hub-Signature-256); see WebhookSignatureVerifier.
                         .requestMatchers("/api/webhook/**").permitAll()
-                        .requestMatchers("/api/auth/privacy", "/api/auth/data-deletion").permitAll()
+                        .requestMatchers("/api/auth/privacy", "/api/auth/terms", "/api/auth/data-deletion").permitAll()
                         .requestMatchers("/api/auth/signup", "/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/google", "/api/auth/signup/google").permitAll()
                         .requestMatchers("/api/auth/invitations/**").permitAll()

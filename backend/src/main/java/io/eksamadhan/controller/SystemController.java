@@ -109,7 +109,7 @@ public class SystemController {
         if (steps.stream().anyMatch(s -> "Message sent to the customer".equals(s.getTitle()))) return "firewall reply";
         if (steps.stream().anyMatch(s -> "AI stays silent".equals(s.getTitle())
                 && "marked as spam".equals(s.getOutcome()))) return "spam";
-        if (steps.stream().anyMatch(s -> "AI stays silent".equals(s.getTitle()))) return "silent — a person owns it";
+        if (steps.stream().anyMatch(s -> "AI stays silent".equals(s.getTitle()))) return "silent: a person owns it";
         if (steps.stream().anyMatch(s -> "Only a sticker or a like".equals(s.getTitle()))) return "sticker";
         if (steps.stream().anyMatch(s -> "ERROR".equals(s.getKind()))) return "failed";
         return "in progress";
@@ -117,7 +117,7 @@ public class SystemController {
 
     private static String workspace(SocialMessage m) {
         return m.getSocialPage() == null || m.getSocialPage().getOrganization() == null
-                ? "—" : m.getSocialPage().getOrganization().getName();
+                ? "No workspace" : m.getSocialPage().getOrganization().getName();
     }
 
     private static boolean contains(String value, String needle) {

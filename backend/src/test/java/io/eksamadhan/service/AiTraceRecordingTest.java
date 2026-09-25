@@ -110,10 +110,10 @@ class AiTraceRecordingTest {
                 "Marked as spam?",
                 "Gather unanswered messages",
                 "Knowledge search",
-                "Gate 1 — is the best passage close enough?",
+                "Gate 1: is the best passage close enough?",
                 "Local model",
-                "Gate 2 — did the model say it answered?",
-                "Gate 3 — confident enough?",
+                "Gate 2: did the model say it answered?",
+                "Gate 3: confident enough?",
                 "Reply sent to the customer"), titles(id));
 
         AiTraceStep model = traces.findBySocialMessageIdOrderBySeqAsc(id).stream()

@@ -6,9 +6,9 @@ import { formatTimestamp } from '../lib/format.js';
 import Avatar from '../components/Avatar.jsx';
 
 const CHANNELS = [
-    { id: 'facebook', name: 'Facebook Page', desc: 'Automate Messenger replies and comment management.', Icon: IconFacebook },
-    { id: 'instagram', name: 'Instagram Business', desc: 'Handle DMs and comments across your professional profile.', Icon: IconInstagram },
-    { id: 'widget', name: 'Website Widget', desc: 'Embed AI chat on your site to answer customer queries 24/7.', Icon: IconWidget, comingSoon: true },
+    { id: 'facebook', name: 'Facebook Page', desc: 'Answer the Messenger conversations on your Page.', Icon: IconFacebook },
+    { id: 'instagram', name: 'Instagram Business', desc: 'Answer direct messages to your Instagram professional account.', Icon: IconInstagram },
+    { id: 'widget', name: 'Website Widget', desc: 'A chat box for your own website. Not available yet.', Icon: IconWidget, comingSoon: true },
 ];
 
 function greeting() {
@@ -25,21 +25,21 @@ export default function HomePage({
     const steps = [
         {
             title: 'Connect a channel',
-            desc: 'Link Facebook, Instagram or your website widget.',
+            desc: 'Link your Facebook Page or Instagram account.',
             done: connected,
             cta: 'Connect a channel',
             action: () => onConnect('facebook'),
         },
         {
             title: 'Add business knowledge',
-            desc: 'Upload docs or URLs so the AI agent can learn.',
+            desc: 'Add documents or your website so the AI can answer from them.',
             done: false,
             cta: 'Add knowledge',
             action: () => onNavigate('knowledge'),
         },
         {
             title: 'Invite your team',
-            desc: 'Add agents to handle complex escalations.',
+            desc: 'Invite the people who answer when the AI hands a conversation over.',
             done: false,
             cta: 'Invite an agent',
             action: () => onNavigate('team'),
@@ -53,7 +53,7 @@ export default function HomePage({
             <div className="page__head">
                 <div>
                     <h1 className="page__title">{greeting()}{user.firstName ? `, ${user.firstName}` : ''}</h1>
-                    <p className="page__sub">Here's the status of your business AI agent today.</p>
+                    <p className="page__sub">Your conversations, channels and setup at a glance.</p>
                 </div>
                 <button
                     className="btn btn--primary"

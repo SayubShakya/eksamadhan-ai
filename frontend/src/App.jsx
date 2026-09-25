@@ -8,6 +8,7 @@ import TeamPage from './pages/TeamPage.jsx';
 import KnowledgePage from './pages/KnowledgePage.jsx';
 import AnalyticsPage from './pages/AnalyticsPage.jsx';
 import AuthPage from './pages/AuthPage.jsx';
+import LegalPage from './pages/LegalPage.jsx';
 import SystemConsole from './pages/SystemConsole.jsx';
 import ProfilePanel from './components/ProfilePanel.jsx';
 import ConfirmDialog from './components/ConfirmDialog.jsx';
@@ -43,6 +44,12 @@ function authRouteFromPath() {
     if (invite) return { mode: 'invite', token: invite[1] };
     return null;
 }
+/** The public legal pages: open to everyone, signed in or not. */
+function legalFromPath() {
+    const path = window.location.pathname.replace(/\/+$/, '');
+    return path === '/privacy' ? 'privacy' : path === '/terms' ? 'terms' : null;
+}
+
 const MESSAGE_POLL_MS = 1500;
 const STATUS_POLL_MS = 5000;
 /**
@@ -58,7 +65,7 @@ const SYNC_MS = 10000;
 function friendlySendError(err) {
     const raw = err?.response?.data?.error || err?.response?.data?.details || '';
     if (/outside.*allowed window|#10\b|policy/i.test(raw)) {
-        return 'Meta will not deliver this — you can only message a customer within 24 hours of their last message.';
+        return 'Meta will not deliver this. You can only message a customer within 24 hours of their last message.';
     }
     if (/access token|#190/i.test(raw)) {
         return 'The connection to this page has expired. Reconnect it under Channels.';
@@ -79,6 +86,7 @@ export default function App() {
     // the installed app opened without a signal.
     const [unreachable, setUnreachable] = useState(false);
     const [authRoute, setAuthRoute] = useState(authRouteFromPath);
+    const [legal, setLegal] = useState(legalFromPath);
     const app = usePwa();
 
     // The section lives in the path, so URLs are shareable and a refresh keeps you
@@ -104,7 +112,7 @@ export default function App() {
     }, []);
 
     useEffect(() => {
-        const onPop = () => { setAuthRoute(authRouteFromPath()); setViewState(viewFromPath()); };
+        const onPop = () => { setAuthRoute(authRouteFromPath()); setLegal(legalFromPath()); setViewState(viewFromPath()); };
         window.addEventListener('popstate', onPop);
         return () => window.removeEventListener('popstate', onPop);
     }, []);
@@ -190,7 +198,7 @@ export default function App() {
     // The inline splash in index.html stays up until there is a real screen to show: the
     // sign-in page, the reconnecting screen, or the app. Not at mount — while the session is
     // being checked this renders nothing, which is the blank gap the splash exists to cover.
-    const firstScreen = session !== undefined || unreachable;
+    const firstScreen = session !== undefined || unreachable || Boolean(legal);
     useEffect(() => { if (firstScreen) hideSplash(); }, [firstScreen]);
 
     // Notifications, once the session is real. `state()` re-registers this browser against
@@ -507,6 +515,9 @@ export default function App() {
         window.history.pushState({}, '', '/login');
     }, []);
 
+    // Legal pages first: they are for anyone, and must not wait on the session check.
+    if (legal) return <LegalPage page={legal} />;
+
     // Still asking the server. Rendering nothing beats flashing the sign-in screen at
     // someone who is signed in — and the splash is still covering it.
     if (session === undefined) {
@@ -651,7 +662,7 @@ export default function App() {
             <ConfirmDialog
                 open={confirmDisconnect}
                 title="Disconnect everything?"
-                message="Every connected page is removed and all stored message history is deleted. This cannot be undone — the messages themselves stay in Messenger, but this app loses its copy."
+                message="Every connected page is removed and all stored message history is deleted. This cannot be undone. The messages stay in Messenger, but this app loses its copy."
                 confirmLabel="Disconnect"
                 danger
                 onConfirm={handleDisconnect}

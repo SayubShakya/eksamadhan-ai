@@ -9,7 +9,7 @@ const WINDOWS = [
 
 /** Seconds read badly once they run to thousands. */
 function duration(seconds) {
-    if (seconds == null) return '—';
+    if (seconds == null) return 'None yet';
     if (seconds < 60) return `${seconds < 10 ? seconds.toFixed(1) : Math.round(seconds)}s`;
     if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
     return `${(seconds / 3600).toFixed(1)} hr`;
@@ -136,7 +136,7 @@ export default function AnalyticsPage() {
 
                     <p className="muted" style={{ marginTop: 18 }}>
                         A conversation counts as deflected when no person ever touched it. Ones the AI
-                        closed as unrelated are left out of both halves — someone using the page as a
+                        closed as unrelated are left out of both halves: someone using the page as a
                         free chatbot is neither a query resolved nor work saved.
                     </p>
                 </>

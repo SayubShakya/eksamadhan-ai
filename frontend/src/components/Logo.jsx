@@ -45,7 +45,7 @@ export function Logotype({ size = 20 }) {
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
             <LogoMark size={size + 14} />
             <span style={{ fontWeight: 700, fontSize: size, letterSpacing: '-0.01em' }}>
-                Eksamadhan AI
+                EkSamadhan AI
             </span>
         </span>
     );

@@ -29,7 +29,7 @@ flowchart TB
     subgraph backend["3 · Backend — Spring Boot, Java 21"]
         direction TB
         api["REST controllers · webhook endpoint"]
-        sec["Security — JWT bearer · roles · tenant scoping<br/>JwtService · AccountService · FirebaseTokenVerifier<br/>WebhookSignatureVerifier"]
+        sec["Security — JWT bearer · roles · tenant scoping<br/>JwtService · AccountService · FirebaseTokenVerifier<br/>AuthRateLimiter · WebhookSignatureVerifier"]
         subgraph rowA[" "]
             direction LR
             channel["Channel<br/>MetaService · MetaMessageParser · SyncService<br/>AttachmentFetcher"]

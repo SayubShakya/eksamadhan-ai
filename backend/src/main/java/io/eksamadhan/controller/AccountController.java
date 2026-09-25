@@ -27,19 +27,22 @@ public class AccountController {
     private final UserRepository userRepository;
     private final InvitationRepository invitationRepository;
     private final io.eksamadhan.service.FirebaseTokenVerifier firebase;
+    private final io.eksamadhan.service.AuthRateLimiter rateLimiter;
 
     public AccountController(AccountService accountService,
                              JwtService jwtService,
                              CurrentUser currentUser,
                              UserRepository userRepository,
                              InvitationRepository invitationRepository,
-                             io.eksamadhan.service.FirebaseTokenVerifier firebase) {
+                             io.eksamadhan.service.FirebaseTokenVerifier firebase,
+                             io.eksamadhan.service.AuthRateLimiter rateLimiter) {
         this.accountService = accountService;
         this.jwtService = jwtService;
         this.currentUser = currentUser;
         this.userRepository = userRepository;
         this.invitationRepository = invitationRepository;
         this.firebase = firebase;
+        this.rateLimiter = rateLimiter;
     }
 
     @PostMapping("/auth/signup")
@@ -52,7 +55,22 @@ public class AccountController {
 
     @PostMapping("/auth/login")
     public Session logIn(@RequestBody LoginRequest request) {
-        return session(accountService.signIn(request.email(), request.password()));
+        // Paused after repeated wrong passwords for this address — see AuthRateLimiter.
+        java.time.Duration paused = rateLimiter.loginPausedFor(request.email());
+        if (!paused.isZero()) {
+            long minutes = Math.max(1, (paused.toSeconds() + 59) / 60);
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Too many wrong passwords for this account. Try again in " + minutes
+                  + (minutes == 1 ? " minute." : " minutes."));
+        }
+        try {
+            User user = accountService.signIn(request.email(), request.password());
+            rateLimiter.recordSuccess(request.email());
+            return session(user);
+        } catch (ResponseStatusException e) {
+            if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) rateLimiter.recordFailure(request.email());
+            throw e;
+        }
     }
 
     /**

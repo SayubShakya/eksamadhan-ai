@@ -90,8 +90,8 @@ export default function NotificationBell({ onOpenThread }) {
 
                         {items.length === 0 ? (
                             <p className="bell__empty">
-                                Nothing yet. You will be alerted here — and on any device where you
-                                turned notifications on — when a conversation needs you.
+                                Nothing yet. When a conversation needs you, you will be alerted here
+                                and on every device where you turned notifications on.
                             </p>
                         ) : (
                             <ul className="bell__list">

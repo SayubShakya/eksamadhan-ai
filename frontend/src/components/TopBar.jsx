@@ -31,9 +31,9 @@ export default function TopBar({
                         {unread > 0 && <span className="topbar__menudot" aria-hidden="true" />}
                     </button>
 
-                    <button className="brand" onClick={onHome} aria-label="Eksamadhan AI — go to home">
+                    <button className="brand" onClick={onHome} aria-label="EkSamadhan AI home">
                         <LogoMark size={28} color="#2563eb" />
-                        <span className="brand__name">Eksamadhan AI</span>
+                        <span className="brand__name">EkSamadhan AI</span>
                     </button>
                 </>
             )}

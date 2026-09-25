@@ -18,11 +18,13 @@
     /* Selected states sit on --panel, where --accent-weak is almost invisible. */
     --accent-tint: #dfe8fb;
     --ai: #eceef2;
-    --success: #16a34a;
+    /* One step darker than they were, so small text in these colours passes WCAG AA (4.5:1) on
+       both white and its own tinted background — the status pills failed at 3.1:1. */
+    --success: #15803d;
     --success-weak: #ecfdf3;
-    --warning: #d97706;
+    --warning: #b45309;
     --warning-weak: #fffaeb;
-    --danger: #dc2626;
+    --danger: #c42525;
     --danger-weak: #fef3f2;
 
     --rail: 72px;

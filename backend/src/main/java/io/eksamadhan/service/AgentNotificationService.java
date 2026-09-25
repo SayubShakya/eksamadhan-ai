@@ -87,7 +87,7 @@ public class AgentNotificationService {
         if (agent == null || thread == null) return;
         try {
             deliver(agent, Notification.Kind.ESCALATED, thread.getId(),
-                    "🚨 " + customerOf(thread) + " needs human support",
+                    customerOf(thread) + " needs human support",
                     reason == null || reason.isBlank()
                             ? preview(thread.getLastMessagePreview())
                             : "Handed to you because " + reason + ".",
@@ -118,8 +118,8 @@ public class AgentNotificationService {
             }
             for (User admin : admins) {
                 deliver(admin, Notification.Kind.ESCALATED, thread.getId(),
-                        "🚨 " + customerOf(thread) + " needs human support",
-                        "Nobody is assigned — " + (reason == null || reason.isBlank()
+                        customerOf(thread) + " needs human support",
+                        "Nobody is assigned. " + (reason == null || reason.isBlank()
                                 ? preview(thread.getLastMessagePreview()) : reason + "."),
                         "/dashboard/inbox?thread=" + thread.getId());
             }
@@ -142,7 +142,7 @@ public class AgentNotificationService {
             String who = by == null ? "A colleague" : displayName(by);
             deliver(agent, Notification.Kind.ASSIGNED, thread.getId(),
                     who + " assigned you a conversation",
-                    customerOf(thread) + " — " + preview(thread.getLastMessagePreview()),
+                    customerOf(thread) + ": " + preview(thread.getLastMessagePreview()),
                     "/dashboard/inbox?thread=" + thread.getId());
         } catch (Exception e) {
             log.debug("Could not push the assignment: {}", e.getMessage());

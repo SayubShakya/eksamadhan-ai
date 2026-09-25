@@ -41,7 +41,7 @@ const OUTCOME_TONE = {
     'firewall reply': 'jev',
     'closed as off-topic': 'bad',
     'failed': 'bad',
-    'silent — a person owns it': 'quiet',
+    'silent: a person owns it': 'quiet',
     'sticker': 'quiet',
     'spam': 'bad',
     'not recorded': 'none',
@@ -288,7 +288,7 @@ export default function ConversationVisualizer() {
                                     <span className="viz__time">{formatTimestamp(m.at)}</span>
                                 </span>
                                 <span className="viz__text">
-                                    {m.text || (m.attachment ? `[${m.attachment}]` : '—')}
+                                    {m.text || (m.attachment ? `[${m.attachment}]` : 'No text')}
                                 </span>
                                 <span className="viz__meta">
                                     <ChannelMark channel={m.channel} />
@@ -316,7 +316,7 @@ export default function ConversationVisualizer() {
                                     {formatTimestamp(trace.message.at)}
                                 </p>
                                 <h3 className="viz__title">
-                                    “{trace.message.text || (trace.message.attachment ? `[${trace.message.attachment}]` : '—')}”
+                                    “{trace.message.text || (trace.message.attachment ? `[${trace.message.attachment}]` : 'No text')}”
                                 </h3>
                                 <p className="viz__who">from {trace.message.customer}</p>
                             </div>
@@ -327,7 +327,7 @@ export default function ConversationVisualizer() {
 
                         {steps.length === 0 ? (
                             <div className="viz__placeholder">
-                                Nothing recorded for this message. It arrived before tracing began —
+                                Nothing recorded for this message. It arrived before tracing began;
                                 every message from now on is traced.
                             </div>
                         ) : (
@@ -389,7 +389,7 @@ export default function ConversationVisualizer() {
                             {sideSteps.length > 0 && (
                                 <div className="flow__side">
                                     <h4 className="flow__sidehead">Also run on this message</h4>
-                                    <p className="flow__sidenote">Beside the reply, not part of it — they can finish while the model is still thinking.</p>
+                                    <p className="flow__sidenote">Beside the reply, not part of it. They can finish while the model is still thinking.</p>
                                     <div className="flow flow--side" role="list">
                                         {sideSteps.map(s => {
                                             const kind = KIND[s.kind] || KIND.ACTION;
@@ -444,10 +444,10 @@ export default function ConversationVisualizer() {
                             <IconClose />
                         </button>
                     </div>
-                    <h5 className="viz__io">Input — what went in</h5>
-                    <IoView text={step.input} empty="Nothing — this step takes no input." />
-                    <h5 className="viz__io">Output — what came out</h5>
-                    <IoView text={step.output} empty="Nothing — this step only decides or ends the flow." />
+                    <h5 className="viz__io">Input: what went in</h5>
+                    <IoView text={step.input} empty="Nothing. This step takes no input." />
+                    <h5 className="viz__io">Output: what came out</h5>
+                    <IoView text={step.output} empty="Nothing. This step only decides or ends the flow." />
                 </aside>
             )}
         </div>

@@ -125,7 +125,7 @@ app:
     retry:
       max-attempts: ${AI_RETRY_ATTEMPTS:3}
     unrelated-message: ${AI_UNRELATED_MESSAGE:I can only help with questions about our products and orders, so I will close this conversation here. Message us again any time you need something.}
-    handover-message: ${AI_HANDOVER_MESSAGE:Let me check that with a colleague — someone from our team will reply here shortly.}
+    handover-message: ${AI_HANDOVER_MESSAGE:Let me check that with a colleague. Someone from our team will reply here shortly.}
   # The Jev firewall (TypeSafe): one decision-model call per customer message, before the
   # reply model. off | shadow | on. Shadow judges every message and records what it would
   # have done, while the existing pipeline answers as usual — run it first, and compare.

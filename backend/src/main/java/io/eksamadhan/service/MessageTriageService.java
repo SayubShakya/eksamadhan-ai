@@ -177,7 +177,7 @@ public class MessageTriageService {
         } catch (RuntimeException e) {
             log.warn("Triage unavailable for message {}, using the normal pipeline: {}",
                     messageId, e.getMessage());
-            trace.step(messageId, TraceRecorder.Kind.ERROR, "Jev — System One triage", "unavailable",
+            trace.step(messageId, TraceRecorder.Kind.ERROR, "Jev: System One triage", "unavailable",
                     TraceRecorder.of("mode", mode.name().toLowerCase(Locale.ROOT)),
                     TraceRecorder.of("error", e.getMessage(), "fallback", "the normal pipeline answers"),
                     TraceRecorder.since(started));
@@ -189,13 +189,13 @@ public class MessageTriageService {
             MessageTriage triage = read(aboutBusiness, aboutMessage, messageId, latencyMs);
             triage.setAction(decide(triage).name());
             existing.ifPresent(old -> triage.setId(old.getId()));
-            trace.step(messageId, TraceRecorder.Kind.JEV, "Jev — System One triage",
+            trace.step(messageId, TraceRecorder.Kind.JEV, "Jev: System One triage",
                     triage.getIntent() + " · " + triage.getAction(),
                     TraceRecorder.of("mode", mode.name().toLowerCase(Locale.ROOT),
                             "model", "jev (TypeSafe System One)",
-                            "call 1 — judged against the business",
+                            "call 1: judged against the business",
                             TraceRecorder.of("state", businessState, "questions", businessQuestions()),
-                            "call 2 — judged on the message alone",
+                            "call 2: judged on the message alone",
                             TraceRecorder.of("state", messageState, "questions", messageQuestions())),
                     TraceRecorder.of("call 1 answers", aboutBusiness.get("answers"),
                             "call 2 answers", aboutMessage.get("answers"),
@@ -208,7 +208,7 @@ public class MessageTriageService {
                                     "spam kind", triage.getSpamKind(),
                                     "priority", triage.getUrgency(),
                                     "action", triage.getAction(),
-                                    "acted on", mode == Mode.ON ? "yes" : "no — shadow mode only records it"),
+                                    "acted on", mode == Mode.ON ? "yes" : "no, shadow mode only records it"),
                             "input tokens", triage.getInputTokens()),
                     latencyMs);
             log.info("Triage [{}] {} ({}) human={} injection={} sentiment={} spam={} P{} -> {} in {}ms: {}",
@@ -274,7 +274,7 @@ public class MessageTriageService {
                             TraceRecorder.of("spam", t.getSpam(), "threshold", spamThreshold, "kind", kind,
                                     "spam in a row", streak, "flags the conversation at", spamRepeat),
                             TraceRecorder.of("AI", "does not answer this message",
-                                    "conversation", "stays where it is — someone in it asked for something real"),
+                                    "conversation", "stays where it is: someone in it asked for something real"),
                             null);
                     log.info("Spam message {} ignored in conversation {} ({} of {} in a row)",
                             message.getId(), threadId, streak, spamRepeat);

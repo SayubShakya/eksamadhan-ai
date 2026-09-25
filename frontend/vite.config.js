@@ -12,6 +12,9 @@ export default defineConfig({
             '/api': {
                 target: 'http://localhost:8080',
                 changeOrigin: true,
+                // Pass on who is really asking (X-Forwarded-For), so the backend's per-device
+                // sign-in limit counts devices rather than this proxy.
+                xfwd: true,
                 // The page and /api share this server's origin, so the browser needs no CORS
                 // here — but it still sends an Origin header, and the backend only accepts
                 // FRONTEND_URL. Opened through a tunnel (a phone testing the installed app) the

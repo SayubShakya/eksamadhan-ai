@@ -76,7 +76,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate }) {
     const withGoogle = async () => {
         setError('');
         if (mode === 'signup' && !form.organizationName.trim()) {
-            setError('Name your workspace first — it is the one thing Google cannot tell us.');
+            setError('Name your workspace first. It is the one thing Google cannot tell us.');
             return;
         }
         setGoogleBusy(true);
@@ -117,7 +117,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate }) {
         : invite ? `Join ${invite.organizationName}` : 'Join the team';
 
     const subtitle = mode === 'login' ? 'Sign in to your support inbox.'
-        : mode === 'signup' ? 'One place for Messenger, Instagram and your website.'
+        : mode === 'signup' ? 'One inbox for your Facebook and Instagram messages.'
         : invite ? `You were invited as ${invite.role.toLowerCase()}, using ${invite.email}.` : '';
 
     if (loadingInvite) {
@@ -208,6 +208,18 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate }) {
                         : mode === 'signup' ? 'Create workspace' : 'Join the team'}
                 </button>
 
+                {/* Creating or joining an account is accepting the terms, so say so where both ways
+                    of doing it — the password form and the Google button — can be seen. Opens in a
+                    new tab, so reading them does not lose what has been typed. */}
+                {mode !== 'login' && (
+                    <p className="auth__legal">
+                        By {mode === 'signup' ? 'creating a workspace' : 'joining'}, you agree to the{' '}
+                        <a href="/terms" target="_blank" rel="noopener">Terms &amp; Conditions</a> and
+                        confirm you have read the{' '}
+                        <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.
+                    </p>
+                )}
+
                 {mode === 'login' && (
                     <p className="auth__switch">
                         New here? <button type="button" className="linkish" onClick={() => onNavigate('signup')}>Create a workspace</button>
@@ -218,6 +230,11 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate }) {
                         Already have an account? <button type="button" className="linkish" onClick={() => onNavigate('login')}>Sign in</button>
                     </p>
                 )}
+
+                <nav className="auth__footer" aria-label="Legal">
+                    <a href="/privacy">Privacy Policy</a>
+                    <a href="/terms">Terms &amp; Conditions</a>
+                </nav>
             </form>
         </div>
     );

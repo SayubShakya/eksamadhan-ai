@@ -294,6 +294,19 @@ expire after 7 days — re-send if it lapses.
       notification badge and 42 iPhone/iPad launch images are generated from the logo. Checked:
       Chrome's installability audit (no errors), offline start, slow 3G (splash at 1.3s,
       bundle at 3.3s) and the dev server (no caching, edits appear live)
+- [x] **Design and copy clean-up to the project's "not AI-generated" rules** (now written into
+      the project instructions): no em dashes or emoji icons anywhere a person reads, no
+      pill-shaped buttons or purple, and every line that promised something the app does not do
+      rewritten. AI replies to customers are cleaned of dashes before sending (5 new tests,
+      66 in all)
+- [x] **Privacy Policy and Terms & Conditions pages**, written from what the system actually does
+      with data; the Meta-facing privacy, terms and data-deletion pages now link to them, and a
+      duplicate, out-of-date privacy page with an old contact address was removed
+- [x] **Brute-force protection on sign-in and sign-up** — an account is paused after five wrong
+      passwords in fifteen minutes, and one device is limited to twenty attempts a minute; tested
+      live and with 4 new unit tests (61 in all)
+- [x] Status colours made readable enough for accessibility standards; checked the frontend for
+      secrets, image descriptions, keyboard use and broken links — nothing else needed fixing
 - [x] **Phone layout fixed across every screen** — the top bar, page titles, the setup
       checklist, team and knowledge rows, the conversation header and messages, and the
       notification list, which opened off the edge of the screen. The cause was one ordering

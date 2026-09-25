@@ -380,20 +380,6 @@ public class AuthController {
         log.info("Organization {} disconnected ({} pages removed)", apiKey, pages.size());
         return Map.of("success", true);
     }
-
-    /**
-     * Privacy Policy and Data Deletion Instructions endpoint.
-     * Required by Meta for App Reviews and standard use.
-     */
-    @GetMapping("/privacy")
-    public String privacy() {
-        return "<h3>Eksamadhan AI - Privacy Policy & Data Deletion</h3>" +
-                "<p>This application is a Proof of Concept (PoC).</p>" +
-                "<p><strong>Data Collection:</strong> We temporary sync your messaging history to provide a unified chat interface.</p>" +
-                "<p><strong>Data Deletion:</strong> You can request full data deletion at any time by clicking 'Logout / Disconnect' in the application dashboard. " +
-                "This action will permanently remove your messages, tokens, and account information from our database.</p>" +
-                "<p>For manual requests, contact support at mnzitshakya@gmail.com.</p>";
-    }
 }
 
 

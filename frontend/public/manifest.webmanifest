@@ -2,7 +2,7 @@
   "id": "/dashboard",
   "name": "EkSamadhan AI",
   "short_name": "EkSamadhan",
-  "description": "One inbox for Messenger and Instagram, answered by AI and handed to your team when it matters.",
+  "description": "One inbox for Messenger and Instagram. The AI answers from your own knowledge and hands the rest to your team.",
   "start_url": "/dashboard?source=pwa",
   "scope": "/",
   "lang": "en",

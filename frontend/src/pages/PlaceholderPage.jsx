@@ -1,38 +1,42 @@
 import { IconArrowRight } from '../components/icons.jsx';
 
 /**
- * Screens designed but not yet built. Naming the phase is deliberate — it tells a
- * reader (and a supervisor) that the gap is planned, not forgotten.
+ * Screens with little of their own yet. Each says plainly where the thing a person came for
+ * actually lives, instead of an internal "Phase 1, not built yet" that tells a user nothing.
  */
 const PAGES = {
     channels: {
         title: 'Channels',
-        phase: 'Phase 1',
-        text: 'Manage connected Facebook Pages and Instagram accounts, and generate the website widget snippet.',
+        sub: 'Facebook and Instagram are connected from Home.',
+        heading: 'Connect channels from Home',
+        text: 'Home shows each channel, whether it is connected, and a button to connect it.',
+        action: { label: 'Go to Home', view: 'home' },
     },
     settings: {
         title: 'Settings',
-        phase: 'Phase 1',
-        text: 'Workspace details, notification preferences and connected account management.',
+        sub: 'Workspace settings.',
+        heading: 'Notifications are set per device',
+        text: 'Turn notifications on or off for this device in your profile: select your picture at the top right.',
+        action: { label: 'Go to inbox', view: 'inbox' },
     },
 };
 
 export default function PlaceholderPage({ view, onNavigate, onLogout }) {
-    const page = PAGES[view] || { title: view, phase: '', text: '' };
+    const page = PAGES[view] || { title: view, sub: '', heading: '', text: '', action: { label: 'Go to Home', view: 'home' } };
     return (
         <div className="page">
             <div className="page__head">
                 <div>
                     <h1 className="page__title">{page.title}</h1>
-                    <p className="page__sub">{page.phase} — not built yet.</p>
+                    <p className="page__sub">{page.sub}</p>
                 </div>
             </div>
 
             <div className="empty empty--panel">
-                <p className="empty__title">Coming in {page.phase}</p>
+                <p className="empty__title">{page.heading}</p>
                 <p className="empty__text">{page.text}</p>
-                <button className="btn btn--secondary" onClick={() => onNavigate('inbox')}>
-                    Go to inbox <IconArrowRight />
+                <button className="btn btn--secondary" onClick={() => onNavigate(page.action.view)}>
+                    {page.action.label} <IconArrowRight />
                 </button>
             </div>
 

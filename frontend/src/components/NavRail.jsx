@@ -57,10 +57,10 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                     <button
                         className="brand"
                         onClick={onHome}
-                        aria-label="Eksamadhan AI — go to home"
+                        aria-label="EkSamadhan AI home"
                     >
                         <LogoMark size={28} color="#2563eb" />
-                        <span className="brand__name">Eksamadhan AI</span>
+                        <span className="brand__name">EkSamadhan AI</span>
                     </button>
                     <button
                         className="icon-btn rail__collapse"

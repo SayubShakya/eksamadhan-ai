@@ -83,7 +83,7 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
         setAlerts(a => ({ ...a, busy: true, note: '' }));
         try {
             await api.sendTestPush();
-            setAlerts(a => ({ ...a, busy: false, note: 'Sent — it should appear in a moment.' }));
+            setAlerts(a => ({ ...a, busy: false, note: 'Sent. It should appear in a moment.' }));
         } catch (err) {
             setAlerts(a => ({ ...a, busy: false, note: api.errorMessage(err, 'Could not send a test notification.') }));
         }
@@ -221,7 +221,7 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
                                         Install on this device
                                     </button>
                                 </div>
-                                <span className="field__note">Its own window and icon, like a downloaded app — no app store.</span>
+                                <span className="field__note">Its own window and icon, like a downloaded app, with no app store.</span>
                             </>
                         ) : app.iosHint ? (
                             <p className="field__static">
