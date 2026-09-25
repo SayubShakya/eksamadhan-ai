@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import Avatar from '../components/Avatar.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import * as api from '../lib/api.js';
+import { LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
+import { useHeldLoading, useResource } from '../lib/loading.js';
 
 const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', AGENT: 'Agent' };
 
@@ -11,8 +13,29 @@ const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', AGENT: 'Agent' };
  * Invites are links, not emails: creating one shows a URL to copy and send. That avoids an
  * email provider, and the admin can see exactly what they are sending.
  */
-export default function TeamPage() {
-    const [team, setTeam] = useState(null);
+/** A member row with the same classes as the real one, so it is the same height. */
+function MemberSkeleton({ name, email }) {
+    return (
+        <div className="member">
+            <Skel circle w={32} h={32} />
+            <div style={{ flex: 1 }}>
+                <div className="member__name"><Skel line w={name} /></div>
+                <div className="member__email"><Skel line w={email} /></div>
+            </div>
+            <div className="member__actions">
+                <span className="tag"><Skel line w={36} /></span>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * `canManage` comes from the signed-in role and only decides whether the invite form is drawn
+ * while the team loads; once it has loaded, the server's answer is used.
+ */
+export default function TeamPage({ canManage: roleCanManage = false }) {
+    const { data: team, error: loadError, reload: load } = useResource('team', api.getTeam);
+    const firstLoad = useHeldLoading(!team && !loadError);
     const [email, setEmail] = useState('');
     const [role, setRole] = useState('AGENT');
     const [error, setError] = useState('');
@@ -22,13 +45,6 @@ export default function TeamPage() {
     // the link by hand.
     const [lastInvite, setLastInvite] = useState(null);
     const [removing, setRemoving] = useState(null);
-
-    const load = useCallback(async () => {
-        try { setTeam(await api.getTeam()); }
-        catch (err) { setError(api.errorMessage(err, 'Could not load the team.')); }
-    }, []);
-
-    useEffect(() => { load(); }, [load]);
 
     const invite = async (e) => {
         e.preventDefault();
@@ -69,9 +85,8 @@ export default function TeamPage() {
         catch (err) { setError(api.errorMessage(err, 'Could not remove that person.')); }
     };
 
-    if (!team) {
-        return <div className="page"><p className="muted">{error || 'Loading the team…'}</p></div>;
-    }
+    const canManage = team ? team.canManage : roleCanManage;
+    const loading = firstLoad || !team;
 
     return (
         <div className="page">
@@ -81,7 +96,7 @@ export default function TeamPage() {
                 invite and remove people.
             </p>
 
-            {team.canManage && (
+            {canManage && (
                 <form className="invite-form" onSubmit={invite}>
                     <label className="field">
                         <span>Invite by email</span>
@@ -95,8 +110,9 @@ export default function TeamPage() {
                             <option value="ADMIN">Admin</option>
                         </select>
                     </label>
-                    <button className="btn btn--primary" type="submit" disabled={busy}>
-                        {busy ? 'Creating…' : 'Create invite link'}
+                    <button className={`btn btn--primary${busy ? ' btn--busy' : ''}`} type="submit"
+                            disabled={busy} aria-busy={busy}>
+                        Create invite link
                     </button>
                 </form>
             )}
@@ -116,7 +132,17 @@ export default function TeamPage() {
             ))}
 
             <h2 className="section-title">Members</h2>
-            {team.members.map(member => (
+            {loading && (loadError && !firstLoad ? (
+                <LoadError className="empty--panel"
+                           message={api.errorMessage(loadError, 'Could not load the team.')}
+                           onRetry={load} />
+            ) : (
+                <LoadingRegion label="the team">
+                    <MemberSkeleton name={140} email={190} />
+                    <MemberSkeleton name={110} email={160} />
+                </LoadingRegion>
+            ))}
+            {!loading && team.members.map(member => (
                 <div className="member" key={member.id}>
                     <Avatar user={member} />
                     <div>
@@ -138,7 +164,7 @@ export default function TeamPage() {
                 </div>
             ))}
 
-            {team.canManage && (
+            {!loading && team.canManage && (
                 <>
                     <h2 className="section-title">Pending invites</h2>
                     {team.invites.length === 0 && <p className="muted">No invites waiting to be accepted.</p>}

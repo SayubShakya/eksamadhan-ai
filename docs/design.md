@@ -111,6 +111,28 @@ inconsistencies to correct when building — read it before starting Phase 3.
 150–200ms ease-out. Animate opacity and transform only. Respect
 `prefers-reduced-motion: reduce` by disabling non-essential animation.
 
+## Loading states
+
+One indicator per kind of wait (code: `components/Loading.jsx`, `lib/loading.js`):
+
+| Wait | Indicator |
+| :--- | :--- |
+| Content whose layout is known (lists, cards, figures) | Skeleton built from `Skel`, inside the same classes as the real content |
+| Unknown wait with no layout to preview (a trace, a dialog's text, the invite check) | `CenteredSpinner` with a label |
+| A button's own request | `.btn--busy`: ring in place of the label, same size, still announced |
+| Upload with a known size | `UploadProgress` bar with a percentage |
+| Whole app starting | The inline splash in `index.html` |
+
+- Never draw a skeleton over data already on screen; a screen revisited shows its last copy
+  and refreshes quietly. A range switch keeps the old figures, dimmed (`.is-refreshing`).
+- Once shown, a skeleton stays at least 450ms, so it never flashes.
+- Every loading state ends in data, an empty state, or an error with "Try again". After 5s,
+  say "Taking longer than usual".
+- The shimmer is one linear sweep (1.6s), grey `#e3e7ed`. Under reduced motion it stops and
+  button rings give way to the dimmed label.
+- Skeleton blocks are `aria-hidden`; the region carries `aria-busy` and one `role="status"`
+  line ("Loading the team").
+
 ## Accessibility (non-negotiable)
 
 - 4.5:1 contrast on all text; verify `--text-muted` on `--surface`.

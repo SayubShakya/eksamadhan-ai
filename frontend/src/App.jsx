@@ -19,6 +19,7 @@ import usePwa from './lib/usePwa.js';
 import { LogoMark } from './components/Logo.jsx';
 import * as api from './lib/api.js';
 import { mergeThreads } from './lib/format.js';
+import { clearResources, prefetch } from './lib/loading.js';
 import './styles/tokens.css';
 import './styles/app.css';
 
@@ -119,6 +120,14 @@ export default function App() {
     const [status, setStatus] = useState(null);
     const [messages, setMessages] = useState([]);
     const [serverThreads, setServerThreads] = useState([]);
+    // Whether each of the three has arrived at least once. An empty list before the first
+    // answer is not "no conversations", and saying so would be a false empty state.
+    const [loaded, setLoaded] = useState({ status: false, messages: false, threads: false });
+    // A first load that failed. Cleared by the next success; the polls keep retrying.
+    const [loadError, setLoadError] = useState(null);
+    const markLoaded = useCallback((key) => {
+        setLoaded(prev => (prev[key] ? prev : { ...prev, [key]: true }));
+    }, []);
     const [active, setActive] = useState(null);
     // Active by default: the inbox opens on work to do, not on the archive.
     const [filter, setFilter] = useState('active');
@@ -135,6 +144,19 @@ export default function App() {
     });
     const lastPayload = useRef('');
 
+    // Nothing of one workspace may still be on screen, or in memory, when the next person
+    // signs in on this tab.
+    const forgetWorkspace = useCallback(() => {
+        clearResources();
+        lastPayload.current = '';
+        setMessages([]);
+        setServerThreads([]);
+        setStatus(null);
+        setActive(null);
+        setLoaded({ status: false, messages: false, threads: false });
+        setLoadError(null);
+    }, []);
+
     const pages = status?.data?.pages ?? [];
 
     // The profile is the signed-in user, loaded from the server. It used to live in
@@ -144,6 +166,9 @@ export default function App() {
     // A system admin runs the platform, not a workspace: none of the inbox's polling,
     // syncing or notification prompts apply to them. Each of those effects keys off this.
     const workspaceSession = session && !session.user?.systemAdmin ? session : null;
+    // Only shapes a skeleton (whether a screen will have its admin forms); the server decides
+    // what anyone may actually do.
+    const canManage = user?.role === 'OWNER' || user?.role === 'ADMIN';
 
     const [profileOpen, setProfileOpen] = useState(false);
     const [confirmDisconnect, setConfirmDisconnect] = useState(false);
@@ -219,7 +244,7 @@ export default function App() {
     // Any 401 anywhere clears the token and raises this, so the dashboard stops polling
     // into a wall of failures and shows the sign-in screen instead.
     useEffect(() => {
-        const onExpired = () => { setSession(null); setAuthRoute({ mode: 'login' }); };
+        const onExpired = () => { forgetWorkspace(); setSession(null); setAuthRoute({ mode: 'login' }); };
         window.addEventListener('auth:expired', onExpired);
         return () => window.removeEventListener('auth:expired', onExpired);
     }, []);
@@ -260,18 +285,22 @@ export default function App() {
         }
     }, []);
 
-    const refreshStatus = useCallback(async () => {
-        try { setStatus(await api.getStatus()); }
-        catch (err) { console.error('Failed to check status', err); }
+    const firstLoadFailed = useCallback((err) => {
+        setLoadError(api.errorMessage(err, 'Your conversations could not be loaded.'));
     }, []);
+
+    const refreshStatus = useCallback(async () => {
+        try { setStatus(await api.getStatus()); markLoaded('status'); }
+        catch (err) { console.error('Failed to check status', err); firstLoadFailed(err); }
+    }, [markLoaded, firstLoadFailed]);
 
     // Held in a ref so handleAssign can call it without depending on its identity.
     const refreshThreadsRef = useRef(null);
 
     const refreshThreads = useCallback(async () => {
-        try { setServerThreads(await api.getThreads()); }
-        catch (err) { console.error('Failed to fetch threads', err); }
-    }, []);
+        try { setServerThreads(await api.getThreads()); markLoaded('threads'); }
+        catch (err) { console.error('Failed to fetch threads', err); firstLoadFailed(err); }
+    }, [markLoaded, firstLoadFailed]);
 
     refreshThreadsRef.current = refreshThreads;
 
@@ -288,11 +317,38 @@ export default function App() {
             // pure, and StrictMode invokes it twice, so writing the ref in there made the
             // second call discard the update.
             const next = JSON.stringify(data);
+            markLoaded('messages');
             if (next === lastPayload.current) return;
             lastPayload.current = next;
             setMessages(data);
-        } catch (err) { console.error('Failed to fetch messages', err); }
-    }, []);
+        } catch (err) { console.error('Failed to fetch messages', err); firstLoadFailed(err); }
+    }, [markLoaded, firstLoadFailed]);
+
+    const inboxLoaded = loaded.messages && loaded.threads;
+    useEffect(() => { if (inboxLoaded && loaded.status) setLoadError(null); }, [inboxLoaded, loaded.status]);
+
+    const retryFirstLoad = useCallback(() => {
+        setLoadError(null);
+        refreshStatus(); refreshMessages(); refreshThreads();
+    }, [refreshStatus, refreshMessages, refreshThreads]);
+
+    // The other screens' data, fetched while the browser is idle after the inbox has loaded,
+    // so opening Team, Knowledge or Analytics for the first time usually needs no skeleton.
+    // There is no code to warm: the whole app is one bundle (see docs/design.md, Loading).
+    useEffect(() => {
+        if (!workspaceSession || !inboxLoaded) return undefined;
+        const warm = () => {
+            prefetch('team', api.getTeam);
+            prefetch('knowledge', api.getKnowledge);
+            prefetch('analytics:30', () => api.getAnalytics(30));
+        };
+        if ('requestIdleCallback' in window) {
+            const id = window.requestIdleCallback(warm, { timeout: 4000 });
+            return () => window.cancelIdleCallback(id);
+        }
+        const id = setTimeout(warm, 1500);
+        return () => clearTimeout(id);
+    }, [workspaceSession, inboxLoaded]);
 
     useEffect(() => {
         if (!workspaceSession) return undefined;
@@ -430,13 +486,14 @@ export default function App() {
         }
     };
 
-    const handleSendVoice = async (thread, blob) => {
+    const handleSendVoice = async (thread, blob, onProgress) => {
         setSendError('');
         try {
             await api.sendVoice({
                 blob,
                 recipientId: thread.customerId,
                 pageId: thread.pageId,
+                onProgress,
             });
             refreshMessages();
         } catch (err) {
@@ -445,13 +502,14 @@ export default function App() {
         }
     };
 
-    const handleSendImage = async (thread, file) => {
+    const handleSendImage = async (thread, file, onProgress) => {
         setSendError('');
         try {
             await api.sendImage({
                 file,
                 recipientId: thread.customerId,
                 pageId: thread.pageId,
+                onProgress,
             });
             refreshMessages();
         } catch (err) {
@@ -510,6 +568,7 @@ export default function App() {
 
     const handleSignOut = useCallback(() => {
         api.clearToken();
+        forgetWorkspace();
         setSession(null);
         setAuthRoute({ mode: 'login' });
         window.history.pushState({}, '', '/login');
@@ -606,6 +665,10 @@ export default function App() {
                         threadCount={allThreads.length}
                         todayCount={todayCount}
                         recent={allThreads.slice(0, 5)}
+                        statusLoaded={loaded.status}
+                        threadsLoaded={inboxLoaded}
+                        loadError={loadError}
+                        onRetry={retryFirstLoad}
                         onOpenConversation={(thread) => { setActive(thread); setView('inbox'); }}
                         onConnect={handleConnect}
                         onNavigate={setView}
@@ -615,6 +678,9 @@ export default function App() {
                 {view === 'inbox' && (
                     <InboxPage
                         threads={threads}
+                        loading={!inboxLoaded}
+                        loadError={loadError}
+                        onRetry={retryFirstLoad}
                         totalThreads={allThreads.length}
                         spamCount={allThreads.filter(t => t.spam).length}
                         pages={pages}
@@ -644,9 +710,9 @@ export default function App() {
                     />
                 )}
 
-                {view === 'team' && <TeamPage />}
+                {view === 'team' && <TeamPage canManage={canManage} />}
 
-                {view === 'knowledge' && <KnowledgePage />}
+                {view === 'knowledge' && <KnowledgePage canManage={canManage} />}
 
                 {view === 'analytics' && <AnalyticsPage />}
 

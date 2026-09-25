@@ -4,6 +4,8 @@ import {
 } from '../components/icons.jsx';
 import { formatTimestamp } from '../lib/format.js';
 import Avatar from '../components/Avatar.jsx';
+import { LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
+import { useHeldLoading } from '../lib/loading.js';
 
 const CHANNELS = [
     { id: 'facebook', name: 'Facebook Page', desc: 'Answer the Messenger conversations on your Page.', Icon: IconFacebook },
@@ -20,7 +22,14 @@ function greeting() {
 
 export default function HomePage({
     user, pages, threadCount, todayCount, recent = [], onConnect, onNavigate, onOpenConversation,
+    statusLoaded = true, threadsLoaded = true, loadError = null, onRetry,
 }) {
+    // Skeletons stand in for what depends on the server: which channels are connected (and so
+    // which setup step is next) and the recent conversations. The rest of the page is fixed
+    // text and renders at once.
+    const failed = Boolean(loadError) && !statusLoaded;
+    const statusPending = useHeldLoading(!statusLoaded && !failed);
+    const recentPending = useHeldLoading(!threadsLoaded && !loadError);
     const connected = pages.length > 0;
     const steps = [
         {
@@ -71,14 +80,41 @@ export default function HomePage({
                             Three steps before your AI agent can answer customers.
                         </p>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <span className="count">{doneCount} of {steps.length} complete</span>
-                        <div className="progress" role="progressbar" aria-valuenow={doneCount} aria-valuemin={0} aria-valuemax={steps.length}>
-                            <span style={{ width: `${(doneCount / steps.length) * 100}%` }} />
+                    {statusPending ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }} aria-hidden="true">
+                            <span className="count"><Skel line w={96} /></span>
+                            <Skel w={160} h={6} />
                         </div>
-                    </div>
+                    ) : !failed && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <span className="count">{doneCount} of {steps.length} complete</span>
+                            <div className="progress" role="progressbar" aria-valuenow={doneCount} aria-valuemin={0} aria-valuemax={steps.length}>
+                                <span style={{ width: `${(doneCount / steps.length) * 100}%` }} />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
+                {failed ? (
+                    <LoadError message={loadError} onRetry={onRetry} />
+                ) : statusPending ? (
+                    <LoadingRegion label="your setup" className="checklist__steps">
+                        {/* The step names are fixed, so they show; only what is done, and so
+                            which step comes next, waits for the server. */}
+                        {steps.map((step, i) => (
+                            <div key={step.title} className="step">
+                                <div className="step__row">
+                                    <Skel circle w={24} h={24} />
+                                    <div style={{ flex: 1 }}>
+                                        <p className="step__title">{step.title}</p>
+                                        <p className="step__desc">{step.desc}</p>
+                                        {i === 0 && <Skel className="step__cta" w={150} h={34} />}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </LoadingRegion>
+                ) : (
                 <div className="checklist__steps">
                     {steps.map((step, i) => (
                         <div
@@ -104,11 +140,13 @@ export default function HomePage({
                         </div>
                     ))}
                 </div>
+                )}
             </section>
 
             <div className="stats">
                 <Stat
                     label="Conversations today"
+                    pending={statusPending || recentPending}
                     value={connected ? todayCount : null}
                     unit={todayCount === 1 ? 'conversation' : 'conversations'}
                 />
@@ -131,6 +169,13 @@ export default function HomePage({
                             <p className="channel__name">{name}</p>
                             <p className="channel__desc">{desc}</p>
 
+                            {statusPending && !comingSoon ? (
+                                <>
+                                    <Skel className="pill" w={112} h={24} style={{ borderRadius: 999 }} />
+                                    <Skel w="100%" h={43} style={{ marginTop: 4, borderRadius: 8 }} />
+                                    <span className="sr-only">Checking whether {name} is connected</span>
+                                </>
+                            ) : (<>
                             <span className={`pill ${connected ? 'pill--positive' : comingSoon ? 'pill--neutral' : 'pill--idle'}`}>
                                 {connected ? `Connected · ${live.map(p => p.pageName).join(', ')}`
                                     : comingSoon ? 'Coming soon' : 'Not connected'}
@@ -145,6 +190,7 @@ export default function HomePage({
                             >
                                 {comingSoon ? 'Coming soon' : connected ? 'Add account' : 'Connect'}
                             </button>
+                            </>)}
                         </div>
                     );
                 })}
@@ -154,7 +200,29 @@ export default function HomePage({
                 <h2 className="section-title">Recent conversations</h2>
                 <p className="section-sub">Messages waiting for you or your AI agent.</p>
             </div>
-            {threadCount > 0 ? (
+            {recentPending ? (
+                <LoadingRegion label="recent conversations" className="card card--flush">
+                    <ul className="recent">
+                        {[0, 1, 2, 3, 4].map(i => (
+                            <li key={i}>
+                                <div className="recent__row">
+                                    <Skel circle w={36} h={36} />
+                                    <span className="recent__body">
+                                        <span className="recent__top">
+                                            <span className="recent__name" style={{ flex: 1 }}><Skel line w={[120, 96, 140, 110, 130][i]} /></span>
+                                            <span className="recent__time"><Skel line w={40} /></span>
+                                        </span>
+                                        <span className="recent__preview"><Skel line w={['70%', '55%', '62%', '66%', '58%'][i]} /></span>
+                                    </span>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                    <div className="recent__all"><span><Skel line w={90} /></span></div>
+                </LoadingRegion>
+            ) : loadError && !threadsLoaded ? (
+                <LoadError className="empty--panel" message={loadError} onRetry={onRetry} />
+            ) : threadCount > 0 ? (
                 <div className="card card--flush">
                     <ul className="recent">
                         {recent.map(t => (
@@ -208,7 +276,15 @@ export default function HomePage({
     );
 }
 
-function Stat({ label, value, unit }) {
+function Stat({ label, value, unit, pending = false }) {
+    if (pending) {
+        return (
+            <div className="stat" aria-busy="true">
+                <div className="stat__label">{label}</div>
+                <div className="stat__value"><Skel line w={56} /></div>
+            </div>
+        );
+    }
     // An em dash beside a unit reads as broken. Say why the number is missing.
     if (value === null) {
         return (

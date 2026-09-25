@@ -6,6 +6,8 @@ import {
 } from '../components/icons.jsx';
 import { isRecordingSupported, startRecording, formatDuration } from '../lib/recorder.js';
 import MessageActions from '../components/MessageActions.jsx';
+import { LoadError, LoadingRegion, Skel, UploadProgress } from '../components/Loading.jsx';
+import { useHeldLoading } from '../lib/loading.js';
 import AssigneePicker from '../components/AssigneePicker.jsx';
 import { formatTimestamp, formatTime, formatDay, initials, STATUS_LABEL, ownershipLabel, SENTIMENT, PRIORITY, SPAM_KIND, participantsOf } from '../lib/format.js';
 
@@ -152,8 +154,72 @@ function Attachment({ message, onOpenImage }) {
     );
 }
 
+/** Widths vary row to row, so the skeleton reads as a list of names and not a grid. */
+const SKELETON_ROWS = [
+    { name: 118, preview: '78%', tag: 88 },
+    { name: 92, preview: '64%', tag: 72 },
+    { name: 136, preview: '84%', tag: 96 },
+    { name: 104, preview: '58%', tag: 80 },
+    { name: 126, preview: '70%', tag: 88 },
+    { name: 88, preview: '76%', tag: 72 },
+];
+
+/** One conversation row, built inside the same classes as the real one so it is as tall. */
+function ConvSkeleton({ row }) {
+    return (
+        <div className="conv">
+            <Skel circle w={36} h={36} />
+            <div className="conv__body">
+                <div className="conv__top">
+                    <span className="conv__name" style={{ flex: 1 }}><Skel line w={row.name} /></span>
+                    <span className="conv__time"><Skel line w={34} /></span>
+                </div>
+                <div className="conv__mid">
+                    <div className="conv__preview"><Skel line w={row.preview} /></div>
+                </div>
+                <span className="conv__foot">
+                    <Skel circle w={13} h={13} />
+                    <span className="conv__ref"><Skel line w={84} /></span>
+                    <Skel w={row.tag} h={20} style={{ borderRadius: 8 }} />
+                </span>
+            </div>
+        </div>
+    );
+}
+
+/** The reading pane before any conversation has loaded: a header and a few bubbles. */
+function ThreadSkeleton() {
+    return (
+        <LoadingRegion label="the conversation" className="thread__skeleton">
+            <div className="thread__head">
+                <Skel circle w={38} h={38} />
+                <div className="thread__who" style={{ flex: 1 }}>
+                    <div className="thread__name"><Skel line w={150} /></div>
+                    <div className="thread__meta"><Skel line w={110} /></div>
+                </div>
+                <div className="thread__actions">
+                    <Skel w={86} h={34} style={{ borderRadius: 8 }} />
+                    <Skel w={76} h={34} style={{ borderRadius: 8 }} />
+                </div>
+            </div>
+            <div className="thread__body" style={{ justifyContent: 'flex-end' }}>
+                {[['in', 220], ['in', 150], ['out', 260], ['in', 190]].map(([side, w], i) => (
+                    <div key={i} className={`msg msg--${side}`}>
+                        {side === 'in' && <Skel circle w={28} h={28} />}
+                        <Skel w={w} h={42} style={{ borderRadius: 16 }} />
+                    </div>
+                ))}
+            </div>
+            <div className="composer">
+                <div className="composer__status"><span><Skel line w={96} /></span></div>
+                <div className="composer__form composer__form--chat"><Skel h={41} style={{ flex: 1, borderRadius: 21 }} /></div>
+            </div>
+        </LoadingRegion>
+    );
+}
+
 export default function InboxPage({
-    threads, totalThreads, spamCount = 0, pages, filter, onFilterChange,
+    threads, loading = false, loadError = null, onRetry, totalThreads, spamCount = 0, pages, filter, onFilterChange,
     active, onSelect, onSend, onSendVoice, onSendImage, onReact, onHideMessage, onThreadAction,
     onConnect, search, onSearchChange, sendError, onDismissError, me, team = [], onAssign,
     platform: platformFilter = 'all', onPlatformChange,
@@ -168,6 +234,18 @@ export default function InboxPage({
     const [shown, setShown] = useState(PAGE_SIZE);   // messages rendered, newest first
     const [emojiOpen, setEmojiOpen] = useState(false);
     const [lightbox, setLightbox] = useState(null);  // photo opened full size, or null
+    // What is being sent from the composer, and how far the upload has got (null = unknown).
+    const [sending, setSending] = useState(null);     // { label, fraction } | null
+    // The conversation action in flight, so its button can show that it is working.
+    const [acting, setActing] = useState(null);
+    const act = async (thread, action) => {
+        setActing(action);
+        try { await onThreadAction(thread, action); } finally { setActing(null); }
+    };
+
+    // Until the first answer, an empty list means "not here yet", not "no conversations".
+    const failed = Boolean(loadError) && loading;
+    const pending = useHeldLoading(loading && !failed);
 
     // Escape closes the photo. Without it the only way out is the button, and a viewer that
     // covers the whole screen needs the key everyone already reaches for.
@@ -258,10 +336,13 @@ export default function InboxPage({
         const blob = await recorder.stop();
         setRecorder(null);
         setBusy(true);
+        setSending({ label: 'Sending voice message', fraction: null });
         try {
-            await onSendVoice(activeThread, blob);
+            await onSendVoice(activeThread, blob,
+                (fraction) => setSending({ label: 'Sending voice message', fraction }));
         } finally {
             setBusy(false);
+            setSending(null);
         }
     };
 
@@ -284,6 +365,82 @@ export default function InboxPage({
     // selecting "Instagram" with no Instagram chats strands the user with no way back.
     const nothingAtAll = totalThreads === 0;
 
+    // The same header whether the list has loaded or not: the filters are known in advance,
+    // and keeping them in place means nothing above the list moves when it arrives.
+    const listHead = (
+            <div className="convlist__head">
+                <div className="convlist__title">
+                    <h2>Conversations</h2>
+                    {!pending && <span className="count">{countLabel(filter, platformFilter, threads.length)}</span>}
+                </div>
+                <div className="chips">
+                    {FILTERS.map(f => (
+                        <button
+                            key={f.id} className="chip"
+                            aria-pressed={filter === f.id}
+                            onClick={() => onFilterChange(f.id)}
+                        >
+                            {f.label}
+                            {/* Never a silent bin: a real customer Jev misjudged must be
+                                noticed, so the tab says how much is waiting in it. */}
+                            {f.id === 'spam' && spamCount > 0 && (
+                                <span className="chip__count" aria-label={`${spamCount} in spam`}>{spamCount}</span>
+                            )}
+                        </button>
+                    ))}
+                
+                    {/* A separate control, because a channel is not a state: this way you
+                        can ask for active Facebook conversations, which one row of
+                        mutually exclusive chips could never express. */}
+                    <select
+                        className="chips__select"
+                        value={platformFilter}
+                        onChange={(e) => onPlatformChange?.(e.target.value)}
+                        aria-label="Filter by channel"
+                    >
+                        {PLATFORMS.map(pf => (
+                            <option key={pf.id} value={pf.id}>{pf.label}</option>
+                        ))}
+                    </select>
+</div>
+            </div>
+    );
+
+    if (pending || failed) {
+        return (
+            <div className="inbox">
+                <aside className="convlist" aria-label="Conversations">
+                    {listHead}
+                    {failed ? (
+                        <LoadError message={loadError} onRetry={onRetry} />
+                    ) : (
+                        <LoadingRegion label="conversations" className="convlist__items">
+                            {SKELETON_ROWS.map((row, i) => <ConvSkeleton key={i} row={row} />)}
+                        </LoadingRegion>
+                    )}
+                </aside>
+                <section className="thread" aria-label="Conversation">
+                    {!failed && <ThreadSkeleton />}
+                </section>
+                {!failed && (
+                    <aside className="context" aria-hidden="true">
+                        <div className="context__label"><Skel line w={100} /></div>
+                        <div className="context__who">
+                            <Skel circle w={44} h={44} />
+                            <div style={{ flex: 1 }}><div><Skel line w={120} /></div><div><Skel line w={80} /></div></div>
+                        </div>
+                        {[90, 60, 110, 70].map((w, i) => (
+                            <div className="context__row" key={i}>
+                                <div className="context__key"><Skel line w={70} /></div>
+                                <div><Skel line w={w} /></div>
+                            </div>
+                        ))}
+                    </aside>
+                )}
+            </div>
+        );
+    }
+
     if (nothingAtAll) {
         return (
             <div className="inbox">
@@ -303,8 +460,8 @@ export default function InboxPage({
                         <div className="empty__icon"><IconInbox size={28} /></div>
                         <p className="empty__title">Your inbox is ready and waiting</p>
                         <p className="empty__text">
-                            Once you link a channel like Facebook Messenger or your website widget,
-                            customer messages will flow here for you or your AI agent to handle.
+                            Once you connect your Facebook Page or Instagram account, customer
+                            messages arrive here for you or your AI agent to handle.
                         </p>
                         <button className="btn btn--primary" onClick={() => onConnect('facebook')}>
                             <IconPlus /> Connect a channel
@@ -318,42 +475,7 @@ export default function InboxPage({
     return (
         <div className={`inbox ${activeThread ? 'inbox--has-active' : ''}`}>
             <aside className="convlist" aria-label="Conversations">
-                <div className="convlist__head">
-                    <div className="convlist__title">
-                        <h2>Conversations</h2>
-                        <span className="count">{countLabel(filter, platformFilter, threads.length)}</span>
-                    </div>
-                    <div className="chips">
-                        {FILTERS.map(f => (
-                            <button
-                                key={f.id} className="chip"
-                                aria-pressed={filter === f.id}
-                                onClick={() => onFilterChange(f.id)}
-                            >
-                                {f.label}
-                                {/* Never a silent bin: a real customer Jev misjudged must be
-                                    noticed, so the tab says how much is waiting in it. */}
-                                {f.id === 'spam' && spamCount > 0 && (
-                                    <span className="chip__count" aria-label={`${spamCount} in spam`}>{spamCount}</span>
-                                )}
-                            </button>
-                        ))}
-                    
-                        {/* A separate control, because a channel is not a state: this way you
-                            can ask for active Facebook conversations, which one row of
-                            mutually exclusive chips could never express. */}
-                        <select
-                            className="chips__select"
-                            value={platformFilter}
-                            onChange={(e) => onPlatformChange?.(e.target.value)}
-                            aria-label="Filter by channel"
-                        >
-                            {PLATFORMS.map(pf => (
-                                <option key={pf.id} value={pf.id}>{pf.label}</option>
-                            ))}
-                        </select>
-</div>
-                </div>
+                {listHead}
 
                 <div className="convlist__items">
                     {visible.map(t => {
@@ -487,25 +609,29 @@ export default function InboxPage({
 
                             <div className="thread__actions">
                                 {activeThread.spam && (
-                                    <button className="btn btn--sm btn--secondary"
-                                            onClick={() => onThreadAction(activeThread, 'not-spam')}>
+                                    <button className={`btn btn--sm btn--secondary${acting === 'not-spam' ? ' btn--busy' : ''}`}
+                                            disabled={Boolean(acting)} aria-busy={acting === 'not-spam'}
+                                            onClick={() => act(activeThread, 'not-spam')}>
                                         Not spam
                                     </button>
                                 )}
                                 {activeThread.status === 'AI_HANDLING' && !activeThread.spam && (
-                                    <button className="btn btn--sm btn--secondary"
-                                            onClick={() => onThreadAction(activeThread, 'take-over')}>
+                                    <button className={`btn btn--sm btn--secondary${acting === 'take-over' ? ' btn--busy' : ''}`}
+                                            disabled={Boolean(acting)} aria-busy={acting === 'take-over'}
+                                            onClick={() => act(activeThread, 'take-over')}>
                                         Take over
                                     </button>
                                 )}
                                 {activeThread.status === 'RESOLVED' ? (
-                                    <button className="btn btn--sm btn--secondary"
-                                            onClick={() => onThreadAction(activeThread, 'return-to-ai')}>
+                                    <button className={`btn btn--sm btn--secondary${acting === 'return-to-ai' ? ' btn--busy' : ''}`}
+                                            disabled={Boolean(acting)} aria-busy={acting === 'return-to-ai'}
+                                            onClick={() => act(activeThread, 'return-to-ai')}>
                                         Reopen
                                     </button>
                                 ) : (
-                                    <button className="btn btn--sm btn--primary"
-                                            onClick={() => onThreadAction(activeThread, 'resolve')}>
+                                    <button className={`btn btn--sm btn--primary${acting === 'resolve' ? ' btn--busy' : ''}`}
+                                            disabled={Boolean(acting)} aria-busy={acting === 'resolve'}
+                                            onClick={() => act(activeThread, 'resolve')}>
                                         Resolve
                                     </button>
                                 )}
@@ -693,6 +819,11 @@ export default function InboxPage({
                                     </button>
                                 </div>
                             )}
+                            {sending && (
+                                <div className="composer__upload">
+                                    <UploadProgress label={sending.label} fraction={sending.fraction} />
+                                </div>
+                            )}
                             {recorder ? (
                                 <div className="composer__form composer__recording">
                                     <span className="recdot" aria-hidden="true" />
@@ -729,8 +860,11 @@ export default function InboxPage({
                                             e.target.value = '';
                                             if (!file || !activeThread) return;
                                             setBusy(true);
-                                            try { await onSendImage(activeThread, file); }
-                                            finally { setBusy(false); }
+                                            setSending({ label: 'Sending photo', fraction: null });
+                                            try {
+                                                await onSendImage(activeThread, file,
+                                                    (fraction) => setSending({ label: 'Sending photo', fraction }));
+                                            } finally { setBusy(false); setSending(null); }
                                         }}
                                     />
                                     <button
@@ -747,7 +881,7 @@ export default function InboxPage({
                                         <input
                                             value={draft}
                                             onChange={e => setDraft(e.target.value)}
-                                            placeholder={busy ? 'Sending voice message…' : 'Message'}
+                                            placeholder={sending ? `${sending.label}…` : 'Message'}
                                             aria-label="Your reply"
                                             disabled={busy}
                                         />
@@ -900,8 +1034,9 @@ export default function InboxPage({
                                     </blockquote>
                                 )}
                                 <p className="spam__note">The AI does not answer it and nobody is alerted.</p>
-                                <button className="btn btn--sm btn--secondary"
-                                        onClick={() => onThreadAction(activeThread, 'not-spam')}>
+                                <button className={`btn btn--sm btn--secondary${acting === 'not-spam' ? ' btn--busy' : ''}`}
+                                        disabled={Boolean(acting)} aria-busy={acting === 'not-spam'}
+                                        onClick={() => act(activeThread, 'not-spam')}>
                                     Not spam, move to Active
                                 </button>
                             </div>
@@ -980,9 +1115,9 @@ export default function InboxPage({
                                     New messages have arrived since this was written.
                                 </p>
                             )}
-                            <button className="btn btn--secondary btn--sm" disabled={summarising}
+                            <button className={`btn btn--secondary btn--sm${summarising ? ' btn--busy' : ''}`} disabled={summarising} aria-busy={summarising}
                                     onClick={() => onSummarise?.(activeThread)}>
-                                {summarising ? 'Writing…' : 'Refresh summary'}
+                                Refresh summary
                             </button>
                         </>
                     ) : (
@@ -992,9 +1127,9 @@ export default function InboxPage({
                                     ? 'A record of what was asked and how it ended is written when a conversation is resolved.'
                                     : 'A short brief is written automatically when a conversation is handed to a person, so whoever picks it up need not read the whole thread.'}
                             </p>
-                            <button className="btn btn--secondary btn--sm" disabled={summarising}
+                            <button className={`btn btn--secondary btn--sm${summarising ? ' btn--busy' : ''}`} disabled={summarising} aria-busy={summarising}
                                     onClick={() => onSummarise?.(activeThread)}>
-                                {summarising ? 'Writing…' : 'Write one now'}
+                                Write one now
                             </button>
                         </>
                     )}

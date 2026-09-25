@@ -67,8 +67,9 @@ export default function NotificationPrompt({ open, onClose }) {
                         <button className="btn btn--secondary" onClick={notNow} disabled={busy}>
                             Not now
                         </button>
-                        <button className="btn btn--primary" onClick={enable} disabled={busy} autoFocus>
-                            {busy ? 'Enabling…' : 'Enable notifications'}
+                        <button className={`btn btn--primary${busy ? ' btn--busy' : ''}`} onClick={enable}
+                                disabled={busy} aria-busy={busy} autoFocus>
+                            Enable notifications
                         </button>
                     </div>
                 </div>

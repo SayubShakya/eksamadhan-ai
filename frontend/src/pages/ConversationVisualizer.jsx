@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../lib/api.js';
+import { CenteredSpinner, LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
+import { useHeldLoading } from '../lib/loading.js';
 import {
     IconBell, IconBolt, IconCheck, IconChevronLeft, IconClose, IconInbox, IconFacebook, IconInstagram, IconSearch,
     IconSend, IconSparkle, IconStop, IconUser,
@@ -195,6 +197,25 @@ function usePanZoom(fitKey) {
     return { viewport, stage, view, handlers, fit, zoomBy };
 }
 
+/** A message row inside the same classes as the real one, so it is the same height. */
+function ItemSkeleton({ name, text }) {
+    return (
+        <li>
+            <div className="viz__item">
+                <span className="viz__itemtop">
+                    <span className="viz__customer" style={{ flex: 1 }}><Skel line w={name} /></span>
+                    <span className="viz__time"><Skel line w={40} /></span>
+                </span>
+                <span className="viz__text"><Skel line w={text} /></span>
+                <span className="viz__meta">
+                    <span><Skel line w={90} /></span>
+                    <span className="viz__outcome"><Skel line w={60} /></span>
+                </span>
+            </div>
+        </li>
+    );
+}
+
 export default function ConversationVisualizer() {
     const [messages, setMessages] = useState(null);
     const [query, setQuery] = useState('');
@@ -242,7 +263,13 @@ export default function ConversationVisualizer() {
         setSelectedId(first.id);
     }, [messages, selectedId]);
 
-    const steps = trace?.steps ?? [];
+    const listLoading = useHeldLoading(messages === null && !error);
+    // The trace on screen must be the chosen message's. Until it is, a spinner, not the
+    // previous message's flow under the new selection.
+    const traceLoading = useHeldLoading(Boolean(selectedId) && trace?.message?.id !== selectedId);
+    const shownTrace = traceLoading ? null : trace;
+
+    const steps = shownTrace?.steps ?? [];
     const step = useMemo(() => steps.find(s => s.id === stepId) ?? null, [steps, stepId]);
     const mainSteps = useMemo(() => mainLine(steps), [steps]);
     const sideSteps = useMemo(() => steps.filter(isSideStep), [steps]);
@@ -275,11 +302,21 @@ export default function ConversationVisualizer() {
                                placeholder="Search message, customer, workspace, CONV-id" />
                     </label>
                 </div>
-                {error && <p className="viz__error" role="alert">{error}</p>}
-                {messages === null && !error && <p className="viz__empty">Loading…</p>}
-                {messages?.length === 0 && <p className="viz__empty">No customer messages yet.</p>}
+                {error && messages !== null && <p className="viz__error" role="alert">{error}</p>}
+                {error && messages === null && !listLoading && <LoadError message={error} onRetry={loadList} />}
+                {!listLoading && messages?.length === 0 && <p className="viz__empty">No customer messages yet.</p>}
+                {listLoading && (
+                    <LoadingRegion label="messages">
+                        <ul className="viz__items">
+                            <ItemSkeleton name={110} text="82%" />
+                            <ItemSkeleton name={90} text="64%" />
+                            <ItemSkeleton name={130} text="74%" />
+                            <ItemSkeleton name={100} text="58%" />
+                        </ul>
+                    </LoadingRegion>
+                )}
                 <ul className="viz__items">
-                    {messages?.map(m => (
+                    {!listLoading && messages?.map(m => (
                         <li key={m.id}>
                             <button className="viz__item" aria-current={m.id === selectedId}
                                     onClick={() => { setSelectedId(m.id); setStepId(null); }}>
@@ -305,8 +342,12 @@ export default function ConversationVisualizer() {
             </aside>
 
             <section className="viz__main" aria-label="How the AI handled this message">
-                {!trace ? (
-                    <div className="viz__placeholder">Choose a message to see its flow.</div>
+                {traceLoading ? (
+                    <CenteredSpinner label="Loading how this message was handled" />
+                ) : !shownTrace ? (
+                    <div className="viz__placeholder">
+                        {listLoading ? '' : 'Choose a message to see its flow.'}
+                    </div>
                 ) : (
                     <>
                         <header className="viz__head">

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { LogoMark } from '../components/Logo.jsx';
 import { IconEye, IconEyeOff } from '../components/icons.jsx';
 import * as api from '../lib/api.js';
+import { CenteredSpinner } from '../components/Loading.jsx';
 import { googleSignInAvailable, googleIdToken, isCancelled, googleErrorMessage } from '../lib/firebase.js';
 
 /** Google's own mark, as its sign-in branding asks for: the four-colour G, unaltered. */
@@ -99,11 +100,13 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate }) {
 
     const googleBlock = googleSignInAvailable && (
         <>
-            <button type="button" className="btn btn--google" onClick={withGoogle} disabled={googleBusy || busy}>
+            <button type="button" className={`btn btn--google${googleBusy ? ' btn--busy' : ''}`}
+                    onClick={withGoogle} disabled={googleBusy || busy} aria-busy={googleBusy}>
                 <GoogleMark />
-                {googleBusy ? 'Waiting for Google…'
-                    : mode === 'login' ? 'Continue with Google'
-                    : mode === 'signup' ? 'Sign up with Google' : 'Join with Google'}
+                <span>
+                    {mode === 'login' ? 'Continue with Google'
+                        : mode === 'signup' ? 'Sign up with Google' : 'Join with Google'}
+                </span>
             </button>
             {mode === 'invite' && invite && (
                 <small className="field__hint auth__google-hint">Use the Google account for {invite.email}.</small>
@@ -121,7 +124,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate }) {
         : invite ? `You were invited as ${invite.role.toLowerCase()}, using ${invite.email}.` : '';
 
     if (loadingInvite) {
-        return <div className="auth"><div className="auth__card"><p className="muted">Checking your invite…</p></div></div>;
+        return <div className="auth"><div className="auth__card"><CenteredSpinner label="Checking your invite" /></div></div>;
     }
 
     // A dead invite link has nothing to submit, so offer the way out rather than a form.
@@ -202,9 +205,9 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate }) {
 
                 {error && <p className="auth__error" role="alert">{error}</p>}
 
-                <button className="btn btn--primary auth__submit" type="submit" disabled={busy}>
-                    {busy ? 'Just a moment…'
-                        : mode === 'login' ? 'Sign in'
+                <button className={`btn btn--primary auth__submit${busy ? ' btn--busy' : ''}`} type="submit"
+                        disabled={busy || googleBusy} aria-busy={busy}>
+                    {mode === 'login' ? 'Sign in'
                         : mode === 'signup' ? 'Create workspace' : 'Join the team'}
                 </button>
 

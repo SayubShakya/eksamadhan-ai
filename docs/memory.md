@@ -393,6 +393,32 @@ status machine and authentication have all since been built — see the change l
   with the real TypeSafe key: the triage backfill ran during `mvn test` and judged the real
   open conversations for real. Harmless here, but tests are not isolated from the network.
 
+- **Loading states (2026-09-25).** Built to a brief; the rules live in
+  `frontend/src/lib/loading.js` (hooks and the per-session data cache) and
+  `components/Loading.jsx` (the indicators), with the CSS under "Loading states" in `app.css`.
+  Which indicator where: **skeletons** for the inbox list and reading pane, Home (setup step,
+  channel state, today's count, recent list), Team members, Knowledge sources, Analytics, the
+  visualizer list and the notification panel; **centred spinner** for the visualizer trace, the
+  invite check and "View text"; **ring inside the button** (`.btn--busy`, label kept so the
+  width never changes) for sign-in/up/join, Google, invite, add/search/crawl, save profile,
+  notifications on/test, summary and the thread actions; **real progress bar** for knowledge
+  file/picture uploads and inbox photo/voice sends (axios `onUploadProgress`; a spinner until
+  the browser knows the size). Rules: a skeleton only on a first visit, held ≥450ms
+  (`useHeldLoading`); pages read through `useResource`, which starts from this session's last
+  copy (in memory only, cleared on sign-out, never localStorage: it is workspace data); a failed
+  first load ends in `LoadError` with Try again; after 5s "Taking longer than usual". App.jsx
+  now tracks `loaded.{status,messages,threads}` and `loadError`, and `forgetWorkspace()` wipes
+  the previous person's inbox on sign-out (it used to stay in memory). Team, Knowledge and
+  Analytics data are prefetched on `requestIdleCallback` once the inbox has loaded.
+  **Gotcha:** the global reduced-motion rule in `tokens.css` (`* { animation: none }`) does not
+  match `::after`, so the shimmer kept moving until `app.css` stopped it by name.
+  **Not applicable, explained rather than built:** route-level code splitting and chunk
+  warming. There is no router and every screen is in one bundle (375KB, 118KB gzipped; Firebase
+  is already its own lazy chunk), so splitting would add a loading state to navigation that
+  does not exist today. The whole-screen boot stays the inline splash from the PWA work (Sayub
+  removed its spinner on purpose). Skeleton rows that differ from the real ones only do so when
+  the real text wraps (a long name, a second tag line), which a skeleton cannot know.
+
 - **"Not vibe coded" rules (2026-09-25)** — now in `CLAUDE.md` and `docs/design.md`. Applied
   across the site: every em/en dash removed from visible text (74 lines in 21 files: screens,
   errors, alerts, the customer handover message, visualizer step names — tests updated to the

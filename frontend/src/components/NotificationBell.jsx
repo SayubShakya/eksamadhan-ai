@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconBell } from './icons.jsx';
 import { formatTimestamp } from '../lib/format.js';
 import * as api from '../lib/api.js';
+import { LoadingRegion, Skel } from './Loading.jsx';
 
 /**
  * The bell in the header: everything this agent has been alerted about.
@@ -18,6 +19,8 @@ const URGENT = new Set(['ESCALATED']);
 
 export default function NotificationBell({ onOpenThread }) {
     const [items, setItems] = useState([]);
+    // 'loading' until the first answer, so an empty panel before it is not "nothing yet".
+    const [state, setState] = useState('loading');   // 'loading' | 'ready' | 'failed'
     const [unread, setUnread] = useState(0);
     const [open, setOpen] = useState(false);
     const panelRef = useRef(null);
@@ -27,8 +30,10 @@ export default function NotificationBell({ onOpenThread }) {
             const data = await api.getNotifications();
             setItems(data.notifications || []);
             setUnread(data.unread || 0);
+            setState('ready');
         } catch {
-            /* The bell is never worth an error in the agent's face. */
+            // The bell is never worth an error in the agent's face; the panel says it quietly.
+            setState(s => (s === 'ready' ? s : 'failed'));
         }
     }, []);
 
@@ -88,7 +93,22 @@ export default function NotificationBell({ onOpenThread }) {
                             <h2 className="panel__title">Notifications</h2>
                         </header>
 
-                        {items.length === 0 ? (
+                        {state === 'loading' ? (
+                            <LoadingRegion label="notifications" className="bell__list">
+                                {[['70%', '90%'], ['55%', '80%']].map(([title, body], i) => (
+                                    <div className="bell__item" key={i}>
+                                        <span className="bell__title"><Skel line w={title} /></span>
+                                        <span className="bell__body"><Skel line w={body} /></span>
+                                        <span className="bell__time"><Skel line w={50} /></span>
+                                    </div>
+                                ))}
+                            </LoadingRegion>
+                        ) : state === 'failed' && items.length === 0 ? (
+                            <p className="bell__empty">
+                                Notifications could not be loaded. They will appear here once the
+                                connection is back.
+                            </p>
+                        ) : items.length === 0 ? (
                             <p className="bell__empty">
                                 Nothing yet. When a conversation needs you, you will be alerted here
                                 and on every device where you turned notifications on.

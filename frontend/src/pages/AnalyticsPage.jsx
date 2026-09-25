@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import * as api from '../lib/api.js';
+import { LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
+import { useHeldLoading, useResource } from '../lib/loading.js';
 
 const WINDOWS = [
     { days: 7, label: '7 days' },
@@ -25,24 +27,54 @@ const percent = (n) => `${Math.round(n * 100)}%`;
  * with, and at this stage the samples are small enough that the denominator matters more
  * than the percentage.
  */
+/** The page's figures as shimmer blocks, laid out with the same classes as the real ones. */
+function FiguresSkeleton() {
+    return (
+        <LoadingRegion label="the figures">
+            <div className="card an__hero">
+                <div>
+                    <div className="context__key"><Skel line w={100} /></div>
+                    <div className="an__big"><Skel line w={96} /></div>
+                    <div className="muted"><Skel line w="60%" /></div>
+                </div>
+                <Skel h={10} style={{ borderRadius: 999 }} />
+            </div>
+            <div className="stats">
+                {[150, 160, 130, 130].map((w, i) => (
+                    <div className="stat" key={i}>
+                        <div className="stat__label"><Skel line w={w} /></div>
+                        <div className="stat__value"><Skel line w={64} /></div>
+                        {/* The first tile's note runs to two lines, and the row takes its height. */}
+                        <div className="muted"><div><Skel line w="70%" /></div>{i === 0 && <div><Skel line w="40%" /></div>}</div>
+                    </div>
+                ))}
+            </div>
+            <h2 className="section-title"><Skel line w={170} /></h2>
+            {[0, 1].map(i => (
+                <div className="member" key={i}>
+                    <div style={{ flex: 1 }}>
+                        <div className="member__name"><Skel line w={80} /></div>
+                        <div className="member__email"><Skel line w={230} /></div>
+                    </div>
+                    <div className="member__actions">
+                        <Skel w={90} h={6} />
+                        <span className="tag"><Skel line w={28} /></span>
+                    </div>
+                </div>
+            ))}
+        </LoadingRegion>
+    );
+}
+
 export default function AnalyticsPage() {
-    const [data, setData] = useState(null);
     const [days, setDays] = useState(30);
-    const [error, setError] = useState('');
-
-    const load = useCallback(async () => {
-        try { setData(await api.getAnalytics(days)); setError(''); }
-        catch (err) { setError(api.errorMessage(err, 'Could not load the figures.')); }
-    }, [days]);
-
-    useEffect(() => { load(); }, [load]);
-
-    if (!data) {
-        return <div className="page"><p className="muted">{error || 'Loading the figures…'}</p></div>;
-    }
-
-    const { deflection: d, replyTimes: r, channels, spamClosed } = data;
-    const met = d.rate >= d.target;
+    // One cached copy per range, so switching back to a range already seen is instant; a new
+    // range keeps the old figures on screen, dimmed, until its own arrive.
+    const res = useResource(`analytics:${days}`, () => api.getAnalytics(days));
+    const { error, refreshing, reload } = res;
+    // Another range's figures never stand in for this one's after a failure.
+    const data = res.stale && error ? undefined : res.data;
+    const firstLoad = useHeldLoading(!data && !error);
 
     return (
         <div className="page">
@@ -64,8 +96,30 @@ export default function AnalyticsPage() {
                 </div>
             </div>
 
-            {error && <p className="auth__error" role="alert">{error}</p>}
+            {firstLoad || (!data && !error) ? <FiguresSkeleton /> : !data ? (
+                <LoadError className="empty--panel"
+                           message={api.errorMessage(error, 'Could not load the figures.')}
+                           onRetry={reload} />
+            ) : (
+                <div className={refreshing ? 'is-refreshing' : ''} aria-busy={refreshing}>
+                    {refreshing && <span className="sr-only" role="status">Loading the figures for {days} days</span>}
+                    {error && !refreshing && (
+                        <p className="auth__error" role="alert">
+                            {api.errorMessage(error, 'Could not load the figures.')}
+                        </p>
+                    )}
+                    <Figures data={data} />
+                </div>
+            )}
+        </div>
+    );
+}
 
+function Figures({ data }) {
+    const { deflection: d, replyTimes: r, channels, spamClosed } = data;
+    const met = d.rate >= d.target;
+    return (
+        <>
             {d.total === 0 ? (
                 <div className="empty empty--panel">
                     <p className="muted">No conversations in this period yet.</p>
@@ -141,6 +195,6 @@ export default function AnalyticsPage() {
                     </p>
                 </>
             )}
-        </div>
+        </>
     );
 }

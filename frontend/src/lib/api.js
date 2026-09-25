@@ -83,19 +83,27 @@ export const searchKnowledge = (q, topK) =>
 export const crawlWebsite = (url) =>
     axios.post('/api/knowledge/website', { url }).then(r => r.data);
 
-export function uploadKnowledgeImage({ file, title, caption }) {
+/**
+ * Upload progress for a determinate bar: a fraction from 0 to 1, or null when the browser
+ * cannot tell the total size.
+ */
+const progress = (onProgress) => (onProgress
+    ? { onUploadProgress: (e) => onProgress(e.total ? e.loaded / e.total : null) }
+    : {});
+
+export function uploadKnowledgeImage({ file, title, caption, onProgress }) {
     const form = new FormData();
     form.append('file', file, file.name);
     form.append('title', title);
     if (caption) form.append('caption', caption);
-    return axios.post('/api/knowledge/image', form).then(r => r.data);
+    return axios.post('/api/knowledge/image', form, progress(onProgress)).then(r => r.data);
 }
 
-export function uploadKnowledge({ file, title }) {
+export function uploadKnowledge({ file, title, onProgress }) {
     const form = new FormData();
     form.append('file', file, file.name);
     if (title) form.append('title', title);
-    return axios.post('/api/knowledge/upload', form).then(r => r.data);
+    return axios.post('/api/knowledge/upload', form, progress(onProgress)).then(r => r.data);
 }
 
 // ── Analytics ───────────────────────────────────────────────────────────────
@@ -117,20 +125,20 @@ export const syncMessages = () => axios.post('/api/messages/sync');
 export const sendReply = (payload) => axios.post('/api/messages/reply', payload);
 export const reactToMessage = (payload) => axios.post('/api/messages/react', payload);
 
-export function sendImage({ file, recipientId, pageId }) {
+export function sendImage({ file, recipientId, pageId, onProgress }) {
     const form = new FormData();
     form.append('file', file, file.name || 'photo.jpg');
     form.append('recipientId', recipientId);
     if (pageId) form.append('pageId', pageId);
-    return axios.post('/api/messages/image', form);
+    return axios.post('/api/messages/image', form, progress(onProgress));
 }
 
-export function sendVoice({ blob, recipientId, pageId }) {
+export function sendVoice({ blob, recipientId, pageId, onProgress }) {
     const form = new FormData();
     form.append('file', blob, 'voice.webm');
     form.append('recipientId', recipientId);
     if (pageId) form.append('pageId', pageId);
-    return axios.post('/api/messages/voice', form);
+    return axios.post('/api/messages/voice', form, progress(onProgress));
 }
 
 // ── Channels ────────────────────────────────────────────────────────────────

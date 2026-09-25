@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { IconUpload, IconSearch, IconTrash, IconImage, IconClose } from '../components/icons.jsx';
 import * as api from '../lib/api.js';
+import { CenteredSpinner, LoadError, LoadingRegion, Skel, UploadProgress } from '../components/Loading.jsx';
+import { useHeldLoading, useResource } from '../lib/loading.js';
 
 const STATUS_TONE = {
     READY: 'tag--ai',
@@ -27,8 +29,33 @@ const WEAK_MATCH = 0.25;
  * retrieves, and how close each one was. That makes retrieval quality visible on its own,
  * before any generated answer is layered on top of it.
  */
-export default function KnowledgePage() {
-    const [library, setLibrary] = useState(null);
+/** A source row inside the same classes as the real one, so it is the same height. */
+function SourceSkeleton({ title, meta }) {
+    return (
+        <div className="member">
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="member__name"><Skel line w={title} /></div>
+                <div className="member__email"><Skel line w={meta} /></div>
+            </div>
+            <div className="member__actions">
+                <span className="tag"><Skel line w={34} /></span>
+                <Skel w={84} h={33} style={{ borderRadius: 8 }} />
+            </div>
+        </div>
+    );
+}
+
+const btn = (base, busy) => `${base}${busy ? ' btn--busy' : ''}`;
+
+/**
+ * `canManage` comes from the signed-in role and only decides whether the add forms are drawn
+ * while the library loads; once it has loaded, the server's answer is used.
+ */
+export default function KnowledgePage({ canManage: roleCanManage = false }) {
+    const { data: library, error: loadError, reload: load } = useResource('knowledge', api.getKnowledge);
+    const firstLoad = useHeldLoading(!library && !loadError);
+    // Bytes sent for the file being uploaded: { label, fraction } while it goes, else null.
+    const [sent, setSent] = useState(null);
     const [title, setTitle] = useState('');
     const [text, setText] = useState('');
     const [error, setError] = useState('');
@@ -47,13 +74,6 @@ export default function KnowledgePage() {
     const [crawling, setCrawling] = useState(false);
     const [imageTitle, setImageTitle] = useState('');
     const [imageCaption, setImageCaption] = useState('');
-
-    const load = useCallback(async () => {
-        try { setLibrary(await api.getKnowledge()); }
-        catch (err) { setError(api.errorMessage(err, 'Could not load the knowledge base.')); }
-    }, []);
-
-    useEffect(() => { load(); }, [load]);
 
     // Indexing happens in the background, so poll only while something is still running.
     const indexing = library?.sources?.some(s => s.status === 'PENDING' || s.status === 'INDEXING');
@@ -85,13 +105,16 @@ export default function KnowledgePage() {
         if (!file) return;
         setError('');
         setBusy(true);
+        const label = `Uploading ${file.name}`;
+        setSent({ label, fraction: null });
         try {
-            await api.uploadKnowledge({ file });
+            await api.uploadKnowledge({ file, onProgress: (fraction) => setSent({ label, fraction }) });
             await load();
         } catch (err) {
             setError(api.errorMessage(err, 'That file could not be added.'));
         } finally {
             setBusy(false);
+            setSent(null);
         }
     };
 
@@ -129,9 +152,12 @@ export default function KnowledgePage() {
         e.preventDefault();
         if (!pendingImage || !imageTitle.trim()) return;
         setBusy(true);
+        const label = `Uploading ${pendingImage.name}`;
+        setSent({ label, fraction: null });
         try {
             await api.uploadKnowledgeImage({
                 file: pendingImage, title: imageTitle.trim(), caption: imageCaption.trim(),
+                onProgress: (fraction) => setSent({ label, fraction }),
             });
             setPendingImage(null);
             setImageTitle('');
@@ -141,6 +167,7 @@ export default function KnowledgePage() {
             setError(api.errorMessage(err, 'That image could not be added.'));
         } finally {
             setBusy(false);
+            setSent(null);
         }
     };
 
@@ -175,11 +202,9 @@ export default function KnowledgePage() {
         }
     };
 
-    if (!library) {
-        return <div className="page"><p className="muted">{error || 'Loading the knowledge base…'}</p></div>;
-    }
-
-    const ready = library.sources.filter(s => s.status === 'READY');
+    const loading = firstLoad || !library;
+    const canManage = library ? library.canManage : roleCanManage;
+    const ready = loading ? [] : library.sources.filter(s => s.status === 'READY');
     const totalChunks = ready.reduce((sum, s) => sum + s.chunkCount, 0);
 
     return (
@@ -191,14 +216,14 @@ export default function KnowledgePage() {
                 it uses none of the same words.
             </p>
 
-            {!library.aiConfigured && (
+            {!loading && !library.aiConfigured && (
                 <p className="auth__error" role="alert">
                     No OpenRouter API key is configured, so nothing can be indexed or searched.
                     Add <code>OPEN_ROUTER_KEY</code> to <code>backend/.env</code> and restart the server.
                 </p>
             )}
 
-            {library.canManage && (
+            {canManage && (
                 <>
                     <form className="card" onSubmit={addText} style={{ marginBottom: 16 }}>
                         <label className="field">
@@ -217,8 +242,9 @@ export default function KnowledgePage() {
                             </small>
                         </label>
                         <div className="knowledge__actions">
-                            <button className="btn btn--primary" type="submit" disabled={busy || !text.trim()}>
-                                {busy ? 'Adding…' : 'Add to knowledge base'}
+                            <button className={btn('btn btn--primary', busy && !sent)} type="submit"
+                                    disabled={busy || !text.trim()} aria-busy={busy && !sent}>
+                                Add to knowledge base
                             </button>
                             <button className="btn btn--secondary" type="button"
                                     onClick={() => fileRef.current?.click()} disabled={busy}>
@@ -232,6 +258,7 @@ export default function KnowledgePage() {
                                    hidden onChange={upload} />
                             <input ref={imageRef} type="file" accept="image/*" hidden onChange={chooseImage} />
                         </div>
+                        {sent && !pendingImage && <UploadProgress label={sent.label} fraction={sent.fraction} />}
                     </form>
 
                     <form className="card" onSubmit={crawl} style={{ marginBottom: 16 }}>
@@ -245,11 +272,17 @@ export default function KnowledgePage() {
                             </small>
                         </label>
                         <div className="knowledge__actions">
-                            <button className="btn btn--primary" type="submit"
-                                    disabled={crawling || !site.trim()}>
-                                {crawling ? 'Reading the site…' : 'Read website'}
+                            <button className={btn('btn btn--primary', crawling)} type="submit"
+                                    disabled={crawling || !site.trim()} aria-busy={crawling}>
+                                Read website
                             </button>
                         </div>
+                        {/* A crawl runs for up to a minute, so say what is happening while it does. */}
+                        {crawling && (
+                            <p className="field__hint" role="status" style={{ marginTop: 10 }}>
+                                Reading the site. Pages appear under Sources as each one is indexed.
+                            </p>
+                        )}
                     </form>
                 </>
             )}
@@ -274,10 +307,11 @@ export default function KnowledgePage() {
                             The AI also writes its own description of the picture, so customers can
                             find it with words you did not think to type.
                         </small>
+                        {sent && <UploadProgress label={sent.label} fraction={sent.fraction} />}
                         <div className="knowledge__actions">
                             <button className="btn btn--primary" type="submit"
                                     disabled={busy || !imageTitle.trim()}>
-                                {busy ? 'Adding…' : 'Add picture'}
+                                Add picture
                             </button>
                             <button className="btn btn--secondary" type="button"
                                     onClick={() => setPendingImage(null)}>Cancel</button>
@@ -293,17 +327,29 @@ export default function KnowledgePage() {
                 {totalChunks > 0 && <span className="count"> · {totalChunks} passages indexed</span>}
             </h2>
 
-            {library.sources.length === 0 && (
+            {loading && (loadError && !firstLoad ? (
+                <LoadError className="empty--panel"
+                           message={api.errorMessage(loadError, 'Could not load the knowledge base.')}
+                           onRetry={load} />
+            ) : (
+                <LoadingRegion label="the knowledge sources">
+                    <SourceSkeleton title={180} meta={130} />
+                    <SourceSkeleton title={140} meta={170} />
+                    <SourceSkeleton title={200} meta={110} />
+                </LoadingRegion>
+            ))}
+
+            {!loading && library.sources.length === 0 && (
                 <div className="empty empty--panel">
                     <p className="muted">
-                        Nothing here yet. {library.canManage
+                        Nothing here yet. {canManage
                             ? 'Add your policies or FAQs above and the AI can start answering from them.'
                             : 'An owner or admin can add your policies and FAQs here.'}
                     </p>
                 </div>
             )}
 
-            {library.sources.map(source => (
+            {!loading && library.sources.map(source => (
                 <div className="member" key={source.id}>
                     {source.imageUrl && (
                         <img className="source__thumb" src={source.imageUrl} alt="" />
@@ -328,7 +374,7 @@ export default function KnowledgePage() {
                                 View text
                             </button>
                         )}
-                        {library.canManage && (
+                        {canManage && (
                             <button className="btn btn--danger btn--sm" onClick={() => setRemoving(source)}
                                     aria-label={`Remove ${source.title}`}>
                                 <IconTrash /> Remove
@@ -349,8 +395,9 @@ export default function KnowledgePage() {
                 <input value={query} onChange={e => setQuery(e.target.value)}
                        placeholder="How long do I have to return something?"
                        aria-label="Test the knowledge base" />
-                <button className="btn btn--primary" type="submit" disabled={searching || !query.trim()}>
-                    {searching ? 'Searching…' : 'Search'}
+                <button className={btn('btn btn--primary', searching)} type="submit"
+                        disabled={searching || !query.trim()} aria-busy={searching}>
+                    Search
                 </button>
             </form>
 
@@ -358,6 +405,7 @@ export default function KnowledgePage() {
                 <p className="muted">Nothing matched. Add a source covering that topic.</p>
             )}
 
+            <div className={searching && results ? 'is-refreshing' : ''} aria-busy={searching}>
             {results?.results.map(hit => (
                 <div className="card knowledge__hit" key={hit.id}>
                     <div className="knowledge__hitmeta">
@@ -377,6 +425,7 @@ export default function KnowledgePage() {
                     this question. The AI should decline rather than guess.
                 </p>
             )}
+            </div>
 
             {viewing && (
                 <>
@@ -392,7 +441,7 @@ export default function KnowledgePage() {
                         <div className="confirm__body">
                             {viewing.sourceUrl && <p className="muted" style={{ margin: '0 0 8px' }}>{viewing.sourceUrl}</p>}
                             {viewing.content === null ? (
-                                <p className="muted">Loading…</p>
+                                <CenteredSpinner label="Reading the extracted text" />
                             ) : (
                                 <>
                                     <p className="muted" style={{ margin: '0 0 10px' }}>

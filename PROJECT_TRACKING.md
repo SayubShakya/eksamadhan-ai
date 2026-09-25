@@ -429,12 +429,29 @@ expire after 7 days — re-send if it lapses.
       refreshable on demand
 - [x] The conversation panel shows who is handling it, and which knowledge passages the AI's
       last answer used, with match scores
+- [x] **Loading states on every screen** — one shimmer primitive, and skeletons built from it
+      for the inbox, Home, Team, Knowledge, Analytics, the visualizer and the notification list,
+      laid out with the same styles as the real content (measured: each skeleton row within
+      1px of the row that replaces it, unless that row's text wraps onto a second line). A skeleton only appears on a first visit and stays at
+      least 0.45s so it never flashes; data already fetched this session shows at once; a
+      failed load ends in an error with "Try again", never an endless shimmer; after 5s it
+      says it is taking longer. Working buttons show a ring without changing size; file,
+      photo and voice uploads show real progress. Fixed on the way: the inbox said "No messages
+      yet" before it had loaded, Home flipped its setup step once the channels arrived, and
+      switching messages in the visualizer briefly showed the previous message's flow.
+      Checked: slow 3G on a phone (splash, then skeleton, then data, with no blank frame),
+      a forced server failure and retry, reduced motion (the shimmer stops) and a 3MB upload
 
 **Commits this week**
 
 <!-- Regenerate before submitting:
-     git log --since=2026-09-17 --until=2026-09-25 --pretty='- %ad `%h` %s' --date=short -->
+     git log --since=2026-09-17 --until=2026-09-26 --pretty='- %ad `%h` %s' --date=short -->
 
+- 2026-09-25 `2c6ead5` feat: add legal pages, sign-in limits and a plain design and copy pass
+- 2026-09-25 `06da290` fix: make every dashboard screen fit a phone
+- 2026-09-25 `35a7983` feat: PWA splash, offline shell and updates; fix sign-in through a tunnel
+- 2026-09-25 `ef1c2af` feat: make the dashboard installable as a progressive web app
+- 2026-09-25 `495007b` feat: sign in with Google through Firebase Authentication
 - 2026-09-25 `a643c0f` feat: add a spam tab and conversation priority from Jev
 - 2026-09-24 `78a02f8` feat: add a spam tab and conversation priority from Jev
 - 2026-09-24 `01eefec` feat: add a spam tab and conversation priority from Jev
@@ -456,22 +473,7 @@ expire after 7 days — re-send if it lapses.
 - 2026-09-18 `3e69653` fix: fall back to initials when a customer photo will not load
 - 2026-09-18 `9a2f9ce` feat: alert agents by browser push when a customer needs a human
 - 2026-09-18 `3cad987` feat: notify agents on their own devices with Web Push
-- 2026-09-17 `f2dbba1` fix: crawler indexed a hidden modal instead of the page
-- 2026-09-17 `949efeb` feat: keep the text each knowledge source was read as
-- 2026-09-17 `4cce574` Crawl a website into the knowledge base
-- 2026-09-17 `473121a` fix: voice transcripts were never persisted
-- 2026-09-17 `37b2c51` Answer voice messages, and default local chat to gemma4
-- 2026-09-17 `347fddd` Switch chat provider with a single AI_CHAT_PROVIDER variable
-- 2026-09-17 `c2f0295` Store pictures in the knowledge base, paired with what they show
-- 2026-09-17 `3ea5e19` docs: add a product catalogue sample with measured retrieval
-- 2026-09-17 `bb41503` Rework the conversation panel, and answer image messages
-- 2026-09-17 `5c96b46` Distinguish your own messages from the AI's and colleagues'
-- 2026-09-17 `9b98139` Add accounts, RAG knowledge base, AI replies and human handover
-- 2026-09-17 `e450275` feat: manage the schema with flyway migrations
-- 2026-09-17 `5257bb0` feat: drive the inbox from server-side conversation threads
-- 2026-09-17 `9d6a4ad` feat: add conversation threads with a status machine
 
-_(pending commit: Sign in with Google)_
 
 **Progress report**
 

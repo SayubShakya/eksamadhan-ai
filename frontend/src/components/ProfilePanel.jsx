@@ -64,8 +64,9 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
         }
     };
 
+    // `busy` is true while the state is read, or names the button whose request is running.
     const toggleAlerts = async () => {
-        setAlerts(a => ({ ...a, busy: true, note: '' }));
+        setAlerts(a => ({ ...a, busy: 'toggle', note: '' }));
         try {
             if (alerts.on) {
                 await push.disable();
@@ -80,7 +81,7 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
     };
 
     const testAlert = async () => {
-        setAlerts(a => ({ ...a, busy: true, note: '' }));
+        setAlerts(a => ({ ...a, busy: 'test', note: '' }));
         try {
             await api.sendTestPush();
             setAlerts(a => ({ ...a, busy: false, note: 'Sent. It should appear in a moment.' }));
@@ -183,14 +184,16 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
                             <div className="field__control">
                                 <button
                                     type="button"
-                                    className={alerts.on ? 'btn btn--secondary' : 'btn btn--primary'}
+                                    className={`btn ${alerts.on ? 'btn--secondary' : 'btn--primary'}${alerts.busy === 'toggle' ? ' btn--busy' : ''}`}
                                     onClick={toggleAlerts}
-                                    disabled={alerts.busy}
+                                    disabled={Boolean(alerts.busy)}
+                                    aria-busy={alerts.busy === 'toggle'}
                                 >
                                     {alerts.on ? 'Turn off on this device' : 'Notify me on this device'}
                                 </button>
                                 {alerts.on && (
-                                    <button type="button" className="btn btn--secondary btn--sm" onClick={testAlert} disabled={alerts.busy}>
+                                    <button type="button" className={`btn btn--secondary btn--sm${alerts.busy === 'test' ? ' btn--busy' : ''}`}
+                                            onClick={testAlert} disabled={Boolean(alerts.busy)} aria-busy={alerts.busy === 'test'}>
                                         Send a test
                                     </button>
                                 )}
@@ -250,8 +253,9 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
                         <button type="button" className="btn btn--secondary" onClick={onClose}>
                             Cancel
                         </button>
-                        <button type="submit" className="btn btn--primary" disabled={!firstName || saving}>
-                            {saving ? 'Saving…' : 'Save changes'}
+                        <button type="submit" className={`btn btn--primary${saving ? ' btn--busy' : ''}`}
+                                disabled={!firstName || saving} aria-busy={saving}>
+                            Save changes
                         </button>
                     </div>
                 </form>
