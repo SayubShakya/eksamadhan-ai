@@ -38,15 +38,18 @@ public class AgentNotificationService {
     private final SocialMessageRepository messageRepository;
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
+    private final MessageTriageService triageService;
 
     public AgentNotificationService(PushService pushService,
                                     SocialMessageRepository messageRepository,
                                     UserRepository userRepository,
-                                    NotificationRepository notificationRepository) {
+                                    NotificationRepository notificationRepository,
+                                    MessageTriageService triageService) {
         this.pushService = pushService;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;
+        this.triageService = triageService;
     }
 
     /**
@@ -174,8 +177,11 @@ public class AgentNotificationService {
 
             ConversationThread thread = message.getThread();
             if (thread == null || thread.getAssignedAgentId() == null) return;
-            // Nobody is woken for spam; it waits in the Spam tab for whoever looks.
+            // Nobody is woken for spam; it waits in the Spam tab for whoever looks. That covers a
+            // single spam message in a real conversation too — the AI ignores it, so buzzing
+            // its owner about it would be the one alert that asks them to act on nothing.
             if (thread.isSpam()) return;
+            if (triageService != null && triageService.ignoreAsSpam(messageId, thread)) return;
             if (thread.getStatus() != ThreadStatus.AGENT_HANDLING
                     && thread.getStatus() != ThreadStatus.OPEN_FOR_AGENT) return;
 

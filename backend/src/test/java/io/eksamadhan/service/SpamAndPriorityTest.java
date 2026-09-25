@@ -37,6 +37,8 @@ class SpamAndPriorityTest {
     @Autowired TraceRecorder trace;
     @Autowired ThreadService threadService;
     @Autowired EntityManager entityManager;
+    @Autowired UserRepository users;
+    @Autowired NotificationRepository notificationRepository;
 
     private SocialPage page;
     private MessageTriageService triage;
@@ -187,5 +189,36 @@ class SpamAndPriorityTest {
         assertFalse(now.isSpam(), "a person's decision outranks Jev's");
         assertTrue(now.isSpamCleared());
         assertEquals("promotion", now.getSpamKind(), "what was overruled is kept");
+    }
+
+    /** Records pushes instead of sending them. */
+    private static class RecordingPush extends PushService {
+        final List<String> sent = new java.util.ArrayList<>();
+        RecordingPush() { super(null, "", "", ""); }
+        @Override
+        public void notify(User user, Notification notification) { sent.add(notification.title()); }
+    }
+
+    @Test
+    void theAssignedPersonIsNotBuzzedForASpamMessageButIsForARealOne() {
+        User owner = users.findAll().stream()
+                .filter(u -> u.getOrganization().getId().equals(page.getOrganization().getId()))
+                .findFirst().orElse(null);
+        assumeFalse(owner == null, "needs a member of the page's workspace");
+
+        ConversationThread thread = conversation();
+        thread.setStatus(ThreadStatus.AGENT_HANDLING);
+        thread.setAssignedAgentId(owner.getId().toString());
+        threads.saveAndFlush(thread);
+        says(thread, "Delivery cost?");
+
+        RecordingPush push = new RecordingPush();
+        AgentNotificationService alerts = new AgentNotificationService(push, messages, users, notificationRepository, triage);
+
+        alerts.customerReplied(says(thread, "Buy 1000 followers for Rs 100"));
+        assertTrue(push.sent.isEmpty(), "a spam message the AI ignores wakes nobody: " + push.sent);
+
+        alerts.customerReplied(says(thread, "Where is my order? It has been two weeks"));
+        assertEquals(1, push.sent.size(), "a real message from the same customer still does");
     }
 }

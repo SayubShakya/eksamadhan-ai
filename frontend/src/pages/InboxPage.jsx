@@ -153,7 +153,7 @@ function Attachment({ message, onOpenImage }) {
 }
 
 export default function InboxPage({
-    threads, totalThreads, pages, filter, onFilterChange,
+    threads, totalThreads, spamCount = 0, pages, filter, onFilterChange,
     active, onSelect, onSend, onSendVoice, onSendImage, onReact, onHideMessage, onThreadAction,
     onConnect, search, onSearchChange, sendError, onDismissError, me, team = [], onAssign,
     platform: platformFilter = 'all', onPlatformChange,
@@ -331,6 +331,11 @@ export default function InboxPage({
                                 onClick={() => onFilterChange(f.id)}
                             >
                                 {f.label}
+                                {/* Never a silent bin: a real customer Jev misjudged must be
+                                    noticed, so the tab says how much is waiting in it. */}
+                                {f.id === 'spam' && spamCount > 0 && (
+                                    <span className="chip__count" aria-label={`${spamCount} in spam`}>{spamCount}</span>
+                                )}
                             </button>
                         ))}
                     

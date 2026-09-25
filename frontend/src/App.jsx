@@ -552,6 +552,7 @@ export default function App() {
                     <InboxPage
                         threads={threads}
                         totalThreads={allThreads.length}
+                        spamCount={allThreads.filter(t => t.spam).length}
                         pages={pages}
                         filter={filter}
                         onFilterChange={setFilter}

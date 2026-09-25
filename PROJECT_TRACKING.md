@@ -298,11 +298,14 @@ expire after 7 days — re-send if it lapses.
       to an agent. Now a spam message is ignored on its own even in a real conversation (no
       reply, no handover, not counted as waiting, never passed to the model), and two in a row
       move the conversation back to Spam. The exact sequence is a test
+- [x] The assigned agent is no longer alerted for a spam message the AI ignores, in an otherwise
+      real conversation; a real message from the same customer still alerts them (tested). The
+      Spam tab shows how many conversations are in it, so a misjudged customer is never buried
 - [x] **Sentiment now comes from Jev alone** — the local model is no longer asked, one call fewer
       per customer message. Jev runs before every reply, in every mode, so spam is caught
       before the AI answers it
-- [x] Migration V23; 15 new tests (5 against the database for the spam and priority rules, 7 for
-      the spam rule itself, 2 for reading Jev's answer, 1 for the visualizer's label), 44 in all
+- [x] Migration V23; 16 new tests (6 against the database for the spam and priority rules, 7 for
+      the spam rule itself, 2 for reading Jev's answer, 1 for the visualizer's label), 45 in all
       passing; checked end to end with a signed test webhook
       carrying a scam message — flagged in under a second, never answered, then cleared with
       Not spam — and the test conversation deleted

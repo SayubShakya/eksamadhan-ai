@@ -751,6 +751,10 @@ status machine and authentication have all since been built — see the change l
 
 - Never commit or push — graded coursework, Manjit owns the history. See `rules.md`.
 - No AI attribution anywhere in the repo.
+- **Never lose a potential client.** Every automated rule that silences, hides or closes a
+  customer (spam, the off-topic streak, firewall shortcuts, alert suppression) must err
+  towards the customer, be measured on real messages first, keep a visible way back (a genuine
+  request restores; a person's override is final) and leave evidence a person can check.
 - No dependencies beyond `architecture.md` without asking.
 - Phases are sequential — see `phases.md`.
 

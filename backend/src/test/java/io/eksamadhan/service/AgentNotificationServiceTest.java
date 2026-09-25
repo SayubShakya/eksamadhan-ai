@@ -54,7 +54,7 @@ class AgentNotificationServiceTest {
 
         // Null notification repository: `deliver` records into it inside its own try/catch, so
         // these tests see the push that would have gone out without needing a database.
-        notifications = new AgentNotificationService(push, null, users, null);
+        notifications = new AgentNotificationService(push, null, users, null, null);
     }
 
     private User person(String email, UserRole role) {

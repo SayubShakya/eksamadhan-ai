@@ -450,6 +450,7 @@ classDiagram
     AiReplyService --> RetrievalService
     AiReplyService --> MessageTriageService
     SentimentService --> MessageTriageService
+    AgentNotificationService --> MessageTriageService
     MessageTriageService --> TypeSafeClient
     AiReplyService --> TraceRecorder
     MessageTriageService --> TraceRecorder
