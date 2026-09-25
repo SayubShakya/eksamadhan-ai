@@ -3,6 +3,7 @@ import { IconClose, IconPlus } from './icons.jsx';
 import Avatar from './Avatar.jsx';
 import { fileToAvatar } from '../lib/avatar.js';
 import * as push from '../lib/push.js';
+import usePwa from '../lib/usePwa.js';
 import * as api from '../lib/api.js';
 
 /**
@@ -19,6 +20,7 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
 
     // Notifications are a property of this browser, not of the account, so the state is read
     // from the browser every time the panel opens rather than stored on the profile.
+    const app = usePwa();
     const [alerts, setAlerts] = useState({ supported: push.supported(), on: false, busy: true, note: '' });
 
     const readAlerts = useCallback(async () => {
@@ -202,6 +204,36 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
                         <span className="field__note">
                             {alerts.note || 'Tells you when a conversation is handed to you, or a customer replies.'}
                         </span>
+                    </div>
+
+                    {/* Per device, like notifications: installing on a laptop says nothing about a phone. */}
+                    <div className="field">
+                        <span className="field__label">App</span>
+                        {app.installed ? (
+                            <p className="field__static">
+                                Installed on this device
+                                <span className="field__note">It opens in its own window, from your dock, Start menu or home screen.</span>
+                            </p>
+                        ) : app.canPrompt ? (
+                            <>
+                                <div className="field__control">
+                                    <button type="button" className="btn btn--primary" onClick={app.install}>
+                                        Install on this device
+                                    </button>
+                                </div>
+                                <span className="field__note">Its own window and icon, like a downloaded app — no app store.</span>
+                            </>
+                        ) : app.iosHint ? (
+                            <p className="field__static">
+                                Add to your home screen
+                                <span className="field__note">In Safari, tap Share, then “Add to Home Screen”.</span>
+                            </p>
+                        ) : (
+                            <p className="field__static">
+                                Not offered here
+                                <span className="field__note">Open this page in Chrome or Edge to install it as an app.</span>
+                            </p>
+                        )}
                     </div>
 
                     {/* Read-only: the email is the account identifier, so changing it here

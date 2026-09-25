@@ -393,6 +393,17 @@ status machine and authentication have all since been built — see the change l
   with the real TypeSafe key: the triage backfill ran during `mvn test` and judged the real
   open conversations for real. Harmless here, but tests are not isolated from the network.
 
+- **The dashboard is an installable PWA (2026-09-25).** `public/manifest.webmanifest` (id
+  `/dashboard`, standalone, shortcuts to Inbox and Knowledge), icons generated from the logo in
+  `public/icons/` (any + maskable + apple-touch), and `lib/pwa.js`, which catches
+  `beforeinstallprompt` before React mounts and registers `sw.js` for everyone — before, it was
+  only registered when someone turned notifications on, so most people could never have
+  installed it. The worker's only cache is `offline.html` (self-contained: inline icon and
+  styles, since offline nothing else can load); `/api` and dashboard files are never cached.
+  Chrome's own check reports zero installability errors; offline fallback verified by cutting
+  the worker's network. Install button in the top bar only while the browser offers it, plus
+  a per-device row in the profile panel (iOS gets the Share → Add to Home Screen hint).
+
 - **Sign in with Google (2026-09-25).** Firebase Authentication in the browser, verification in
   `FirebaseTokenVerifier` (Google's JWKS + issuer/audience/expiry, `email_verified`, provider
   `google.com` — an email/password Firebase account must not be a way in). Only

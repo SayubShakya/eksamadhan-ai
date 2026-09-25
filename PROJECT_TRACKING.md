@@ -286,6 +286,11 @@ expire after 7 days — re-send if it lapses.
       and never through sign-up or invites, with its own console in the same layout as a
       workspace; its only page for now is the conversation visualizer. Workspace owners get 403
       on its endpoints, checked live
+- [x] **The dashboard installs as an app (PWA)** — its own window and icon on a laptop or phone,
+      with no app store: a manifest, icons made from the logo, an Install button that appears
+      only when the browser offers it, and an offline page instead of the browser's error.
+      Nothing else is cached, so the installed app never shows a stale inbox. Checked with
+      Chrome's own installability audit (no errors) and by taking the app offline
 - [x] **Sign in with Google (Firebase Authentication)** — on sign-in, workspace sign-up and
       invitation acceptance, so staff join without creating another password. The backend
       checks Google's signature on every sign-in token itself, with no service-account key; a

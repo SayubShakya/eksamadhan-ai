@@ -59,6 +59,7 @@ flowchart LR
         b12["See priority and sentiment"]
         b13["Join from an invite with Google<br/>no password to create"]
         b7["Enable notifications on this device"]
+        b14["Install the dashboard as an app"]
         b8["Receive alert when needed<br/>FR-09"]
         b9["Toggle availability<br/>PLANNED · FR-05"]
     end
@@ -73,6 +74,7 @@ flowchart LR
     agent --- b12
     agent --- b13
     agent --- b7
+    agent --- b14
     agent --- b8
     agent -.- b9
     style b9 stroke-dasharray: 5 5

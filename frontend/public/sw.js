@@ -1,15 +1,41 @@
 /*
  * The service worker: the only part of this app that runs when the dashboard is closed.
  *
- * It exists for one job — receive a push and show it — so it deliberately does nothing else.
- * No caching, no offline shell: a support inbox showing stale conversations from cache would
- * be worse than one that says it cannot reach the server.
+ * Two jobs: receive a push and show it, and make the dashboard installable as an app. It
+ * still caches no conversation and no page of the dashboard — a support inbox showing stale
+ * conversations from cache would be worse than one that says it cannot reach the server. With
+ * no connection it shows exactly that: a single offline page.
  */
 
 /* Take over straight away instead of waiting for every tab to close, so enabling
  * notifications works on the first try rather than after a full browser restart. */
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+// The installable app. Only what the offline page needs is kept — never the dashboard's own
+// files, and never an /api response: conversations must always be live, and a cached inbox
+// would show a customer as waiting after someone has answered them. Bump the version to drop
+// an old cache.
+const CACHE = 'eksamadhan-shell-v2';
+const OFFLINE = '/offline.html';      // self-contained: its icon and styles are inline
+const SHELL = [OFFLINE];
+
+self.addEventListener('install', (event) => {
+    event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(
+        caches.keys()
+            .then((keys) => Promise.all(keys.filter((k) => k.startsWith('eksamadhan-') && k !== CACHE)
+                .map((k) => caches.delete(k))))
+            .then(() => self.clients.claim()));
+});
+
+// Opening the app with no connection: the network first, always, and only when it fails the
+// offline page — so the installed app says "you're offline" instead of the browser's dinosaur.
+self.addEventListener('fetch', (event) => {
+    const request = event.request;
+    if (request.mode !== 'navigate') return;
+    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE)));
+});
 
 self.addEventListener('push', (event) => {
     let payload = {};

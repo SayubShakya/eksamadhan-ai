@@ -1,0 +1,27 @@
+{
+  "id": "/dashboard",
+  "name": "EkSamadhan AI",
+  "short_name": "EkSamadhan",
+  "description": "One inbox for Messenger and Instagram, answered by AI and handed to your team when it matters.",
+  "start_url": "/dashboard?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "en",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Inbox", "short_name": "Inbox", "url": "/dashboard/inbox?source=pwa",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Knowledge", "short_name": "Knowledge", "url": "/dashboard/knowledge?source=pwa",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

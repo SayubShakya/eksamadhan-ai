@@ -1,4 +1,5 @@
-import { IconSearch, IconMenu, IconSignOut } from './icons.jsx';
+import { IconSearch, IconMenu, IconSignOut, IconDownload } from './icons.jsx';
+import usePwa from '../lib/usePwa.js';
 import { LogoMark } from './Logo.jsx';
 import Avatar from './Avatar.jsx';
 import NotificationBell from './NotificationBell.jsx';
@@ -20,6 +21,7 @@ export default function TopBar({
     onOpenThread,
 }) {
     const role = ROLE_LABEL[user?.role] ?? user?.role ?? '';
+    const app = usePwa();
     return (
         <header className="topbar">
             {!navOpen && (
@@ -47,6 +49,16 @@ export default function TopBar({
                         aria-label="Search conversations"
                     />
                 </div>
+            )}
+
+            {/* Only when the browser has said it can install, and it is not installed already:
+                a button that did nothing, or offered what is already there, would be noise. */}
+            {app.canPrompt && !app.installed && (
+                <button className="btn btn--secondary btn--sm topbar__install" onClick={app.install}
+                        title="Install EkSamadhan as an app on this device">
+                    <IconDownload size={15} />
+                    <span className="topbar__install-text">Install app</span>
+                </button>
             )}
 
             {/* Before the account chip: the same alerts that go out as browser

@@ -36,7 +36,7 @@ Instagram as a supported channel because the software supports it.
 
 ## What changed since Semester 1
 
-Twenty-two differences, grouped by why they happened.
+Twenty-three differences, grouped by why they happened.
 
 ### Deliberate technology substitutions
 
@@ -45,6 +45,7 @@ Twenty-two differences, grouped by why they happened.
 | Vector store | Pinecone, a separate service | **pgvector inside PostgreSQL** | One less account, no synchronisation path to drift, and deleting a customer's knowledge is one cascading delete in a single transaction rather than a best-effort remote call |
 | Notifications | Firebase Cloud Messaging | **Web Push with VAPID** | The browser standard FCM is built on. No Google project, no service-account key, and the payload is encrypted end to end (RFC 8291) so the relaying push service cannot read a customer's message |
 | Sign-in | Email and password | **Email and password, or Sign in with Google** through Firebase Authentication | Staff join from an invitation without creating another password. Firebase is used only to obtain a Google-signed ID token; the backend checks it against Google's public keys, so there is still no service-account key and no second session to manage |
+| Delivery | A website | **An installable app (PWA)** as well | Installs from the browser into its own window with its own icon, on a laptop or a phone, with no app store. The service worker that already delivered push notifications also shows an offline page; it caches no conversation, because a support inbox showing stale messages is worse than one that says it is offline |
 | LLM | OpenAI / Gemini, called directly | **Gemma 4 locally via Ollama**, OpenRouter as a hosted alternative behind one switch (`AI_CHAT_PROVIDER`) — a choice, not an automatic failover | Free per reply and customer messages never leave the machine. Embeddings stay hosted because the schema fixes them at 1536 dimensions |
 
 ### The model gained a concept the design did not have

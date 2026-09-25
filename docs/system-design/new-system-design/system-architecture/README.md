@@ -12,7 +12,7 @@ layers are kept in the same order so the two can be read side by side.
 flowchart TB
     subgraph clients["1 · Client interfaces"]
         direction LR
-        agent["Support agent / Admin<br/>React + Vite dashboard"]
+        agent["Support agent / Admin<br/>React + Vite dashboard<br/>installable as an app — PWA"]
         customer["End user<br/>customer"]
         widget["Web chat widget<br/>PLANNED · FR-03"]
         sysadmin["System admin console<br/>conversation visualizer"]

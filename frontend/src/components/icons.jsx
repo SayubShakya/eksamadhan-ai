@@ -24,6 +24,7 @@ export const IconChevronLeft = (p) => <svg {...s(p)}><path d="M15 18l-6-6 6-6" /
 export const IconTrash = (p) => <svg {...s({ size: p.size || 14 })}><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /></svg>;
 export const IconUser = (p) => <svg {...s(p)}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>;
 export const IconUpload = (p) => <svg {...s({ size: p.size || 15 })}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 9l5-5 5 5" /><path d="M12 4v12" /></svg>;
+export const IconDownload = (p) => <svg {...s({ size: p.size || 16 })}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" /></svg>;
 export const IconMenu = (p) => <svg {...s(p)}><path d="M3 6h18" /><path d="M3 12h18" /><path d="M3 18h18" /></svg>;
 export const IconSparkle = (p) => <svg {...s(p)} fill="currentColor" stroke="none"><path d="M12 2.6l1.85 4.98a3 3 0 0 0 1.77 1.77L20.6 11.2l-4.98 1.85a3 3 0 0 0-1.77 1.77L12 19.8l-1.85-4.98a3 3 0 0 0-1.77-1.77L3.4 11.2l4.98-1.85a3 3 0 0 0 1.77-1.77z" /><path d="M18.4 15.6l.72 1.94c.13.36.41.64.77.77l1.94.72-1.94.72a1.2 1.2 0 0 0-.77.77l-.72 1.94-.72-1.94a1.2 1.2 0 0 0-.77-.77L15 18.03l1.91-.72c.36-.13.64-.41.77-.77z" /></svg>;
 export const IconSignOut = (p) => <svg {...s(p)}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>;
