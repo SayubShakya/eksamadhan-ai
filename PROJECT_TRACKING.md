@@ -472,12 +472,30 @@ expire after 7 days — re-send if it lapses.
       cold launch shows only one (Android's own), but a refresh has no Android screen before it.
       A refresh now shows the logo, with a small loading ring under it after 0.4s; a cold launch
       is unchanged
+- [x] **Agent availability (PRD 4.6, FR-05)** — each person sets Available or Busy in the top
+      bar, and is shown offline automatically a few minutes after closing the dashboard (it
+      reports in once a minute). The AI now only hands conversations to people who are
+      Available and online; one escalated while nobody is waits, owners and admins are alerted,
+      and it goes to the first person who becomes available. Team shows who is available now and
+      when others were last seen; the reassign picker shows each person's status. Migration V25;
+      4 new tests (73 in all); system design updated (ER, class, use case, sequence, architecture,
+      DFD) and the new columns checked against the live database
+- [x] **Presence updates live, no refresh.** A colleague switching between Available and Busy
+      now shows on everyone's screen at once (16ms measured), through a server-sent event
+      stream; closing the dashboard shows the person offline in about 5 seconds (7 if the tab
+      crashed), instead of after 3 minutes. Brand written "EkSamadhan AI" in the status menu,
+      the offline screen, the update banner and the install tooltip. 1 new end-to-end test over
+      real HTTP (74 in all); architecture and class diagrams updated
 
 **Commits this week**
 
 <!-- Regenerate before submitting:
-     git log --since=2026-09-17 --until=2026-09-26 --pretty='- %ad `%h` %s' --date=short -->
+     git log --since=2026-09-17 --until=2026-09-27 --pretty='- %ad `%h` %s' --date=short -->
 
+- 2026-09-25 `69cb50d` fix: show the logo and a loader when the installed app is refreshed
+- 2026-09-25 `3700cfc` feat: confirm sign-out, live Home figures, customer details on phones
+- 2026-09-25 `249174d` fix: keep the notification bell beside the account name on every screen
+- 2026-09-25 `d18aa0c` feat: make the notification bell an unread inbox with a full page
 - 2026-09-25 `c3901e6` feat: add skeletons, busy buttons and upload progress to every screen
 - 2026-09-25 `2c6ead5` feat: add legal pages, sign-in limits and a plain design and copy pass
 - 2026-09-25 `06da290` fix: make every dashboard screen fit a phone
@@ -505,6 +523,21 @@ expire after 7 days — re-send if it lapses.
 - 2026-09-18 `3e69653` fix: fall back to initials when a customer photo will not load
 - 2026-09-18 `9a2f9ce` feat: alert agents by browser push when a customer needs a human
 - 2026-09-18 `3cad987` feat: notify agents on their own devices with Web Push
+- 2026-09-17 `f2dbba1` fix: crawler indexed a hidden modal instead of the page
+- 2026-09-17 `949efeb` feat: keep the text each knowledge source was read as
+- 2026-09-17 `4cce574` Crawl a website into the knowledge base
+- 2026-09-17 `473121a` fix: voice transcripts were never persisted
+- 2026-09-17 `37b2c51` Answer voice messages, and default local chat to gemma4
+- 2026-09-17 `347fddd` Switch chat provider with a single AI_CHAT_PROVIDER variable
+- 2026-09-17 `c2f0295` Store pictures in the knowledge base, paired with what they show
+- 2026-09-17 `3ea5e19` docs: add a product catalogue sample with measured retrieval
+- 2026-09-17 `bb41503` Rework the conversation panel, and answer image messages
+- 2026-09-17 `5c96b46` Distinguish your own messages from the AI's and colleagues'
+- 2026-09-17 `9b98139` Add accounts, RAG knowledge base, AI replies and human handover
+- 2026-09-17 `e450275` feat: manage the schema with flyway migrations
+- 2026-09-17 `5257bb0` feat: drive the inbox from server-side conversation threads
+- 2026-09-17 `9d6a4ad` feat: add conversation threads with a status machine
+- 2026-09-17 `ba57745` feat: blurred backdrop for dialogs
 
 
 **Progress report**

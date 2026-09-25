@@ -38,12 +38,15 @@ public class TeamController {
     private final CurrentUser currentUser;
     private final EmailService emailService;
     private final String frontendUrl;
+    private final io.eksamadhan.service.AvailabilityService availability;
 
     public TeamController(UserRepository userRepository,
                           InvitationRepository invitationRepository,
                           CurrentUser currentUser,
                           EmailService emailService,
+                          io.eksamadhan.service.AvailabilityService availability,
                           @Value("${app.frontend-url}") String frontendUrl) {
+        this.availability = availability;
         this.userRepository = userRepository;
         this.invitationRepository = invitationRepository;
         this.currentUser = currentUser;
@@ -51,8 +54,14 @@ public class TeamController {
         this.frontendUrl = frontendUrl;
     }
 
+    /**
+     * @param presence   AVAILABLE, BUSY or OFFLINE right now (FR-05): what routing goes by
+     * @param lastSeenAt when their dashboard last reported in, for "last seen 2 hr ago"
+     */
     public record Member(String id, String firstName, String lastName, String email,
-                         UserRole role, UserStatus status, String avatar, boolean isYou) {}
+                         UserRole role, UserStatus status, String avatar, boolean isYou,
+                         io.eksamadhan.service.AvailabilityService.Presence presence,
+                         String lastSeenAt) {}
 
     /**
      * @param emailed     whether the invitation email was actually delivered
@@ -72,7 +81,9 @@ public class TeamController {
 
         List<Member> members = userRepository.findByOrganization(organization).stream()
                 .map(u -> new Member(u.getId().toString(), u.getFirstName(), u.getLastName(),
-                        u.getEmail(), u.getRole(), u.getStatus(), u.getAvatar(), u.getId().equals(me.getId())))
+                        u.getEmail(), u.getRole(), u.getStatus(), u.getAvatar(), u.getId().equals(me.getId()),
+                        availability.presenceOf(u),
+                        u.getLastSeenAt() == null ? null : u.getLastSeenAt().toString()))
                 .toList();
 
         // Invite links are only shown to someone who could have created them.

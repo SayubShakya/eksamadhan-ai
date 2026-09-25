@@ -54,7 +54,7 @@ flowchart TB
     meta --> customer
 
     p4 -->|"cannot answer"| p5
-    p5 -->|"assign least-loaded agent"| d1
+    p5 -->|"assign least-loaded available agent"| d1
     p5 --> p6
     p6 -->|"push · email · bell row"| d1
     p6 -->|"encrypted push"| agent
@@ -140,7 +140,7 @@ than that moment being imported at all.
 | 2 | Conversation & Thread Manager | Finds or creates the thread, keeps its preview and unanswered count, and owns the status machine |
 | 3 | Knowledge Ingestion | Extracts text from a paste, a PDF, an image description or a crawled page; splits it on headings; embeds each passage |
 | 4 | RAG Answer Engine | Retrieval, prompt assembly with recalled conversation memory, the model call, and the three gates |
-| 5 | Escalation & Routing | Moves the thread to a person, picks the least-loaded active agent, schedules the handover brief |
+| 5 | Escalation & Routing | Moves the thread to a person, picks the least-loaded agent who is Available and online (or leaves it waiting for the first who is), schedules the handover brief |
 | 6 | Notification Service | One call writes the in-app bell row and sends the encrypted push; email is sent alongside on escalation |
 | 7 | Agent Dashboard | Everything an agent does — reply, take over, hand back to the AI, transfer, resolve, read the brief |
 | 8 | Analytics | Deflection against the 60% target, median and 90th-percentile reply times, escalation volume by channel |

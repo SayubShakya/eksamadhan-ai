@@ -696,8 +696,8 @@ public class AiReplyService {
             }
             trace.here(TraceRecorder.Kind.HANDOVER, "Assign the least-loaded agent",
                     assignee == null ? "nobody available" : assignee.getFirstName() + " " + assignee.getLastName(),
-                    TraceRecorder.of("rule", "fewest open conversations among active members; ties broken at random"),
-                    assignee == null ? TraceRecorder.of("assigned", "nobody (owners and admins are alerted instead)")
+                    TraceRecorder.of("rule", "fewest open conversations among members who are available and online; ties broken at random"),
+                    assignee == null ? TraceRecorder.of("assigned", "nobody available (owners and admins are alerted; it goes to the first person who becomes available)")
                                      : TraceRecorder.of("assigned", assignee.getFirstName() + " " + assignee.getLastName(),
                                               "email", assignee.getEmail(), "role", assignee.getRole().name()));
         } else if (escalated.getAssignedAgentId() != null) {

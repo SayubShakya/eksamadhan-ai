@@ -3,6 +3,7 @@ import usePwa from '../lib/usePwa.js';
 import { LogoMark } from './Logo.jsx';
 import Avatar from './Avatar.jsx';
 import NotificationBell from './NotificationBell.jsx';
+import AvailabilityMenu from './AvailabilityMenu.jsx';
 import { fullName } from '../lib/avatar.js';
 
 const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', AGENT: 'Agent' };
@@ -11,14 +12,13 @@ const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', AGENT: 'Agent' };
 /**
  * Shared across every screen.
  *
- * The agent availability selector (Online / Busy / Offline) was removed on request: it
- * stored a value but nothing consumed it. It belongs back here when round-robin routing
- * lands in Phase 4, since escalations should only reach agents marked Online (FR-05).
+ * The availability selector (FR-05) is back now that routing reads it: new conversations only
+ * go to people who are Available and have the dashboard open.
  */
 export default function TopBar({
     query, onQueryChange, user,
     onToggleNav, onHome, unread = 0, navOpen, showSearch, onEditProfile, onSignOut,
-    onOpenNotification, onSeeAllNotifications,
+    onOpenNotification, onSeeAllNotifications, onAvailabilityChange,
 }) {
     const role = ROLE_LABEL[user?.role] ?? user?.role ?? '';
     const app = usePwa();
@@ -59,7 +59,7 @@ export default function TopBar({
                 a button that did nothing, or offered what is already there, would be noise. */}
             {app.canPrompt && !app.installed && (
                 <button className="btn btn--secondary btn--sm topbar__install" onClick={app.install}
-                        title="Install EkSamadhan as an app on this device">
+                        title="Install EkSamadhan AI as an app on this device">
                     <IconDownload size={15} />
                     <span className="topbar__install-text">Install app</span>
                 </button>
@@ -67,6 +67,10 @@ export default function TopBar({
 
             {/* Before the account chip: the same alerts that go out as browser
                 notifications, readable here whatever a device did with them. */}
+            {onAvailabilityChange && (
+                <AvailabilityMenu value={user?.availability} onChange={onAvailabilityChange} />
+            )}
+
             <NotificationBell onOpen={onOpenNotification} onSeeAll={onSeeAllNotifications} />
 
             <button className="user" onClick={onEditProfile} aria-label="Edit profile">

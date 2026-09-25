@@ -19,6 +19,11 @@ import java.util.*;
  *
  * Ties are broken at random. With an ordered tie-break the same person would take every
  * escalation on a quiet day.
+ *
+ * Only people who can take a conversation right now are considered: Available, and with the
+ * dashboard open in the last few minutes (FR-05, see AvailabilityService). A conversation
+ * handed to someone who is away just waits for them, while a colleague who is here could
+ * have answered it.
  */
 @Service
 @Slf4j
@@ -26,23 +31,29 @@ public class AgentRoutingService {
 
     private final UserRepository userRepository;
     private final ConversationThreadRepository threadRepository;
+    private final LiveEvents live;
     private final Random random = new Random();
 
     public AgentRoutingService(UserRepository userRepository,
-                               ConversationThreadRepository threadRepository) {
+                               ConversationThreadRepository threadRepository,
+                               LiveEvents live) {
         this.userRepository = userRepository;
         this.threadRepository = threadRepository;
+        this.live = live;
     }
 
     /**
-     * @return the agent who should take this conversation, or empty when the workspace has
-     *         no one active — in which case the conversation still escalates and simply waits
-     *         in the queue.
+     * @return the agent who should take this conversation, or empty when nobody is available
+     *         and online — in which case the conversation still escalates, waits unassigned,
+     *         and is handed out as soon as someone becomes available.
      */
     public Optional<User> pickAgent(Organization organization) {
-        List<User> candidates = userRepository.findActiveByOrganization(organization);
+        java.time.OffsetDateTime now = java.time.OffsetDateTime.now();
+        List<User> candidates = userRepository.findActiveByOrganization(organization).stream()
+                .filter(user -> AvailabilityService.canTakeNew(user, now, live.goneAt(user.getId())))
+                .toList();
         if (candidates.isEmpty()) {
-            log.warn("Organization {} has no active members to escalate to", organization.getApiKey());
+            log.warn("Organization {} has nobody available to escalate to", organization.getApiKey());
             return Optional.empty();
         }
 

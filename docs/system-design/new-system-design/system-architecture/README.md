@@ -33,7 +33,7 @@ flowchart TB
         subgraph rowA[" "]
             direction LR
             channel["Channel<br/>MetaService · MetaMessageParser · SyncService<br/>AttachmentFetcher"]
-            convo["Conversation<br/>ThreadService · AgentRoutingService<br/>ConversationSummaryService"]
+            convo["Conversation<br/>ThreadService · AgentRoutingService<br/>AvailabilityService · ConversationSummaryService"]
         end
         subgraph rowB[" "]
             direction LR
@@ -68,7 +68,7 @@ flowchart TB
     end
 
     customer --> meta
-    agent -->|"REST + polling"| api
+    agent -->|"REST + polling · SSE presence"| api
     widget -.->|"planned"| api
     sysadmin -->|"REST — system admin only"| api
     agent -.->|"Sign in with Google"| firebase
@@ -130,13 +130,23 @@ This is development scaffolding, not product architecture — in deployment the 
 own address and the proxy disappears. It is drawn because it is real, and because a marker
 running the project will meet it.
 
-## Transport: polling, not websockets
+## Transport: polling, one event stream, no websockets
 
 The Semester 1 diagram labelled the dashboard link "WebSocket / REST". No websockets were
 built. The dashboard polls — messages and threads every 1.5s, connection status every 5s, a
-Meta sync every 10s, and the notification bell every 15s. The one push-style path: when the
-service worker receives a Web Push it also tells every open dashboard tab, and the bell refetches
-at once rather than on its next poll.
+Meta sync every 10s, and the notification bell every 15s. Two push-style paths:
+
+- **Presence (FR-05)** travels over one server-sent event stream per open tab,
+  `GET /api/me/events` (`LiveEvents`). A colleague switching between Available and Busy reaches
+  every open dashboard in the workspace in milliseconds (16ms in `LivePresenceTest`). The stream
+  also tells the server when a tab has gone: the page says so as it closes (`sendBeacon` to
+  `/api/me/events/close`), and a keep-alive every 10s catches a tab that died without a word;
+  after a 5s grace, so a refresh does not flash offline, the person shows as offline. SSE rather
+  than a websocket because the traffic is one way, it is plain HTTP through the Vite proxy and
+  the tunnels, and Spring MVC serves it without another dependency. The stream is read with
+  `fetch` rather than `EventSource`, which cannot send the bearer token.
+- When the service worker receives a Web Push it also tells every open dashboard tab, and the
+  bell refetches at once rather than on its next poll.
 
 The sync is **triggered by the dashboard**, not scheduled on the server: there is no
 `@Scheduled` job anywhere in the backend. While nobody has the dashboard open, a message Meta

@@ -62,7 +62,7 @@ flowchart LR
         b14["Install the dashboard as an app"]
         b8["Receive alert when needed<br/>FR-09"]
         b15["Read and clear alerts in the bell<br/>open one · mark all read"]
-        b9["Toggle availability<br/>PLANNED · FR-05"]
+        b9["Set availability<br/>Available or Busy · FR-05"]
     end
     agent --- b1
     agent --- b2
@@ -78,8 +78,7 @@ flowchart LR
     agent --- b14
     agent --- b8
     agent --- b15
-    agent -.- b9
-    style b9 stroke-dasharray: 5 5
+    agent --- b9
 ```
 
 ### End User and Meta
@@ -166,10 +165,10 @@ flowchart LR
 | FR-02 | Admin uploads knowledge about products and policies | **Built** — and extended to images and website crawling |
 | FR-03 | Admin generates a chat widget script | Planned |
 | FR-04 | Admin invites support agents by email | **Built** |
-| FR-05 | Agent toggles availability | Planned |
+| FR-05 | Agent toggles availability | **Built** — Available or Busy by choice; offline worked out from a heartbeat |
 | FR-06 | Agent views a unified inbox | **Built** |
 | FR-07 | System detects low confidence and hands over | **Built** — three gates, not one |
-| FR-08 | System routes a chat to a free agent | **Built** — least-loaded rather than round-robin |
+| FR-08 | System routes a chat to a free agent | **Built** — least-loaded among agents who are available and online, rather than round-robin |
 | FR-09 | Agent receives a Web Push notification | **Built** |
 | FR-10 | End user receives a push about a web-chat reply | Planned, depends on FR-03 |
 
@@ -184,10 +183,12 @@ hid inside one box labelled "Connect Social Accounts".
 transcribes voice notes, reads photos, judges sentiment, writes the handover brief, picks the
 agent to hand to, and closes conversations that are not about the business at all.
 
-**"Toggle Availability" moved from built to planned.** It was implemented in Semester 1's
-design and even appeared in the UI, but the control was removed because nothing consumed it —
-routing considers every active member. It belongs back the moment routing respects it, which
-is why it is drawn dashed rather than deleted.
+**"Toggle Availability" is built, and routing respects it.** For a while it was drawn as
+planned: the Semester 1 control stored a value nothing read, so it was removed. It came back
+once routing used it. A person chooses Available or Busy; offline is not a choice but is worked
+out from the dashboard's once-a-minute heartbeat, so an "Available" left on overnight cannot
+keep sending customers to someone who has gone home. A conversation escalated while nobody is
+available waits, and goes to the first person who becomes available.
 
 **New cases the PRD never listed**, added because building the thing revealed the need:
 transfer a conversation to a colleague, read the automatically-written handover brief, enable

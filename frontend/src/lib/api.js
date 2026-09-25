@@ -50,6 +50,10 @@ export const signUp = (payload) => axios.post('/api/auth/signup', payload).then(
 export const logIn = (payload) => axios.post('/api/auth/login', payload).then(r => r.data);
 export const getMe = () => axios.get('/api/me').then(r => r.data);
 export const updateMe = (payload) => axios.put('/api/me', payload).then(r => r.data);
+// Availability (FR-05): the choice, and the heartbeat that tells the team this dashboard is open.
+export const heartbeat = () => axios.post('/api/me/heartbeat').then(r => r.data);
+export const setAvailability = (availability) =>
+    axios.put('/api/me/availability', { availability }).then(r => r.data);
 
 // ── Invitations (public: the recipient has no account yet) ──────────────────
 // Sign in with Google: the Firebase ID token, which the backend checks against Google's keys.

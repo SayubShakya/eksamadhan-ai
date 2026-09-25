@@ -123,7 +123,18 @@ export function useResource(key, fetcher) {
         reload();
     }, [key, reload]);
 
+    /** Changes the data in place, and in the session copy, when an event says what changed. */
+    const mutate = useCallback((fn) => {
+        setState(s => {
+            if (s.data === undefined) return s;
+            const data = fn(s.data);
+            store.set(keyRef.current, { ...(store.get(keyRef.current) || {}), data });
+            return { ...s, data };
+        });
+    }, []);
+
     return {
+        mutate,
         data: state.data,
         error: state.error,
         // Showing another key's data while this one loads.

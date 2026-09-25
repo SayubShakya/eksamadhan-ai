@@ -43,6 +43,24 @@ public interface ConversationThreadRepository extends JpaRepository<Conversation
           + "GROUP BY t.assignedAgentId")
     List<Object[]> countOpenPerAgent(String tenantId);
 
+    /** Handed to a person but nobody was available: the queue, oldest first. */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT t FROM ConversationThread t WHERE t.tenantId = :tenantId "
+          + "AND t.status = io.eksamadhan.model.ThreadStatus.OPEN_FOR_AGENT "
+          + "AND t.assignedAgentId IS NULL AND t.spam = false "
+          + "ORDER BY t.escalatedAt ASC NULLS FIRST")
+    List<ConversationThread> findUnassignedWaiting(String tenantId);
+
+    /**
+     * Take a waiting conversation for someone, only if nobody took it first. Two people coming
+     * online at the same moment must not both be told the same customer is theirs.
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(
+            "UPDATE ConversationThread t SET t.assignedAgentId = :agentId "
+          + "WHERE t.id = :id AND t.assignedAgentId IS NULL")
+    int claimUnassigned(java.util.UUID id, String agentId);
+
     /**
      * Conversations the AI still owes an answer on — see {@code SyncService.answerMissed}.
      *

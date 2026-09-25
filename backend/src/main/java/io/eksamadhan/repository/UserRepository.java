@@ -30,4 +30,17 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query("SELECT u FROM User u WHERE u.organization = :organization "
          + "AND u.status = io.eksamadhan.model.UserStatus.ACTIVE ORDER BY u.createdAt")
     List<User> findActiveByOrganization(Organization organization);
+
+    /**
+     * Only the presence columns, never the whole row: a heartbeat saving a stale copy of the
+     * user would undo a profile edit made in another tab a moment earlier.
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE User u SET u.lastSeenAt = :at WHERE u.id = :id")
+    int touchLastSeen(java.util.UUID id, java.time.OffsetDateTime at);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE User u SET u.availability = :availability, u.lastSeenAt = :at WHERE u.id = :id")
+    int setAvailability(java.util.UUID id, io.eksamadhan.model.Availability availability,
+                        java.time.OffsetDateTime at);
 }

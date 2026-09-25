@@ -81,7 +81,8 @@ sequenceDiagram
         AI->>T: escalate(thread, reason)
         T->>DB: status = OPEN_FOR_AGENT
         AI->>AR: pickAgent(organization)
-        AR-->>AI: least-loaded active agent
+        AR-->>AI: least-loaded agent who is Available and online
+        Note over AR: Nobody available: it waits unassigned, owners and admins<br/>are alerted, and the first person to come online gets it.
         AI->>DB: assign
         AI->>N: escalated(agent, thread, reason)
         N->>DB: write notification row

@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Avatar from '../components/Avatar.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import * as api from '../lib/api.js';
 import { LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
+import { PRESENCE } from '../components/AvailabilityMenu.jsx';
+import { timeAgo } from '../lib/format.js';
 
 const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', AGENT: 'Agent' };
 
@@ -13,6 +15,19 @@ const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', AGENT: 'Agent' };
  * Invites are links, not emails: creating one shows a URL to copy and send. That avoids an
  * email provider, and the admin can see exactly what they are sending.
  */
+/** Available, Busy, or Offline with when they were last here. */
+function Presence({ member }) {
+    const p = PRESENCE[member.presence] || PRESENCE.OFFLINE;
+    const offline = member.presence !== 'AVAILABLE' && member.presence !== 'BUSY';
+    return (
+        <span className={`presence presence--${(member.presence || 'OFFLINE').toLowerCase()}`}>
+            <span className={`dot ${p.dot}`} aria-hidden="true" />
+            {p.label}
+            {offline && (member.lastSeenAt ? `, last seen ${timeAgo(member.lastSeenAt)}` : ', not seen yet')}
+        </span>
+    );
+}
+
 /** A member row with the same classes as the real one, so it is the same height. */
 function MemberSkeleton({ name, email }) {
     return (
@@ -34,8 +49,24 @@ function MemberSkeleton({ name, email }) {
  * while the team loads; once it has loaded, the server's answer is used.
  */
 export default function TeamPage({ canManage: roleCanManage = false }) {
-    const { data: team, error: loadError, reload: load } = useResource('team', api.getTeam);
+    const { data: team, error: loadError, reload: load, mutate } = useResource('team', api.getTeam);
     const firstLoad = useHeldLoading(!team && !loadError);
+
+    // A colleague's status arrives the moment it changes (the live stream, see App.jsx); the
+    // slow refresh is only a backstop for a stream that has dropped.
+    useEffect(() => {
+        const onPresence = (e) => {
+            const { userId, presence, lastSeenAt } = e.detail || {};
+            mutate(t => ({
+                ...t,
+                members: t.members.map(m => (m.id === userId
+                    ? { ...m, presence, lastSeenAt: lastSeenAt ?? m.lastSeenAt } : m)),
+            }));
+        };
+        window.addEventListener('presence', onPresence);
+        const id = setInterval(load, 60000);
+        return () => { window.removeEventListener('presence', onPresence); clearInterval(id); };
+    }, [load, mutate]);
     const [email, setEmail] = useState('');
     const [role, setRole] = useState('AGENT');
     const [error, setError] = useState('');
@@ -131,7 +162,20 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                 </p>
             ))}
 
-            <h2 className="section-title">Members</h2>
+            <h2 className="section-title">
+                Members
+                {!loading && (() => {
+                    const active = team.members.filter(m => m.status === 'ACTIVE');
+                    const here = active.filter(m => m.presence === 'AVAILABLE').length;
+                    return <span className="count"> · {here} of {active.length} available now</span>;
+                })()}
+            </h2>
+            {!loading && !team.members.some(m => m.status === 'ACTIVE' && m.presence === 'AVAILABLE') && (
+                <p className="notice notice--warn">
+                    Nobody is available right now. Conversations the AI hands over will wait, and go to
+                    the first person who becomes available. Owners and admins are alerted meanwhile.
+                </p>
+            )}
             {loading && (loadError && !firstLoad ? (
                 <LoadError className="empty--panel"
                            message={api.errorMessage(loadError, 'Could not load the team.')}
@@ -151,6 +195,7 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                             {member.isYou && <span className="tag tag--ai" style={{ marginLeft: 8 }}>You</span>}
                         </div>
                         <div className="member__email">{member.email}</div>
+                        {member.status === 'ACTIVE' && <Presence member={member} />}
                     </div>
                     <div className="member__actions">
                         <span className="tag tag--agent">{ROLE_LABEL[member.role]}</span>

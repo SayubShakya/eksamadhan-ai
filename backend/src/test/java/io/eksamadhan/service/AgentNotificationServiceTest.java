@@ -112,6 +112,17 @@ class AgentNotificationServiceTest {
         }
 
         @Override
+        public int touchLastSeen(java.util.UUID id, java.time.OffsetDateTime at) {
+            return 0;
+        }
+
+        @Override
+        public int setAvailability(java.util.UUID id, io.eksamadhan.model.Availability availability,
+                                   java.time.OffsetDateTime at) {
+            return 0;
+        }
+
+        @Override
         public java.util.Optional<User> findByEmailIgnoreCase(String email) { return java.util.Optional.empty(); }
         @Override
         public boolean existsByEmailIgnoreCase(String email) { return false; }

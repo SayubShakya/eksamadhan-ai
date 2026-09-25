@@ -119,7 +119,7 @@ public class AgentNotificationService {
             for (User admin : admins) {
                 deliver(admin, Notification.Kind.ESCALATED, thread.getId(),
                         customerOf(thread) + " needs human support",
-                        "Nobody is assigned. " + (reason == null || reason.isBlank()
+                        "Nobody is available to take it, so it goes to the first person who is. " + (reason == null || reason.isBlank()
                                 ? preview(thread.getLastMessagePreview()) : reason + "."),
                         "/dashboard/inbox?thread=" + thread.getId());
             }

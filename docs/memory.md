@@ -393,6 +393,42 @@ status machine and authentication have all since been built — see the change l
   with the real TypeSafe key: the triage backfill ran during `mvn test` and judged the real
   open conversations for real. Harmless here, but tests are not isolated from the network.
 
+- **Agent availability, FR-05 (2026-09-26).** Migration V25: `users.availability` (AVAILABLE or
+  BUSY, default AVAILABLE, check constraint) and `users.last_seen_at`. Presence is worked out,
+  never stored: `AvailabilityService.presence` = OFFLINE if not ACTIVE or not seen within
+  `ONLINE_WINDOW` (3 min), else the chosen value. The dashboard posts `/api/me/heartbeat` every
+  60s and when the tab becomes visible (Chrome still runs a 60s timer in a background tab);
+  `PUT /api/me/availability` sets the choice. `AgentRoutingService.pickAgent` now only
+  considers `canTakeNew` people. **Never lose a client:** with nobody available the
+  conversation still escalates unassigned and owners/admins are alerted (existing branch), and
+  `claimQueue` hands waiting conversations out, oldest first, the moment someone becomes
+  available (heartbeat after being away, or choosing Available); `claimUnassigned` is a
+  conditional UPDATE so two people arriving at once cannot both get the same customer. Busy
+  keeps existing conversations; only new ones skip them. Manual reassignment may still pick an
+  offline person (the picker shows their status; it is a human's decision). UI: status menu in
+  the top bar (dot only on phones), presence and "last seen" on Team with "N of M available
+  now" and a warning when nobody is, presence in the reassign picker. The top-bar name now
+  hides below 420px when the install button shows, to make room. Tests: `AvailabilityTest` (4).
+  Needs a backend restart; the V25 migration has already been applied to the dev database by
+  the test run.
+
+- **Live presence over SSE (2026-09-26).** Sayub: a status change must show on colleagues' screens
+  with no refresh and no delay. `LiveEvents` holds one `SseEmitter` per open tab
+  (`GET /api/me/events?tab=<random per page load>`), publishes `presence` events to the workspace
+  after the transaction commits, and marks a person gone when their last tab closes: the page
+  sends `sendBeacon('/api/me/events/close?tab=…')` on `pagehide` (permitAll, the tab id is the
+  only secret and forging one just ends a stream the page reopens), and a keep-alive every 10s
+  catches a tab that died silently. A 5s grace stops a refresh flashing offline. Presence now
+  also counts `goneAt` (in memory; it only counts if the person has not been seen since). The
+  frontend reads the stream with `fetch` (`lib/live.js`), not `EventSource`, which cannot send
+  the bearer token, and patches App's team list, the Team page (`useResource().mutate`) and your
+  own status in other tabs. Security: `DispatcherType.ASYNC` is permitted so the stream's async
+  dispatches are not rejected. **Gotcha found by `LivePresenceTest`:** `connect()` must not clear
+  `goneAt`, or reopening the app is never announced (the before/after comparison sees no change).
+  Measured: status change 16ms, closed tab offline 5s, dead tab 7s. The menu text is Sayub's exact
+  wording ("a few minutes after you close EkSamadhan AI"); the real time is seconds, and minutes
+  only if the stream cannot run (heartbeat fallback, 3 min).
+
 - **Notification bell = unread inbox (2026-09-25).** `NotificationBell.jsx` rewritten to a brief.
   The panel lists only unread (`GET /api/notifications?unread=true&limit=5`; `unread` in the
   answer is always the full count) and opening it marks nothing read, which is what the old
@@ -1016,8 +1052,7 @@ status machine and authentication have all since been built — see the change l
   four escalations — 3-way tie, then 2, then the last free member, then a random tie-break.
   The assignee shows in the conversation list and above the composer.
 
-  Still missing from PRD 4.6: an availability toggle (FR-05), so routing currently considers
-  every ACTIVE member rather than only those marked online.
+  ~~Still missing from PRD 4.6: an availability toggle (FR-05).~~ Built 2026-09-26, see below.
 
 - **2026-09-17** — **The AI answers.** `LlmClient` (OpenRouter chat completions,
   `openai/gpt-4o-mini`) and `AiReplyService`, hooked into webhook ingestion through an

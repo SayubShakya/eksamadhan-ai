@@ -46,7 +46,7 @@ Meta Graph API integration"*
       agent invites. `demo-tenant-1` is gone: the workspace comes from the token.
       Google sign-in and OTP (§5.4.3) are deferred — record as a limitation
 - [ ] Encrypt stored Meta access tokens at rest
-- [ ] Agent online/offline status
+- [x] Agent online/offline status — done 2026-09-26 (FR-05: Available/Busy choice, offline from a heartbeat, routing and the waiting queue use it)
 - [x] Rename the domain toward the report's model (Tenant→Organization) and add the
       `Thread` concept with the `AI_HANDLING → OPEN_FOR_AGENT → …` status machine —
       done 2026-09-17

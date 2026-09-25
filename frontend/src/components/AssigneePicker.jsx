@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { PRESENCE } from './AvailabilityMenu.jsx';
 import { IconSearch, IconSparkle, IconCheck } from './icons.jsx';
 import Avatar from './Avatar.jsx';
 
@@ -83,7 +84,10 @@ export default function AssigneePicker({ thread, team = [], me, onAssign, onRetu
                             <span className="assignee__who">
                                 {[member.firstName, member.lastName].filter(Boolean).join(' ')}
                                 {member.isYou && ' (you)'}
-                                <small>{member.email}</small>
+                                <small>
+                                    <span className={`dot ${(PRESENCE[member.presence] || PRESENCE.OFFLINE).dot}`} aria-hidden="true" />
+                                    {' '}{(PRESENCE[member.presence] || PRESENCE.OFFLINE).label} · {member.email}
+                                </small>
                             </span>
                             {member.id === thread.assignedAgentId && <IconCheck />}
                         </button>

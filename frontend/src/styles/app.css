@@ -173,6 +173,37 @@
 .dot--busy { background: var(--warning); }
 .dot--offline { background: var(--text-muted); }
 
+/* Your status in the top bar (FR-05): Available or Busy; Offline is automatic. */
+.availability { position: relative; flex-shrink: 0; }
+.availability__button {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--r-sm);
+    background: var(--bg); color: var(--text); font-size: 13px; font-weight: 500;
+}
+.availability__button:hover:not(:disabled) { background: var(--surface); }
+.availability__button .assignee__caret { margin-left: 2px; }
+.availability__menu {
+    position: absolute; top: calc(100% + 8px); right: 0; z-index: 60; width: 280px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md);
+    box-shadow: 0 10px 30px rgba(16, 20, 27, .14); padding: 6px;
+}
+.availability__option {
+    width: 100%; display: flex; align-items: flex-start; gap: 10px; text-align: left;
+    padding: 9px 10px; border: 0; background: none; border-radius: var(--r-sm); color: var(--text);
+}
+.availability__option .dot { margin-top: 6px; }
+.availability__option:hover { background: var(--surface); }
+.availability__option svg { margin-left: auto; color: var(--accent); margin-top: 3px; flex-shrink: 0; }
+.availability__text { display: flex; flex-direction: column; font-weight: 500; font-size: 14px; }
+.availability__text small { color: var(--text-muted); font-weight: 400; font-size: 12px; }
+.availability__foot { margin: 4px 10px 6px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
+
+/* Presence beside a person's name (Team, the reassign picker). */
+.presence { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.presence--available { color: var(--success); }
+.presence--busy { color: var(--warning); }
+.assignee__who small .dot { display: inline-block; vertical-align: middle; width: 7px; height: 7px; }
+
 .topbar__search {
     flex: 1; max-width: 520px; margin: 0 auto;
     position: relative; min-width: 0;
@@ -464,8 +495,8 @@
     .topbar:has(.topbar__search) .brand { display: inline-flex; }
     .topbar .brand__name { font-size: 15px; }
 }
-@media (max-width: 380px) {
-    /* With the install button showing as well, the name no longer fits. */
+@media (max-width: 420px) {
+    /* With the install button and your status showing as well, the name no longer fits. */
     .topbar:has(.topbar__install) .brand { display: none; }
 }
 @media (max-width: 340px) {
@@ -1801,6 +1832,9 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
     /* Top bar: icons only. The name and role are one tap away, in the profile panel. */
     .topbar { gap: 6px; padding: 0 8px; }
     .topbar__actions { gap: 6px; }
+    .availability__label { display: none; }
+    .availability__button { padding: 8px; }
+    .availability__menu { position: fixed; top: calc(var(--topbar) + env(safe-area-inset-top) + 6px); left: 8px; right: 8px; width: auto; }
     .user__text { display: none; }
     .user { padding: 2px; }
 

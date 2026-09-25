@@ -21,6 +21,7 @@ import { LogoMark } from './components/Logo.jsx';
 import * as api from './lib/api.js';
 import { mergeThreads } from './lib/format.js';
 import { clearResources, prefetch } from './lib/loading.js';
+import { connectLive } from './lib/live.js';
 import './styles/tokens.css';
 import './styles/app.css';
 
@@ -250,15 +251,58 @@ export default function App() {
         return () => window.removeEventListener('auth:expired', onExpired);
     }, []);
 
-    // Members available to hand a conversation to. Small and rarely changing, so it is
-    // fetched once rather than polled.
+    // Members to hand a conversation to. Refreshed every minute, because who is available
+    // changes through the day and the picker shows it.
     const [team, setTeam] = useState([]);
     useEffect(() => {
-        if (!workspaceSession) return;
-        api.getTeam()
+        if (!workspaceSession) return undefined;
+        const load = () => api.getTeam()
             .then(data => setTeam(data.members.filter(m => m.status === 'ACTIVE')))
-            .catch(() => setTeam([]));
+            .catch(() => { /* keep the last list */ });
+        load();
+        const id = setInterval(load, 60000);
+        return () => clearInterval(id);
     }, [workspaceSession]);
+
+    // FR-05: tell the server this dashboard is open, once a minute and whenever the tab comes
+    // back into view. Stop, and the server counts this person offline after a few minutes,
+    // so new conversations stop coming to them.
+    useEffect(() => {
+        if (!workspaceSession) return undefined;
+        const beat = () => api.heartbeat().catch(() => { /* next beat will try again */ });
+        beat();
+        const id = setInterval(beat, 60000);
+        const onVisible = () => { if (document.visibilityState === 'visible') beat(); };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible); };
+    }, [workspaceSession]);
+
+    // Live updates: a colleague switching to Busy, or closing their dashboard, shows here at
+    // once. The event carries the new state, so screens patch themselves without refetching.
+    useEffect(() => {
+        if (!workspaceSession) return undefined;
+        const myId = workspaceSession.user?.id;
+        return connectLive(({ event, data }) => {
+            if (event !== 'presence' || !data?.userId) return;
+            setTeam(list => list.map(m => (m.id === data.userId
+                ? { ...m, presence: data.presence, lastSeenAt: data.lastSeenAt ?? m.lastSeenAt } : m)));
+            // Your own status, changed in another tab or on another device.
+            if (data.userId === myId && data.availability) {
+                setSession(s => (s && s.user.availability !== data.availability
+                    ? { ...s, user: { ...s.user, availability: data.availability } } : s));
+            }
+            window.dispatchEvent(new CustomEvent('presence', { detail: data }));
+        });
+    }, [workspaceSession]);
+
+    const changeAvailability = useCallback(async (next) => {
+        try {
+            const result = await api.setAvailability(next);
+            setSession(s => (s ? { ...s, user: { ...s.user, availability: result.availability } } : s));
+        } catch (err) {
+            setSendError(api.errorMessage(err, 'Your status could not be changed.'));
+        }
+    }, []);
 
     const [summarising, setSummarising] = useState(false);
 
@@ -628,7 +672,7 @@ export default function App() {
                     <LogoMark size={40} color="#2563eb" />
                     <h1 className="auth__title">You're offline</h1>
                     <p className="auth__sub">
-                        EkSamadhan cannot reach the server. You are still signed in, and it will
+                        EkSamadhan AI cannot reach the server. You are still signed in, and it will
                         reconnect on its own as soon as it can.
                     </p>
                     <button className="btn btn--secondary" onClick={() => window.location.reload()}>Try again</button>
@@ -672,7 +716,7 @@ export default function App() {
             {/* A new version is installed and waiting (see public/sw.js on why it waits). */}
             {app.updateReady && (
                 <div className="update-banner" role="status">
-                    <span>A new version of EkSamadhan is ready.</span>
+                    <span>A new version of EkSamadhan AI is ready.</span>
                     <button className="btn btn--sm btn--primary" onClick={app.applyUpdate}>Reload</button>
                 </div>
             )}
@@ -699,6 +743,7 @@ export default function App() {
                     onSignOut={requestSignOut}
                     onOpenNotification={openNotification}
                     onSeeAllNotifications={() => setView('notifications')}
+                    onAvailabilityChange={changeAvailability}
                 />
 
                 {view === 'home' && (

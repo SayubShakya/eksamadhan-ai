@@ -22,9 +22,8 @@ while another is handed to a person.
 Everything drawn with a **solid** border is built and can be demonstrated. Everything drawn
 **dashed** is designed but not built, and is labelled *planned* with its requirement id.
 
-Not built yet: the web chat widget (FR-03), the visitor push notification that depends on it
-(FR-10), and the agent availability toggle (FR-05). Google sign-in and the installable PWA are
-planned for the coming week.
+Not built yet: the web chat widget (FR-03) and the visitor push notification that depends on it
+(FR-10). Google sign-in and the installable PWA, once planned, are built.
 
 One caveat that belongs on the record: the code path for Instagram is complete and identical
 to Facebook's — same webhook, same parser, same inbox — but the Instagram account could not be
@@ -78,7 +77,7 @@ Twenty-three differences, grouped by why they happened.
 
 | Area | Semester 1 | Semester 2 |
 | :--- | :--- | :--- |
-| Dashboard transport | drawn as **WebSocket / REST** | **REST and polling only.** There are no websockets: messages and threads poll every 1.5s, connection status 5s, Meta sync 10s, the notification bell 15s |
+| Dashboard transport | drawn as **WebSocket / REST** | **REST and polling, plus one server-sent event stream.** No websockets: messages and threads poll every 1.5s, connection status 5s, Meta sync 10s, the notification bell 15s. Agent presence (FR-05) is pushed over `GET /api/me/events` so a status change shows on colleagues' screens at once |
 | Escalation trigger | a single "confidence < 70%" | **three gates** — retrieval similarity first (weak retrieval drops the passages but the model still answers, so "hello" is met conversationally), then the model's own verdict on whether the passages answer it, then confidence. Plus a `related` flag so a question the knowledge base does not cover is passed to a person rather than treated as spam |
 | Web chat widget | drawn as a finished component | **not built** — FR-03 and FR-10 |
 | Deployment | not modelled | **one Docker service** (`pgvector/pgvector:pg16`). Backend, frontend and Ollama all run on the host |

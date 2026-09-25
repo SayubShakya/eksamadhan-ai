@@ -35,6 +35,8 @@ classDiagram
         +String avatar
         +OffsetDateTime lastLoginAt
         +boolean systemAdmin
+        +Availability availability
+        +OffsetDateTime lastSeenAt
         +displayName() String
     }
 
@@ -336,6 +338,23 @@ classDiagram
         +pickAgent(organization) Optional~User~
     }
 
+    class LiveEvents {
+        +connect(tab, userId, organizationId) SseEmitter
+        +publish(organizationId, name, data)
+        +closeTab(tab)
+        +goneAt(userId) OffsetDateTime
+    }
+
+    class AvailabilityService {
+        +ONLINE_WINDOW$ Duration
+        +presence(user, now, goneAt)$ Presence
+        +canTakeNew(user, now, goneAt)$ boolean
+        +presenceOf(user) Presence
+        +heartbeat(user) Presence
+        +choose(user, availability) Presence
+        +claimQueue(organization) int
+    }
+
     class ConversationSummaryService {
         +scheduleWhenQuiet(threadId)
         +summariseNow(threadId)
@@ -473,6 +492,11 @@ classDiagram
     AiReplyService --> ConversationMemoryService
     AiReplyService --> ThreadService
     AiReplyService --> AgentRoutingService
+    AgentRoutingService ..> AvailabilityService : only available and online
+    AvailabilityService --> AgentRoutingService
+    AvailabilityService --> AgentNotificationService
+    AvailabilityService --> LiveEvents : publishes presence
+    AgentRoutingService --> LiveEvents : tab closed means offline
     AiReplyService --> ConversationSummaryService
     AiReplyService --> AgentNotificationService
     AiReplyService --> EmailService

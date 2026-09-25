@@ -43,8 +43,13 @@ public class SecurityConfig {
                         // /error, which the chain then rejects — turning every 400 and 409
                         // into a confusing 401.
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                        // The live event stream (GET /api/me/events) is checked when it opens;
+                        // the later async dispatches that write to it carry no token of their own.
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         // Meta signs these itself (X-Hub-Signature-256); see WebhookSignatureVerifier.
                         .requestMatchers("/api/webhook/**").permitAll()
+                        // A closing page's goodbye; sendBeacon cannot send the token. See LiveEvents.closeTab.
+                        .requestMatchers(HttpMethod.POST, "/api/me/events/close").permitAll()
                         .requestMatchers("/api/auth/privacy", "/api/auth/terms", "/api/auth/data-deletion").permitAll()
                         .requestMatchers("/api/auth/signup", "/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/google", "/api/auth/signup/google").permitAll()

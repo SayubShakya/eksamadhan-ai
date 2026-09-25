@@ -52,6 +52,8 @@ erDiagram
         timestamptz created_at
         timestamptz last_login_at
         boolean system_admin "set only from configuration"
+        varchar availability "AVAILABLE BUSY, chosen by the person"
+        timestamptz last_seen_at "dashboard heartbeat, online if recent"
     }
 
     INVITATIONS {

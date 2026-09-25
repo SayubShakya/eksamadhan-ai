@@ -75,6 +75,16 @@ public class User {
     @Column(name = "last_login_at")
     private OffsetDateTime lastLoginAt;
 
+    /** Whether they take new conversations when online (FR-05). */
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    @Column(nullable = false, length = 20)
+    private Availability availability = Availability.AVAILABLE;
+
+    /** Refreshed every minute by an open dashboard; online means seen recently. */
+    @Column(name = "last_seen_at")
+    private OffsetDateTime lastSeenAt;
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) createdAt = OffsetDateTime.now();
