@@ -28,7 +28,12 @@ const URGENT = new Set(['ESCALATED']);
 /** Tells the full notifications page (and any other listener) that the unread set changed. */
 const announce = () => window.dispatchEvent(new Event('notifications:changed'));
 
-export default function NotificationBell({ onOpen, onSeeAll, color }) {
+/**
+ * `onPage` is true while the full notifications page is open. The bell then opens nothing: the
+ * page already is the full list, and a dropdown of the same alerts on top of it showed two
+ * copies. It stays a way back to the top of that page.
+ */
+export default function NotificationBell({ onOpen, onSeeAll, color, onPage = false }) {
     const [items, setItems] = useState([]);           // unread, newest first, at most PEEK
     const [unread, setUnread] = useState(0);          // the server's full count
     // 'loading' until the first answer, so an empty panel before it is not "all caught up".
@@ -114,7 +119,15 @@ export default function NotificationBell({ onOpen, onSeeAll, color }) {
         return () => { root.classList.remove('scroll-locked'); clearInterval(id); };
     }, [open]);
 
+    // Moving to the full page closes the dropdown if it was open.
+    useEffect(() => { if (onPage) setOpen(false); }, [onPage]);
+
     const toggle = () => {
+        if (onPage) {
+            document.querySelector('.page')?.scrollTo({ top: 0, behavior: 'smooth' });
+            load();
+            return;
+        }
         const next = !open;
         setOpen(next);
         if (next) load();
@@ -186,12 +199,13 @@ export default function NotificationBell({ onOpen, onSeeAll, color }) {
         <div className="bell">
             <button
                 ref={buttonRef}
-                className="icon-btn bell__button"
+                className={`icon-btn bell__button${onPage ? ' bell__button--current' : ''}`}
                 style={color ? { color } : undefined}
                 onClick={toggle}
                 aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
-                aria-haspopup="menu"
-                aria-expanded={open}
+                aria-haspopup={onPage ? undefined : 'menu'}
+                aria-expanded={onPage ? undefined : open}
+                aria-current={onPage ? 'page' : undefined}
             >
                 <IconBell />
                 {unread > 0 && <span className="bell__count" aria-hidden="true">{badge}</span>}

@@ -744,6 +744,7 @@ export default function App() {
                     onOpenNotification={openNotification}
                     onSeeAllNotifications={() => setView('notifications')}
                     onAvailabilityChange={changeAvailability}
+                    view={view}
                 />
 
                 {view === 'home' && (

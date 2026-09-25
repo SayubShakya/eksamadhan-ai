@@ -486,6 +486,9 @@ expire after 7 days — re-send if it lapses.
       crashed), instead of after 3 minutes. Brand written "EkSamadhan AI" in the status menu,
       the offline screen, the update banner and the install tooltip. 1 new end-to-end test over
       real HTTP (74 in all); architecture and class diagrams updated
+- [x] Fixed two copies of the notifications on the notifications page: the bell no longer opens
+      its dropdown there, and is highlighted as the current page instead. Old alerts stored with
+      a siren emoji in the title (13 rows) cleaned by migration V26
 
 **Commits this week**
 

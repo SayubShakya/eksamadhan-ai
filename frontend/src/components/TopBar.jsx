@@ -18,7 +18,7 @@ const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', AGENT: 'Agent' };
 export default function TopBar({
     query, onQueryChange, user,
     onToggleNav, onHome, unread = 0, navOpen, showSearch, onEditProfile, onSignOut,
-    onOpenNotification, onSeeAllNotifications, onAvailabilityChange,
+    onOpenNotification, onSeeAllNotifications, onAvailabilityChange, view,
 }) {
     const role = ROLE_LABEL[user?.role] ?? user?.role ?? '';
     const app = usePwa();
@@ -71,7 +71,7 @@ export default function TopBar({
                 <AvailabilityMenu value={user?.availability} onChange={onAvailabilityChange} />
             )}
 
-            <NotificationBell onOpen={onOpenNotification} onSeeAll={onSeeAllNotifications} />
+            <NotificationBell onOpen={onOpenNotification} onSeeAll={onSeeAllNotifications} onPage={view === 'notifications'} />
 
             <button className="user" onClick={onEditProfile} aria-label="Edit profile">
                 <span className="user__text">

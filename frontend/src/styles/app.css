@@ -707,6 +707,8 @@
 /* ── Notification bell ─────────────────────────────────────────────────── */
 .bell { position: relative; flex-shrink: 0; }
 .bell__button { position: relative; }
+/* On the notifications page the bell is where you are, like a selected nav item. */
+.bell__button--current, .bell__button--current:hover { background: var(--accent-tint); color: var(--accent); }
 
 /* Sits on the bell's upper-right, ringed in the bar's own colour so it reads as a
    badge rather than as part of the icon. */

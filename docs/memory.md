@@ -412,6 +412,11 @@ status machine and authentication have all since been built — see the change l
   Needs a backend restart; the V25 migration has already been applied to the dev database by
   the test run.
 
+- **Notifications page has no sidebar item, by decision (2026-09-26).** The bell is its entry, as
+  in most apps; on that page the bell gets `.bell__button--current` + `aria-current="page"` and
+  opens no dropdown (the dropdown on top of the full list showed the same alerts twice). V26
+  strips the leading "🚨 " from 13 old `notifications.title` rows written before the no-emoji rule.
+
 - **Live presence over SSE (2026-09-26).** Sayub: a status change must show on colleagues' screens
   with no refresh and no delay. `LiveEvents` holds one `SseEmitter` per open tab
   (`GET /api/me/events?tab=<random per page load>`), publishes `presence` events to the workspace
