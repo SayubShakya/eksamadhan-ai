@@ -393,16 +393,66 @@ status machine and authentication have all since been built — see the change l
   with the real TypeSafe key: the triage backfill ran during `mvn test` and judged the real
   open conversations for real. Harmless here, but tests are not isolated from the network.
 
-- **The dashboard is an installable PWA (2026-09-25).** `public/manifest.webmanifest` (id
-  `/dashboard`, standalone, shortcuts to Inbox and Knowledge), icons generated from the logo in
-  `public/icons/` (any + maskable + apple-touch), and `lib/pwa.js`, which catches
-  `beforeinstallprompt` before React mounts and registers `sw.js` for everyone — before, it was
-  only registered when someone turned notifications on, so most people could never have
-  installed it. The worker's only cache is `offline.html` (self-contained: inline icon and
-  styles, since offline nothing else can load); `/api` and dashboard files are never cached.
-  Chrome's own check reports zero installability errors; offline fallback verified by cutting
-  the worker's network. Install button in the top bar only while the browser offers it, plus
-  a per-device row in the profile panel (iOS gets the Share → Add to Home Screen hint).
+- **Testing on a phone (2026-09-25).** The phone needs HTTPS to install. Use a Cloudflare quick
+  tunnel to the frontend: `cloudflared tunnel --url http://localhost:5174` (no account, no
+  warning page, no time limit; the address changes each start). **Not a second Pinggy tunnel:**
+  the free plan allows one at a time, so it and `run.sh`'s backend tunnel knocked each other off
+  ("Tunnel dropped — reconnecting", "closed by remote host"), and Pinggy's free warning page
+  lets a browser through on a cookie that lasts 10 minutes, after which API calls get the warning
+  page. Two fixes came out of it: the Vite proxy drops the `Origin` header on `/api`
+  (the backend's CORS allowed only `FRONTEND_URL`, so every call through a tunnel was 403
+  "Invalid CORS request" — safe because auth is a bearer token, not a cookie); and Firebase
+  errors in AuthPage now say what failed (`googleErrorMessage`) instead of "could not reach the
+  server". Google sign-in on a tunnel address needs that address added to Firebase →
+  Authentication → Settings → Authorized domains. Verified with a real Chrome posing as an
+  Android phone; Sayub installed it and signed in on his Android.
+
+- **The dashboard is an installable PWA (2026-09-25, reworked the same day to a full brief).**
+  - Assets: `frontend/scripts/generate-pwa-assets.mjs` renders every icon (192/512/1024 + SVG,
+    separate maskable, opaque apple-touch, white-on-transparent `badge-96.png` for Android's
+    status bar), 42 iOS launch images (21 devices × 2 orientations) and rewrites their `<link>`
+    tags in `index.html` between `pwa:startup-images` markers. Needs puppeteer from outside
+    package.json; outputs are committed.
+  - Splash: inline HTML + `<style>` in `index.html`, a sibling of `#root`, white = manifest
+    `background_color` = launch images, tile 88px centred everywhere. `lib/splash.js` fades it
+    after two nested rAFs and removes it on transitionend or an 800ms timer started *outside*
+    the rAFs (background tabs run no rAF). Hidden when the first real screen exists
+    (`session !== undefined`), not at mount — the app renders `null` while checking the session.
+  - Worker (`public/sw.js`, cache `eksamadhan-v3`): navigations network-first → cached shell →
+    `offline.html`; `/assets/*` cache-first; `/icons/*` stale-while-revalidate; `/api`,
+    cross-origin and non-GET never answered. `skipWaiting` only on first install; updates wait
+    for "A new version is ready — Reload" (SKIP_WAITING message), because an immediate swap
+    deletes the cache under a session that may still lazy-load an old hashed chunk.
+  - Dev server registers `/sw.js?dev=1`: push only, no fetch handling, deletes every cache —
+    deliberately not unregistered, which would break Web Push on localhost. `registerWorker()`
+    in `lib/pwa.js` is the only registration (push.js uses it): two script URLs under one
+    scope replace each other.
+  - Bug fixed on the way: a failed `/api/me` of any kind cleared the token, so an offline start
+    signed staff out. Now only 401/403 does; no answer shows "You're offline" and reconnects on
+    the `online` event or a 10s retry.
+  - **Android draws its launch screen from the maskable icon, at 288×288dp** (Android 12+), and
+    uses that one image for the home-screen icon too — there is no separate launch image. So only
+    three pairs exist: white ring round the home icon + neat white launch; full blue icon + blue
+    launch; full blue icon + white launch with a large blue shape. Sayub tried the first two on
+    his phone and chose the third (2026-09-25): full-bleed blue maskable (`MASK_SCALE` 0.42),
+    white `background_color`/`theme_color`, iOS launch images white with a 116pt tile.
+  - **One logo per launch, not two.** Android's launch screen already shows the logo, and the
+    in-app splash then showed it again — Sayub saw "2 icons popping up". The in-app splash now
+    hides its logo under `@media (display-mode: standalone), (display-mode: minimal-ui)`, so the
+    installed app shows Android's logo, then plain white, then the app; a browser tab (no OS
+    splash) still gets the 116px tile. No spinner. Chrome's media emulation cannot fake
+    display-mode, so this was checked as a parsed rule and on Sayub's phone, not headless.
+    An installed app keeps its old icon until Chrome refreshes it (up to a day) — reinstall.
+  - `display: standalone`, not fullscreen (keeps the notification shade on Android). Safe-area
+    padding on `.shell` and `.auth`, `100dvh`, `viewport-fit=cover`.
+  - Verified: Chrome installability audit — no errors; built app offline → "You're offline",
+    token kept, reconnect 14ms after the network returned; slow 3G — splash painted at 1.27s,
+    bundle finished 3.25s, fade began with the app already rendered; rAF-less tab — splash
+    removed by the timer; badge 0 non-white pixels, apple-touch 0 translucent; dev — worker
+    `?dev=1`, 0 caches, an edit appeared live. **Not verifiable here:** Android install
+    (icon crop, launch-splash colour), iOS Add to Home Screen (launch image, notch) — needs a
+    real device and HTTPS. Meta connect and the Google popup leave the app's scope; do them
+    in a browser tab if the installed app misbehaves.
 
 - **Sign in with Google (2026-09-25).** Firebase Authentication in the browser, verification in
   `FirebaseTokenVerifier` (Google's JWKS + issuer/audience/expiry, `email_verified`, provider

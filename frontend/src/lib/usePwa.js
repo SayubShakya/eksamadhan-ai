@@ -5,5 +5,5 @@ import * as pwa from './pwa.js';
 export default function usePwa() {
     const [state, setState] = useState(pwa.state);
     useEffect(() => pwa.subscribe(setState), []);
-    return { ...state, install: pwa.install };
+    return { ...state, install: pwa.install, applyUpdate: pwa.applyUpdate };
 }

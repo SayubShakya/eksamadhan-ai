@@ -1,5 +1,11 @@
 /* ── Shell ─────────────────────────────────────────────────────────── */
-.shell { display: flex; height: 100vh; overflow: hidden; }
+/* Installed on an iPhone there is no browser chrome: without the safe-area padding the top bar
+   runs under the notch and the composer under the home indicator. 100dvh, not 100vh, so the
+   height follows the visible area as mobile toolbars come and go. */
+.shell {
+    display: flex; height: 100vh; height: 100dvh; overflow: hidden; box-sizing: border-box;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
 
 .scrim {
     position: fixed; inset: 0; z-index: 40;
@@ -1012,9 +1018,12 @@
 /* ── Sign in / sign up / accept invite ───────────────────────────────────── */
 .auth {
     min-height: 100vh;
+    min-height: 100dvh;
+    box-sizing: border-box;
+    padding: calc(24px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
+             calc(24px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
     display: grid;
     place-items: center;
-    padding: 24px 16px;
     background: var(--panel);
 }
 .auth__card {
@@ -1589,3 +1598,12 @@
 /* Install the dashboard as an app — shown only while the browser offers it. */
 .topbar__install { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
 @media (max-width: 640px) { .topbar__install-text { display: none; } }
+
+/* A new version is installed and waiting; it takes over only when the person says so. */
+.update-banner {
+    position: fixed; z-index: 1000; left: 50%; transform: translateX(-50%);
+    top: calc(12px + env(safe-area-inset-top));
+    display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md);
+    box-shadow: var(--shadow-md); font-size: 13px;
+}

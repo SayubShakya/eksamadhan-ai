@@ -12,6 +12,15 @@ export default defineConfig({
             '/api': {
                 target: 'http://localhost:8080',
                 changeOrigin: true,
+                // The page and /api share this server's origin, so the browser needs no CORS
+                // here — but it still sends an Origin header, and the backend only accepts
+                // FRONTEND_URL. Opened through a tunnel (a phone testing the installed app) the
+                // origin is the tunnel's, and every call was refused. Dropping the header at our
+                // own proxy is safe: the API authenticates with a bearer token the page sends
+                // itself, never a cookie a browser would attach for another site.
+                configure: (proxy) => {
+                    proxy.on('proxyReq', (proxyReq) => proxyReq.removeHeader('origin'));
+                },
             },
         },
     },

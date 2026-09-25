@@ -10,6 +10,7 @@
  * not, and neither does a tunnel without https.
  */
 import * as api from './api.js';
+import { registerWorker } from './pwa.js';
 
 export const supported = () =>
     typeof window !== 'undefined'
@@ -36,7 +37,8 @@ function encodeKey(buffer) {
     return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-const register = () => navigator.serviceWorker.register('/sw.js', { scope: '/' });
+// The shared registration: the worker's URL differs between a build and the dev server.
+const register = () => registerWorker();
 
 const SNOOZE_KEY = 'push-snoozed-at';
 const SNOOZE_DAYS = 7;

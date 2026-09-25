@@ -13,6 +13,9 @@ import ProfilePanel from './components/ProfilePanel.jsx';
 import ConfirmDialog from './components/ConfirmDialog.jsx';
 import NotificationPrompt from './components/NotificationPrompt.jsx';
 import * as push from './lib/push.js';
+import { hideSplash } from './lib/splash.js';
+import usePwa from './lib/usePwa.js';
+import { LogoMark } from './components/Logo.jsx';
 import * as api from './lib/api.js';
 import { mergeThreads } from './lib/format.js';
 import './styles/tokens.css';
@@ -71,7 +74,12 @@ export default function App() {
     // different from `null` (definitely signed out) — without that distinction the sign-in
     // screen flashes on every reload.
     const [session, setSession] = useState(undefined);
+    // The server could not be reached while checking the session — offline, most likely. Kept
+    // apart from "signed out": treating no connection as no account signed staff out every time
+    // the installed app opened without a signal.
+    const [unreachable, setUnreachable] = useState(false);
     const [authRoute, setAuthRoute] = useState(authRouteFromPath);
+    const app = usePwa();
 
     // The section lives in the path, so URLs are shareable and a refresh keeps you
     // where you were. Vite and any static host must fall back to index.html.
@@ -153,14 +161,37 @@ export default function App() {
 
     // One call decides whether we are signed in: a stored token is only a claim until the
     // server accepts it (it may have expired, or the account may be gone).
+    // Only the server saying no ends a session. No answer at all keeps the token and retries —
+    // when the connection returns, and every ten seconds in case it returns unannounced.
     useEffect(() => {
         let cancelled = false;
-        if (!api.getToken()) { setSession(null); return; }
-        api.getMe()
-            .then(data => { if (!cancelled) setSession(data); })
-            .catch(() => { if (!cancelled) { api.clearToken(); setSession(null); } });
-        return () => { cancelled = true; };
+        let retry = null;
+        if (!api.getToken()) { setSession(null); return undefined; }
+        const check = () => api.getMe()
+            .then(data => { if (!cancelled) { setUnreachable(false); setSession(data); } })
+            .catch(err => {
+                if (cancelled) return;
+                const status = err?.response?.status;
+                if (status === 401 || status === 403) {
+                    api.clearToken();
+                    setSession(null);
+                } else {
+                    setUnreachable(true);
+                    clearTimeout(retry);
+                    retry = setTimeout(check, 10000);
+                }
+            });
+        const onOnline = () => { clearTimeout(retry); check(); };
+        window.addEventListener('online', onOnline);
+        check();
+        return () => { cancelled = true; clearTimeout(retry); window.removeEventListener('online', onOnline); };
     }, []);
+
+    // The inline splash in index.html stays up until there is a real screen to show: the
+    // sign-in page, the reconnecting screen, or the app. Not at mount — while the session is
+    // being checked this renders nothing, which is the blank gap the splash exists to cover.
+    const firstScreen = session !== undefined || unreachable;
+    useEffect(() => { if (firstScreen) hideSplash(); }, [firstScreen]);
 
     // Notifications, once the session is real. `state()` re-registers this browser against
     // whoever just signed in, re-subscribes silently when permission was already given, and
@@ -477,8 +508,23 @@ export default function App() {
     }, []);
 
     // Still asking the server. Rendering nothing beats flashing the sign-in screen at
-    // someone who is signed in.
-    if (session === undefined) return null;
+    // someone who is signed in — and the splash is still covering it.
+    if (session === undefined) {
+        if (!unreachable) return null;
+        return (
+            <div className="auth">
+                <div className="auth__card" role="status">
+                    <LogoMark size={40} color="#2563eb" />
+                    <h1 className="auth__title">You're offline</h1>
+                    <p className="auth__sub">
+                        EkSamadhan cannot reach the server. You are still signed in, and it will
+                        reconnect on its own as soon as it can.
+                    </p>
+                    <button className="btn btn--secondary" onClick={() => window.location.reload()}>Try again</button>
+                </div>
+            </div>
+        );
+    }
 
     if (!session) {
         const route = authRoute ?? { mode: 'login' };
@@ -507,6 +553,13 @@ export default function App() {
 
     return (
         <div className="shell">
+            {/* A new version is installed and waiting (see public/sw.js on why it waits). */}
+            {app.updateReady && (
+                <div className="update-banner" role="status">
+                    <span>A new version of EkSamadhan is ready.</span>
+                    <button className="btn btn--sm btn--primary" onClick={app.applyUpdate}>Reload</button>
+                </div>
+            )}
             <NavRail
                 view={view}
                 onNavigate={setView}

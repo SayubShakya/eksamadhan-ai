@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { LogoMark } from '../components/Logo.jsx';
 import { IconEye, IconEyeOff } from '../components/icons.jsx';
 import * as api from '../lib/api.js';
-import { googleSignInAvailable, googleIdToken, isCancelled } from '../lib/firebase.js';
+import { googleSignInAvailable, googleIdToken, isCancelled, googleErrorMessage } from '../lib/firebase.js';
 
 /** Google's own mark, as its sign-in branding asks for: the four-colour G, unaltered. */
 function GoogleMark() {
@@ -88,9 +88,10 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate }) {
             onSession(session);
         } catch (err) {
             if (!isCancelled(err)) {
-                setError(api.errorMessage(err, err?.code === 'auth/popup-blocked'
-                    ? 'Your browser blocked the Google window. Allow pop-ups for this site and try again.'
-                    : 'Google sign-in did not work. Please try again.'));
+                // Firebase's own failures first: they have no HTTP response, and the generic
+                // handler would call every one of them "could not reach the server".
+                setError(googleErrorMessage(err)
+                    ?? api.errorMessage(err, 'Google sign-in did not work. Please try again.'));
             }
             setGoogleBusy(false);
         }

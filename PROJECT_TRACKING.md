@@ -287,10 +287,20 @@ expire after 7 days — re-send if it lapses.
       workspace; its only page for now is the conversation visualizer. Workspace owners get 403
       on its endpoints, checked live
 - [x] **The dashboard installs as an app (PWA)** — its own window and icon on a laptop or phone,
-      with no app store: a manifest, icons made from the logo, an Install button that appears
-      only when the browser offers it, and an offline page instead of the browser's error.
-      Nothing else is cached, so the installed app never shows a stale inbox. Checked with
-      Chrome's own installability audit (no errors) and by taking the app offline
+      with no app store. A branded splash paints instantly (inline in the page, before any
+      JavaScript), matching the phone's own launch screen, and hands over to the app with no
+      blank frame; the app opens offline from its cached shell without signing anyone out, and
+      offers updates instead of swapping them under an open session. Icons, the Android
+      notification badge and 42 iPhone/iPad launch images are generated from the logo. Checked:
+      Chrome's installability audit (no errors), offline start, slow 3G (splash at 1.3s,
+      bundle at 3.3s) and the dev server (no caching, edits appear live)
+- [x] Home-screen icon kept full blue, and the installed app now shows its logo once: the loading
+      screen no longer repeats the logo (or a spinner) after Android's own launch screen
+- [x] **Installed and used on a real Android phone**, through an HTTPS tunnel. Two fixes on the
+      way: requests through a tunnel were refused by the backend's cross-origin check, and a
+      Google sign-in failure was reported as "could not reach the server" instead of its cause
+- [x] Fixed staff being signed out when the app started without a connection — any failed
+      session check cleared the sign-in; now only the server refusing it does
 - [x] **Sign in with Google (Firebase Authentication)** — on sign-in, workspace sign-up and
       invitation acceptance, so staff join without creating another password. The backend
       checks Google's signature on every sign-in token itself, with no service-account key; a
