@@ -280,6 +280,7 @@
 .stat__label { font-size: 12px; font-weight: 500; color: var(--text-muted); }
 .stat__value { font-size: 28px; font-weight: 650; letter-spacing: -.02em; margin-top: 8px; }
 .stat__value--empty { color: var(--border-strong); }
+.stat__note { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 .stat__unit { font-size: 12px; color: var(--text-muted); font-weight: 400; margin-left: 6px; }
 
 /* Channel cards */
@@ -366,6 +367,7 @@
     padding: 12px 20px; display: flex; align-items: center; gap: 12px;
 }
 .thread__who { min-width: 0; }
+.thread__avatar { display: contents; }
 .thread__name { font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .thread__meta { font-size: 12px; color: var(--text-muted); }
 .badge {
@@ -428,12 +430,46 @@
 .kb__score { font-size: 12px; color: var(--accent); font-weight: 600; }
 .kb__text { font-size: 12px; color: var(--text-muted); margin: 0; }
 
-@media (max-width: 1100px) { .context { display: none; } }
+/* Below 1100px the details column does not fit beside the thread. It is not dropped: the (i)
+   button in the conversation header opens it as a sheet from the right. */
+.thread__info, .context__close { display: none; }
+.context__labelrow { display: flex; align-items: center; justify-content: space-between; }
+@media (max-width: 1100px) {
+    .context { display: none; }
+    .thread__info { display: grid; }
+    .context--open {
+        display: block; position: fixed; top: 0; right: 0; bottom: 0; z-index: 66;
+        width: min(340px, 92vw);
+        padding-top: calc(20px + env(safe-area-inset-top));
+        padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        box-shadow: var(--shadow-md); border-left: 1px solid var(--border);
+        overscroll-behavior: contain;
+        animation: context-in .18s ease-out;
+    }
+    .context--open .context__close { display: grid; margin: -6px -6px -6px 0; }
+    .context__scrim { z-index: 65; }
+}
+@keyframes context-in { from { transform: translateX(24px); opacity: 0; } }
 .thread__back { display: none; }
 
+/* The top bar's brand is the logo with its name, or nothing: the logo on its own beside the menu
+   button read as a stray icon. It only has to give way beside the search box, and on the
+   narrowest phones. (:has() carries the specificity these need over `.topbar .brand`.) */
 @media (max-width: 900px) {
-    .brand__name { display: none; }
     .user__text { display: none; }
+    .topbar:has(.topbar__search) .brand { display: none; }
+}
+@media (max-width: 760px) {
+    /* The search box is hidden on a phone, so the brand has its room back. */
+    .topbar:has(.topbar__search) .brand { display: inline-flex; }
+    .topbar .brand__name { font-size: 15px; }
+}
+@media (max-width: 380px) {
+    /* With the install button showing as well, the name no longer fits. */
+    .topbar:has(.topbar__install) .brand { display: none; }
+}
+@media (max-width: 340px) {
+    .topbar:has(.brand) .brand { display: none; }
 }
 
 @media (max-width: 760px) {
@@ -1797,6 +1833,11 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
     .thread__name .badge { flex-shrink: 0; padding: 3px 5px; }
     .thread__name .badge__text { display: none; }
     .thread__actions { gap: 6px; }
+    /* The (i) details button needs room on a phone, so the header drops the avatar (the list and
+       the details sheet both show it) and keeps "Last active" to one line. */
+    .thread__avatar { display: none; }
+    .thread__who { flex: 1; }
+    .thread__meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* The notification list was pinned to the bell and opened off the left of the screen. On a
        phone it is a sheet under the top bar, the full width minus a margin. */

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+    IconInfo,
     IconSend, IconInbox, IconPlus, IconBack, IconReply, IconClose, IconMic, IconStop, IconImage,
     IconSmile, IconThumb, IconSparkle,
     IconFacebook, IconInstagram,
@@ -234,6 +235,9 @@ export default function InboxPage({
     const [shown, setShown] = useState(PAGE_SIZE);   // messages rendered, newest first
     const [emojiOpen, setEmojiOpen] = useState(false);
     const [lightbox, setLightbox] = useState(null);  // photo opened full size, or null
+    // Below 1100px there is no room for the details column beside the thread, so it opens as a
+    // sheet from this button instead of disappearing.
+    const [detailsOpen, setDetailsOpen] = useState(false);
     // What is being sent from the composer, and how far the upload has got (null = unknown).
     const [sending, setSending] = useState(null);     // { label, fraction } | null
     // The conversation action in flight, so its button can show that it is working.
@@ -282,7 +286,16 @@ export default function InboxPage({
         endRef.current?.scrollIntoView();
         setReplyTo(null);
         setShown(PAGE_SIZE);
+        setDetailsOpen(false);
     }, [active?.id]);
+
+    // Escape closes the details sheet, the way every other panel here closes.
+    useEffect(() => {
+        if (!detailsOpen) return undefined;
+        const onKey = (e) => { if (e.key === 'Escape') setDetailsOpen(false); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [detailsOpen]);
 
     // On new messages, only follow if the agent is already near the bottom —
     // otherwise reading older history would keep getting yanked away.
@@ -593,7 +606,9 @@ export default function InboxPage({
                             >
                                 <IconBack />
                             </button>
-                            <PersonAvatar name={activeThread.name} url={activeThread.avatarUrl} size={38} />
+                            <span className="thread__avatar">
+                                <PersonAvatar name={activeThread.name} url={activeThread.avatarUrl} size={38} />
+                            </span>
                             <div className="thread__who">
                                 <div className="thread__name">
                                     <span className="thread__nametext">{activeThread.name}</span>
@@ -608,6 +623,16 @@ export default function InboxPage({
                             </div>
 
                             <div className="thread__actions">
+                                <button
+                                    type="button"
+                                    className="icon-btn thread__info"
+                                    onClick={() => setDetailsOpen(true)}
+                                    aria-label="Customer details"
+                                    aria-expanded={detailsOpen}
+                                    title="Customer details"
+                                >
+                                    <IconInfo />
+                                </button>
                                 {activeThread.spam && (
                                     <button className={`btn btn--sm btn--secondary${acting === 'not-spam' ? ' btn--busy' : ''}`}
                                             disabled={Boolean(acting)} aria-busy={acting === 'not-spam'}
@@ -941,9 +966,18 @@ export default function InboxPage({
                 )}
             </section>
 
+            {activeThread && detailsOpen && (
+                <div className="scrim context__scrim" onClick={() => setDetailsOpen(false)} aria-hidden="true" />
+            )}
             {activeThread && (
-                <aside className="context" aria-label="Customer details">
-                    <div className="context__label">Customer info</div>
+                <aside className={`context${detailsOpen ? ' context--open' : ''}`} aria-label="Customer details">
+                    <div className="context__label context__labelrow">
+                        Customer info
+                        <button type="button" className="icon-btn context__close"
+                                onClick={() => setDetailsOpen(false)} aria-label="Close customer details">
+                            <IconClose />
+                        </button>
+                    </div>
                     <div className="context__who">
                         <PersonAvatar name={activeThread.name} url={activeThread.avatarUrl} size={44} />
                         <div>

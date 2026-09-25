@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import * as api from '../lib/api.js';
+import { formatSeconds as duration } from '../lib/format.js';
 import { LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
 
@@ -8,14 +9,6 @@ const WINDOWS = [
     { days: 30, label: '30 days' },
     { days: 90, label: '90 days' },
 ];
-
-/** Seconds read badly once they run to thousands. */
-function duration(seconds) {
-    if (seconds == null) return 'None yet';
-    if (seconds < 60) return `${seconds < 10 ? seconds.toFixed(1) : Math.round(seconds)}s`;
-    if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
-    return `${(seconds / 3600).toFixed(1)} hr`;
-}
 
 const percent = (n) => `${Math.round(n * 100)}%`;
 

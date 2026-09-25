@@ -453,6 +453,21 @@ expire after 7 days — re-send if it lapses.
 - [x] Fixed the bell's position: on screens without the search box (Home, Team, Knowledge) it
       sat at the far left of the header and its panel opened off the edge of the screen. It now
       stays beside the account name on every screen, desktop and phone
+- [x] **Customer details on phones and tablets** — the right-hand details column (priority,
+      spam, sentiment, who handles it, the summary) was simply hidden below 1100px wide. An (i)
+      button in the conversation header now opens it as a sheet from the right; it closes with
+      the X, Escape or a tap outside. Checked at 360, 390 and 900px wide
+- [x] The phone header shows the logo with the "EkSamadhan AI" name, or no logo at all when
+      there is no room, instead of a lone logo beside the menu button. Checked from 320 to
+      1280px wide with no overflow
+- [x] **Signing out asks first** ("Sign out?", Cancel or Sign out), in the workspace and the
+      system admin console; it used to sign out on a single tap
+- [x] **Home shows real figures.** The setup steps "Add business knowledge" and "Invite your
+      team" were hard-coded as not done, and three of the four figures always said "Not measured
+      yet". Now: knowledge counts once a source is indexed, the team once anyone else has joined
+      or been invited, and the checklist disappears when all three are done; the figures are the
+      last 30 days from Analytics (resolved by AI, escalated, median AI reply time), each with
+      what it is out of, and say "No conversations yet" when there is nothing to measure
 
 **Commits this week**
 

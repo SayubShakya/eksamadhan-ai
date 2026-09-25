@@ -2,10 +2,11 @@ import {
     IconPlus, IconArrowRight, IconCheck, IconInbox,
     IconFacebook, IconInstagram, IconWidget,
 } from '../components/icons.jsx';
-import { formatTimestamp } from '../lib/format.js';
+import { formatTimestamp, formatSeconds } from '../lib/format.js';
+import * as api from '../lib/api.js';
 import Avatar from '../components/Avatar.jsx';
 import { LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
-import { useHeldLoading } from '../lib/loading.js';
+import { useHeldLoading, useResource } from '../lib/loading.js';
 
 const CHANNELS = [
     { id: 'facebook', name: 'Facebook Page', desc: 'Answer the Messenger conversations on your Page.', Icon: IconFacebook },
@@ -28,7 +29,15 @@ export default function HomePage({
     // which setup step is next) and the recent conversations. The rest of the page is fixed
     // text and renders at once.
     const failed = Boolean(loadError) && !statusLoaded;
-    const statusPending = useHeldLoading(!statusLoaded && !failed);
+    // The same data the Knowledge, Team and Analytics screens use, from the same session cache,
+    // so Home and those screens can never disagree.
+    const knowledge = useResource('knowledge', api.getKnowledge);
+    const team = useResource('team', api.getTeam);
+    const analytics = useResource('analytics:30', () => api.getAnalytics(30));
+    const settled = (r) => r.data !== undefined || Boolean(r.error);
+    const statusPending = useHeldLoading(
+        (!statusLoaded || !settled(knowledge) || !settled(team)) && !failed);
+    const figuresPending = useHeldLoading(!settled(analytics));
     const recentPending = useHeldLoading(!threadsLoaded && !loadError);
     const connected = pages.length > 0;
     const steps = [
@@ -42,20 +51,36 @@ export default function HomePage({
         {
             title: 'Add business knowledge',
             desc: 'Add documents or your website so the AI can answer from them.',
-            done: false,
+            // Ready means indexed: a file still being read cannot answer anyone yet.
+            done: Boolean(knowledge.data?.sources?.some(src => src.status === 'READY')),
             cta: 'Add knowledge',
             action: () => onNavigate('knowledge'),
         },
         {
             title: 'Invite your team',
             desc: 'Invite the people who answer when the AI hands a conversation over.',
-            done: false,
+            // Done once anyone else is in the workspace or has been invited.
+            done: Boolean(team.data && (team.data.members.filter(m => m.status === 'ACTIVE').length > 1
+                || team.data.invites?.length > 0)),
             cta: 'Invite an agent',
             action: () => onNavigate('team'),
         },
     ];
     const doneCount = steps.filter(s => s.done).length;
     const nextStep = steps.findIndex(s => !s.done);
+    // Once everything is done the checklist has nothing left to say, so it goes.
+    const setupDone = !statusPending && !failed && doneCount === steps.length;
+
+    // The last 30 days, as on the Analytics screen. A figure with nothing behind it says so.
+    const a = analytics.data;
+    const total = a?.deflection?.total ?? 0;
+    const pct = (n) => Math.round(n * 100);
+    const figures = !a ? null : {
+        resolved: total ? { value: pct(a.deflection.rate), unit: '%', note: `${a.deflection.handledByAi} of ${total} conversations, last 30 days` } : null,
+        escalated: total ? { value: pct(a.deflection.escalated / total), unit: '%', note: `${a.deflection.escalated} of ${total} conversations, last 30 days` } : null,
+        reply: a.replyTimes?.aiSamples ? { value: formatSeconds(a.replyTimes.aiMedianSeconds), unit: '', note: `median of ${a.replyTimes.aiSamples} AI replies, last 30 days` } : null,
+    };
+    const emptyNote = analytics.error && !a ? 'Could not load' : 'No conversations yet';
 
     return (
         <div className="page">
@@ -68,10 +93,11 @@ export default function HomePage({
                     className="btn btn--primary"
                     onClick={() => document.getElementById('channels')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                 >
-                    <IconPlus /> Connect a channel
+                    <IconPlus /> {connected ? 'Add a channel' : 'Connect a channel'}
                 </button>
             </div>
 
+            {!setupDone && (
             <section className="card" aria-labelledby="setup-h">
                 <div className="checklist__head">
                     <div>
@@ -142,6 +168,7 @@ export default function HomePage({
                 </div>
                 )}
             </section>
+            )}
 
             <div className="stats">
                 <Stat
@@ -149,10 +176,15 @@ export default function HomePage({
                     pending={statusPending || recentPending}
                     value={connected ? todayCount : null}
                     unit={todayCount === 1 ? 'conversation' : 'conversations'}
+                    empty="No channel connected"
                 />
-                <Stat label="Resolved by AI" value={null} unit="%" />
-                <Stat label="Escalated to agent" value={null} unit="%" />
-                <Stat label="Average reply time" value={null} unit="seconds" />
+                <Stat label="Resolved by AI" pending={figuresPending} empty={emptyNote}
+                      {...figures?.resolved} value={figures?.resolved?.value ?? null} />
+                <Stat label="Escalated to a person" pending={figuresPending} empty={emptyNote}
+                      {...figures?.escalated} value={figures?.escalated?.value ?? null} />
+                <Stat label="AI reply time" pending={figuresPending}
+                      empty={analytics.error && !a ? 'Could not load' : 'No AI replies yet'}
+                      {...figures?.reply} value={figures?.reply?.value ?? null} />
             </div>
 
             <div className="section-head" id="channels">
@@ -276,7 +308,7 @@ export default function HomePage({
     );
 }
 
-function Stat({ label, value, unit, pending = false }) {
+function Stat({ label, value, unit, note, pending = false, empty = 'Not measured yet' }) {
     if (pending) {
         return (
             <div className="stat" aria-busy="true">
@@ -290,7 +322,7 @@ function Stat({ label, value, unit, pending = false }) {
         return (
             <div className="stat stat--empty">
                 <div className="stat__label">{label}</div>
-                <div className="stat__placeholder">Not measured yet</div>
+                <div className="stat__placeholder">{empty}</div>
             </div>
         );
     }
@@ -298,8 +330,10 @@ function Stat({ label, value, unit, pending = false }) {
         <div className="stat">
             <div className="stat__label">{label}</div>
             <div className="stat__value">
-                {value}<span className="stat__unit">{unit}</span>
+                {value}{unit && <span className="stat__unit">{unit}</span>}
             </div>
+            {/* What the number is out of: a percentage with no count behind it misleads. */}
+            {note && <div className="stat__note">{note}</div>}
         </div>
     );
 }

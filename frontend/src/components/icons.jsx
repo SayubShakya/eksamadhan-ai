@@ -39,6 +39,7 @@ export const IconCopy = (p) => <svg {...s({ size: p.size || 15 })}><rect x="9" y
 export const IconReply = (p) => <svg {...s({ size: p.size || 15 })}><path d="M9 17l-5-5 5-5" /><path d="M4 12h10a6 6 0 0 1 6 6v1" /></svg>;
 export const IconBack = (p) => <svg {...s(p)}><path d="M19 12H5" /><path d="M11 18l-6-6 6-6" /></svg>;
 export const IconArrowRight = (p) => <svg {...s({ size: p.size || 14 })}><path d="M5 12h14" /><path d="M13 6l6 6-6 6" /></svg>;
+export const IconInfo = (p) => <svg {...s(p)}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>;
 export const IconCheck = (p) => <svg {...s({ size: p.size || 14 })}><path d="M20 6L9 17l-5-5" /></svg>;
 export const IconWidget = (p) => <svg {...s(p)}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /><circle cx="8" cy="10" r="1" fill="currentColor" /><circle cx="12" cy="10" r="1" fill="currentColor" /><circle cx="16" cy="10" r="1" fill="currentColor" /></svg>;
 

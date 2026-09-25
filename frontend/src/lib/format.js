@@ -15,6 +15,14 @@ export function formatTimestamp(iso) {
     return `${date.getMonth() + 1}/${date.getDate()}/${String(date.getFullYear()).slice(-2)}`;
 }
 
+/** Seconds read badly once they run to thousands. */
+export function formatSeconds(seconds) {
+    if (seconds == null) return 'None yet';
+    if (seconds < 60) return `${seconds < 10 ? seconds.toFixed(1) : Math.round(seconds)}s`;
+    if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
+    return `${(seconds / 3600).toFixed(1)} hr`;
+}
+
 /** "just now", "4 min ago", "3 hr ago", "yesterday", "5 days ago", then the date. */
 export function timeAgo(iso, now = Date.now()) {
     if (!iso) return '';

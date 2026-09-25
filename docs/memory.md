@@ -412,6 +412,21 @@ status machine and authentication have all since been built — see the change l
   **Header layout:** install, bell, account chip and sign-out share `.topbar__actions`
   (`margin-left: auto`). Only `.user` used to be pushed right, so without the search box the
   bell sat at the far left and its right-anchored panel opened off-screen.
+- **Customer details below 1100px (2026-09-25).** `.context` is still hidden in the layout there,
+  but `.thread__info` (the (i) in the thread header) sets `detailsOpen`, which adds
+  `.context--open`: a fixed sheet from the right with a scrim, closed by X, Escape or the scrim,
+  and reset when another conversation opens. On phones the header avatar is hidden to make room
+  (`.thread__avatar`), otherwise the name was squeezed to one letter at 360px.
+- **Top-bar brand rule (2026-09-25):** the logo appears with its name or not at all. Hidden
+  beside the visible search box (761 to 900px, inbox only), shown on phones, hidden again below
+  380px when the install button is also there and below 340px always. Uses `:has()`.
+- **Home is live (2026-09-25).** `HomePage` reads `knowledge`, `team` and `analytics:30` through
+  `useResource` (the same cache keys the other screens and the idle prefetch use). Steps: knowledge
+  done = any READY source; team done = more than one ACTIVE member or any pending invite; the
+  checklist is hidden when all three are done. Stats use the 30-day Analytics overview; the old
+  "Average reply time" is labelled "AI reply time" because the figure is the median, not a mean.
+  `formatSeconds` moved to `lib/format.js`. Sign-out goes through a `ConfirmDialog` in App.jsx
+  (`requestSignOut`), shared by TopBar and SystemConsole.
 
 - **Loading states (2026-09-25).** Built to a brief; the rules live in
   `frontend/src/lib/loading.js` (hooks and the per-session data cache) and

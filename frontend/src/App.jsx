@@ -592,6 +592,21 @@ export default function App() {
         refreshThreads();
     };
 
+    // Sign-out is one tap on an icon beside the account chip, easy to hit by accident on a phone,
+    // and it throws away whatever was being typed. So it asks first.
+    const [confirmSignOut, setConfirmSignOut] = useState(false);
+    const signOutDialog = (
+        <ConfirmDialog
+            open={confirmSignOut}
+            title="Sign out?"
+            message="You will need to sign in again to see your inbox. Anything you have typed and not sent will be lost."
+            confirmLabel="Sign out"
+            onConfirm={() => { setConfirmSignOut(false); handleSignOut(); }}
+            onCancel={() => setConfirmSignOut(false)}
+        />
+    );
+    const requestSignOut = useCallback(() => setConfirmSignOut(true), []);
+
     const handleSignOut = useCallback(() => {
         api.clearToken();
         forgetWorkspace();
@@ -644,7 +659,12 @@ export default function App() {
     }
 
     if (session.user?.systemAdmin) {
-        return <SystemConsole user={session.user} onSignOut={handleSignOut} />;
+        return (
+            <>
+                <SystemConsole user={session.user} onSignOut={requestSignOut} />
+                {signOutDialog}
+            </>
+        );
     }
 
     return (
@@ -676,7 +696,7 @@ export default function App() {
                     navOpen={navOpen}
                     showSearch={view === 'inbox'}
                     onEditProfile={() => setProfileOpen(true)}
-                    onSignOut={handleSignOut}
+                    onSignOut={requestSignOut}
                     onOpenNotification={openNotification}
                     onSeeAllNotifications={() => setView('notifications')}
                 />
@@ -759,6 +779,8 @@ export default function App() {
                 onConfirm={handleDisconnect}
                 onCancel={() => setConfirmDisconnect(false)}
             />
+
+            {signOutDialog}
 
             <NotificationPrompt
                 open={askNotifications}
