@@ -51,6 +51,10 @@ export default function TopBar({
                 </div>
             )}
 
+            {/* One group on the right, so the bell stays beside the account chip on every screen.
+                Before, only the chip was pushed right and the bell sat wherever the search box
+                left space: at the far left on screens without search. */}
+            <div className="topbar__actions">
             {/* Only when the browser has said it can install, and it is not installed already:
                 a button that did nothing, or offered what is already there, would be noise. */}
             {app.canPrompt && !app.installed && (
@@ -76,6 +80,7 @@ export default function TopBar({
             <button className="icon-btn" onClick={onSignOut} aria-label="Sign out" title="Sign out">
                 <IconSignOut />
             </button>
+            </div>
         </header>
     );
 }

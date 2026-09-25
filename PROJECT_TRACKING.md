@@ -450,6 +450,9 @@ expire after 7 days — re-send if it lapses.
       open; a push now refreshes the bell straight away. Backend: `POST
       /api/notifications/{id}/read` (only the owner's own) and an unread-only list; 3 new tests
       (69 in all). Checked in the browser with a mocked server holding 12 unread alerts
+- [x] Fixed the bell's position: on screens without the search box (Home, Team, Knowledge) it
+      sat at the far left of the header and its panel opened off the edge of the screen. It now
+      stays beside the account name on every screen, desktop and phone
 
 **Commits this week**
 

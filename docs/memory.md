@@ -409,6 +409,9 @@ status machine and authentication have all since been built — see the change l
   "See all") also sync through a `notifications:changed` window event. Needs a backend restart
   for the new endpoint; until then a tap still opens the conversation but its mark-read fails
   quietly and the item returns on the next poll.
+  **Header layout:** install, bell, account chip and sign-out share `.topbar__actions`
+  (`margin-left: auto`). Only `.user` used to be pushed right, so without the search box the
+  bell sat at the far left and its right-anchored panel opened off-screen.
 
 - **Loading states (2026-09-25).** Built to a brief; the rules live in
   `frontend/src/lib/loading.js` (hooks and the per-session data cache) and
