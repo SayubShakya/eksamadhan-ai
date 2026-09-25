@@ -151,6 +151,11 @@ app:
     spam-repeat: ${TRIAGE_SPAM_REPEAT:2}
     greeting-reply: ${TRIAGE_GREETING_REPLY:Hi! How can I help you today?}
     thanks-reply: ${TRIAGE_THANKS_REPLY:You're welcome! Let me know if there is anything else I can help with.}
+  # Sign in with Google, through Firebase Authentication. Only the project id is needed here:
+  # the browser gets an ID token from Google, and this checks Google's signature on it
+  # against Google's public keys. No service-account key. Blank means Google sign-in is off.
+  firebase:
+    project-id: ${FIREBASE_PROJECT_ID:}
   # The platform operator. Created at startup from these two, in a workspace of its own; never
   # through signup or an invitation. Blank email means there is no system admin. The password
   # is read only to create the account (12 characters at least) and never overwrites it after.

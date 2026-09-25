@@ -1,6 +1,6 @@
 # ER diagram — Semester 2
 
-Thirteen tables, produced by 23 Flyway migrations. Verified against the running database, not
+Thirteen tables, produced by 24 Flyway migrations. Verified against the running database, not
 from memory. Compare with [Semester 1](../../old-system-design/er-diagram/Picture1.png), which
 had six.
 
@@ -42,7 +42,8 @@ erDiagram
         uuid id PK
         uuid organization_id FK "ON DELETE CASCADE"
         varchar email UK
-        varchar password_hash "bcrypt"
+        varchar password_hash "bcrypt, null for a Google-only member"
+        varchar firebase_uid UK "the Google account, pinned on first use"
         varchar first_name
         varchar last_name
         varchar role "OWNER ADMIN AGENT"

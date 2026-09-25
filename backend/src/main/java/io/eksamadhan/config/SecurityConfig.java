@@ -47,6 +47,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/webhook/**").permitAll()
                         .requestMatchers("/api/auth/privacy", "/api/auth/data-deletion").permitAll()
                         .requestMatchers("/api/auth/signup", "/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/google", "/api/auth/signup/google").permitAll()
                         .requestMatchers("/api/auth/invitations/**").permitAll()
                         // Meta redirects the browser here with no token of ours; the state is
                         // signed instead (see AuthController.connectUrl).

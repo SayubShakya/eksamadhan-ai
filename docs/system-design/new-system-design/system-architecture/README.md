@@ -29,7 +29,7 @@ flowchart TB
     subgraph backend["3 · Backend — Spring Boot, Java 21"]
         direction TB
         api["REST controllers · webhook endpoint"]
-        sec["Security — JWT bearer · roles · tenant scoping<br/>JwtService · AccountService · WebhookSignatureVerifier"]
+        sec["Security — JWT bearer · roles · tenant scoping<br/>JwtService · AccountService · FirebaseTokenVerifier<br/>WebhookSignatureVerifier"]
         subgraph rowA[" "]
             direction LR
             channel["Channel<br/>MetaService · MetaMessageParser · SyncService<br/>AttachmentFetcher"]
@@ -63,6 +63,7 @@ flowchart TB
             resend["Resend<br/>email"]
             push["Browser push services"]
             typesafe["TypeSafe · Jev<br/>decision model — hosted"]
+            firebase["Google · Firebase Authentication<br/>Sign in with Google"]
         end
     end
 
@@ -70,6 +71,8 @@ flowchart TB
     agent -->|"REST + polling"| api
     widget -.->|"planned"| api
     sysadmin -->|"REST — system admin only"| api
+    agent -.->|"Sign in with Google"| firebase
+    sec -->|"checks the ID token<br/>against Google's public keys"| firebase
     meta --> proxy --> tunnel --> api
     proxy -.-> redis
 

@@ -52,6 +52,13 @@ export const getMe = () => axios.get('/api/me').then(r => r.data);
 export const updateMe = (payload) => axios.put('/api/me', payload).then(r => r.data);
 
 // ── Invitations (public: the recipient has no account yet) ──────────────────
+// Sign in with Google: the Firebase ID token, which the backend checks against Google's keys.
+export const logInWithGoogle = (idToken) =>
+    axios.post('/api/auth/google', { idToken }).then(r => r.data);
+export const signUpWithGoogle = (idToken, organizationName) =>
+    axios.post('/api/auth/signup/google', { idToken, organizationName }).then(r => r.data);
+export const acceptInviteWithGoogle = (token, idToken) =>
+    axios.post(`/api/auth/invitations/${token}/accept/google`, { idToken }).then(r => r.data);
 export const previewInvite = (token) => axios.get(`/api/auth/invitations/${token}`).then(r => r.data);
 export const acceptInvite = (token, payload) =>
     axios.post(`/api/auth/invitations/${token}/accept`, payload).then(r => r.data);

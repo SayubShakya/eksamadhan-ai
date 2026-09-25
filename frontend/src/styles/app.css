@@ -1572,3 +1572,16 @@
     margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 11px; font-weight: 600;
     background: var(--danger-weak); color: var(--danger);
 }
+
+/* Sign in with Google: white, bordered, Google's mark on the left, as its branding asks. */
+.btn--google {
+    justify-content: center; gap: 10px; background: #fff; color: #1f1f1f;
+    border: 1px solid #dadce0; font-weight: 500;
+}
+.btn--google:hover:not(:disabled) { background: #f8f9fa; border-color: #c4c7c5; }
+.btn--google:disabled { opacity: .7; cursor: default; }
+.auth__google-hint { margin-top: -8px; }
+.auth__or {
+    display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 12px;
+}
+.auth__or::before, .auth__or::after { content: ''; flex: 1; height: 1px; background: var(--border); }

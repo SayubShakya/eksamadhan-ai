@@ -27,6 +27,7 @@ classDiagram
         +Organization organization
         +String email
         +String passwordHash
+        +String firebaseUid
         +String firstName
         +String lastName
         +UserRole role
@@ -430,6 +431,12 @@ classDiagram
     class SystemController {
         +messages(limit, q) List~MessageSummary~
         +trace(id) Trace
+    }
+
+    class FirebaseTokenVerifier {
+        +verify(idToken) GoogleIdentity
+        +isConfigured() boolean
+        ~validator(projectId)$ OAuth2TokenValidator
     }
 
     class TypeSafeClient {

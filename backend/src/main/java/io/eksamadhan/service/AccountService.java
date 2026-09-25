@@ -132,7 +132,10 @@ public class AccountService {
                 new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email or password is incorrect");
 
         User user = userRepository.findByEmailIgnoreCase(normaliseEmail(email)).orElseThrow(() -> rejected);
-        if (!passwordEncoder.matches(password == null ? "" : password, user.getPasswordHash())) {
+        // A member who joined with Google has no password to match; the same answer as a
+        // wrong one, so the response still says nothing about which addresses exist.
+        if (user.getPasswordHash() == null
+                || !passwordEncoder.matches(password == null ? "" : password, user.getPasswordHash())) {
             throw rejected;
         }
         if (user.getStatus() != UserStatus.ACTIVE) {
@@ -141,6 +144,122 @@ public class AccountService {
 
         user.setLastLoginAt(OffsetDateTime.now());
         return userRepository.save(user);
+    }
+
+    // ---- Sign in with Google ----
+    //
+    // Google proves the address; it does not decide who belongs to a workspace. So a Google
+    // account gets in only as the member who already has that address, as the person an
+    // invitation was sent to, or as the owner of a workspace it is creating.
+
+    /** An existing member, signing in with the Google account that has their address. */
+    @Transactional
+    public User signInWithGoogle(FirebaseTokenVerifier.GoogleIdentity google) {
+        User user = userRepository.findByEmailIgnoreCase(google.email())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "There is no account for " + google.email() + " yet. If you were invited, open the "
+                      + "link in your invitation email; otherwise create a workspace."));
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This account has been disabled");
+        }
+        // The one account that can read every workspace does not hang on an outside login.
+        if (user.isSystemAdmin()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The system admin signs in with a password");
+        }
+        link(user, google);
+        user.setLastLoginAt(OffsetDateTime.now());
+        return userRepository.save(user);
+    }
+
+    /** A new workspace, its owner signing up with Google instead of choosing a password. */
+    @Transactional
+    public User signUpWithGoogle(String organizationName, FirebaseTokenVerifier.GoogleIdentity google) {
+        require(organizationName, "Workspace name is required");
+        String email = normaliseEmail(google.email());
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "That email already has an account — use Sign in with Google instead");
+        }
+        String[] name = splitName(google);
+        User owner = userRepository.save(User.builder()
+                .organization(adoptOrCreate(organizationName))
+                .email(email)
+                .firebaseUid(google.uid())
+                .firstName(name[0])
+                .lastName(name[1])
+                .avatar(google.picture())
+                .role(UserRole.OWNER)
+                .status(UserStatus.ACTIVE)
+                .lastLoginAt(OffsetDateTime.now())
+                .build());
+        log.info("Created owner {} with Google for organization {}", owner.getId(), owner.getOrganization().getApiKey());
+        return owner;
+    }
+
+    /** Staff joining from an invitation, with the Google account the invitation was sent to. */
+    @Transactional
+    public User acceptInvitationWithGoogle(String token, FirebaseTokenVerifier.GoogleIdentity google) {
+        Invitation invitation = invitationRepository.findByToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "This invite link is not valid"));
+        if (!invitation.isUsable()) {
+            throw new ResponseStatusException(HttpStatus.GONE, "This invite link has expired or was already used");
+        }
+        String invited = normaliseEmail(invitation.getEmail());
+        // The invitation is for an address, and whoever holds the link must prove they own it.
+        if (!invited.equals(google.email())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "This invite is for " + invited + ", but you signed in with Google as " + google.email()
+                  + ". Choose that Google account, or join with a password instead.");
+        }
+        if (userRepository.existsByEmailIgnoreCase(invited)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "That email already has an account");
+        }
+        String[] name = splitName(google);
+        User member = userRepository.save(User.builder()
+                .organization(invitation.getOrganization())
+                .email(invited)
+                .firebaseUid(google.uid())
+                .firstName(name[0])
+                .lastName(name[1])
+                .avatar(google.picture())
+                .role(invitation.getRole())
+                .status(UserStatus.ACTIVE)
+                .lastLoginAt(OffsetDateTime.now())
+                .build());
+        invitation.setAcceptedAt(OffsetDateTime.now());
+        invitationRepository.save(invitation);
+        log.info("{} joined {} with Google as {}", invited, invitation.getOrganization().getApiKey(), invitation.getRole());
+        return member;
+    }
+
+    /**
+     * Pins the member to the first Google account they sign in with. A different Google
+     * account presenting the same address — a Workspace account deleted and recreated, say —
+     * is a different person as far as Google is concerned, and is refused.
+     */
+    private void link(User user, FirebaseTokenVerifier.GoogleIdentity google) {
+        if (user.getFirebaseUid() == null) {
+            user.setFirebaseUid(google.uid());
+            if (user.getAvatar() == null) user.setAvatar(google.picture());
+        } else if (!user.getFirebaseUid().equals(google.uid())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "This account is linked to a different Google account. Sign in with your password, "
+                  + "or ask your workspace owner for help.");
+        }
+    }
+
+    /** "Sayub Shakya" → Sayub / Shakya; no name → the part of the address before the @. */
+    static String[] splitName(FirebaseTokenVerifier.GoogleIdentity google) {
+        String full = google.name() == null ? "" : google.name().trim();
+        if (full.isEmpty()) full = google.email().substring(0, google.email().indexOf('@'));
+        int space = full.indexOf(' ');
+        String first = space < 0 ? full : full.substring(0, space);
+        String last = space < 0 ? null : full.substring(space + 1).trim();
+        return new String[] { cut(first, 60), last == null || last.isEmpty() ? null : cut(last, 60) };
+    }
+
+    private static String cut(String s, int max) {
+        return s.length() <= max ? s : s.substring(0, max);
     }
 
     public static String randomToken(int bytes) {

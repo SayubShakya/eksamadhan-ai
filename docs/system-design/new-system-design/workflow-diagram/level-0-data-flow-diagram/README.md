@@ -16,6 +16,7 @@ flowchart LR
     meta["Meta platform<br/>Facebook · Instagram"]
     hosted["Hosted AI services<br/>OpenRouter · TypeSafe Jev"]
     sysadmin["System Admin<br/>(platform operator)"]
+    google["Google<br/>Firebase Authentication"]
 
     system((("0<br/>EkSamadhan AI<br/>system")))
 
@@ -32,6 +33,8 @@ flowchart LR
     system -->|"message and knowledge text"| hosted
     hosted -->|"embeddings, triage judgments"| system
 
+    agent -->|"Google sign-in"| google
+    google -->|"signed ID token"| system
     sysadmin -->|"choose a message"| system
     system -->|"every message's AI flow, step by step"| sysadmin
     system -->|"inbox, handover brief, alerts"| agent

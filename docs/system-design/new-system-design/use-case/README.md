@@ -29,6 +29,7 @@ flowchart LR
         a5["Test what the AI would retrieve"]
         a6["View unified inbox<br/>FR-06"]
         a7["Generate website widget script<br/>PLANNED · FR-03"]
+        a8["Sign up and sign in with Google"]
     end
     owner --- a1
     owner --- a2
@@ -36,6 +37,7 @@ flowchart LR
     owner --- a4
     owner --- a5
     owner --- a6
+    owner --- a8
     owner -.- a7
     style a7 stroke-dasharray: 5 5
 ```
@@ -55,6 +57,7 @@ flowchart LR
         b10["Hand back to the AI"]
         b11["Review the Spam tab<br/>mark a conversation not spam"]
         b12["See priority and sentiment"]
+        b13["Join from an invite with Google<br/>no password to create"]
         b7["Enable notifications on this device"]
         b8["Receive alert when needed<br/>FR-09"]
         b9["Toggle availability<br/>PLANNED · FR-05"]
@@ -68,6 +71,7 @@ flowchart LR
     agent --- b10
     agent --- b11
     agent --- b12
+    agent --- b13
     agent --- b7
     agent --- b8
     agent -.- b9

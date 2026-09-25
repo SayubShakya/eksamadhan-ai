@@ -26,17 +26,20 @@ public class AccountController {
     private final CurrentUser currentUser;
     private final UserRepository userRepository;
     private final InvitationRepository invitationRepository;
+    private final io.eksamadhan.service.FirebaseTokenVerifier firebase;
 
     public AccountController(AccountService accountService,
                              JwtService jwtService,
                              CurrentUser currentUser,
                              UserRepository userRepository,
-                             InvitationRepository invitationRepository) {
+                             InvitationRepository invitationRepository,
+                             io.eksamadhan.service.FirebaseTokenVerifier firebase) {
         this.accountService = accountService;
         this.jwtService = jwtService;
         this.currentUser = currentUser;
         this.userRepository = userRepository;
         this.invitationRepository = invitationRepository;
+        this.firebase = firebase;
     }
 
     @PostMapping("/auth/signup")
@@ -70,6 +73,24 @@ public class AccountController {
     public Session acceptInvitation(@PathVariable String token, @RequestBody AcceptInviteRequest request) {
         return session(accountService.acceptInvitation(
                 token, request.firstName(), request.lastName(), request.password()));
+    }
+
+    // Sign in with Google. The token is checked against Google's keys before anything else
+    // happens; see FirebaseTokenVerifier.
+
+    @PostMapping("/auth/google")
+    public Session logInWithGoogle(@RequestBody GoogleRequest request) {
+        return session(accountService.signInWithGoogle(firebase.verify(request.idToken())));
+    }
+
+    @PostMapping("/auth/signup/google")
+    public Session signUpWithGoogle(@RequestBody GoogleRequest request) {
+        return session(accountService.signUpWithGoogle(request.organizationName(), firebase.verify(request.idToken())));
+    }
+
+    @PostMapping("/auth/invitations/{token}/accept/google")
+    public Session acceptInvitationWithGoogle(@PathVariable String token, @RequestBody GoogleRequest request) {
+        return session(accountService.acceptInvitationWithGoogle(token, firebase.verify(request.idToken())));
     }
 
     @GetMapping("/me")

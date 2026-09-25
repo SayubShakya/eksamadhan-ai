@@ -286,6 +286,14 @@ expire after 7 days — re-send if it lapses.
       and never through sign-up or invites, with its own console in the same layout as a
       workspace; its only page for now is the conversation visualizer. Workspace owners get 403
       on its endpoints, checked live
+- [x] **Sign in with Google (Firebase Authentication)** — on sign-in, workspace sign-up and
+      invitation acceptance, so staff join without creating another password. The backend
+      checks Google's signature on every sign-in token itself, with no service-account key; a
+      Google account only gets in as the member with that address or the person the invite was
+      sent to. Migration V24; 12 tests (6 on the token checks, including a forged and an
+      unverified one, 6 on who a Google account may become). Firebase project `eksamadhan-ai`
+      created, and verified with a real Google account: the owner signed in with Google and
+      their existing account was linked, password kept
 - [x] **Spam tab and conversation priority, both from Jev** — every conversation gets a priority
       1–3 from the urgency of its most urgent message, shown in the list and the customer panel.
       Spam gets its own tab: the AI does not answer it and nobody is alerted, and the panel says
@@ -394,6 +402,9 @@ expire after 7 days — re-send if it lapses.
 <!-- Regenerate before submitting:
      git log --since=2026-09-17 --until=2026-09-25 --pretty='- %ad `%h` %s' --date=short -->
 
+- 2026-09-25 `a643c0f` feat: add a spam tab and conversation priority from Jev
+- 2026-09-24 `78a02f8` feat: add a spam tab and conversation priority from Jev
+- 2026-09-24 `01eefec` feat: add a spam tab and conversation priority from Jev
 - 2026-09-24 `997f270` feat: add a system admin console with a conversation visualizer
 - 2026-09-23 `d0a73ba` docs: updated system design diagram
 - 2026-09-23 `78aafb9` feat: added Jev
@@ -423,8 +434,11 @@ expire after 7 days — re-send if it lapses.
 - 2026-09-17 `bb41503` Rework the conversation panel, and answer image messages
 - 2026-09-17 `5c96b46` Distinguish your own messages from the AI's and colleagues'
 - 2026-09-17 `9b98139` Add accounts, RAG knowledge base, AI replies and human handover
+- 2026-09-17 `e450275` feat: manage the schema with flyway migrations
+- 2026-09-17 `5257bb0` feat: drive the inbox from server-side conversation threads
+- 2026-09-17 `9d6a4ad` feat: add conversation threads with a status machine
 
-_(pending commit: spam tab, priority and Jev-only sentiment)_
+_(pending commit: Sign in with Google)_
 
 **Progress report**
 

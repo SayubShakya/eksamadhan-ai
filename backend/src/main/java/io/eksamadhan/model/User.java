@@ -33,9 +33,14 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
+    /** Null for a member who only ever signs in with Google. */
+    @Column(name = "password_hash")
     @ToString.Exclude
     private String passwordHash;
+
+    /** The Google account (as its Firebase uid) this member signs in with, once they have. */
+    @Column(name = "firebase_uid", unique = true, length = 128)
+    private String firebaseUid;
 
     @Column(name = "first_name", nullable = false, length = 60)
     private String firstName;
@@ -47,7 +52,7 @@ public class User {
     @Column(nullable = false, length = 20)
     private UserRole role;
 
-    /** Data URL of a 128px square, produced by the frontend's lib/avatar.js. */
+    /** Data URL of a 128px square from the frontend's lib/avatar.js, or the Google photo URL of a member who joined with Google. */
     @Column(columnDefinition = "TEXT")
     @ToString.Exclude
     private String avatar;

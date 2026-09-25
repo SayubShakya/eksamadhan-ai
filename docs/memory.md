@@ -393,6 +393,19 @@ status machine and authentication have all since been built — see the change l
   with the real TypeSafe key: the triage backfill ran during `mvn test` and judged the real
   open conversations for real. Harmless here, but tests are not isolated from the network.
 
+- **Sign in with Google (2026-09-25).** Firebase Authentication in the browser, verification in
+  `FirebaseTokenVerifier` (Google's JWKS + issuer/audience/expiry, `email_verified`, provider
+  `google.com` — an email/password Firebase account must not be a way in). Only
+  `FIREBASE_PROJECT_ID` on the backend; `VITE_FIREBASE_*` in `frontend/.env`, public by design.
+  Google proves the address, not membership: login needs an existing member, an invite needs
+  the invited address, sign-up creates only a new owner. V24 made `password_hash` nullable
+  (Google-only members; the password login refuses them with the usual message) and added
+  `firebase_uid`, pinned on first use so a different Google account with the same address is
+  refused. The system admin cannot use Google. The button hides when not configured.
+  Firebase project `eksamadhan-ai` (number 332866756426), Google provider enabled, web app
+  "EkSamadhan web". Verified end to end 2026-09-25: Sayub signed in with Google and his
+  existing owner account was linked (firebase_uid set, password kept).
+
 - **System admin is a flag, not a role — on purpose.** `users.system_admin` (V22) is set only by
   `SystemAdminBootstrap` from `SYSTEM_ADMIN_EMAIL` / `SYSTEM_ADMIN_PASSWORD` in `backend/.env`.
   Invites take their role from the request body, so a `SYSTEM_ADMIN` role value would have let

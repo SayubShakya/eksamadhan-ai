@@ -20,6 +20,9 @@ public final class AuthDtos {
 
     public record LoginRequest(String email, String password) {}
 
+    /** A Firebase ID token from "Sign in with Google"; the workspace name only when signing up. */
+    public record GoogleRequest(String idToken, String organizationName) {}
+
     public record AcceptInviteRequest(String firstName, String lastName, String password) {}
 
     public record UpdateProfileRequest(String firstName, String lastName, String avatar) {}
