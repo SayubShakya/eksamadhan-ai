@@ -19,22 +19,37 @@
          background_color and the iOS launch images, so nothing flashes between them.
          In a browser tab it shows the blue tile. In the INSTALLED app it shows no logo: Android
          (and iOS) have already shown one on their own launch screen, and a second one popping
-         up after it read as two splash screens. The logo is written by
+         up after it read as two splash screens. A REFRESH of the installed app is different:
+         no launch screen comes first, so a logo-less splash was just a blank screen. The script
+         after #splash marks a reload (or any later load in the same session) with
+         .splash--again, which brings the logo back. Under the logo, a small ring fades in after
+         0.4s, so a quick load never shows it. The logo is written by
          scripts/generate-pwa-assets.mjs. -->
     <style>
       #splash {
         position: fixed; inset: 0; z-index: 2147483647;
-        display: grid; place-items: center;
+        display: grid; place-items: center; align-content: center; gap: 28px;
         background: #ffffff;
         opacity: 1; visibility: visible;
         transition: opacity .28s ease, visibility 0s linear .28s;
       }
       #splash.splash--out { opacity: 0; visibility: hidden; }
       #splash svg { width: 116px; height: 116px; display: block; }
-      @media (display-mode: standalone), (display-mode: minimal-ui) {
-        #splash svg { visibility: hidden; }
+      .splash__ring {
+        width: 22px; height: 22px; border-radius: 50%; box-sizing: border-box;
+        border: 2px solid #d0d5dd; border-top-color: #2563eb; opacity: 0;
+        animation: splash-spin .8s linear infinite, splash-show .2s ease .4s forwards;
       }
-      @media (prefers-reduced-motion: reduce) { #splash { transition: none; } }
+      @keyframes splash-spin { to { transform: rotate(360deg); } }
+      @keyframes splash-show { to { opacity: 1; } }
+      @media (display-mode: standalone), (display-mode: minimal-ui) {
+        #splash svg, #splash .splash__ring { visibility: hidden; }
+        #splash.splash--again svg, #splash.splash--again .splash__ring { visibility: visible; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #splash { transition: none; }
+        .splash__ring { animation: splash-show .2s ease .4s forwards; }
+      }
     </style>
     <!-- Without JavaScript nothing would ever remove it. -->
     <noscript><style>#splash { display: none; }</style></noscript>
@@ -93,7 +108,18 @@
     <!-- pwa:splash-logo -->
       <svg viewBox="0 0 116 116" aria-hidden="true"> <rect width="116" height="116" rx="25.52" fill="#2563eb"/> <g transform="translate(22.04,24.197599999999998) scale(1.4983333333333333)"><g fill="#fff"> <rect x="3" y="7" width="23" height="6.8" rx="3.4"/> <rect x="3" y="18.6" width="14" height="6.8" rx="3.4"/> <rect x="3" y="30.2" width="23" height="6.8" rx="3.4"/> <path d="M32 15h11a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4h-5l-5 4.5V31h-1a4 4 0 0 1-4-4v-8a4 4 0 0 1 4-4z"/></g><g fill="#2563eb"> <g transform="translate(24.85,5.52) scale(0.62)"> <path d="M15.4 22.5h3.1l4.6 11.4h-3.2l-.8-2.2h-4.5l-.8 2.2h-3.1zm2.8 6.8-1.3-3.6-1.3 3.6z"/> <rect x="26.2" y="22.5" width="3.1" height="11.4" rx="1"/> </g></g></g> </svg>
     <!-- /pwa:splash-logo -->
+      <span class="splash__ring" aria-hidden="true"></span>
     </div>
+    <script>
+      // A reload, or any load after the first in this session, had no launch screen before it.
+      try {
+        var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+        if ((nav && nav.type === 'reload') || sessionStorage.getItem('eks-booted')) {
+          document.getElementById('splash').classList.add('splash--again');
+        }
+        sessionStorage.setItem('eks-booted', '1');
+      } catch (e) { /* storage blocked: the splash just stays as it is */ }
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

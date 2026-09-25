@@ -468,6 +468,10 @@ expire after 7 days — re-send if it lapses.
       or been invited, and the checklist disappears when all three are done; the figures are the
       last 30 days from Analytics (resolved by AI, escalated, median AI reply time), each with
       what it is out of, and say "No conversations yet" when there is nothing to measure
+- [x] **Refreshing the installed app showed a blank screen.** Its splash hides the logo so a
+      cold launch shows only one (Android's own), but a refresh has no Android screen before it.
+      A refresh now shows the logo, with a small loading ring under it after 0.4s; a cold launch
+      is unchanged
 
 **Commits this week**
 

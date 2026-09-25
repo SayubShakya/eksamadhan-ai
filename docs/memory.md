@@ -427,6 +427,11 @@ status machine and authentication have all since been built — see the change l
   "Average reply time" is labelled "AI reply time" because the figure is the median, not a mean.
   `formatSeconds` moved to `lib/format.js`. Sign-out goes through a `ConfirmDialog` in App.jsx
   (`requestSignOut`), shared by TopBar and SystemConsole.
+- **Splash on refresh (2026-09-25).** In standalone mode the inline splash hides its logo (one-logo
+  rule for cold launches). An inline script after `#splash` in `index.html` adds `.splash--again`
+  when `performance` says `reload` or `sessionStorage['eks-booted']` is already set, which shows
+  the logo again. `.splash__ring` (outside the `pwa:splash-logo` markers, so the asset generator
+  keeps it) fades in after 0.4s whenever the logo shows; static under reduced motion.
 
 - **Loading states (2026-09-25).** Built to a brief; the rules live in
   `frontend/src/lib/loading.js` (hooks and the per-session data cache) and
