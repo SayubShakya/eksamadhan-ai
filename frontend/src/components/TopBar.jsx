@@ -18,7 +18,7 @@ const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', AGENT: 'Agent' };
 export default function TopBar({
     query, onQueryChange, user,
     onToggleNav, onHome, unread = 0, navOpen, showSearch, onEditProfile, onSignOut,
-    onOpenThread,
+    onOpenNotification, onSeeAllNotifications,
 }) {
     const role = ROLE_LABEL[user?.role] ?? user?.role ?? '';
     const app = usePwa();
@@ -63,7 +63,7 @@ export default function TopBar({
 
             {/* Before the account chip: the same alerts that go out as browser
                 notifications, readable here whatever a device did with them. */}
-            <NotificationBell onOpenThread={onOpenThread} />
+            <NotificationBell onOpen={onOpenNotification} onSeeAll={onSeeAllNotifications} />
 
             <button className="user" onClick={onEditProfile} aria-label="Edit profile">
                 <span className="user__text">

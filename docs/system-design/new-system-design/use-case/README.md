@@ -61,6 +61,7 @@ flowchart LR
         b7["Enable notifications on this device"]
         b14["Install the dashboard as an app"]
         b8["Receive alert when needed<br/>FR-09"]
+        b15["Read and clear alerts in the bell<br/>open one · mark all read"]
         b9["Toggle availability<br/>PLANNED · FR-05"]
     end
     agent --- b1
@@ -76,6 +77,7 @@ flowchart LR
     agent --- b7
     agent --- b14
     agent --- b8
+    agent --- b15
     agent -.- b9
     style b9 stroke-dasharray: 5 5
 ```
@@ -189,5 +191,6 @@ is why it is drawn dashed rather than deleted.
 
 **New cases the PRD never listed**, added because building the thing revealed the need:
 transfer a conversation to a colleague, read the automatically-written handover brief, enable
-notifications per device, view analytics, and test what the AI would retrieve for a question
+notifications per device, read and clear alerts in the bell (an unread inbox: an alert leaves it
+only when opened or cleared, never just by opening the panel), view analytics, and test what the AI would retrieve for a question
 before trusting it in front of customers.

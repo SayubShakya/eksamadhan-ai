@@ -441,12 +441,22 @@ expire after 7 days — re-send if it lapses.
       switching messages in the visualizer briefly showed the previous message's flow.
       Checked: slow 3G on a phone (splash, then skeleton, then data, with no blank frame),
       a forced server failure and retry, reduced motion (the shimmer stops) and a 3MB upload
+- [x] **Notification bell reworked into an unread inbox** — opening the panel no longer marks
+      everything read (it used to, which emptied the list while it was being read). An alert
+      leaves only when it is opened, which drops the badge by one at once and goes to its
+      conversation, or by "Mark all read", which sweeps the cards out one by one while the badge
+      counts down to zero. The panel shows the newest five; the badge and "See 7 more" carry the
+      full count. New "All notifications" page; the page behind is locked while the panel is
+      open; a push now refreshes the bell straight away. Backend: `POST
+      /api/notifications/{id}/read` (only the owner's own) and an unread-only list; 3 new tests
+      (69 in all). Checked in the browser with a mocked server holding 12 unread alerts
 
 **Commits this week**
 
 <!-- Regenerate before submitting:
      git log --since=2026-09-17 --until=2026-09-26 --pretty='- %ad `%h` %s' --date=short -->
 
+- 2026-09-25 `c3901e6` feat: add skeletons, busy buttons and upload progress to every screen
 - 2026-09-25 `2c6ead5` feat: add legal pages, sign-in limits and a plain design and copy pass
 - 2026-09-25 `06da290` fix: make every dashboard screen fit a phone
 - 2026-09-25 `35a7983` feat: PWA splash, offline shell and updates; fix sign-in through a tunnel

@@ -393,6 +393,23 @@ status machine and authentication have all since been built — see the change l
   with the real TypeSafe key: the triage backfill ran during `mvn test` and judged the real
   open conversations for real. Harmless here, but tests are not isolated from the network.
 
+- **Notification bell = unread inbox (2026-09-25).** `NotificationBell.jsx` rewritten to a brief.
+  The panel lists only unread (`GET /api/notifications?unread=true&limit=5`; `unread` in the
+  answer is always the full count) and opening it marks nothing read, which is what the old
+  version did and why items vanished mid-read. Tap: removed and badge -1 immediately,
+  `POST /api/notifications/{id}/read` fired unawaited (the query is scoped to the caller, so an
+  id from another user's list changes nothing), then `openNotification` in App.jsx opens the
+  thread with a filter that shows it (Active/Resolved/Spam) so the hidden-conversation effect
+  does not close it. A `dismissed` set stops an in-flight poll bringing a tapped item back.
+  Mark all read: request fired first, cards leave 85ms apart over 460ms each, driven by timers
+  rather than `animationend` so it still works when reduced motion switches the animation off;
+  the badge steps down in proportion and ends at 0. `html.scroll-locked` locks the page while
+  open (removed on close and unmount). Realtime: `sw.js` posts `{type:'notification'}` to open
+  tabs on every push; the bell and `NotificationsPage` (view `notifications`, reached from
+  "See all") also sync through a `notifications:changed` window event. Needs a backend restart
+  for the new endpoint; until then a tap still opens the conversation but its mark-read fails
+  quietly and the item returns on the next poll.
+
 - **Loading states (2026-09-25).** Built to a brief; the rules live in
   `frontend/src/lib/loading.js` (hooks and the per-session data cache) and
   `components/Loading.jsx` (the indicators), with the CSS under "Loading states" in `app.css`.

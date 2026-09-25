@@ -134,7 +134,9 @@ running the project will meet it.
 
 The Semester 1 diagram labelled the dashboard link "WebSocket / REST". No websockets were
 built. The dashboard polls — messages and threads every 1.5s, connection status every 5s, a
-Meta sync every 10s, and the notification bell every 15s.
+Meta sync every 10s, and the notification bell every 15s. The one push-style path: when the
+service worker receives a Web Push it also tells every open dashboard tab, and the bell refetches
+at once rather than on its next poll.
 
 The sync is **triggered by the dashboard**, not scheduled on the server: there is no
 `@Scheduled` job anywhere in the backend. While nobody has the dashboard open, a message Meta

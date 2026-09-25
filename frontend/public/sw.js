@@ -132,7 +132,12 @@ self.addEventListener('push', (event) => {
 
     /* waitUntil keeps the worker alive until the notification is actually shown —
      * without it the browser may kill it first and show nothing. */
-    event.waitUntil(self.registration.showNotification(title, options));
+    event.waitUntil(Promise.all([
+        self.registration.showNotification(title, options),
+        /* And tell every open dashboard, so its bell refreshes now rather than on its next poll. */
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+            .then((clients) => clients.forEach((client) => client.postMessage({ type: 'notification' }))),
+    ]));
 });
 
 self.addEventListener('notificationclick', (event) => {

@@ -654,28 +654,41 @@
 .bell__panel {
     position: absolute; top: calc(100% + 8px); right: 0; z-index: 60;
     width: min(360px, calc(100vw - 32px));
-    max-height: min(420px, 70vh); overflow-y: auto;
-    background: var(--panel);
+    max-height: min(480px, 75vh);
+    display: flex; flex-direction: column;
+    background: var(--bg);
     border: 1px solid var(--border); border-radius: var(--r-md);
     box-shadow: var(--shadow-lg, 0 12px 40px rgba(16, 20, 27, .16));
+    overflow: hidden;
 }
-.bell__head { padding: 12px 14px 8px; border-bottom: 1px solid var(--border); }
+.bell__head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+    padding: 12px 14px 10px; border-bottom: 1px solid var(--border);
+}
+/* Only the list scrolls, and a scroll that reaches its end stops there instead of carrying on
+   into the page (which is also locked: html.scroll-locked). */
+.bell__scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .bell__empty { margin: 0; padding: 16px 14px; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
-.bell__list { list-style: none; margin: 0; padding: 4px; }
+.bell__list { list-style: none; margin: 0; padding: 6px; }
+.bell__row { margin-bottom: 4px; }
+.bell__row:last-child { margin-bottom: 0; }
 
 .bell__item {
     width: 100%; text-align: left;
-    display: flex; flex-direction: column; gap: 2px;
-    padding: 10px 10px; border: 0; background: none;
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px; border: 0; background: none;
     border-radius: var(--r-sm); color: var(--text);
 }
-.bell__item:hover:not(:disabled) { background: var(--surface); }
 .bell__item:disabled { cursor: default; }
-
-/* Unread is carried by weight and a bar rather than a background wash, so a panel of
-   unread items does not become a solid block of colour. */
-.bell__item--unread { box-shadow: inset 2px 0 0 var(--accent); }
+/* Unread reads as unread at a glance: a tinted card, a dot, and the title in bold. */
+.bell__item--unread { background: var(--accent-weak); }
+.bell__item--unread:hover:not(:disabled) { background: var(--accent-tint); }
 .bell__item--unread .bell__title { font-weight: 600; }
+.bell__dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    margin-top: 6px; background: var(--accent);
+}
+.bell__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 
 .bell__title { font-size: 13px; line-height: 1.4; }
 .bell__title--urgent { color: var(--danger); }
@@ -684,6 +697,51 @@
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .bell__time { font-size: 11px; color: var(--text-muted); }
+
+/* "Mark all read": each card collapses, fades and slides out, one after another (the delay is
+   set per card). --h is the card's own height, measured when the sweep starts. */
+.bell__row--leaving { overflow: hidden; animation: bell-leave 460ms ease-in forwards; }
+@keyframes bell-leave {
+    0% { opacity: 1; transform: none; max-height: var(--h, 96px); margin-bottom: 4px; }
+    55% { opacity: 0; transform: translateX(28px); max-height: var(--h, 96px); margin-bottom: 4px; }
+    100% { opacity: 0; transform: translateX(28px); max-height: 0; margin-bottom: 0; }
+}
+
+.bell__caughtup { display: grid; justify-items: center; text-align: center; gap: 4px; padding: 28px 20px 24px; }
+.bell__caughtup-icon {
+    width: 44px; height: 44px; border-radius: 50%; margin-bottom: 8px;
+    display: grid; place-items: center;
+    background: var(--success-weak); color: var(--success);
+}
+.bell__caughtup-title { margin: 0; font-weight: 600; font-size: 14px; }
+.bell__caughtup-text { margin: 0 0 10px; color: var(--text-muted); font-size: 13px; }
+
+/* The quiet action on the left, the way onward in the accent on the right. */
+.bell__foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 8px 8px; border-top: 1px solid var(--border);
+}
+.bell__markall, .bell__link {
+    border: 0; background: none; padding: 6px 8px; border-radius: var(--r-sm); font-size: 13px;
+}
+.bell__markall { color: var(--text-muted); font-weight: 400; }
+.bell__markall:hover:not(:disabled) { background: var(--surface); color: var(--text); }
+.bell__markall:disabled { cursor: progress; }
+.bell__link { color: var(--accent); font-weight: 600; }
+.bell__link:hover { background: var(--accent-weak); }
+
+html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behavior: none; }
+.bell__catcher { touch-action: none; }
+
+/* The full notifications page reuses the bell's rows, on cards. */
+.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-width: 760px; }
+.notes__row .bell__item { background: var(--bg); border: 1px solid var(--border); padding: 12px 14px; }
+.notes__row .bell__item:hover { background: var(--surface); }
+.notes__row .bell__item--unread { background: var(--accent-weak); border-color: #cfe0fb; }
+.notes__row .bell__item--unread:hover { background: var(--accent-tint); }
+.notes__row .bell__title { font-size: 14px; }
+.notes__row .bell__body { font-size: 13px; }
+.bell__dot--read { background: transparent; }
 
 /* How long the AI took, beside the timestamp. Quiet by default; the wait turns amber
    because a long one means the message was not delivered live. */

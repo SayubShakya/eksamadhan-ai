@@ -4,6 +4,7 @@ import TopBar from './components/TopBar.jsx';
 import HomePage from './pages/HomePage.jsx';
 import InboxPage from './pages/InboxPage.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
+import NotificationsPage from './pages/NotificationsPage.jsx';
 import TeamPage from './pages/TeamPage.jsx';
 import KnowledgePage from './pages/KnowledgePage.jsx';
 import AnalyticsPage from './pages/AnalyticsPage.jsx';
@@ -23,7 +24,7 @@ import { clearResources, prefetch } from './lib/loading.js';
 import './styles/tokens.css';
 import './styles/app.css';
 
-const VIEWS = ['home', 'inbox', 'knowledge', 'channels', 'team', 'analytics', 'settings'];
+const VIEWS = ['home', 'inbox', 'knowledge', 'channels', 'team', 'analytics', 'settings', 'notifications'];
 const BASE = '/dashboard';
 
 const viewFromPath = () => {
@@ -447,6 +448,31 @@ export default function App() {
         [allThreads],
     );
 
+    /**
+     * Where a notification leads: its conversation when it has one, otherwise the screen its
+     * link names. The inbox filter is set to one that shows the conversation, or the effect
+     * that closes a conversation hidden by the filter would close it straight away.
+     */
+    const openNotification = useCallback((item) => {
+        const threadId = item?.threadId
+            || (item?.url ? new URL(item.url, window.location.origin).searchParams.get('thread') : null);
+        if (threadId) {
+            const match = allThreads.find(t => t.id === threadId);
+            if (match) {
+                setFilter(match.spam ? 'spam' : match.status === 'RESOLVED' ? 'resolved' : 'active');
+                setPlatform('all');
+                setQuery('');
+                setActive(match);
+            } else {
+                setWanted(threadId);   // not loaded yet: opened as soon as it arrives
+            }
+            setView('inbox');
+            return;
+        }
+        const seg = item?.url ? new URL(item.url, window.location.origin).pathname.replace(BASE, '').replace(/^\/+|\/+$/g, '') : '';
+        setView(VIEWS.includes(seg) ? seg : 'inbox');
+    }, [allThreads, setView]);
+
     const handleConnect = async (platform) => {
         if (platform === 'widget') return;
         try {
@@ -651,11 +677,8 @@ export default function App() {
                     showSearch={view === 'inbox'}
                     onEditProfile={() => setProfileOpen(true)}
                     onSignOut={handleSignOut}
-                    onOpenThread={(threadId) => {
-                        const match = allThreads.find(t => t.id === threadId);
-                        if (match) setActive(match);
-                        setView('inbox');
-                    }}
+                    onOpenNotification={openNotification}
+                    onSeeAllNotifications={() => setView('notifications')}
                 />
 
                 {view === 'home' && (
@@ -716,7 +739,9 @@ export default function App() {
 
                 {view === 'analytics' && <AnalyticsPage />}
 
-                {!['home', 'inbox', 'team', 'knowledge', 'analytics'].includes(view) && (
+                {view === 'notifications' && <NotificationsPage onOpen={openNotification} />}
+
+                {!['home', 'inbox', 'team', 'knowledge', 'analytics', 'notifications'].includes(view) && (
                     <PlaceholderPage
                         view={view}
                         onNavigate={setView}

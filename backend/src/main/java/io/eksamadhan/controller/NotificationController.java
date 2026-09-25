@@ -38,23 +38,42 @@ public class NotificationController {
                                        String threadId, String kind, String createdAt,
                                        boolean read) {}
 
+    /**
+     * The recent history, or with {@code unread=true} only what is still unread (the bell's
+     * panel). {@code unread} in the answer is always the full count, whatever the limit, so a
+     * short peek never hides how many there really are.
+     */
     @GetMapping
-    public Map<String, Object> list() {
+    public Map<String, Object> list(@RequestParam(defaultValue = "false") boolean unread,
+                                    @RequestParam(defaultValue = "" + RECENT) int limit) {
         User me = currentUser.require();
-        List<NotificationResponse> recent = notifications
-                .findRecent(me, PageRequest.of(0, RECENT))
+        PageRequest page = PageRequest.of(0, Math.clamp(limit, 1, RECENT));
+        List<NotificationResponse> recent = (unread ? notifications.findUnread(me, page)
+                                                    : notifications.findRecent(me, page))
                 .stream().map(NotificationController::toDto).toList();
 
         return Map.of("notifications", recent, "unread", notifications.countByUserAndReadAtIsNull(me));
     }
 
-    /** Opening the panel marks everything in it read — that is what opening it means. */
+    /**
+     * "Mark all read". Opening the panel does not call this: reading a list is not acting on
+     * it, and clearing on open emptied the list while it was still being read.
+     */
     @PostMapping("/read")
     @Transactional
     public Map<String, Object> markRead() {
         User me = currentUser.require();
         int marked = notifications.markAllRead(me);
         return Map.of("marked", marked, "unread", 0);
+    }
+
+    /** One notification acted on (tapped). Idempotent: reading it twice is not an error. */
+    @PostMapping("/{id}/read")
+    @Transactional
+    public Map<String, Object> markOneRead(@PathVariable UUID id) {
+        User me = currentUser.require();
+        int marked = notifications.markRead(id, me);
+        return Map.of("marked", marked, "unread", notifications.countByUserAndReadAtIsNull(me));
     }
 
     private static NotificationResponse toDto(Notification n) {

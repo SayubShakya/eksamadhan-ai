@@ -17,6 +17,19 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
 
     long countByUserAndReadAtIsNull(User user);
 
+    /** The bell's panel is an inbox of what is still unread, not a history. */
+    @Query("SELECT n FROM Notification n WHERE n.user = :user AND n.readAt IS NULL ORDER BY n.createdAt DESC")
+    List<Notification> findUnread(User user, Pageable page);
+
+    /**
+     * One notification read, and only if it belongs to this user: an id from someone else's
+     * list must not clear their bell. Returns the rows changed, so 0 means not yours or gone.
+     */
+    @Modifying
+    @Query("UPDATE Notification n SET n.readAt = CURRENT_TIMESTAMP "
+         + "WHERE n.id = :id AND n.user = :user AND n.readAt IS NULL")
+    int markRead(java.util.UUID id, User user);
+
     /** Marking the whole list read is one statement, not one per row. */
     @Modifying
     @Query("UPDATE Notification n SET n.readAt = CURRENT_TIMESTAMP "

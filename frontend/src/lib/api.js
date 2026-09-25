@@ -159,8 +159,11 @@ export const subscribeToPush = (subscription) =>
 export const unsubscribeFromPush = (subscription) =>
     axios.post('/api/push/unsubscribe', subscription).then(r => r.data);
 export const sendTestPush = () => axios.post('/api/push/test').then(r => r.data);
-export const getNotifications = () => axios.get('/api/notifications').then(r => r.data);
+/** `unread: true` gives only what is still unread; `unread` in the answer is always the full count. */
+export const getNotifications = ({ unread = false, limit } = {}) =>
+    axios.get('/api/notifications', { params: { unread, ...(limit ? { limit } : {}) } }).then(r => r.data);
 export const markNotificationsRead = () => axios.post('/api/notifications/read').then(r => r.data);
+export const markNotificationRead = (id) => axios.post(`/api/notifications/${id}/read`).then(r => r.data);
 
 // ── System admin ────────────────────────────────────────────────────────────
 // Across every workspace; the server refuses anyone who is not a system admin.
