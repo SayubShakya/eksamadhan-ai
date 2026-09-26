@@ -241,9 +241,13 @@
 
 /* ── Page ──────────────────────────────────────────────────────────── */
 .page { flex: 1; overflow-y: auto; padding: 32px 36px 56px; }
-/* Every screen's content stops at the same width, so moving between pages does not change
-   where things sit. The inbox is not a .page and keeps the full width. */
-.page > * { max-width: 1120px; }
+/* Every screen's content stops at the same width and sits in the middle, so the spare room on
+   a wide screen is split equally left and right instead of piling up on one side, and moving
+   between pages does not change where things sit. Dialogs and their backdrops are fixed to the
+   window, so they are left out. The inbox is not a .page and keeps the full width. */
+.page > :not(.scrim):not(.confirm):not(.popover__catcher) {
+    max-width: 1200px; margin-left: auto; margin-right: auto;
+}
 .page__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .page__title { font-size: 26px; font-weight: 650; letter-spacing: -.02em; margin: 0 0 5px; }
 .page__sub { color: var(--text-muted); margin: 0; }
@@ -1803,7 +1807,7 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 /* ── Settings ─────────────────────────────────────────────────────────────────────────── */
 /* A section list on the left, cards on the right. Each setting is a row: its name and what it
    does on the left, the control on the right, so the page scans as a list of decisions. */
-.settings__layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; max-width: 1120px; }
+.settings__layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; max-width: 1200px; }
 .settings__nav { position: sticky; top: 0; display: flex; flex-direction: column; gap: 2px; }
 .settings__navitem {
     display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;

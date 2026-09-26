@@ -618,6 +618,8 @@ Submitted Thursday 2026-10-01.
       use; Knowledge's three stacked forms became one "Add knowledge" card with a tab per way of
       adding, so the sources are no longer pushed a screen down; the notifications list lines up
       with its "Mark all read"; the sign-in logo is the brand blue
+- [x] Page content is centred on wide screens, so the space either side is equal (it all
+      collected on the right); checked on every page at 1280, 1680 and 1920px
 
 **Commits this week**
 

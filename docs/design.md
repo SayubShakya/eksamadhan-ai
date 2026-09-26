@@ -63,7 +63,8 @@ the viva.
 ## Page frame
 
 Every screen except the inbox is a `.page`: a `page__head` (big `page__title`, `page__sub`, the
-page's main action on the right) and content capped at 1120px (`.page > *`), so nothing moves
+page's main action on the right) and content capped at 1200px and centred (`.page > *`, dialogs
+excluded), so spare room on a wide screen is split equally left and right and nothing moves
 between screens. Sections inside use `section-title`. On a phone the menu is a drawer that is
 always closed on load; only the docked desktop menu remembers open or closed. Disabled buttons
 keep a border (`.btn:disabled`), or they read as flat grey text.
