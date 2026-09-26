@@ -80,6 +80,37 @@ square-cornered like every other control; the danger card has a red outline. Rea
 workspace's. A new setting belongs here only when the backend does something with it; a switch
 that changes nothing is fake UI.
 
+## Leaving: deactivate and delete
+
+Settings, Data and privacy holds three rows like every other settings card, the reversible ones
+first: Download my data, Deactivate account, Delete my account, each with one line saying what it
+does and its button on the right (full width under the text on a phone). Only delete is red, as
+text on the plain outline (`.btn--outline-danger`), never filled. A tenant's delete row
+says they choose who takes over first; the first deletion step lists the other members as radio
+cards (admins first) and Continue waits for a choice. With nobody to hand over to, the row says
+why in place of a button, so there is never a button that leads nowhere.
+Delete opens a short `BottomSheet`: "Delete your account?", one sentence on what is erased, then
+"Deactivate instead" as the filled button, Cancel, and below them, in a grey footer strip running to the edges, a small red underlined question, "Still want to delete your account?", which leads to the steps
+(smallest, last on a phone, far left on desktop). A bottom sheet on a phone, a
+440px centred dialog from 721px. Focus starts on Cancel and stays inside; Escape, the backdrop
+and, on a phone, dragging it down close it. The five steps that follow are the real safeguard.
+The deletion steps' position comes from the server, never the URL. Each step after the first has a quiet Back on the left; on a phone the actions stack with the step's own action on top and Back last. "Keep my account" ends the attempt, so the next visit starts at step 1.
+
+## Pinned conversations
+
+Pinning is an icon button in the conversation header, beside the details button: outline when
+off, filled blue on a pale blue ground when on, with `aria-pressed`. Each list row also has a pin
+button at the end of its top line, after the time, beside the row rather than inside it (a button cannot hold a
+button): always shown, a grey outline until pinned, then filled blue. Pinned ones sit first.
+
+## Status pages
+
+A missing page and a lost connection share one layout (`StatusPage`): an icon in a pale blue
+circle, an optional code ("404") in small blue type, a plain title, one or two sentences that
+say what happened and what is safe, then at most two buttons, the useful one filled. Full page
+has the brand at the top and Privacy and Terms at the foot; inside the dashboard it sits in the
+page frame with the menu still there.
+
 ## Role names
 
 Sign out lives at the bottom of the menu, under Settings, never in the top bar. Role tags use

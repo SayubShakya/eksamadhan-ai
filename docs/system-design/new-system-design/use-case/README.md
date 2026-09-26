@@ -27,10 +27,11 @@ flowchart LR
         a3["Invite support agents<br/>FR-04"]
         a4["View analytics<br/>deflection · reply time · by channel"]
         a5["Test what the AI would retrieve"]
-        a6["View unified inbox<br/>FR-06"]
+        a6["View unified inbox<br/>FR-06 · pin conversations to the top"]
         a7["Generate website widget script<br/>PLANNED · FR-03"]
         a8["Sign up and sign in with Google"]
         a9["Configure the workspace and AI replies<br/>name · AI on or off · handover and closing words"]
+        a10["Leave the workspace<br/>download my data · deactivate · hand over to a member, then delete"]
     end
     owner --- a1
     owner --- a2
@@ -40,6 +41,7 @@ flowchart LR
     owner --- a6
     owner --- a8
     owner --- a9
+    owner --- a10
     owner -.- a7
     style a7 stroke-dasharray: 5 5
 ```
@@ -59,12 +61,14 @@ flowchart LR
         b10["Hand back to the AI"]
         b11["Review the Spam tab<br/>mark a conversation not spam"]
         b12["See priority and sentiment"]
+        b18["Pin a conversation to the top<br/>personal, not shared"]
         b13["Join from an invite with Google<br/>no password to create"]
         b7["Enable notifications on this device"]
         b14["Install the dashboard as an app"]
         b8["Receive alert when needed<br/>FR-09"]
         b15["Read and clear alerts in the bell<br/>open one · mark all read"]
         b16["Manage own settings<br/>email alerts · change password"]
+        b17["Leave the workspace<br/>download my data · deactivate · delete my account"]
         b9["Set availability<br/>Available or Busy · FR-05"]
     end
     agent --- b1
@@ -82,6 +86,8 @@ flowchart LR
     agent --- b8
     agent --- b15
     agent --- b16
+    agent --- b17
+    agent --- b18
     agent --- b9
 ```
 

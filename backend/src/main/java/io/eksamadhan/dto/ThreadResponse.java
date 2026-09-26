@@ -34,6 +34,7 @@ public class ThreadResponse {
     private String spamAt;           // ISO 8601
     private boolean spamCleared;     // a person said it is not spam
     private SpamMessage spamMessage; // the message that decided it
+    private boolean pinned;          // pinned by the person asking, not by anyone else
 
     public record SpamMessage(String id, String text, String timestamp) {}
 }

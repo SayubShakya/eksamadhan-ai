@@ -24,7 +24,7 @@ function GoogleMark() {
  *
  * `mode` is 'login' | 'signup' | 'invite'. On success the parent receives the session.
  */
-export default function AuthPage({ mode, inviteToken, onSession, onNavigate }) {
+export default function AuthPage({ mode, inviteToken, onSession, onNavigate, notice }) {
     const [showPassword, setShowPassword] = useState(false);
     const [form, setForm] = useState({
         organizationName: '', firstName: '', lastName: '', email: '', password: '',
@@ -148,6 +148,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate }) {
                 <LogoMark size={40} color="#2563eb" />
                 <h1 className="auth__title">{title}</h1>
                 <p className="auth__sub">{subtitle}</p>
+                {notice && mode === 'login' && <p className="notice notice--ok" role="status">{notice}</p>}
 
                 {mode !== 'signup' && googleBlock}
 

@@ -418,6 +418,26 @@ status machine and authentication have all since been built — see the change l
   Needs a backend restart; the V25 migration has already been applied to the dev database by
   the test run.
 
+- **Account deletion (2026-09-26).** `AccountLifecycleService` + `AccountLifecycleController`
+  (`/api/account/...`), table `account_deletion_challenges` (V28, one per user, 15 min, stage
+  0..4). Stages move only in order; `DELETE /api/account/deletion` requires stage 4. The code is
+  6 digits, stored as SHA-256(challenge id + code), 10 min, 5 sends 30s apart, 5 attempts;
+  `verifyCode` is `noRollbackFor = ResponseStatusException` or a wrong guess would roll back its
+  own counter. Deleting: release open conversations to the queue and `claimQueue`, alert tenant
+  and admins (`Notification.Kind.MEMBER_LEFT`), email the receipt, delete push devices and
+  notifications, null `invitations.invited_by`, scrub email and full name out of
+  `ai_trace_steps` text, overwrite the user row ("Former staff member",
+  `deleted-<id>@deleted.invalid`, no password, no Google link, no photo), status DELETED.
+  `CurrentUser` answers 401 for DEACTIVATED and DELETED, which is how every session ends at once
+  (the tokens are stateless). Sign-in (password or Google) turns DEACTIVATED back to ACTIVE.
+  Team hides DELETED rows. **Brief items that do not apply here, said rather than faked:** no
+  phone, date of birth, saved places, passkeys, location history, jobs, payments or reviews exist
+  in this app, so the flow itemises what does (name, email, photo, sign-in, devices,
+  notifications) and what stays (replies to customers, conversations handled); step 2 is the
+  email only. Tenant: at first blocked (Sayub's first decision), replaced the same day by
+  the handover below. Emails go through Resend's onboarding sender until a domain is verified, so
+  codes reach only the Resend account owner's address for now.
+
 - **UI review pass (2026-09-26).** Page frame unified (see `docs/design.md`, Page frame); the
   nav's `navOpen` is only read and written for the docked layout (>= 1024px), because a
   remembered "open" made the phone drawer cover the screen on load; Knowledge's add forms are one
@@ -481,6 +501,66 @@ status machine and authentication have all since been built — see the change l
   member", "Alert the staff member"). Not changed: Jev's triage question, which lists "agent,
   owner" as words customers use; its thresholds were measured on that text. The system-design
   actors still say "Account Owner/Admin" and "Support Agent", the PRD's names; not renamed.
+- **Admin stays as a role (2026-09-26, Sayub asked why it exists).** The server gives it real,
+  separate powers: Staff see only conversations assigned to them (`ThreadService.visibleTo`);
+  Admin (`canManageTeam`) sees every conversation and can invite and remove people, edit
+  knowledge, connect channels and change settings; only the Tenant can disconnect a channel or
+  everything (`requireTenant`), which deletes history, and the Tenant cannot be removed. So a
+  tenant can hand the day-to-day running to a manager without handing over the power to wipe the
+  workspace. PRD FR-04 also names an admin. The Team invite form now says what the chosen role
+  can do (`ROLE_MEANING` in `TeamPage.jsx`). Offered to Sayub: remove Admin if still preferred.
+- **Data and privacy card redone (2026-09-26, Sayub: "where is delete button", and the sheet
+  looked wrong on desktop).** Three `Row`s with a description each instead of a wrapping button
+  grid. The tenant's delete row explains in place why it is unavailable; the sheet no longer opens
+  for them (it used to open with no delete option at all). The sheet is a centred dialog from
+  721px and a bottom sheet below; "Delete permanently" is now a red outline button, not a faint
+  link. The settings menu now follows the scroll (it stayed on Workspace).
+- **A tenant can delete by handing the workspace over (2026-09-26, Sayub chose "Hand over,
+  then delete" over blocking it or deleting the whole workspace).** Step 0 of the deletion flow
+  asks the tenant to choose who takes over, from the workspace's other active members (admins
+  listed first; staff allowed, since there is no role-change screen yet). The choice is stored on
+  the deletion record (V29 `successor_id`) and acted on only at the final delete, in the same
+  transaction: the chosen person becomes OWNER, the leaving tenant is stored as ADMIN so there is
+  always exactly one, and the new tenant gets a bell alert (`Kind.NEW_TENANT`) and an email. If the
+  chosen person is no longer active by then, the delete is refused (409) and the flow goes back
+  to choosing: a workspace is never left without a tenant. With nobody else in the workspace the
+  row says to invite a colleague first (`/api/settings` `me.canDelete`, `me.cannotDeleteReason`).
+  3 tests replace the old "tenant cannot start" one (94 in all). Privacy Policy updated.
+- **Delete confirmation made small (2026-09-26, Sayub).** The two-column "Would deactivating be
+  enough?" comparison became a plain "Delete your account?" with one sentence; "Deactivate instead"
+  is the big filled button and delete is only a small red question under the buttons, "Still want to delete your account?" (Sayub asked for that),
+  440px wide on desktop. The five steps stay as the safeguard.
+- **Deletion flow: Back, and Keep my account starts over (2026-09-26, Sayub).** `POST
+  /api/account/deletion/back` lowers the server's stage by one (never raises it; leaving or
+  returning to the code step drops the code, so a new one is asked for). `POST .../cancel`
+  deletes the attempt; "Keep my account" calls it. Every visit to the page now starts at step 1
+  (`start`), and starting again carries the code send count and time across, so restarting is no
+  way round the 30s gap or the 5-send cap. A tenant's chosen successor stays chosen on the way
+  back. 2 new tests (96 in all).
+- **"Something went wrong" on opening Delete your account (2026-09-26, fixed).** Opening the page
+  starts the flow, and React's development mode mounted it twice, so two starts ran at once; the
+  old start deleted and re-inserted the one-per-person record, and the second insert hit the
+  unique `user_id` (500) until Try again. `start` now reuses the row (and resets code limits only
+  once the old attempt has expired), the controller answers a same-moment duplicate with the
+  record the other made, and the page sends one start at a time. `DeletionStartRaceTest` fires
+  two starts together five times; it failed with 500 on the old code. Also: Data and privacy
+  buttons use the blue secondary style, Delete a pale red fill; step 1 no longer says "the 0
+  conversations", and says "Choose who takes over to continue." beside a disabled Continue.
+- **Pinned conversations (2026-09-26, Sayub).** Personal, like pinning a chat in WhatsApp:
+  a pin puts a conversation at the top of your own list and nobody else's (a shared pin would
+  reorder the whole team's queue). Table `pinned_conversations` (V30, PK user and thread, both
+  cascade); `PinnedConversationRepository` (plain SQL); `PUT` / `DELETE /api/threads/{id}/pin`,
+  allowed on anything you can see (404 otherwise, so staff only their own); `/api/threads`
+  returns `pinned` for the caller. The inbox sorts pinned first, then by latest message; a pin
+  button in the conversation header and one on each list row (a sibling of the row button, always
+  shown, grey until pinned, then blue (Sayub: not only on hover); pinning from the list does not open the chat); the change shows at once and is put back if the server refuses. Deleting an account
+  removes its pins. No limit on how many. `PinTest` (2).
+- **404 and offline pages (2026-09-26).** One `StatusPage` layout for both. An unknown top-level
+  address shows a full-page 404 (brand, the path, "Go to Home" or "Go to sign in", "Go back",
+  Privacy and Terms), decided before the session check so it never flashes the dashboard; an
+  unknown `/dashboard/<x>` shows the same message inside the menu and top bar
+  (`viewFromPath` returns `not-found`). The offline screen uses it too, with a reconnecting
+  spinner and "Try again now". Checked at 1280 and 390px, signed in and out.
 
 - **Notifications page has no sidebar item, by decision (2026-09-26).** The bell is its entry, as
   in most apps; on that page the bell gets `.bell__button--current` + `aria-current="page"` and

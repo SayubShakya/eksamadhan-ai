@@ -121,6 +121,8 @@ export const getThreads = () => axios.get('/api/threads').then(r => r.data);
 
 export const setThreadState = (threadId, action, body) =>
     axios.post(`/api/threads/${threadId}/${action}`, body || {});
+export const pinThread = (threadId, pinned) =>
+    (pinned ? axios.put(`/api/threads/${threadId}/pin`) : axios.delete(`/api/threads/${threadId}/pin`)).then(r => r.data);
 export const summariseThread = (threadId) =>
     axios.post(`/api/threads/${threadId}/summarise`).then(r => r.data);
 export const assignThread = (threadId, userId) =>
@@ -157,6 +159,21 @@ export const connectUrl = (platform) =>
 export const disconnectChannels = () => axios.post('/api/auth/disconnect');
 /** One connected account, and the conversations it brought in (tenant only). */
 export const disconnectPage = (id) => axios.delete(`/api/auth/pages/${id}`).then(r => r.data);
+
+// ── Data and privacy: download, deactivate, delete ──────────────────────────
+// The deletion flow's stage lives on the server; every call answers with it.
+export const getDeletion = () => axios.get('/api/account/deletion').then(r => r.data);
+export const startDeletion = () => axios.post('/api/account/deletion').then(r => r.data);
+export const deletionBack = () => axios.post('/api/account/deletion/back').then(r => r.data);
+export const cancelDeletion = () => axios.post('/api/account/deletion/cancel').then(r => r.data);
+export const deletionRead = (successorId) => axios.post('/api/account/deletion/read', successorId ? { successorId } : undefined).then(r => r.data);
+export const deletionWord = (value) => axios.post('/api/account/deletion/word', { value }).then(r => r.data);
+export const deletionIdentity = (value) => axios.post('/api/account/deletion/identity', { value }).then(r => r.data);
+export const deletionResend = () => axios.post('/api/account/deletion/code/resend').then(r => r.data);
+export const deletionCode = (value) => axios.post('/api/account/deletion/code', { value }).then(r => r.data);
+export const deleteAccount = () => axios.delete('/api/account/deletion').then(r => r.data);
+export const deactivateAccount = () => axios.post('/api/account/deactivate').then(r => r.data);
+export const exportMyData = () => axios.get('/api/account/export', { responseType: 'blob' }).then(r => r.data);
 
 // ── Settings ────────────────────────────────────────────────────────────────
 export const getSettings = () => axios.get('/api/settings').then(r => r.data);

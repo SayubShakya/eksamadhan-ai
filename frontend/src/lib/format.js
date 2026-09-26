@@ -185,5 +185,7 @@ export function mergeThreads(threads, messages, { status = 'all', platform = 'al
                 },
             };
         })
-        .sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
+        // Your pinned conversations first, then everything by the latest message.
+        .sort((a, b) => (Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)))
+            || (new Date(b.lastMessageAt) - new Date(a.lastMessageAt)));
 }

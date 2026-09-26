@@ -35,4 +35,10 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     @Query("UPDATE Notification n SET n.readAt = CURRENT_TIMESTAMP "
          + "WHERE n.user = :user AND n.readAt IS NULL")
     int markAllRead(User user);
+
+    long countByUser(User user);
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("DELETE FROM Notification n WHERE n.user = :user")
+    int deleteAllForUser(User user);
 }

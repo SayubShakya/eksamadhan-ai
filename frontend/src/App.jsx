@@ -6,6 +6,7 @@ import InboxPage from './pages/InboxPage.jsx';
 import ChannelsPage from './pages/ChannelsPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
+import DeleteAccountPage from './pages/DeleteAccountPage.jsx';
 import TeamPage from './pages/TeamPage.jsx';
 import KnowledgePage from './pages/KnowledgePage.jsx';
 import AnalyticsPage from './pages/AnalyticsPage.jsx';
@@ -19,6 +20,8 @@ import * as push from './lib/push.js';
 import { hideSplash } from './lib/splash.js';
 import usePwa from './lib/usePwa.js';
 import { LogoMark } from './components/Logo.jsx';
+import StatusPage, { IconCloudOff, IconCompass } from './components/StatusPage.jsx';
+import { Spinner } from './components/Loading.jsx';
 import * as api from './lib/api.js';
 import { mergeThreads } from './lib/format.js';
 import { clearResources, prefetch } from './lib/loading.js';
@@ -26,13 +29,25 @@ import { connectLive } from './lib/live.js';
 import './styles/tokens.css';
 import './styles/app.css';
 
-const VIEWS = ['home', 'inbox', 'knowledge', 'channels', 'team', 'analytics', 'settings', 'notifications'];
+const VIEWS = ['home', 'inbox', 'knowledge', 'channels', 'team', 'analytics', 'settings', 'notifications', 'delete-account'];
 const BASE = '/dashboard';
 
 const viewFromPath = () => {
     const seg = window.location.pathname.replace(BASE, '').replace(/^\/+|\/+$/g, '');
-    return VIEWS.includes(seg) ? seg : 'home';
+    if (!seg) return 'home';
+    // An address under /dashboard that is not a screen: say so, rather than quietly showing Home.
+    return VIEWS.includes(seg) ? seg : 'not-found';
 };
+
+/**
+ * Whether the address is one this app answers at all. Anything else (a mistyped link, an old
+ * bookmark) gets the full-page 404, signed in or not.
+ */
+function isKnownPath() {
+    const path = window.location.pathname.replace(/\/+$/, '') || '/';
+    return path === '/' || path === BASE || path.startsWith(`${BASE}/`)
+        || ['/login', '/signup', '/privacy', '/terms'].includes(path) || /^\/invite\/.+/.test(path);
+}
 
 const pathForView = (view) => (view === 'home' ? BASE : `${BASE}/${view}`);
 
@@ -52,6 +67,35 @@ function authRouteFromPath() {
 function legalFromPath() {
     const path = window.location.pathname.replace(/\/+$/, '');
     return path === '/privacy' ? 'privacy' : path === '/terms' ? 'terms' : null;
+}
+
+/**
+ * "Page not found". Full-page for any address the app does not know; inside the dashboard, with
+ * the menu still there, for an unknown /dashboard/... screen.
+ */
+function NotFound({ inShell = false, signedIn = false, onHome }) {
+    const path = window.location.pathname;
+    const home = () => (onHome ? onHome() : window.location.assign(signedIn ? BASE : '/login'));
+    const canGoBack = window.history.length > 1;
+    return (
+        <StatusPage
+            inShell={inShell}
+            icon={<IconCompass />}
+            code="404"
+            title="This page does not exist"
+            actions={(
+                <>
+                    <button className="btn btn--primary" onClick={home}>
+                        {inShell || signedIn ? 'Go to Home' : 'Go to sign in'}
+                    </button>
+                    {canGoBack && <button className="btn btn--secondary" onClick={() => window.history.back()}>Go back</button>}
+                </>
+            )}
+        >
+            <p>There is nothing at <code className="status__path">{path}</code>. The link may be mistyped,
+                or the page may have moved.</p>
+        </StatusPage>
+    );
 }
 
 const MESSAGE_POLL_MS = 1500;
@@ -91,6 +135,7 @@ export default function App() {
     const [unreachable, setUnreachable] = useState(false);
     const [authRoute, setAuthRoute] = useState(authRouteFromPath);
     const [legal, setLegal] = useState(legalFromPath);
+    const [knownPath, setKnownPath] = useState(isKnownPath);
     const app = usePwa();
 
     // The section lives in the path, so URLs are shareable and a refresh keeps you
@@ -122,7 +167,7 @@ export default function App() {
     }, []);
 
     useEffect(() => {
-        const onPop = () => { setAuthRoute(authRouteFromPath()); setLegal(legalFromPath()); setViewState(viewFromPath()); };
+        const onPop = () => { setAuthRoute(authRouteFromPath()); setLegal(legalFromPath()); setKnownPath(isKnownPath()); setViewState(viewFromPath()); };
         window.addEventListener('popstate', onPop);
         return () => window.removeEventListener('popstate', onPop);
     }, []);
@@ -232,7 +277,7 @@ export default function App() {
     // The inline splash in index.html stays up until there is a real screen to show: the
     // sign-in page, the reconnecting screen, or the app. Not at mount — while the session is
     // being checked this renders nothing, which is the blank gap the splash exists to cover.
-    const firstScreen = session !== undefined || unreachable || Boolean(legal);
+    const firstScreen = session !== undefined || unreachable || Boolean(legal) || !knownPath;
     useEffect(() => { if (firstScreen) hideSplash(); }, [firstScreen]);
 
     // Notifications, once the session is real. `state()` re-registers this browser against
@@ -315,6 +360,19 @@ export default function App() {
 
     // The manual button ignores the cooldown: a person asking for it now has better judgement
     // about whether the conversation has settled than a timer does.
+    // Pin or unpin for yourself. Shown at once; put back if the server says no.
+    const handlePin = useCallback(async (thread) => {
+        const next = !thread.pinned;
+        const set = (value) => setServerThreads(list => list.map(t => (t.id === thread.id ? { ...t, pinned: value } : t)));
+        set(next);
+        try {
+            await api.pinThread(thread.id, next);
+        } catch (err) {
+            set(!next);
+            setSendError(api.errorMessage(err, next ? 'Could not pin the conversation.' : 'Could not unpin the conversation.'));
+        }
+    }, []);
+
     const handleSummarise = useCallback(async (thread) => {
         setSummarising(true);
         try {
@@ -658,6 +716,18 @@ export default function App() {
     );
     const requestSignOut = useCallback(() => setConfirmSignOut(true), []);
 
+    /**
+     * After deactivating or deleting: the server has already ended every session, so this only
+     * clears this tab and says what happened on the sign-in page.
+     */
+    const signedOutWithNotice = useCallback((notice) => {
+        api.clearToken();
+        forgetWorkspace();
+        setSession(null);
+        setAuthRoute({ mode: 'login', notice });
+        window.history.pushState({}, '', '/login');
+    }, [forgetWorkspace]);
+
     const handleSignOut = useCallback(() => {
         api.clearToken();
         forgetWorkspace();
@@ -668,23 +738,22 @@ export default function App() {
 
     // Legal pages first: they are for anyone, and must not wait on the session check.
     if (legal) return <LegalPage page={legal} />;
+    if (!knownPath) return <NotFound signedIn={Boolean(api.getToken())} />;
 
     // Still asking the server. Rendering nothing beats flashing the sign-in screen at
     // someone who is signed in — and the splash is still covering it.
     if (session === undefined) {
         if (!unreachable) return null;
         return (
-            <div className="auth">
-                <div className="auth__card" role="status">
-                    <LogoMark size={40} color="#2563eb" />
-                    <h1 className="auth__title">You're offline</h1>
-                    <p className="auth__sub">
-                        EkSamadhan AI cannot reach the server. You are still signed in, and it will
-                        reconnect on its own as soon as it can.
-                    </p>
-                    <button className="btn btn--secondary" onClick={() => window.location.reload()}>Try again</button>
-                </div>
-            </div>
+            <StatusPage
+                icon={<IconCloudOff />}
+                title="You're offline"
+                actions={<button className="btn btn--primary" onClick={() => window.location.reload()}>Try again now</button>}
+            >
+                <p>EkSamadhan AI cannot reach the server. You are still signed in, and nothing you
+                    were doing is lost.</p>
+                <p className="status__live"><Spinner size={14} /> Reconnecting on its own as soon as it can</p>
+            </StatusPage>
         );
     }
 
@@ -694,6 +763,7 @@ export default function App() {
             <AuthPage
                 mode={route.mode}
                 inviteToken={route.token}
+                notice={route.notice}
                 onSession={(next) => {
                     api.setToken(next.token);
                     setSession(next);
@@ -803,6 +873,7 @@ export default function App() {
                         team={team}
                         onAssign={handleAssign}
                         onSummarise={handleSummarise}
+                        onPin={handlePin}
                         summarising={summarising}
                     />
                 )}
@@ -816,8 +887,21 @@ export default function App() {
                 {view === 'notifications' && <NotificationsPage onOpen={openNotification} />}
 
                 {view === 'settings' && (
-                    <SettingsPage user={user} onDisconnect={() => setConfirmDisconnect(true)} />
+                    <SettingsPage user={user} onDisconnect={() => setConfirmDisconnect(true)}
+                                  onStartDeletion={() => setView('delete-account')}
+                                  onSignedOut={() => signedOutWithNotice(
+                                      'Your account is deactivated. Sign in any time to turn it back on.')} />
                 )}
+
+                {view === 'delete-account' && (
+                    <DeleteAccountPage
+                        onCancel={() => setView('settings')}
+                        onDeleted={(masked) => signedOutWithNotice(
+                            `Your account was deleted. A receipt was sent to ${masked}.`)}
+                    />
+                )}
+
+                {view === 'not-found' && <NotFound inShell onHome={() => setView('home')} />}
 
                 {view === 'channels' && (
                     <ChannelsPage

@@ -620,12 +620,50 @@ Submitted Thursday 2026-10-01.
       with its "Mark all read"; the sign-in logo is the brand blue
 - [x] Page content is centred on wide screens, so the space either side is equal (it all
       collected on the right); checked on every page at 1280, 1680 and 1920px
+- [x] **Account deletion, deactivation and "Download my data"** (Settings, Data and privacy).
+      Three equal controls, the reversible one first; delete opens a bottom sheet asking "Would
+      deactivating be enough?", then a five-step flow (what goes and what stays with real counts,
+      type DELETE, type your email, an emailed code, last chance). The step is held on the server,
+      so opening the last step's address lands on step one and the delete is refused unless every
+      step happened. Deleting keeps the business's record (replies, conversations) with no name
+      and erases the person (name, email, photo, sign-in, devices, notifications), tells the
+      tenant and admins first, emails a receipt, hands their open conversations to someone
+      available, and signs out every session. Deactivating is undone by signing in. The tenant
+      cannot delete (decided by Sayub): the workspace needs its tenant. Migration V28; 6 new
+      tests (92 in all); Privacy Policy, ER, class and use case diagrams updated
+- [x] A proper 404 page: full page for an unknown address (with the path, Go to Home or Go to
+      sign in, Go back), and inside the dashboard for an unknown dashboard page; the offline
+      screen redesigned in the same layout with a reconnecting spinner
+- [x] Team invite form explains what the chosen role can do; the Admin role kept for its real
+      separate powers (sees every conversation, runs the team, knowledge, channels and settings,
+      but cannot disconnect channels or delete history, which only the tenant can)
+
+- [x] Data and privacy card rebuilt as described rows; the tenant sees why delete is not
+      available instead of a sheet with no delete in it; the "Would deactivating be enough?"
+      sheet is a centred dialog on desktop and a bottom sheet on phones, with a clear "Delete
+      permanently" button; the settings menu highlights the section being read while scrolling
+- [x] The tenant can delete their account by first choosing a member to take the workspace over;
+      the handover happens only at the final step, together with the deletion, and is checked again
+      then. The new tenant gets an alert and an email. Migration V29; 3 new tests (94 in all);
+      Privacy Policy, ER, class and use case diagrams updated
+- [x] The delete confirmation is a small "Delete your account?" dialog: "Deactivate instead"
+      is the big button; delete is a small "Still want to delete your account?" line under it, in place of the two-column comparison
+- [x] The deletion steps have a Back button, and "Keep my account" cancels the attempt so trying
+      again starts at step 1; restarting cannot be used to get round the code limits; 2 new tests
+- [x] Fixed "Something went wrong" on first opening the deletion page (two starts at once
+      collided on the database; new race test fails on the old code); Data and privacy buttons
+      recoloured; step 1 wording for zero counts and a hint beside the disabled Continue
+- [x] Pin a conversation: personal pins keep it at the top of your own inbox; pin button in the
+      conversation header and on each conversation in the list; migration V30; 2 tests; ER, class and use
+      case diagrams updated
 
 **Commits this week**
 
 <!-- Regenerate before submitting:
      git log --since=2026-09-25 --until=2026-10-02 --pretty='- %ad `%h` %s' --date=short -->
 
+- 2026-09-26 `1d458a1` feat: channels and settings pages, profile fixes, centred page layout
+- 2026-09-26 `a1dd512` feat: settings page for the workspace, AI replies and your account
 - 2026-09-26 `f6335c2` feat: call the roles Tenant, Admin and Staff on screen
 - 2026-09-26 `058a2e6` fix: one list on the notifications page; strip emoji from old alerts
 - 2026-09-26 `bee62e6` feat: agent availability with live presence updates

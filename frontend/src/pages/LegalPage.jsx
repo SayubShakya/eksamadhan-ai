@@ -10,7 +10,7 @@ import { LogoMark } from '../components/Logo.jsx';
  * Meta-facing pages (/api/auth/privacy, /terms, /data-deletion) link here for the full text.
  */
 const CONTACT = 'shakya.sayub123@gmail.com';
-const UPDATED = '25 September 2026';
+const UPDATED = '26 September 2026';
 
 const Mail = () => <a href={`mailto:${CONTACT}`}>{CONTACT}</a>;
 
@@ -92,14 +92,22 @@ function Privacy() {
                 <li>Conversations stay while the business's page is connected. <em>Disconnect</em>, in
                     Settings, deletes the connected pages and all their conversations and messages.</li>
                 <li>Unused invitations expire after 7 days.</li>
-                <li>Staff accounts stay until the workspace asks us to delete them.</li>
+                <li>Staff accounts stay until the person deletes theirs (Settings, Data and privacy) or
+                    the workspace asks us to. Deleting erases your name, email, photo, sign-in, devices
+                    and notifications at once; replies you sent to customers stay in the business's
+                    conversations with no name attached. The person who created a workspace (the tenant) first
+                    chooses another member to take it over as tenant; that person is told by email. To close
+                    the whole workspace instead, email us.</li>
+                <li>Deactivating instead signs you out everywhere and stops conversations and alerts
+                    coming to you. Signing in again turns your account back on.</li>
             </ul>
 
             <h2>Your rights</h2>
             <p>
                 You can ask to see the data we hold about you, to correct it, to delete it, to limit how
-                it is used, to object to its use, or to receive a copy. Email <Mail /> and we will reply
-                within one month. If you are unhappy with the answer you can complain to your data
+                it is used, to object to its use, or to receive a copy. Most of this you can do yourself
+                in Settings, Data and privacy: download your data, deactivate your account, or delete it.
+                For anything else, email <Mail /> and we will reply within one month. If you are unhappy with the answer you can complain to your data
                 protection authority. In the UK, that is the Information Commissioner's Office (ico.org.uk).
             </p>
             <p>

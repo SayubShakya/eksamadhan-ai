@@ -79,7 +79,9 @@ public class TeamController {
         User me = currentUser.require();
         Organization organization = me.getOrganization();
 
+        // A deleted account's row is kept for history, but it is nobody any more.
         List<Member> members = userRepository.findByOrganization(organization).stream()
+                .filter(u -> u.getStatus() != UserStatus.DELETED)
                 .map(u -> new Member(u.getId().toString(), u.getFirstName(), u.getLastName(),
                         u.getEmail(), u.getRole(), u.getStatus(), u.getAvatar(), u.getId().equals(me.getId()),
                         availability.presenceOf(u),

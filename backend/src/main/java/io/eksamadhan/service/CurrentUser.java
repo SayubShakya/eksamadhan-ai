@@ -49,6 +49,11 @@ public class CurrentUser {
 
         // A token outlives a disabled account by up to its 24h lifetime, so check on every
         // request rather than trusting what the token said when it was issued.
+        // Deactivated or deleted: every session this person has ends here, on its next request,
+        // as a 401 so each browser signs itself out rather than showing errors.
+        if (user.getStatus() == UserStatus.DEACTIVATED || user.getStatus() == UserStatus.DELETED) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Signed out");
+        }
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account is not active");
         }

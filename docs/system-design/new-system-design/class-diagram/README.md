@@ -41,6 +41,8 @@ classDiagram
         +Availability availability
         +OffsetDateTime lastSeenAt
         +boolean emailAlerts
+        +OffsetDateTime deactivatedAt
+        +OffsetDateTime deletedAt
         +displayName() String
     }
 
@@ -205,11 +207,22 @@ classDiagram
         +canManageTeam() boolean
     }
 
+    class AccountDeletionChallenge {
+        +UUID id
+        +UUID userId
+        +int stage
+        +String codeHash
+        +UUID successorId
+        +OffsetDateTime expiresAt
+    }
+
     class UserStatus {
         <<enumeration>>
         ACTIVE
         INVITED
         DISABLED
+        DEACTIVATED
+        DELETED
     }
 
     class ThreadStatus {
@@ -255,6 +268,7 @@ classDiagram
     KnowledgeSource "1" o-- "*" KnowledgeChunk
     User "1" o-- "*" PushSubscription
     User "1" o-- "*" Notification
+    User "1" -- "0..1" AccountDeletionChallenge
     SocialMessage "1" -- "0..1" MessageEmbedding : by socialMessageId
     SocialMessage "1" -- "0..1" MessageTriage : by socialMessageId
     SocialMessage "1" -- "*" AiTraceStep : by socialMessageId
@@ -327,6 +341,13 @@ classDiagram
         +backfillAsync(tenantId)
     }
 
+    class PinnedConversationRepository {
+        +threadIdsFor(userId) Set~UUID~
+        +pin(userId, threadId)
+        +unpin(userId, threadId)
+        +deleteAllFor(userId) int
+    }
+
     class ThreadService {
         +attach(message, page, customerId)
         +takeOver(threadId, agentId)
@@ -347,6 +368,22 @@ classDiagram
         +publish(organizationId, name, data)
         +closeTab(tab)
         +goneAt(userId) OffsetDateTime
+    }
+
+    class AccountLifecycleService {
+        +summary(user) Map
+        +deactivate(user)
+        +successors(user) List~User~
+        +canDelete(user) boolean
+        +start(user) AccountDeletionChallenge
+        +acknowledge(user, successorId)
+        +back(user) AccountDeletionChallenge
+        +cancel(user)
+        +confirmWord(user, word)
+        +confirmIdentity(user, email)
+        +verifyCode(user, code)
+        +delete(user)
+        +export(user) Map
     }
 
     class AvailabilityService {
@@ -495,11 +532,14 @@ classDiagram
     AiReplyService --> LlmClient
     AiReplyService --> ConversationMemoryService
     AiReplyService --> ThreadService
+    AccountLifecycleService --> PinnedConversationRepository : removes their pins
     AiReplyService --> AgentRoutingService
     AgentRoutingService ..> AvailabilityService : only available and online
     AvailabilityService --> AgentRoutingService
     AvailabilityService --> AgentNotificationService
     AvailabilityService --> LiveEvents : publishes presence
+    AccountLifecycleService --> AvailabilityService : hands their conversations on
+    AccountLifecycleService --> AgentNotificationService : tells the tenant and admins
     AgentRoutingService --> LiveEvents : tab closed means offline
     AiReplyService --> ConversationSummaryService
     AiReplyService --> AgentNotificationService

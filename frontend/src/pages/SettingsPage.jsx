@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as api from '../lib/api.js';
 import { LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
 import useDeviceAlerts from '../lib/useDeviceAlerts.js';
-import { IconBell, IconSettings, IconSparkle, IconTrash, IconUser } from '../components/icons.jsx';
+import { IconBell, IconLock, IconSettings, IconSparkle, IconTrash, IconUser } from '../components/icons.jsx';
+import DataPrivacyCard from '../components/DataPrivacyCard.jsx';
 
 /**
  * Settings: only what the system acts on.
@@ -24,6 +25,7 @@ const SECTIONS = [
     { id: 'ai', label: 'AI replies', Icon: IconSparkle },
     { id: 'notifications', label: 'Notifications', Icon: IconBell },
     { id: 'security', label: 'Sign-in and security', Icon: IconUser },
+    { id: 'privacy', label: 'Data and privacy', Icon: IconLock },
     { id: 'danger', label: 'Danger zone', Icon: IconTrash, tenantOnly: true },
 ];
 
@@ -343,19 +345,47 @@ function SecurityCard({ settings, email }) {
     );
 }
 
-export default function SettingsPage({ user, onDisconnect }) {
+export default function SettingsPage({ user, onDisconnect, onStartDeletion, onSignedOut }) {
     const { data, error, reload, mutate } = useResource('settings', api.getSettings);
     const loading = useHeldLoading(!data && !error);
     const [current, setCurrent] = useState('workspace');
     const sections = SECTIONS.filter(s => !s.tenantOnly || data?.canDisconnect);
 
+    const pageRef = useRef(null);
+    const jumpedAt = useRef(0);
+
     const jump = (id) => {
+        jumpedAt.current = Date.now();
         setCurrent(id);
         document.getElementById(`settings-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
+    // The menu follows the scroll: the section whose top has passed the top of the page is the
+    // current one, and at the very bottom it is the last, which may never reach the top.
+    const ids = sections.map(s => s.id).join(',');
+    useEffect(() => {
+        const page = pageRef.current;
+        if (!page || !data) return undefined;
+        const list = ids.split(',');
+        const onScroll = () => {
+            // A click in the menu already chose; the scroll it starts must not overrule it (a
+            // section near the end cannot reach the top, so the end-of-page rule would win).
+            if (Date.now() - jumpedAt.current < 1000) return;
+            const top = page.getBoundingClientRect().top + 120;
+            let at = list[0];
+            if (page.scrollTop + page.clientHeight >= page.scrollHeight - 4) at = list[list.length - 1];
+            else for (const id of list) {
+                const el = document.getElementById(`settings-${id}`);
+                if (el && el.getBoundingClientRect().top <= top) at = id;
+            }
+            setCurrent(at);
+        };
+        page.addEventListener('scroll', onScroll, { passive: true });
+        return () => page.removeEventListener('scroll', onScroll);
+    }, [ids, data]);
+
     return (
-        <div className="page settings">
+        <div ref={pageRef} className="page settings">
             <div className="page__head">
                 <div>
                     <h1 className="page__title">Settings</h1>
@@ -382,11 +412,13 @@ export default function SettingsPage({ user, onDisconnect }) {
                         <WorkspaceCards settings={data} onSaved={(next) => mutate(() => next)} />
                         <NotificationsCard settings={data} onSaved={(next) => mutate(() => next)} />
                         <SecurityCard settings={data} email={user?.email} />
+                        <DataPrivacyCard user={user} settings={data} Card={Card} Row={Row}
+                                         onStartDeletion={onStartDeletion} onSignedOut={onSignedOut} />
 
                         {data.canDisconnect && (
                             <Card id="danger" danger title="Danger zone" sub="This cannot be undone.">
                                 <Row title="Disconnect everything"
-                                     hint="Removes every connected page and deletes all stored conversations. Only the tenant can do this.">
+                                     hint="Removes every connected page and deletes all stored conversations.">
                                     <button type="button" className="btn btn--danger btn--sm" onClick={onDisconnect}>Disconnect</button>
                                 </Row>
                             </Card>

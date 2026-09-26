@@ -21,4 +21,8 @@ public interface PushSubscriptionRepository extends JpaRepository<PushSubscripti
     List<PushSubscription> findForUser(User user);
 
     long countByUser(User user);
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("DELETE FROM PushSubscription p WHERE p.user = :user")
+    int deleteAllForUser(io.eksamadhan.model.User user);
 }

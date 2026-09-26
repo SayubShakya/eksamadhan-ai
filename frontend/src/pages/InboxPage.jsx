@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    IconInfo,
+    IconInfo, IconPin,
     IconSend, IconInbox, IconPlus, IconBack, IconReply, IconClose, IconMic, IconStop, IconImage,
     IconSmile, IconThumb, IconSparkle,
     IconFacebook, IconInstagram,
@@ -224,7 +224,7 @@ export default function InboxPage({
     active, onSelect, onSend, onSendVoice, onSendImage, onReact, onHideMessage, onThreadAction,
     onConnect, search, onSearchChange, sendError, onDismissError, me, team = [], onAssign,
     platform: platformFilter = 'all', onPlatformChange,
-    onSummarise, summarising,
+    onSummarise, summarising, onPin,
 }) {
     const [copiedId, setCopiedId] = useState(false);
     const [draft, setDraft] = useState('');
@@ -495,8 +495,8 @@ export default function InboxPage({
                         const platform = platformOf(t.pageId);
                         const awaitingReply = t.status === 'OPEN_FOR_AGENT' || t.unanswered > 0;
                         return (
+                            <div key={t.id || t.customerId} className={`conv-row${t.pinned ? ' is-pinned' : ''}`}>
                             <button
-                                key={t.id || t.customerId}
                                 className={`conv ${awaitingReply ? 'conv--attention' : ''}`}
                                 aria-current={active?.id === t.id}
                                 onClick={() => onSelect(t)}
@@ -552,6 +552,21 @@ export default function InboxPage({
                                     </span>
                                 </div>
                             </button>
+                            {/* Beside the row, not inside it: a button cannot hold a button. Always shown:
+                                grey until pinned, then blue. */}
+                            {onPin && t.id && (
+                                <button
+                                    type="button"
+                                    className={`conv-row__pin${t.pinned ? ' is-on' : ''}`}
+                                    onClick={() => onPin(t)}
+                                    aria-pressed={Boolean(t.pinned)}
+                                    aria-label={t.pinned ? `Unpin ${t.name}` : `Pin ${t.name} to the top`}
+                                    title={t.pinned ? 'Unpin' : 'Pin to the top'}
+                                >
+                                    <IconPin size={15} filled={t.pinned} />
+                                </button>
+                            )}
+                            </div>
                         );
                     })}
                     {!visible.length && (
@@ -623,6 +638,18 @@ export default function InboxPage({
                             </div>
 
                             <div className="thread__actions">
+                                {onPin && (
+                                    <button
+                                        type="button"
+                                        className={`icon-btn thread__pin${activeThread.pinned ? ' is-on' : ''}`}
+                                        onClick={() => onPin(activeThread)}
+                                        aria-pressed={Boolean(activeThread.pinned)}
+                                        aria-label={activeThread.pinned ? 'Unpin conversation' : 'Pin conversation to the top'}
+                                        title={activeThread.pinned ? 'Unpin' : 'Pin to the top'}
+                                    >
+                                        <IconPin filled={activeThread.pinned} />
+                                    </button>
+                                )}
                                 <button
                                     type="button"
                                     className="icon-btn thread__info"

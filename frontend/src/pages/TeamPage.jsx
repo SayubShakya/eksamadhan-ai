@@ -28,6 +28,18 @@ function Presence({ member }) {
     );
 }
 
+/**
+ * What each role may do, as the server enforces it (CurrentUser.requireTeamManager and
+ * requireTenant). Admin exists so a tenant can hand the day-to-day running of the team to a
+ * manager without handing over what cannot be undone.
+ */
+const ROLE_MEANING = {
+    AGENT: 'Staff answer the conversations handed to them, and see only their own.',
+    ADMIN: 'Admins do everything staff do, and can also see every conversation, invite and remove '
+        + 'people, edit knowledge, connect channels and change settings. Only the tenant can '
+        + 'disconnect a channel or delete conversation history.',
+};
+
 /** A member row with the same classes as the real one, so it is the same height. */
 function MemberSkeleton({ name, email }) {
     return (
@@ -125,8 +137,8 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                 <div>
                     <h1 className="page__title">Team</h1>
                     <p className="page__sub">
-                        Everyone here shares the same inbox. Staff handle conversations; the tenant and
-                        admins can also invite and remove people.
+                        The tenant created this workspace. Admins help run it: they can invite people and
+                        change knowledge, channels and settings. Staff answer the conversations handed to them.
                     </p>
                 </div>
             </div>
@@ -140,7 +152,8 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                     </label>
                     <label className="field">
                         <span>Role</span>
-                        <select className="invite-form__role" value={role} onChange={e => setRole(e.target.value)}>
+                        <select className="invite-form__role" value={role} onChange={e => setRole(e.target.value)}
+                                aria-describedby="role-meaning">
                             <option value="AGENT">Staff</option>
                             <option value="ADMIN">Admin</option>
                         </select>
@@ -149,6 +162,11 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                             disabled={busy} aria-busy={busy}>
                         Create invite link
                     </button>
+                    {/* What the chosen role can do, in the form itself: a bare "Admin" left the
+                        difference from the tenant and from staff to guesswork. */}
+                    <p id="role-meaning" className="invite-form__meaning">
+                        {ROLE_MEANING[role]}
+                    </p>
                 </form>
             )}
 
@@ -204,6 +222,7 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                     <div className="member__actions">
                         <span className={`tag role-tag role-tag--${member.role.toLowerCase()}`}>{ROLE_LABEL[member.role]}</span>
                         {member.status === 'DISABLED' && <span className="muted">Removed</span>}
+                        {member.status === 'DEACTIVATED' && <span className="muted">Deactivated</span>}
                         {team.canManage && !member.isYou && member.role !== 'OWNER' && member.status !== 'DISABLED' && (
                             <button className="btn btn--danger btn--sm" onClick={() => setRemoving(member)}>
                                 Remove

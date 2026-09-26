@@ -395,6 +395,19 @@
 .conv__top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .conv__name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .conv__time { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+/* The row's pin button sits at the end of the top line, after the time. That line already cuts the
+   name short when needed, so the room it takes never pushes the tags onto a second line. */
+.conv-row { position: relative; }
+.conv-row .conv__top { padding-right: 24px; }
+.conv-row__pin {
+    position: absolute; right: 8px; top: 8px; width: 28px; height: 28px;
+    display: grid; place-items: center; border: 0; border-radius: var(--r-sm);
+    background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.conv-row__pin:hover { background: var(--accent-weak); color: var(--accent); }
+.conv-row__pin.is-on { color: var(--accent); background: transparent; }
+.conv-row__pin.is-on:hover { background: var(--accent-weak); }
+.thread__pin.is-on { color: var(--accent); background: var(--accent-weak); }
 .conv__preview { color: var(--text-muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: var(--r-sm); }
 .tag--agent { background: var(--warning-weak); color: var(--warning); }
@@ -1281,6 +1294,7 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 }
 /* Wide enough that the chosen role always shows, and as tall as the email field beside it. */
 .invite-form__role { min-width: 140px; height: 42px; cursor: pointer; }
+.invite-form__meaning { flex-basis: 100%; margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
 .invite-form .field:has(.invite-form__role) { flex: 0 0 auto; min-width: 140px; }
 
 /* Role tags: a role is not a warning, so no amber. The tenant stands out; staff is quiet. */
@@ -1759,6 +1773,158 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
     background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md);
     box-shadow: var(--shadow-md); font-size: 13px;
 }
+
+/* ── Status pages: 404 and offline ── */
+.status-page { min-height: 100dvh; display: flex; flex-direction: column; background: var(--surface); }
+.status-page__head { padding: 20px 28px; }
+.status-page__main { flex: 1; display: grid; place-items: center; padding: 24px 16px 48px; }
+.status-page__foot { display: flex; justify-content: center; gap: 20px; padding: 20px; font-size: 13px; }
+.status-page__foot a { color: var(--text-muted); }
+.status-page--shell { display: grid; place-items: center; min-height: 0; }
+.status { max-width: 460px; text-align: center; display: grid; justify-items: center; }
+.status__icon {
+    width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--accent-weak); color: var(--accent); margin-bottom: 18px;
+}
+.status__code { margin: 0 0 6px; font-size: 13px; font-weight: 600; letter-spacing: .12em; color: var(--accent); }
+.status__title { margin: 0 0 10px; font-size: 26px; font-weight: 650; letter-spacing: -.02em; color: var(--text); }
+.status__text { color: var(--text-muted); font-size: 15px; line-height: 1.6; }
+.status__text p { margin: 0 0 8px; }
+.status__path {
+    font-size: 13px; padding: 2px 6px; border-radius: 6px; background: var(--bg);
+    border: 1px solid var(--border); color: var(--text); overflow-wrap: anywhere;
+}
+.status__live { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+.status__actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+
+/* ── Data and privacy, the "Would deactivating be enough?" sheet, the deletion steps ── */
+/* Three controls of one size, the reversible ones first. Only delete carries the danger colour,
+   and only as text on the same plain outline: a filled red button would make it the loudest
+   thing on the page. */
+.btn--outline {
+    background: var(--bg); color: var(--text); border-color: var(--border-strong);
+    justify-content: center; font-weight: 500;
+}
+.btn--outline:hover:not(:disabled) { background: var(--surface); }
+.btn--outline-danger { color: var(--danger); }
+.btn--outline-danger:hover:not(:disabled) { background: var(--danger-weak); }
+.privacy__btn { min-width: 128px; }
+/* The same weight as the two blue buttons above it, in the danger colour: pale fill, red text. */
+.privacy__btn.btn--danger { background: var(--danger-weak); border-color: #f1c9c5; font-weight: 600; }
+.privacy__btn.btn--danger:hover:not(:disabled) { border-color: var(--danger); }
+@media (max-width: 520px) { .privacy__btn { width: 100%; } }
+
+.sheet__backdrop { position: fixed; inset: 0; z-index: 80; background: rgba(16, 20, 27, .4); animation: fade .15s ease; }
+.sheet {
+    position: fixed; left: 50%; bottom: 0; z-index: 81; transform: translateX(-50%);
+    width: min(560px, 100vw); max-height: 88dvh; overflow-y: auto;
+    background: var(--bg); border-radius: var(--r-lg) var(--r-lg) 0 0;
+    box-shadow: 0 -12px 40px rgba(16, 20, 27, .18);
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: sheet-in .2s ease-out;
+    transition: transform .18s ease;
+}
+@keyframes sheet-in { from { transform: translateX(-50%) translateY(24px); opacity: 0; } }
+.sheet:focus { outline: none; }
+.sheet__grab { display: grid; place-items: center; padding: 10px 0 4px; cursor: grab; touch-action: none; }
+.sheet__handle { width: 40px; height: 4px; border-radius: 2px; background: var(--border-strong); }
+.sheet__body { padding: 6px 24px 22px; }
+.sheet__title { font-size: 18px; font-weight: 650; margin: 4px 0 14px; }
+.sheet__text { margin: 0 0 10px; font-size: 14px; line-height: 1.6; color: var(--text); }
+/* Delete as a quiet question in a footer strip of its own, set apart from the two buttons so it
+   reads as a way out, not a third choice. The strip runs to the dialog's edges. */
+.sheet__more {
+    margin: 20px -24px -22px; padding: 12px 24px; text-align: center;
+    border-top: 1px solid var(--border); background: var(--surface);
+}
+.sheet__more-link {
+    border: 0; background: none; padding: 2px 0; font: inherit; font-size: 13px;
+    color: var(--danger); cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+}
+.sheet__more-link:hover { text-decoration-thickness: 2px; }
+.sheet__text--quiet { color: var(--text-muted); font-size: 13px; }
+/* Phone: stacked, the safe choice on top under the thumb. Desktop: one row, safe choice last
+   (where the eye ends), as in every other dialog here. */
+/* The reversible choice is the big one; delete is a small red text link, last. Phone: stacked
+   in that order. Desktop: one row, the link pushed to the left. */
+.sheet__actions { display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin-top: 16px; }
+.sheet__actions .btn { justify-content: center; }
+.sheet__link {
+    border: 0; background: none; padding: 10px; font-size: 14px; color: var(--text-muted);
+    border-radius: var(--r-sm); cursor: pointer;
+}
+.sheet__link:hover:not(:disabled) { background: var(--surface); color: var(--text); }
+.sheet__link:disabled { cursor: default; opacity: .6; }
+.sheet__link--danger { color: var(--danger); }
+.sheet__link--danger:hover { background: var(--danger-weak); color: var(--danger); }
+@media (max-width: 520px) {
+    .sheet__body { padding: 6px 16px 18px; }
+    .sheet__more { margin: 16px -16px -18px; padding: 12px 16px; }
+}
+/* On a desktop a sheet pinned to the bottom edge reads as broken: it becomes a centred dialog,
+   with no drag handle (there is nothing to drag with a mouse). */
+@media (min-width: 721px) {
+    .sheet {
+        top: 50%; bottom: auto; transform: translate(-50%, -50%); width: min(440px, calc(100vw - 48px));
+        border-radius: var(--r-lg); box-shadow: 0 20px 60px rgba(16, 20, 27, .22);
+        animation: dialog-in .16s ease-out;
+    }
+    .sheet__grab { display: none; }
+    .sheet__body { padding: 24px 28px 24px; }
+    .sheet__actions { flex-direction: row-reverse; justify-content: flex-start; align-items: center; margin-top: 22px; }
+    .sheet__more { margin: 22px -28px -24px; padding: 14px 28px; }
+}
+@keyframes dialog-in { from { transform: translate(-50%, -48%); opacity: 0; } }
+
+.wizard__successors { border: 0; margin: 18px 0 0; padding: 0; min-width: 0; display: grid; gap: 8px; }
+.wizard__successors legend { padding: 0; }
+.wizard__successors .wizard__text { margin-top: 0; }
+.wizard__person {
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer;
+    border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg);
+}
+.wizard__person:hover { background: var(--surface); }
+.wizard__person.is-chosen { border-color: var(--accent); background: var(--accent-weak); }
+.wizard__person input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; flex-shrink: 0; }
+.wizard__person-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.wizard__person-text strong { font-size: 14px; font-weight: 600; color: var(--text); }
+.wizard__person-text span { font-size: 13px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wizard__steps { list-style: none; margin: 0 0 18px; padding: 0; display: flex; gap: 6px; flex-wrap: wrap; }
+.wizard__steps li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: var(--r-sm); font-size: 13px; color: var(--text-muted); background: var(--bg); border: 1px solid var(--border); }
+.wizard__steps li.is-current { border-color: var(--accent); color: var(--accent); background: var(--accent-weak); font-weight: 500; }
+.wizard__steps li.is-done { color: var(--text); }
+.wizard__num { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; background: var(--surface); }
+.is-current .wizard__num { background: var(--accent); color: #fff; }
+.is-done .wizard__num { background: var(--success-weak); color: var(--success); }
+.wizard__card { max-width: 640px; }
+.page > .wizard__card { margin-left: 0; }
+.wizard__title { font-size: 16px; font-weight: 600; margin: 0 0 10px; }
+.wizard__title + .wizard__list { margin-top: 0; }
+.wizard__list { list-style: none; margin: 0 0 22px; padding: 0; border: 1px solid var(--border); border-radius: var(--r-sm); }
+.wizard__list li { display: flex; justify-content: space-between; gap: 16px; padding: 9px 12px; font-size: 14px; }
+.wizard__list li + li { border-top: 1px solid var(--border); }
+.wizard__list span { color: var(--text-muted); }
+.wizard__list strong { font-weight: 500; text-align: right; overflow-wrap: anywhere; }
+.wizard__text { margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: var(--text-muted); }
+.wizard__text strong { color: var(--text); }
+.wizard__actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.wizard__spacer { flex: 1; }
+.wizard__hint { margin-right: auto; font-size: 13px; color: var(--text-muted); }
+/* Back sits on the left, apart from the two choices on the right. */
+.wizard__back {
+    background: none; border-color: transparent; color: var(--text-muted); padding-left: 8px; padding-right: 12px;
+}
+.wizard__back:hover:not(:disabled) { background: var(--surface); color: var(--text); }
+/* Phone: one column, the step's own action on top, Back last. */
+@media (max-width: 520px) {
+    .wizard__actions { flex-direction: column-reverse; align-items: stretch; gap: 8px; }
+    .wizard__actions .btn { justify-content: center; }
+    .wizard__actions .wizard__spacer { display: none; }
+}
+.wizard__code { letter-spacing: .3em; font-size: 18px; max-width: 220px; }
+.wizard__danger { display: flex; gap: 12px; padding: 14px 16px; border-radius: var(--r-sm); background: var(--danger-weak); color: var(--danger); }
+.wizard__danger p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--text); }
+.wizard__danger .wizard__danger-title { color: var(--danger); font-weight: 600; margin-bottom: 4px; }
 
 /* ── Knowledge: one card, a tab per way of adding ── */
 .knowledge__addhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

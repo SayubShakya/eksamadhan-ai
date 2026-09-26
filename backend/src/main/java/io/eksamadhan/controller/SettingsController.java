@@ -6,6 +6,7 @@ import io.eksamadhan.model.UserRole;
 import io.eksamadhan.repository.OrganizationRepository;
 import io.eksamadhan.repository.UserRepository;
 import io.eksamadhan.service.AiReplyService;
+import io.eksamadhan.service.AccountLifecycleService;
 import io.eksamadhan.service.AuthRateLimiter;
 import io.eksamadhan.service.CurrentUser;
 import org.springframework.http.HttpStatus;
@@ -37,16 +38,19 @@ public class SettingsController {
     private final AiReplyService aiReplies;
     private final PasswordEncoder passwordEncoder;
     private final AuthRateLimiter rateLimiter;
+    private final AccountLifecycleService lifecycle;
 
     public SettingsController(CurrentUser currentUser, OrganizationRepository organizations,
                               UserRepository users, AiReplyService aiReplies,
-                              PasswordEncoder passwordEncoder, AuthRateLimiter rateLimiter) {
+                              PasswordEncoder passwordEncoder, AuthRateLimiter rateLimiter,
+                              AccountLifecycleService lifecycle) {
         this.currentUser = currentUser;
         this.organizations = organizations;
         this.users = users;
         this.aiReplies = aiReplies;
         this.passwordEncoder = passwordEncoder;
         this.rateLimiter = rateLimiter;
+        this.lifecycle = lifecycle;
     }
 
     public record WorkspaceSettings(String name, boolean aiRepliesEnabled,
@@ -71,7 +75,9 @@ public class SettingsController {
                 "me", Map.of(
                         "emailAlerts", me.isEmailAlerts(),
                         "hasPassword", me.getPasswordHash() != null,
-                        "googleLinked", me.getFirebaseUid() != null),
+                        "googleLinked", me.getFirebaseUid() != null,
+                        "canDelete", lifecycle.canDelete(me),
+                        "cannotDeleteReason", lifecycle.canDelete(me) ? "" : lifecycle.whyNot(me)),
                 "canManage", me.getRole().canManageTeam(),
                 "canDisconnect", me.getRole() == UserRole.OWNER);
     }

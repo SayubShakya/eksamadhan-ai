@@ -138,12 +138,24 @@ public class AccountService {
                 || !passwordEncoder.matches(password == null ? "" : password, user.getPasswordHash())) {
             throw rejected;
         }
+        reactivateIfDeactivated(user);
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This account has been disabled");
         }
 
         user.setLastLoginAt(OffsetDateTime.now());
         return userRepository.save(user);
+    }
+
+    /**
+     * Deactivating is undone by signing in: that is the whole difference from deleting, and the
+     * Settings page promises it. Disabled (removed by an admin) and deleted accounts stay out.
+     */
+    private static void reactivateIfDeactivated(User user) {
+        if (user.getStatus() == UserStatus.DEACTIVATED) {
+            user.setStatus(UserStatus.ACTIVE);
+            user.setDeactivatedAt(null);
+        }
     }
 
     // ---- Sign in with Google ----
@@ -159,6 +171,7 @@ public class AccountService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "There is no account for " + google.email() + " yet. If you were invited, open the "
                       + "link in your invitation email; otherwise create a workspace."));
+        reactivateIfDeactivated(user);
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This account has been disabled");
         }

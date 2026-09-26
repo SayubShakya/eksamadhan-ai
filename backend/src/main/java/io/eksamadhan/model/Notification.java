@@ -23,7 +23,7 @@ import java.util.UUID;
 public class Notification {
 
     /** Why it was sent, so the bell can show the urgent ones differently. */
-    public enum Kind { ESCALATED, ASSIGNED, CUSTOMER_REPLIED, TEST }
+    public enum Kind { ESCALATED, ASSIGNED, CUSTOMER_REPLIED, TEST, MEMBER_LEFT, NEW_TENANT }
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

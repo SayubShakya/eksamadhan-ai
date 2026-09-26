@@ -113,4 +113,9 @@ public interface SocialMessageRepository extends JpaRepository<SocialMessage, UU
     @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
     @org.springframework.data.jpa.repository.Query("DELETE FROM SocialMessage m WHERE m.socialPage = :page")
     int deleteBySocialPage(io.eksamadhan.model.SocialPage page);
+
+    /** Replies this person sent to customers: kept on deletion, their name no longer attached. */
+    long countBySentByUserId(java.util.UUID userId);
+
+    java.util.List<SocialMessage> findBySentByUserIdOrderByTimestampAsc(java.util.UUID userId);
 }

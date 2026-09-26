@@ -155,4 +155,17 @@ public interface ConversationThreadRepository extends JpaRepository<Conversation
     @org.springframework.data.jpa.repository.Query(
             "UPDATE ConversationThread t SET t.spam = false WHERE t.id = :id AND t.spam = true")
     int restoreFromSpam(UUID id);
+
+    long countByAssignedAgentId(String agentId);
+
+    /**
+     * A person leaving (deactivated or deleted) hands their open conversations back to the queue,
+     * so no customer is left with someone who is gone; routing then gives them to whoever is here.
+     */
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("UPDATE ConversationThread t SET t.assignedAgentId = NULL, "
+          + "t.status = io.eksamadhan.model.ThreadStatus.OPEN_FOR_AGENT "
+          + "WHERE t.assignedAgentId = :agentId AND t.status IN "
+          + "(io.eksamadhan.model.ThreadStatus.OPEN_FOR_AGENT, io.eksamadhan.model.ThreadStatus.AGENT_HANDLING)")
+    int releaseToQueue(String agentId);
 }

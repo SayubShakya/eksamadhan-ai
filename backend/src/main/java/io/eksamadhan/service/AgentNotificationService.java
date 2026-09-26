@@ -150,6 +150,37 @@ public class AgentNotificationService {
     }
 
     /** The "Send a test" button, which should exercise the bell as well as the push. */
+    /**
+     * A member deactivated or deleted their own account. The tenant and admins hear it while
+     * there is still a name to give, because on deletion the name is gone a moment later.
+     */
+    public void memberLeft(User leaving, boolean deleted, int conversationsReleased) {
+        if (leaving == null || leaving.getOrganization() == null) return;
+        String name = (leaving.getFirstName() + " " + (leaving.getLastName() == null ? "" : leaving.getLastName())).trim();
+        String title = name + (deleted ? " deleted their account" : " deactivated their account");
+        String body = conversationsReleased == 0
+                ? (deleted ? "They are no longer in the workspace." : "They are off the rota until they sign in again.")
+                : conversationsReleased + (conversationsReleased == 1 ? " conversation was" : " conversations were")
+                  + " handed back to the queue for someone available.";
+        for (User manager : userRepository.findActiveByOrganization(leaving.getOrganization())) {
+            if (manager.getId().equals(leaving.getId()) || !manager.getRole().canManageTeam()) continue;
+            try {
+                deliver(manager, Notification.Kind.MEMBER_LEFT, null, title, body, "/dashboard/team");
+            } catch (Exception e) {
+                log.debug("Could not tell {} that a member left: {}", manager.getEmail(), e.getMessage());
+            }
+        }
+    }
+
+    /** The tenant deleted their account and named this person to take the workspace over. */
+    public void becameTenant(User successor, String formerTenant) {
+        deliver(successor, Notification.Kind.NEW_TENANT, null,
+                "You are now the tenant of " + successor.getOrganization().getName(),
+                formerTenant + " deleted their account and chose you to take over. You can now "
+                        + "disconnect channels and delete conversation history, which only the tenant can do.",
+                "/dashboard/team");
+    }
+
     public void test(User agent) {
         deliver(agent, Notification.Kind.TEST, null,
                 "Notifications are working",

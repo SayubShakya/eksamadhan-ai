@@ -32,11 +32,38 @@ public class ThreadController {
     private final ConversationSummaryService summaryService;
     private final io.eksamadhan.service.AgentNotificationService agentNotifications;
     private final io.eksamadhan.repository.SocialMessageRepository messageRepository;
+    private final io.eksamadhan.repository.PinnedConversationRepository pins;
 
     @GetMapping
     public List<ThreadResponse> list() {
-        return threadService.visibleTo(currentUser.require())
-                .stream().map(this::toDto).toList();
+        User me = currentUser.require();
+        java.util.Set<UUID> pinned = pins.threadIdsFor(me.getId());
+        return threadService.visibleTo(me).stream().map(t -> toDto(t, pinned)).toList();
+    }
+
+    /**
+     * Pin or unpin a conversation for yourself. Anything you can see you can pin, including a
+     * conversation you may not act on; staff see only their own, so only those.
+     */
+    @PutMapping("/{threadId}/pin")
+    public Map<String, Object> pin(@PathVariable UUID threadId) {
+        User me = requireVisible(threadId);
+        pins.pin(me.getId(), threadId);
+        return Map.of("pinned", true);
+    }
+
+    @DeleteMapping("/{threadId}/pin")
+    public Map<String, Object> unpin(@PathVariable UUID threadId) {
+        User me = currentUser.require();
+        pins.unpin(me.getId(), threadId);
+        return Map.of("pinned", false);
+    }
+
+    private User requireVisible(UUID threadId) {
+        User me = currentUser.require();
+        boolean visible = threadService.visibleTo(me).stream().anyMatch(t -> t.getId().equals(threadId));
+        if (!visible) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Conversation not found");
+        return me;
     }
 
     @PostMapping("/{threadId}/take-over")
@@ -154,6 +181,10 @@ public class ThreadController {
     }
 
     private ThreadResponse toDto(ConversationThread t) {
+        return toDto(t, pins.threadIdsFor(currentUser.require().getId()));
+    }
+
+    private ThreadResponse toDto(ConversationThread t, java.util.Set<UUID> pinned) {
         return ThreadResponse.builder()
                 .id(t.getId().toString())
                 .customerId(t.getCustomerId())
@@ -180,6 +211,7 @@ public class ThreadController {
                 .spamAt(t.getSpamAt() == null ? null : t.getSpamAt().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
                 .spamCleared(t.isSpamCleared())
                 .spamMessage(spamMessage(t))
+                .pinned(pinned.contains(t.getId()))
                 .build();
     }
 

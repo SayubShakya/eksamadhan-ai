@@ -17,6 +17,9 @@ erDiagram
     ORGANIZATIONS ||--o{ KNOWLEDGE_SOURCES : owns
     ORGANIZATIONS ||--o{ KNOWLEDGE_CHUNKS : scopes
     USERS ||--o{ PUSH_SUBSCRIPTIONS : registers
+    USERS ||--o{ PINNED_CONVERSATIONS : pins
+    USERS ||--o| ACCOUNT_DELETION_CHALLENGES : deleting
+    USERS |o--o{ ACCOUNT_DELETION_CHALLENGES : "takes over as tenant"
     USERS ||--o{ NOTIFICATIONS : receives
     USERS ||--o{ INVITATIONS : invited_by
     USERS ||--o{ SOCIAL_MESSAGES : sent_by
@@ -25,6 +28,7 @@ erDiagram
     CONVERSATION_THREADS ||--o{ SOCIAL_MESSAGES : contains
     CONVERSATION_THREADS ||--o{ MESSAGE_EMBEDDINGS : remembers
     CONVERSATION_THREADS ||--o{ NOTIFICATIONS : concerns
+    CONVERSATION_THREADS ||--o{ PINNED_CONVERSATIONS : pinned_as
     SOCIAL_MESSAGES ||--|| MESSAGE_EMBEDDINGS : embedded_as
     SOCIAL_MESSAGES ||--o| MESSAGE_TRIAGE : judged_as
     SOCIAL_MESSAGES ||--o{ AI_TRACE_STEPS : traced_by
@@ -51,13 +55,15 @@ erDiagram
         varchar last_name
         varchar role "OWNER ADMIN AGENT"
         text avatar
-        varchar status "ACTIVE INVITED DISABLED"
+        varchar status "ACTIVE INVITED DISABLED DEACTIVATED DELETED"
         timestamptz created_at
         timestamptz last_login_at
         boolean system_admin "set only from configuration"
         varchar availability "AVAILABLE BUSY, chosen by the person"
         timestamptz last_seen_at "dashboard heartbeat, online if recent"
         boolean email_alerts "handover also by email"
+        timestamptz deactivated_at
+        timestamptz deleted_at "row kept, personal fields overwritten"
     }
 
     INVITATIONS {
@@ -224,6 +230,25 @@ erDiagram
         text output "what came out, as JSON"
         integer duration_ms
         timestamptz created_at
+    }
+
+    ACCOUNT_DELETION_CHALLENGES {
+        uuid id PK
+        uuid user_id FK,UK "ON DELETE CASCADE, one per person"
+        smallint stage "0 to 4, the server's step"
+        varchar code_hash "SHA-256 of code and id"
+        timestamptz code_sent_at
+        int code_sends
+        int code_attempts
+        uuid successor_id FK "tenant only, who takes over, ON DELETE SET NULL"
+        timestamptz created_at
+        timestamptz expires_at "15 minutes"
+    }
+
+    PINNED_CONVERSATIONS {
+        uuid user_id PK,FK "ON DELETE CASCADE, personal"
+        uuid thread_id PK,FK "ON DELETE CASCADE"
+        timestamptz pinned_at
     }
 
     PUSH_SUBSCRIPTIONS {

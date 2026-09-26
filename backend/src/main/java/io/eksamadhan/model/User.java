@@ -81,7 +81,13 @@ public class User {
     @Column(nullable = false, length = 20)
     private Availability availability = Availability.AVAILABLE;
 
-    /** Whether a handover is also emailed to them; push and the bell always happen. */
+    @Column(name = "deactivated_at")
+    private OffsetDateTime deactivatedAt;
+
+    @Column(name = "deleted_at")
+    private OffsetDateTime deletedAt;
+
+        /** Whether a handover is also emailed to them; push and the bell always happen. */
     @Builder.Default
     @Column(name = "email_alerts", nullable = false)
     private boolean emailAlerts = true;
