@@ -1,7 +1,7 @@
 # Eight-week delivery plan
 
 Week 1 begins **15 September 2026**; week 8 ends **9 November 2026**. A progress
-report is due the **Monday after each week ends**.
+report is due every **Thursday**, the last day of each week (weeks run Friday to Thursday).
 
 > **This compresses the twelve-week plan in §7.2 of the contextual report into eight.**
 > The four phases still run in the same order, but four weeks of slack are gone, so
@@ -150,9 +150,10 @@ runs twice in a row without intervention.
 
 | Day | |
 | :--- | :--- |
-| Monday | Submit last week's report; re-read this plan |
-| Tue–Sat | Build. Commit as you go — the log must match the repo |
-| Sunday | Write the report; regenerate the commit list as evidence |
+| Friday | Start the new week; re-read this plan |
+| Fri–Tue | Build. Commit as you go — the log must match the repo |
+| Wednesday | Write the report; regenerate the commit list as evidence |
+| Thursday | Submit the week's report |
 
 Report template and past reports: [`weekly-reports/`](weekly-reports/).
 

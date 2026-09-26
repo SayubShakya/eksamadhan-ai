@@ -21,6 +21,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -39,6 +41,7 @@ class AiTraceRecordingTest {
     @Autowired SocialPageRepository pages;
     @Autowired ConversationThreadRepository threads;
     @Autowired SocialMessageRepository messages;
+    @Autowired io.eksamadhan.repository.OrganizationRepository organizations;
 
     @MockitoBean LlmClient llmClient;
     @MockitoBean RetrievalService retrievalService;
@@ -108,6 +111,7 @@ class AiTraceRecordingTest {
                 "Customer message received",
                 "Is a person already handling it?",
                 "Marked as spam?",
+                "Are AI replies switched on?",
                 "Gather unanswered messages",
                 "Knowledge search",
                 "Gate 1: is the best passage close enough?",
@@ -140,6 +144,57 @@ class AiTraceRecordingTest {
         assertTrue(handover >= 0 && assign > handover, "handover, then assignment: " + steps);
         assertTrue(steps.stream().anyMatch(t -> t.startsWith("Alert ")), "someone is alerted: " + steps);
         assertEquals("Message sent to the customer", steps.get(steps.size() - 1), "the handover notice closes it");
+    }
+
+    /**
+     * Settings: a workspace that switches the AI off. The customer is handed to a person with the
+     * workspace's own handover words, and the model is never asked. It used to return in silence.
+     */
+    @Test
+    void aWorkspaceWithAiSwitchedOffHandsTheCustomerToAPersonInItsOwnWords() {
+        Organization org = page.getOrganization();
+        org.setAiRepliesEnabled(false);
+        org.setHandoverMessage("Thanks for waiting. One of our team will answer you here.");
+        organizations.saveAndFlush(org);
+        UUID id = customerAsks("Do you have this in blue?");
+
+        aiReplyService.reply(id, page.getId());
+
+        List<String> steps = titles(id);
+        int check = steps.indexOf("Are AI replies switched on?");
+        int handover = steps.indexOf("Escalated to a person");
+        assertTrue(check >= 0 && handover > check, "switch checked, then handed over: " + steps);
+        assertFalse(steps.contains("Local model"), "the model is not asked: " + steps);
+        verify(llmClient, never()).complete(anyString(), anyString());
+        verify(metaService).sendMessage(eq("trace-test-customer"),
+                eq("Thanks for waiting. One of our team will answer you here."), any(), any());
+        assertEquals(ThreadStatus.OPEN_FOR_AGENT,
+                messages.findWithThreadById(id).orElseThrow().getThread().getStatus());
+    }
+
+    @Autowired io.eksamadhan.repository.UserRepository users;
+
+    /** Settings: someone who turned email alerts off still gets the push and the bell, not the email. */
+    @Test
+    void emailAlertsOffMeansAPushButNoEmail() {
+        List<User> members = users.findActiveByOrganization(page.getOrganization());
+        assumeFalse(members.isEmpty(), "needs a member to hand to");
+        java.time.OffsetDateTime now = java.time.OffsetDateTime.now();
+        // Only this one person is available and online, so routing must pick them.
+        for (User u : members) users.setAvailability(u.getId(), Availability.AVAILABLE, now.minusHours(1));
+        User quiet = members.get(0);
+        users.setAvailability(quiet.getId(), Availability.AVAILABLE, now);
+        User fresh = users.findById(quiet.getId()).orElseThrow();
+        fresh.setEmailAlerts(false);
+        users.saveAndFlush(fresh);
+
+        when(llmClient.complete(anyString(), anyString())).thenReturn(
+                "{\"related\": true, \"answered\": false, \"confidence\": 0.2, \"reply\": \"\"}");
+        UUID id = customerAsks("Do you repair washing machines?");
+        aiReplyService.reply(id, page.getId());
+
+        verify(agentNotifications).escalated(org.mockito.ArgumentMatchers.argThat(u -> u.getId().equals(quiet.getId())), any(), any());
+        verify(emailService, never()).send(anyString(), anyString(), any(), any());
     }
 
     @Test

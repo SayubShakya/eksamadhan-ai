@@ -155,6 +155,14 @@ export const connectUrl = (platform) =>
 
 /** Removes every connected page and the stored history. Not the same as signing out. */
 export const disconnectChannels = () => axios.post('/api/auth/disconnect');
+/** One connected account, and the conversations it brought in (tenant only). */
+export const disconnectPage = (id) => axios.delete(`/api/auth/pages/${id}`).then(r => r.data);
+
+// ── Settings ────────────────────────────────────────────────────────────────
+export const getSettings = () => axios.get('/api/settings').then(r => r.data);
+export const saveWorkspaceSettings = (payload) => axios.put('/api/settings/workspace', payload).then(r => r.data);
+export const saveMySettings = (payload) => axios.put('/api/settings/me', payload).then(r => r.data);
+export const changePassword = (payload) => axios.put('/api/settings/me/password', payload).then(r => r.data);
 
 // ── Notifications ───────────────────────────────────────────────────────────
 export const getPushKey = () => axios.get('/api/push/key').then(r => r.data);

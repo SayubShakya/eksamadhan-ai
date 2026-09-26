@@ -27,7 +27,9 @@ flowchart TD
     spamGate -->|yes| quietSpam(["AI stays silent, nobody alerted —<br/>it waits in the Spam tab"])
     spamGate -->|no| sticker{"Only a sticker<br/>or a like?"}
     sticker -->|yes| quietSticker(["Nothing to answer —<br/>not counted as waiting"])
-    sticker -->|no| hasText{"Does it<br/>have text?"}
+    sticker -->|no| aiOn{"AI replies switched on<br/>for this workspace,<br/>and a model configured?"}
+    aiOn -->|no| escOff(["Escalate to an available person,<br/>with the workspace's handover words"])
+    aiOn -->|yes| hasText{"Does it<br/>have text?"}
 
     hasText -->|no| readable{"Can the attachment<br/>be read?"}
     readable -->|yes| toText["Turn it into text:<br/>transcribe a voice note,<br/>describe a photo"]

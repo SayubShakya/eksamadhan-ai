@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import {
     IconHome, IconInbox, IconKnowledge,
-    IconChannels, IconTeam, IconAnalytics, IconSettings, IconChevronLeft,
+    IconChannels, IconTeam, IconAnalytics, IconSettings, IconChevronLeft, IconSignOut,
 } from './icons.jsx';
 import { LogoMark } from './Logo.jsx';
 
@@ -28,7 +28,7 @@ const DOCKED = '(min-width: 1024px)';
  * `showSettings={false}` because workspace settings have no meaning outside a workspace.
  */
 export default function NavRail({ view, onNavigate, unread = 0, open, onClose, onToggle, onHome,
-                                  items = ITEMS, showSettings = true }) {
+                                  items = ITEMS, showSettings = true, onSignOut }) {
     useEffect(() => {
         if (!open) return;
         const onKey = (e) => {
@@ -97,6 +97,13 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                     >
                         <IconSettings />
                         <span>Settings</span>
+                    </button>
+                )}
+                {/* Last in the menu, under Settings, where people look for it. It asks first. */}
+                {onSignOut && (
+                    <button className="rail__item rail__item--signout" onClick={onSignOut}>
+                        <IconSignOut />
+                        <span>Sign out</span>
                     </button>
                 )}
             </nav>

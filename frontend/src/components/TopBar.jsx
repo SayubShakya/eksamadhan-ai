@@ -1,4 +1,4 @@
-import { IconSearch, IconMenu, IconSignOut, IconDownload } from './icons.jsx';
+import { IconSearch, IconMenu, IconDownload } from './icons.jsx';
 import usePwa from '../lib/usePwa.js';
 import { LogoMark } from './Logo.jsx';
 import Avatar from './Avatar.jsx';
@@ -81,9 +81,6 @@ export default function TopBar({
                 <Avatar user={user} size={32} />
             </button>
 
-            <button className="icon-btn" onClick={onSignOut} aria-label="Sign out" title="Sign out">
-                <IconSignOut />
-            </button>
             </div>
         </header>
     );

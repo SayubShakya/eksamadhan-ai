@@ -71,10 +71,10 @@ export default function AnalyticsPage() {
 
     return (
         <div className="page">
-            <div className="an__head">
+            <div className="page__head">
                 <div>
-                    <h1 className="section-title" style={{ marginTop: 0 }}>Analytics</h1>
-                    <p className="muted" style={{ marginTop: -4 }}>
+                    <h1 className="page__title">Analytics</h1>
+                    <p className="page__sub">
                         How much the AI is handling, how quickly customers get an answer, and where
                         the human workload comes from.
                     </p>

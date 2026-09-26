@@ -108,6 +108,9 @@ public interface SocialMessageRepository extends JpaRepository<SocialMessage, UU
     int saveTranscript(java.util.UUID id, String transcript);
 
     void deleteByTenantId(String tenantId);
+
+    /** Every message a page brought in; their traces, triage and embeddings go with them (ON DELETE CASCADE). */
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("DELETE FROM SocialMessage m WHERE m.socialPage = :page")
+    int deleteBySocialPage(io.eksamadhan.model.SocialPage page);
 }
-
-

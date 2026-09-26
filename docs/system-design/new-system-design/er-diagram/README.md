@@ -36,6 +36,9 @@ erDiagram
         varchar api_key UK "the tenant key denormalised elsewhere"
         varchar name
         timestamptz created_at
+        boolean ai_replies_enabled "off hands every message to staff"
+        text handover_message "null means the default"
+        text closing_message "null means the default"
     }
 
     USERS {
@@ -54,6 +57,7 @@ erDiagram
         boolean system_admin "set only from configuration"
         varchar availability "AVAILABLE BUSY, chosen by the person"
         timestamptz last_seen_at "dashboard heartbeat, online if recent"
+        boolean email_alerts "handover also by email"
     }
 
     INVITATIONS {

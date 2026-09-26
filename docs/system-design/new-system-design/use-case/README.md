@@ -22,7 +22,7 @@ with these actors down the left and the ovals inside one system boundary.
 flowchart LR
     owner(("Account Owner<br/>/ Admin"))
     subgraph s1["EkSamadhan AI platform"]
-        a1["Connect Facebook / Instagram page<br/>FR-01"]
+        a1["Connect, reconnect or disconnect<br/>a Facebook / Instagram page<br/>FR-01"]
         a2["Add business knowledge<br/>text · PDF · image · website crawl<br/>FR-02"]
         a3["Invite support agents<br/>FR-04"]
         a4["View analytics<br/>deflection · reply time · by channel"]
@@ -30,6 +30,7 @@ flowchart LR
         a6["View unified inbox<br/>FR-06"]
         a7["Generate website widget script<br/>PLANNED · FR-03"]
         a8["Sign up and sign in with Google"]
+        a9["Configure the workspace and AI replies<br/>name · AI on or off · handover and closing words"]
     end
     owner --- a1
     owner --- a2
@@ -38,6 +39,7 @@ flowchart LR
     owner --- a5
     owner --- a6
     owner --- a8
+    owner --- a9
     owner -.- a7
     style a7 stroke-dasharray: 5 5
 ```
@@ -62,6 +64,7 @@ flowchart LR
         b14["Install the dashboard as an app"]
         b8["Receive alert when needed<br/>FR-09"]
         b15["Read and clear alerts in the bell<br/>open one · mark all read"]
+        b16["Manage own settings<br/>email alerts · change password"]
         b9["Set availability<br/>Available or Busy · FR-05"]
     end
     agent --- b1
@@ -78,6 +81,7 @@ flowchart LR
     agent --- b14
     agent --- b8
     agent --- b15
+    agent --- b16
     agent --- b9
 ```
 

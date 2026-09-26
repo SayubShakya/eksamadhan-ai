@@ -193,11 +193,6 @@ public class AiReplyService {
     }
 
     private void replyTraced(UUID messageId, UUID pageId) {
-        if (!enabled || !llmClient.isConfigured()) {
-            trace.here(TraceRecorder.Kind.END, "Auto-reply is off", "no AI reply",
-                    TraceRecorder.of("auto-reply", enabled, "model configured", llmClient.isConfigured()), null);
-            return;
-        }
 
         // Recorded on the reply so a slow answer can be explained rather than argued about:
         // this marks when the AI actually started, which is not when the customer wrote.
@@ -262,6 +257,21 @@ public class AiReplyService {
                     TraceRecorder.of("attachment", "sticker"), TraceRecorder.of("counted as waiting", false));
             return;
         }
+        // AI replies switched off (by the workspace, or on the whole server), or no model to
+        // answer with: the customer goes to a person. This used to return without a word, and
+        // nobody was told a customer had written.
+        String offReason = !organization.isAiRepliesEnabled() ? "AI replies are switched off for this workspace"
+                : !enabled ? "AI replies are switched off on this server"
+                : !llmClient.isConfigured() ? "no AI model is configured" : null;
+        trace.here(TraceRecorder.Kind.DECISION, "Are AI replies switched on?", offReason == null ? "yes" : "no",
+                TraceRecorder.of("workspace setting", organization.isAiRepliesEnabled(),
+                        "server setting", enabled, "model configured", llmClient.isConfigured()),
+                TraceRecorder.of("AI may reply", offReason == null));
+        if (offReason != null) {
+            escalate(thread, page, message.getSenderId(), offReason);
+            return;
+        }
+
         if (question == null || question.isBlank()) {
             question = readAttachment(message);
             if (question == null) {
@@ -734,8 +744,7 @@ public class AiReplyService {
             agentNotifications.nobodyToAssign(page.getOrganization(), escalated, reason);
         }
 
-        if (!alreadyWaiting && page != null && customerId != null && handoverMessage != null
-                && !handoverMessage.isBlank()) {
+        if (!alreadyWaiting && page != null && customerId != null && !handoverText(page).isBlank()) {
             sendHandoverNotice(page, customerId);
         }
     }
@@ -745,6 +754,8 @@ public class AiReplyService {
         // and it must not wait on an email round trip to Resend.
         agentNotifications.escalated(agent, thread, reason);
 
+        // Email only if they want it (Settings); the push and the bell above always happen.
+        if (!agent.isEmailAlerts()) return;
         try {
             String customer = thread.getCustomerName() == null ? "A customer" : thread.getCustomerName();
             String link = frontendUrl + "/dashboard/inbox";
@@ -778,8 +789,24 @@ public class AiReplyService {
     }
 
     private void sendHandoverNotice(SocialPage page, String customerId) {
-        sendNotice(page, customerId, handoverMessage);
+        sendNotice(page, customerId, handoverText(page));
     }
+
+    /** The workspace's own wording if it set one in Settings, otherwise the default. */
+    private String handoverText(SocialPage page) {
+        String own = page == null || page.getOrganization() == null ? null : page.getOrganization().getHandoverMessage();
+        return own != null && !own.isBlank() ? own : handoverMessage == null ? "" : handoverMessage;
+    }
+
+    private String closingText(SocialPage page) {
+        String own = page == null || page.getOrganization() == null ? null : page.getOrganization().getClosingMessage();
+        return own != null && !own.isBlank() ? own : unrelatedMessage == null ? "" : unrelatedMessage;
+    }
+
+    /** The built-in wording, shown on the Settings page as what an empty field means. */
+    public String defaultHandoverMessage() { return handoverMessage == null ? "" : handoverMessage; }
+
+    public String defaultClosingMessage() { return unrelatedMessage == null ? "" : unrelatedMessage; }
 
     private void sendNotice(SocialPage page, String customerId, String text) {
         try {
@@ -927,8 +954,8 @@ public class AiReplyService {
         thread.setOffTopicStreak(streak);
         threadRepository.updateOffTopic(thread.getId(), streak, true);
 
-        if (page != null && customerId != null && unrelatedMessage != null && !unrelatedMessage.isBlank()) {
-            sendNotice(page, customerId, unrelatedMessage);
+        if (page != null && customerId != null && !closingText(page).isBlank()) {
+            sendNotice(page, customerId, closingText(page));
         }
         threadService.resolve(thread.getId());
         trace.here(TraceRecorder.Kind.END, "Conversation closed", "off-topic three times in a row",

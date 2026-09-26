@@ -53,6 +53,8 @@ sequenceDiagram
 
     alt conversation is spam
         Note over AI: No reply, no handover, no alert.<br/>It waits in the Spam tab until a person says otherwise.
+    else AI replies switched off (Settings), or no model configured
+        Note over AI: Handed to a person at once: escalate, assign an available<br/>staff member, send the workspace's handover words. Never silent.
     else firewall on, and sure
         Note over AI,J: Greet, thank, or hand over without the model.
     else everything else

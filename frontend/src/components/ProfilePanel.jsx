@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ROLE_LABEL } from '../lib/format.js';
-import { IconClose, IconPlus } from './icons.jsx';
+import { IconArrowRight, IconClose, IconPlus } from './icons.jsx';
 import Avatar from './Avatar.jsx';
 import { fileToAvatar } from '../lib/avatar.js';
-import * as push from '../lib/push.js';
 import usePwa from '../lib/usePwa.js';
 import * as api from '../lib/api.js';
 
@@ -13,31 +12,19 @@ import * as api from '../lib/api.js';
  * Saved on the server against the signed-in user. Role and email are read-only: the role
  * is set when inviting (FR-04), and the email identifies the account.
  */
-export default function ProfilePanel({ open, user, onSave, onClose }) {
+export default function ProfilePanel({ open, user, onSave, onClose, onOpenSettings }) {
     const [draft, setDraft] = useState(user);
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
     const fileRef = useRef(null);
 
-    // Notifications are a property of this browser, not of the account, so the state is read
-    // from the browser every time the panel opens rather than stored on the profile.
+    // Installing is per device, so it is offered here only when this browser can do it now.
     const app = usePwa();
-    const [alerts, setAlerts] = useState({ supported: push.supported(), on: false, busy: true, note: '' });
-
-    const readAlerts = useCallback(async () => {
-        if (!push.supported()) { setAlerts({ supported: false, on: false, busy: false, note: '' }); return; }
-        try {
-            const subscription = await push.current();
-            setAlerts({ supported: true, on: !!subscription, busy: false, note: '' });
-        } catch {
-            setAlerts({ supported: true, on: false, busy: false, note: '' });
-        }
-    }, []);
 
     // Seed only when the panel opens. Depending on `user` too would reset the form
     // mid-edit whenever the profile object changed identity.
     useEffect(() => {
-        if (open) { setDraft(user); setError(''); setSaving(false); readAlerts(); }
+        if (open) { setDraft(user); setError(''); setSaving(false); }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
@@ -65,31 +52,7 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
         }
     };
 
-    // `busy` is true while the state is read, or names the button whose request is running.
-    const toggleAlerts = async () => {
-        setAlerts(a => ({ ...a, busy: 'toggle', note: '' }));
-        try {
-            if (alerts.on) {
-                await push.disable();
-                setAlerts({ supported: true, on: false, busy: false, note: 'Notifications are off on this device.' });
-            } else {
-                await push.enable();
-                setAlerts({ supported: true, on: true, busy: false, note: 'This device will be notified.' });
-            }
-        } catch (err) {
-            setAlerts(a => ({ ...a, busy: false, note: err.message || 'Could not change notifications.' }));
-        }
-    };
 
-    const testAlert = async () => {
-        setAlerts(a => ({ ...a, busy: 'test', note: '' }));
-        try {
-            await api.sendTestPush();
-            setAlerts(a => ({ ...a, busy: false, note: 'Sent. It should appear in a moment.' }));
-        } catch (err) {
-            setAlerts(a => ({ ...a, busy: false, note: api.errorMessage(err, 'Could not send a test notification.') }));
-        }
-    };
 
     const submit = async (e) => {
         e.preventDefault();
@@ -142,6 +105,13 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
                         </div>
                     </div>
 
+                    {draft.avatar && (
+                        <button type="button" className="profile__remove"
+                                onClick={() => setDraft(d => ({ ...d, avatar: null }))}>
+                            Remove photo
+                        </button>
+                    )}
+
                     {error && <p className="panel__error" role="alert">{error}</p>}
 
                     <div className="field-row">
@@ -167,88 +137,42 @@ export default function ProfilePanel({ open, user, onSave, onClose }) {
                         </label>
                     </div>
 
-                    {/* Read-only: letting people set their own role would let any agent
-                        promote themselves. Roles are assigned when inviting (FR-04). */}
-                    <div className="field">
-                        <span className="field__label">Role</span>
-                        <p className="field__static">
-                            {ROLE_LABEL[draft.role] || draft.role}
-                            <span className="field__note">Set by your workspace admin</span>
-                        </p>
-                    </div>
+                    {/* Read-only: letting people set their own role would let any staff member
+                        promote themselves, and the email is how the account signs in. */}
+                    <dl className="profile__facts">
+                        <div>
+                            <dt>Email</dt>
+                            <dd>{draft.email}<small>Used to sign in</small></dd>
+                        </div>
+                        <div>
+                            <dt>Role</dt>
+                            <dd>
+                                {ROLE_LABEL[draft.role] || draft.role}
+                                <small>{draft.role === 'OWNER' ? 'You created this workspace' : 'Set by the tenant or an admin'}</small>
+                            </dd>
+                        </div>
+                    </dl>
 
-                    {/* Per browser, per device. Granting permission on a laptop says nothing
-                        about a phone, so this reads the browser rather than the account. */}
-                    <div className="field">
-                        <span className="field__label">Notifications</span>
-                        {alerts.supported ? (
-                            <div className="field__control">
-                                <button
-                                    type="button"
-                                    className={`btn ${alerts.on ? 'btn--secondary' : 'btn--primary'}${alerts.busy === 'toggle' ? ' btn--busy' : ''}`}
-                                    onClick={toggleAlerts}
-                                    disabled={Boolean(alerts.busy)}
-                                    aria-busy={alerts.busy === 'toggle'}
-                                >
-                                    {alerts.on ? 'Turn off on this device' : 'Notify me on this device'}
-                                </button>
-                                {alerts.on && (
-                                    <button type="button" className={`btn btn--secondary btn--sm${alerts.busy === 'test' ? ' btn--busy' : ''}`}
-                                            onClick={testAlert} disabled={Boolean(alerts.busy)} aria-busy={alerts.busy === 'test'}>
-                                        Send a test
-                                    </button>
-                                )}
-                            </div>
-                        ) : (
-                            <p className="field__static">
-                                Not available
-                                <span className="field__note">This browser cannot show notifications.</span>
-                            </p>
-                        )}
-                        <span className="field__note">
-                            {alerts.note || 'Tells you when a conversation is handed to you, or a customer replies.'}
-                        </span>
-                    </div>
+                    {/* Only when this browser can install now; a row saying it cannot is noise. */}
+                    {!app.installed && (app.canPrompt || app.iosHint) && (
+                        <div className="profile__install">
+                            {app.canPrompt ? (
+                                <>
+                                    <span>Install EkSamadhan AI on this device, in its own window with its own icon.</span>
+                                    <button type="button" className="btn btn--secondary btn--sm" onClick={app.install}>Install</button>
+                                </>
+                            ) : (
+                                <span>Add it to your home screen: in Safari, tap Share, then "Add to Home Screen".</span>
+                            )}
+                        </div>
+                    )}
 
-                    {/* Per device, like notifications: installing on a laptop says nothing about a phone. */}
-                    <div className="field">
-                        <span className="field__label">App</span>
-                        {app.installed ? (
-                            <p className="field__static">
-                                Installed on this device
-                                <span className="field__note">It opens in its own window, from your dock, Start menu or home screen.</span>
-                            </p>
-                        ) : app.canPrompt ? (
-                            <>
-                                <div className="field__control">
-                                    <button type="button" className="btn btn--primary" onClick={app.install}>
-                                        Install on this device
-                                    </button>
-                                </div>
-                                <span className="field__note">Its own window and icon, like a downloaded app, with no app store.</span>
-                            </>
-                        ) : app.iosHint ? (
-                            <p className="field__static">
-                                Add to your home screen
-                                <span className="field__note">In Safari, tap Share, then “Add to Home Screen”.</span>
-                            </p>
-                        ) : (
-                            <p className="field__static">
-                                Not offered here
-                                <span className="field__note">Open this page in Chrome or Edge to install it as an app.</span>
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Read-only: the email is the account identifier, so changing it here
-                        would silently change how you sign in. */}
-                    <div className="field">
-                        <span className="field__label">Email</span>
-                        <p className="field__static">
-                            {draft.email}
-                            <span className="field__note">Used to sign in</span>
-                        </p>
-                    </div>
+                    {/* Notifications and the password live in Settings, in one place. */}
+                    {onOpenSettings && (
+                        <button type="button" className="profile__link" onClick={onOpenSettings}>
+                            Notifications, password and more in Settings <IconArrowRight size={14} />
+                        </button>
+                    )}
 
                     <div className="panel__actions">
                         <button type="button" className="btn btn--secondary" onClick={onClose}>

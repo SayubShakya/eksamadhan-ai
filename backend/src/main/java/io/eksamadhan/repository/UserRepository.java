@@ -43,4 +43,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query("UPDATE User u SET u.availability = :availability, u.lastSeenAt = :at WHERE u.id = :id")
     int setAvailability(java.util.UUID id, io.eksamadhan.model.Availability availability,
                         java.time.OffsetDateTime at);
+
+    /** The profile panel's three fields, and nothing else on the row. */
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
+    @Query("UPDATE User u SET u.firstName = :firstName, u.lastName = :lastName, u.avatar = :avatar WHERE u.id = :id")
+    int updateProfile(java.util.UUID id, String firstName, String lastName, String avatar);
 }

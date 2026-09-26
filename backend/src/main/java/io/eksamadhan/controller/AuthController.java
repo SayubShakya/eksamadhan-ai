@@ -59,7 +59,8 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown platform: " + platform);
         }
         String target = instagram ? "instagram" : "facebook";
-        String apiKey = currentUser.organizationApiKey();
+        // Connecting a page is the tenant's and admins' job; Staff answer conversations.
+        String apiKey = currentUser.requireTeamManager().getOrganization().getApiKey();
 
         String scope = instagram
                 ? String.join(",", "instagram_basic", "instagram_manage_messages", "pages_messaging",
@@ -338,13 +339,23 @@ public class AuthController {
             return StatusResponse.builder().connected(false).build();
         }
         
+        Map<UUID, Object[]> stats = new HashMap<>();
+        for (Object[] row : threadRepository.statsPerPage(organization.getApiKey())) stats.put((UUID) row[0], row);
+
         List<StatusResponse.PageData> pageDataList = pages.stream()
-                .map(page -> StatusResponse.PageData.builder()
-                        .pageId(page.getPageId())
-                        .pageName(page.getPageName())
-                        .platform(page.getPlatform().toLowerCase())
-                        .connectedAt(page.getConnectedAt())
-                        .build())
+                .map(page -> {
+                    Object[] row = stats.get(page.getId());
+                    return StatusResponse.PageData.builder()
+                            .id(page.getId().toString())
+                            .pageId(page.getPageId())
+                            .pageName(page.getPageName())
+                            .platform(page.getPlatform().toLowerCase())
+                            .connectedAt(page.getConnectedAt())
+                            .conversations(row == null ? 0 : ((Number) row[1]).longValue())
+                            .withPeople(row == null || row[2] == null ? 0 : ((Number) row[2]).longValue())
+                            .lastMessageAt(row == null || row[3] == null ? null : row[3].toString())
+                            .build();
+                })
                 .toList();
         
         return StatusResponse.builder()
@@ -358,6 +369,26 @@ public class AuthController {
     }
 
     /**
+     * Disconnect one page and delete the conversations it brought in. The tenant only, like
+     * disconnecting everything: the history cannot be recovered. Messages first, then the
+     * conversations, then the page (the foreign keys between them do not cascade).
+     */
+    @DeleteMapping("/pages/{id}")
+    @Transactional
+    public Map<String, Object> disconnectPage(@PathVariable UUID id) {
+        Organization organization = currentUser.requireTenant().getOrganization();
+        SocialPage page = pageRepository.findById(id)
+                .filter(p -> p.getOrganization().getId().equals(organization.getId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No such connected page"));
+        int messages = messageRepository.deleteBySocialPage(page);
+        int threads = threadRepository.deleteBySocialPage(page);
+        pageRepository.deleteById(page.getId());
+        log.info("Disconnected page {} ({}) from {}: {} conversations, {} messages removed",
+                page.getPageName(), page.getPlatform(), organization.getApiKey(), threads, messages);
+        return Map.of("removed", true, "conversations", threads, "messages", messages);
+    }
+
+    /**
      * Disconnect every channel and delete the conversation history that came with it.
      *
      * This used to delete the organization row as well, which is no longer acceptable: the
@@ -367,7 +398,9 @@ public class AuthController {
     @PostMapping("/disconnect")
     @Transactional
     public Map<String, Boolean> disconnect() {
-        Organization organization = currentUser.organization();
+        // Deletes every conversation the workspace has, so only the tenant may. It used to be
+        // open to any signed-in member, Staff included.
+        Organization organization = currentUser.requireTenant().getOrganization();
         String apiKey = organization.getApiKey();
         log.info("Disconnecting all channels for organization {}", apiKey);
 

@@ -35,6 +35,19 @@ public class Organization {
     @Column(nullable = false)
     private OffsetDateTime createdAt;
 
+    /** Settings page: off hands every new customer message to staff instead of the AI. */
+    @Builder.Default
+    @Column(name = "ai_replies_enabled", nullable = false)
+    private boolean aiRepliesEnabled = true;
+
+    /** What the customer is told when a person takes over; null means the built-in default. */
+    @Column(name = "handover_message", columnDefinition = "TEXT")
+    private String handoverMessage;
+
+    /** What the customer is told when an off-topic conversation is closed; null means the default. */
+    @Column(name = "closing_message", columnDefinition = "TEXT")
+    private String closingMessage;
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) createdAt = OffsetDateTime.now();

@@ -60,7 +60,29 @@ the viva.
 - Weights: 400 body, 500 labels, 600 headings. Nothing heavier.
 - Line height 1.5 body, 1.25 headings. Message bodies cap at ~70ch.
 
+## Page frame
+
+Every screen except the inbox is a `.page`: a `page__head` (big `page__title`, `page__sub`, the
+page's main action on the right) and content capped at 1120px (`.page > *`), so nothing moves
+between screens. Sections inside use `section-title`. On a phone the menu is a drawer that is
+always closed on load; only the docked desktop menu remembers open or closed. Disabled buttons
+keep a border (`.btn:disabled`), or they read as flat grey text.
+
+## Settings
+
+Five sections, and only settings the system acts on: Workspace, AI replies, Notifications,
+Sign-in and security, Danger zone (tenant only). Layout: a section list on the left (hidden
+below 900px), one card per section with a header, rows of "name and what it does" on the left and
+the control on the right (stacked on a phone), and a grey footer holding that card's own Save,
+disabled until something in the card changes. On/off settings are switches (`role="switch"`),
+square-cornered like every other control; the danger card has a red outline. Read-only for Staff where a setting is the
+workspace's. A new setting belongs here only when the backend does something with it; a switch
+that changes nothing is fake UI.
+
 ## Role names
+
+Sign out lives at the bottom of the menu, under Settings, never in the top bar. Role tags use
+`.role-tag--owner|admin|agent` (blue, light blue, grey); amber is for things waiting on someone.
 
 On screen the roles are **Tenant** (created the workspace), **Admin** and **Staff**. Never
 "Owner" or "Agent" in visible text. The stored values stay `OWNER`, `ADMIN`, `AGENT`, the

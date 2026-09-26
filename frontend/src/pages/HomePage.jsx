@@ -9,9 +9,10 @@ import { LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
 
 const CHANNELS = [
-    { id: 'facebook', name: 'Facebook Page', desc: 'Answer the Messenger conversations on your Page.', Icon: IconFacebook },
-    { id: 'instagram', name: 'Instagram Business', desc: 'Answer direct messages to your Instagram professional account.', Icon: IconInstagram },
-    { id: 'widget', name: 'Website Widget', desc: 'A chat box for your own website. Not available yet.', Icon: IconWidget, comingSoon: true },
+    // Named as on the Channels page, so the same channel never goes by two names.
+    { id: 'facebook', name: 'Facebook Messenger', desc: 'Messages to your Facebook Page.', Icon: IconFacebook },
+    { id: 'instagram', name: 'Instagram', desc: 'Direct messages to your Instagram professional account.', Icon: IconInstagram },
+    { id: 'widget', name: 'Website chat', desc: 'A chat box on your own website, answered in the same inbox.', Icon: IconWidget, comingSoon: true },
 ];
 
 function greeting() {
@@ -40,6 +41,8 @@ export default function HomePage({
     const figuresPending = useHeldLoading(!settled(analytics));
     const recentPending = useHeldLoading(!threadsLoaded && !loadError);
     const connected = pages.length > 0;
+    // Connecting a channel is the tenant's and admins' job (the server refuses Staff).
+    const canManage = user?.role === 'OWNER' || user?.role === 'ADMIN';
     const steps = [
         {
             title: 'Connect a channel',
@@ -89,12 +92,14 @@ export default function HomePage({
                     <h1 className="page__title">{greeting()}{user.firstName ? `, ${user.firstName}` : ''}</h1>
                     <p className="page__sub">Your conversations, channels and setup at a glance.</p>
                 </div>
-                <button
-                    className="btn btn--primary"
-                    onClick={() => document.getElementById('channels')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                >
-                    <IconPlus /> {connected ? 'Add a channel' : 'Connect a channel'}
-                </button>
+                {canManage && (
+                    <button
+                        className="btn btn--primary"
+                        onClick={() => onNavigate('channels')}
+                    >
+                        <IconPlus /> {connected ? 'Add a channel' : 'Connect a channel'}
+                    </button>
+                )}
             </div>
 
             {!setupDone && (
@@ -187,9 +192,14 @@ export default function HomePage({
                       {...figures?.reply} value={figures?.reply?.value ?? null} />
             </div>
 
-            <div className="section-head" id="channels">
-                <h2 className="section-title">Channels</h2>
-                <p className="section-sub">Where your customers message you from.</p>
+            <div className="section-head section-head--row" id="channels">
+                <div>
+                    <h2 className="section-title">Channels</h2>
+                    <p className="section-sub">Where your customers message you from.</p>
+                </div>
+                <button type="button" className="section-head__link" onClick={() => onNavigate('channels')}>
+                    Manage channels <IconArrowRight size={14} />
+                </button>
             </div>
             <div className="channels">
                 {CHANNELS.map(({ id, name, desc, Icon, comingSoon }) => {
@@ -213,15 +223,17 @@ export default function HomePage({
                                     : comingSoon ? 'Coming soon' : 'Not connected'}
                             </span>
 
-                            {/* Short, parallel labels: three buttons of wildly different
-                                lengths read as three unrelated controls. */}
-                            <button
-                                className={`btn ${connected || comingSoon ? 'btn--secondary' : 'btn--primary'}`}
-                                disabled={comingSoon}
-                                onClick={() => onConnect(id)}
-                            >
-                                {comingSoon ? 'Coming soon' : connected ? 'Add account' : 'Connect'}
-                            </button>
+                            {/* Short, parallel labels. No button at all where there is nothing to
+                                do: a disabled "Coming soon" only repeated the tag above it, and Staff
+                                cannot connect channels. */}
+                            {!comingSoon && canManage && (
+                                <button
+                                    className={`btn ${connected ? 'btn--secondary' : 'btn--primary'}`}
+                                    onClick={() => onConnect(id)}
+                                >
+                                    {connected ? 'Add account' : 'Connect'}
+                                </button>
+                            )}
                             </>)}
                         </div>
                     );
@@ -298,7 +310,7 @@ export default function HomePage({
                     <p className="empty__text">Messages from your connected channels will appear here.</p>
                     <button
                         className="btn btn--primary"
-                        onClick={() => document.getElementById('channels')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                        onClick={() => onNavigate('channels')}
                     >
                         <IconPlus /> Connect a channel
                     </button>

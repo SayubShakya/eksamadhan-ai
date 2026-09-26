@@ -81,6 +81,11 @@ public class User {
     @Column(nullable = false, length = 20)
     private Availability availability = Availability.AVAILABLE;
 
+    /** Whether a handover is also emailed to them; push and the bell always happen. */
+    @Builder.Default
+    @Column(name = "email_alerts", nullable = false)
+    private boolean emailAlerts = true;
+
     /** Refreshed every minute by an open dashboard; online means seen recently. */
     @Column(name = "last_seen_at")
     private OffsetDateTime lastSeenAt;

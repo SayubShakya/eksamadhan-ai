@@ -3,8 +3,9 @@ import NavRail from './components/NavRail.jsx';
 import TopBar from './components/TopBar.jsx';
 import HomePage from './pages/HomePage.jsx';
 import InboxPage from './pages/InboxPage.jsx';
-import PlaceholderPage from './pages/PlaceholderPage.jsx';
+import ChannelsPage from './pages/ChannelsPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
+import SettingsPage from './pages/SettingsPage.jsx';
 import TeamPage from './pages/TeamPage.jsx';
 import KnowledgePage from './pages/KnowledgePage.jsx';
 import AnalyticsPage from './pages/AnalyticsPage.jsx';
@@ -97,15 +98,21 @@ export default function App() {
     const [view, setViewState] = useState(viewFromPath);
     // Docked and open by default on a desktop, closed on smaller screens where it
     // would cover the content. The choice is remembered.
+    // Below 1024px the menu is a drawer over the content, so a page there always opens with it
+    // closed: a remembered "open" from a desktop would cover the whole screen on load.
     const [navOpen, setNavOpen] = useState(() => {
+        const docked = window.matchMedia('(min-width: 1024px)').matches;
+        if (!docked) return false;
         try {
             const saved = localStorage.getItem('navOpen');
             if (saved !== null) return saved === 'true';
         } catch { /* private mode */ }
-        return window.matchMedia('(min-width: 1024px)').matches;
+        return true;
     });
 
+    // Only the docked menu's choice is remembered; the drawer is closed on every load anyway.
     useEffect(() => {
+        if (!window.matchMedia('(min-width: 1024px)').matches) return;
         try { localStorage.setItem('navOpen', String(navOpen)); } catch { /* private mode */ }
     }, [navOpen]);
 
@@ -728,6 +735,7 @@ export default function App() {
                 onClose={() => setNavOpen(false)}
                 onToggle={() => setNavOpen(o => !o)}
                 onHome={() => setView('home')}
+                onSignOut={requestSignOut}
             />
             <div className="main">
                 <TopBar
@@ -807,11 +815,16 @@ export default function App() {
 
                 {view === 'notifications' && <NotificationsPage onOpen={openNotification} />}
 
-                {!['home', 'inbox', 'team', 'knowledge', 'analytics', 'notifications'].includes(view) && (
-                    <PlaceholderPage
-                        view={view}
-                        onNavigate={setView}
-                        onLogout={() => setConfirmDisconnect(true)}
+                {view === 'settings' && (
+                    <SettingsPage user={user} onDisconnect={() => setConfirmDisconnect(true)} />
+                )}
+
+                {view === 'channels' && (
+                    <ChannelsPage
+                        user={user}
+                        pages={pages}
+                        statusLoaded={loaded.status}
+                        onChanged={() => { refreshStatus(); refreshThreads(); refreshMessages(); }}
                     />
                 )}
             </div>
@@ -838,6 +851,7 @@ export default function App() {
                 user={user}
                 onSave={saveProfile}
                 onClose={() => setProfileOpen(false)}
+                onOpenSettings={() => { setProfileOpen(false); setView('settings'); }}
             />
         </div>
     );

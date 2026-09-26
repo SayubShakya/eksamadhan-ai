@@ -117,6 +117,11 @@ class AgentNotificationServiceTest {
         }
 
         @Override
+        public int updateProfile(java.util.UUID id, String firstName, String lastName, String avatar) {
+            return 0;
+        }
+
+        @Override
         public int setAvailability(java.util.UUID id, io.eksamadhan.model.Availability availability,
                                    java.time.OffsetDateTime at) {
             return 0;

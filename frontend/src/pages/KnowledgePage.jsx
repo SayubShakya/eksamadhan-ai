@@ -47,6 +47,13 @@ function SourceSkeleton({ title, meta }) {
 
 const btn = (base, busy) => `${base}${busy ? ' btn--busy' : ''}`;
 
+const ADD_TABS = [
+    { id: 'text', label: 'Write text' },
+    { id: 'file', label: 'Upload a file' },
+    { id: 'picture', label: 'Add a picture' },
+    { id: 'website', label: 'Read a website' },
+];
+
 /**
  * `canManage` comes from the signed-in role and only decides whether the add forms are drawn
  * while the library loads; once it has loaded, the server's answer is used.
@@ -56,6 +63,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
     const firstLoad = useHeldLoading(!library && !loadError);
     // Bytes sent for the file being uploaded: { label, fraction } while it goes, else null.
     const [sent, setSent] = useState(null);
+    const [addTab, setAddTab] = useState('text');
     const [title, setTitle] = useState('');
     const [text, setText] = useState('');
     const [error, setError] = useState('');
@@ -209,12 +217,15 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
 
     return (
         <div className="page">
-            <h1 className="section-title" style={{ marginTop: 0 }}>Knowledge</h1>
-            <p className="muted" style={{ marginTop: -4 }}>
-                What the AI is allowed to answer from. Each source is split into passages and
-                indexed by meaning, so a customer's question finds the right passage even when
-                it uses none of the same words.
-            </p>
+            <div className="page__head">
+                <div>
+                    <h1 className="page__title">Knowledge</h1>
+                    <p className="page__sub">
+                        What the AI is allowed to answer from. Each source is split into passages and
+                        indexed by meaning, so a question finds the right passage even in other words.
+                    </p>
+                </div>
+            </div>
 
             {!loading && !library.aiConfigured && (
                 <p className="auth__error" role="alert">
@@ -223,101 +234,146 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                 </p>
             )}
 
+            {/* One card with a tab per way of adding, instead of three forms stacked above the
+                list: the sources are what the page is for, so they should not start a screen down. */}
             {canManage && (
-                <>
-                    <form className="card" onSubmit={addText} style={{ marginBottom: 16 }}>
-                        <label className="field">
-                            <span>Title</span>
-                            <input value={title} onChange={e => setTitle(e.target.value)}
-                                   placeholder="Shipping and returns" maxLength={120} />
-                        </label>
-                        <label className="field" style={{ marginTop: 10 }}>
-                            <span>Text</span>
-                            <textarea className="knowledge__text" value={text} rows={7}
-                                      onChange={e => setText(e.target.value)}
-                                      placeholder="Paste your policies, FAQs or product details here…" />
-                            <small className="field__hint">
-                                Headings help. A short line like “Returns” starts a new passage, which
-                                keeps each answer on one topic.
-                            </small>
-                        </label>
-                        <div className="knowledge__actions">
-                            <button className={btn('btn btn--primary', busy && !sent)} type="submit"
-                                    disabled={busy || !text.trim()} aria-busy={busy && !sent}>
-                                Add to knowledge base
-                            </button>
-                            <button className="btn btn--secondary" type="button"
-                                    onClick={() => fileRef.current?.click()} disabled={busy}>
-                                <IconUpload /> Upload a PDF or text file
-                            </button>
-                            <button className="btn btn--secondary" type="button"
-                                    onClick={() => imageRef.current?.click()} disabled={busy}>
-                                <IconImage /> Add a picture
-                            </button>
-                            <input ref={fileRef} type="file" accept=".pdf,.txt,.md,text/plain,application/pdf"
-                                   hidden onChange={upload} />
-                            <input ref={imageRef} type="file" accept="image/*" hidden onChange={chooseImage} />
+                <section className="card settings__card knowledge__add" aria-labelledby="add-h">
+                    <header className="settings__cardhead knowledge__addhead">
+                        <h2 id="add-h">Add knowledge</h2>
+                        <div className="chips" role="tablist" aria-label="How to add">
+                            {ADD_TABS.map(t => (
+                                <button key={t.id} type="button" role="tab" className="chip"
+                                        aria-selected={addTab === t.id} aria-pressed={addTab === t.id}
+                                        onClick={() => setAddTab(t.id)}>
+                                    {t.label}
+                                </button>
+                            ))}
                         </div>
-                        {sent && !pendingImage && <UploadProgress label={sent.label} fraction={sent.fraction} />}
-                    </form>
+                    </header>
 
-                    <form className="card" onSubmit={crawl} style={{ marginBottom: 16 }}>
-                        <label className="field">
-                            <span>Or read your website</span>
-                            <input value={site} onChange={e => setSite(e.target.value)}
-                                   placeholder="acme.com.np" disabled={crawling} />
-                            <small className="field__hint">
-                                Follows links within the site only, obeys robots.txt, and stops after
-                                25 pages. Each page becomes its own source you can remove.
-                            </small>
-                        </label>
-                        <div className="knowledge__actions">
-                            <button className={btn('btn btn--primary', crawling)} type="submit"
-                                    disabled={crawling || !site.trim()} aria-busy={crawling}>
-                                Read website
-                            </button>
-                        </div>
-                        {/* A crawl runs for up to a minute, so say what is happening while it does. */}
-                        {crawling && (
-                            <p className="field__hint" role="status" style={{ marginTop: 10 }}>
-                                Reading the site. Pages appear under Sources as each one is indexed.
-                            </p>
+                    <div className="knowledge__addbody" role="tabpanel">
+                        {addTab === 'text' && (
+                            <form onSubmit={addText}>
+                                <label className="field">
+                                    <span>Title</span>
+                                    <input value={title} onChange={e => setTitle(e.target.value)}
+                                           placeholder="Shipping and returns" maxLength={120} />
+                                </label>
+                                <label className="field" style={{ marginTop: 10 }}>
+                                    <span>Text</span>
+                                    <textarea className="knowledge__text" value={text} rows={6}
+                                              onChange={e => setText(e.target.value)}
+                                              placeholder="Paste your policies, FAQs or product details here…" />
+                                    <small className="field__hint">
+                                        Headings help. A short line like “Returns” starts a new passage, which
+                                        keeps each answer on one topic.
+                                    </small>
+                                </label>
+                                <div className="knowledge__actions">
+                                    <button className={btn('btn btn--primary', busy && !sent)} type="submit"
+                                            disabled={busy || !text.trim()} aria-busy={busy && !sent}>
+                                        Add to knowledge base
+                                    </button>
+                                </div>
+                            </form>
                         )}
-                    </form>
-                </>
-            )}
 
-            {/* The title is asked for before the image is saved, not after: an image with no
-                words cannot be retrieved, so saving first would create something unreachable. */}
-            {pendingImage && (
-                <form className="card imgform" onSubmit={saveImage}>
-                    <img className="imgform__preview" src={URL.createObjectURL(pendingImage)} alt="" />
-                    <div className="imgform__fields">
-                        <label className="field">
-                            <span>What does this show?</span>
-                            <input value={imageTitle} onChange={e => setImageTitle(e.target.value)}
-                                   placeholder="Acme Buds Pro in black" maxLength={120} required autoFocus />
-                        </label>
-                        <label className="field">
-                            <span>Anything else worth knowing <small>(optional)</small></span>
-                            <input value={imageCaption} onChange={e => setImageCaption(e.target.value)}
-                                   placeholder="Shows the charging case open, with the LED" maxLength={300} />
-                        </label>
-                        <small className="field__hint">
-                            The AI also writes its own description of the picture, so customers can
-                            find it with words you did not think to type.
-                        </small>
-                        {sent && <UploadProgress label={sent.label} fraction={sent.fraction} />}
-                        <div className="knowledge__actions">
-                            <button className="btn btn--primary" type="submit"
-                                    disabled={busy || !imageTitle.trim()}>
-                                Add picture
-                            </button>
-                            <button className="btn btn--secondary" type="button"
-                                    onClick={() => setPendingImage(null)}>Cancel</button>
-                        </div>
+                        {addTab === 'file' && (
+                            <div>
+                                <p className="field__hint knowledge__lead">
+                                    A PDF, or a plain text or Markdown file. Its text is read, split into
+                                    passages and indexed; scanned PDFs with no text layer cannot be read.
+                                </p>
+                                <div className="knowledge__actions">
+                                    <button className="btn btn--primary" type="button"
+                                            onClick={() => fileRef.current?.click()} disabled={busy}>
+                                        <IconUpload /> Choose a file
+                                    </button>
+                                </div>
+                                {sent && !pendingImage && <UploadProgress label={sent.label} fraction={sent.fraction} />}
+                            </div>
+                        )}
+
+                        {addTab === 'picture' && (
+                            pendingImage ? (
+                                /* The title is asked for before the image is saved, not after: an image
+                                   with no words cannot be retrieved, so saving first would create
+                                   something unreachable. */
+                                <form className="imgform" onSubmit={saveImage}>
+                                    <img className="imgform__preview" src={URL.createObjectURL(pendingImage)} alt="" />
+                                    <div className="imgform__fields">
+                                        <label className="field">
+                                            <span>What does this show?</span>
+                                            <input value={imageTitle} onChange={e => setImageTitle(e.target.value)}
+                                                   placeholder="Acme Buds Pro in black" maxLength={120} required autoFocus />
+                                        </label>
+                                        <label className="field">
+                                            <span>Anything else worth knowing <small>(optional)</small></span>
+                                            <input value={imageCaption} onChange={e => setImageCaption(e.target.value)}
+                                                   placeholder="Shows the charging case open, with the LED" maxLength={300} />
+                                        </label>
+                                        <small className="field__hint">
+                                            The AI also writes its own description of the picture, so customers can
+                                            find it with words you did not think to type.
+                                        </small>
+                                        {sent && <UploadProgress label={sent.label} fraction={sent.fraction} />}
+                                        <div className="knowledge__actions">
+                                            <button className="btn btn--primary" type="submit"
+                                                    disabled={busy || !imageTitle.trim()}>
+                                                Add picture
+                                            </button>
+                                            <button className="btn btn--secondary" type="button"
+                                                    onClick={() => setPendingImage(null)}>Cancel</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            ) : (
+                                <div>
+                                    <p className="field__hint knowledge__lead">
+                                        A product photo, a size chart or a menu. You give it a title, and the AI
+                                        sends it to a customer when their question is about it.
+                                    </p>
+                                    <div className="knowledge__actions">
+                                        <button className="btn btn--primary" type="button"
+                                                onClick={() => imageRef.current?.click()} disabled={busy}>
+                                            <IconImage /> Choose a picture
+                                        </button>
+                                    </div>
+                                </div>
+                            )
+                        )}
+
+                        {addTab === 'website' && (
+                            <form onSubmit={crawl}>
+                                <label className="field">
+                                    <span>Website address</span>
+                                    <input value={site} onChange={e => setSite(e.target.value)}
+                                           placeholder="acme.com.np" disabled={crawling} />
+                                    <small className="field__hint">
+                                        Follows links within the site only, obeys robots.txt, and stops after
+                                        25 pages. Each page becomes its own source you can remove.
+                                    </small>
+                                </label>
+                                <div className="knowledge__actions">
+                                    <button className={btn('btn btn--primary', crawling)} type="submit"
+                                            disabled={crawling || !site.trim()} aria-busy={crawling}>
+                                        Read website
+                                    </button>
+                                </div>
+                                {/* A crawl runs for up to a minute, so say what is happening while it does. */}
+                                {crawling && (
+                                    <p className="field__hint" role="status" style={{ marginTop: 10 }}>
+                                        Reading the site. Pages appear under Sources as each one is indexed.
+                                    </p>
+                                )}
+                            </form>
+                        )}
+
+                        <input ref={fileRef} type="file" accept=".pdf,.txt,.md,text/plain,application/pdf"
+                               hidden onChange={upload} />
+                        <input ref={imageRef} type="file" accept="image/*" hidden onChange={chooseImage} />
                     </div>
-                </form>
+                </section>
             )}
 
             {error && <p className="auth__error" role="alert">{error}</p>}

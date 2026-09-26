@@ -43,6 +43,19 @@ public interface ConversationThreadRepository extends JpaRepository<Conversation
           + "GROUP BY t.assignedAgentId")
     List<Object[]> countOpenPerAgent(String tenantId);
 
+    /** Per connected page: conversations, how many are with a person now, and the latest message. */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT t.socialPage.id, COUNT(t), "
+          + "SUM(CASE WHEN t.status IN (io.eksamadhan.model.ThreadStatus.OPEN_FOR_AGENT, "
+          + "io.eksamadhan.model.ThreadStatus.AGENT_HANDLING) THEN 1 ELSE 0 END), MAX(t.lastMessageAt) "
+          + "FROM ConversationThread t WHERE t.tenantId = :tenantId AND t.socialPage IS NOT NULL "
+          + "GROUP BY t.socialPage.id")
+    List<Object[]> statsPerPage(String tenantId);
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("DELETE FROM ConversationThread t WHERE t.socialPage = :page")
+    int deleteBySocialPage(io.eksamadhan.model.SocialPage page);
+
     /** Handed to a person but nobody was available: the queue, oldest first. */
     @org.springframework.data.jpa.repository.Query(
             "SELECT t FROM ConversationThread t WHERE t.tenantId = :tenantId "

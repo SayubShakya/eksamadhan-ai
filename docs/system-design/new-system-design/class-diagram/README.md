@@ -20,6 +20,9 @@ classDiagram
         +String name
         +String apiKey
         +OffsetDateTime createdAt
+        +boolean aiRepliesEnabled
+        +String handoverMessage
+        +String closingMessage
     }
 
     class User {
@@ -37,6 +40,7 @@ classDiagram
         +boolean systemAdmin
         +Availability availability
         +OffsetDateTime lastSeenAt
+        +boolean emailAlerts
         +displayName() String
     }
 

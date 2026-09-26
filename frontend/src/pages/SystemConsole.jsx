@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import NavRail from '../components/NavRail.jsx';
-import { IconFlow, IconMenu, IconSignOut } from '../components/icons.jsx';
+import { IconFlow, IconMenu } from '../components/icons.jsx';
 import { LogoMark } from '../components/Logo.jsx';
 import ConversationVisualizer from './ConversationVisualizer.jsx';
 
@@ -28,6 +28,7 @@ export default function SystemConsole({ user, onSignOut }) {
                 onClose={() => setNavOpen(false)}
                 onToggle={() => setNavOpen(o => !o)}
                 onHome={() => {}}
+                onSignOut={onSignOut}
             />
             <div className="main">
                 <header className="topbar">
@@ -49,9 +50,6 @@ export default function SystemConsole({ user, onSignOut }) {
                             {(user?.firstName?.[0] || 'S') + (user?.lastName?.[0] || 'A')}
                         </span>
                     </div>
-                    <button className="icon-btn" onClick={onSignOut} aria-label="Sign out" title="Sign out">
-                        <IconSignOut />
-                    </button>
                 </header>
                 <ConversationVisualizer />
             </div>

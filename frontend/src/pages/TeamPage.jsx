@@ -121,11 +121,15 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
 
     return (
         <div className="page">
-            <h1 className="section-title" style={{ marginTop: 0 }}>Team</h1>
-            <p className="muted" style={{ marginTop: -4 }}>
-                Everyone here shares the same inbox. Staff handle conversations; admins can also
-                invite and remove people.
-            </p>
+            <div className="page__head">
+                <div>
+                    <h1 className="page__title">Team</h1>
+                    <p className="page__sub">
+                        Everyone here shares the same inbox. Staff handle conversations; the tenant and
+                        admins can also invite and remove people.
+                    </p>
+                </div>
+            </div>
 
             {canManage && (
                 <form className="invite-form" onSubmit={invite}>
@@ -134,9 +138,9 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                         <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                                placeholder="colleague@example.com" required />
                     </label>
-                    <label className="field" style={{ flex: '0 0 auto', minWidth: 0 }}>
+                    <label className="field">
                         <span>Role</span>
-                        <select value={role} onChange={e => setRole(e.target.value)}>
+                        <select className="invite-form__role" value={role} onChange={e => setRole(e.target.value)}>
                             <option value="AGENT">Staff</option>
                             <option value="ADMIN">Admin</option>
                         </select>
@@ -198,7 +202,7 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                         {member.status === 'ACTIVE' && <Presence member={member} />}
                     </div>
                     <div className="member__actions">
-                        <span className="tag tag--agent">{ROLE_LABEL[member.role]}</span>
+                        <span className={`tag role-tag role-tag--${member.role.toLowerCase()}`}>{ROLE_LABEL[member.role]}</span>
                         {member.status === 'DISABLED' && <span className="muted">Removed</span>}
                         {team.canManage && !member.isYou && member.role !== 'OWNER' && member.status !== 'DISABLED' && (
                             <button className="btn btn--danger btn--sm" onClick={() => setRemoving(member)}>
@@ -217,7 +221,7 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                         <div className="card" key={pending.id} style={{ marginBottom: 10 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                 <strong style={{ fontSize: 14 }}>{pending.email}</strong>
-                                <span className="tag tag--agent">{ROLE_LABEL[pending.role]}</span>
+                                <span className={`tag role-tag role-tag--${pending.role.toLowerCase()}`}>{ROLE_LABEL[pending.role]}</span>
                                 <button className="btn btn--secondary btn--sm" style={{ marginLeft: 'auto' }}
                                         onClick={() => revoke(pending.id)}>
                                     Revoke

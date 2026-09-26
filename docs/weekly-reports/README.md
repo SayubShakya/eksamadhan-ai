@@ -1,6 +1,6 @@
 # Weekly progress reports
 
-One folder per week, submitted to the supervisor every Monday.
+One folder per week, submitted to the supervisor every Thursday.
 
 | Week | Period | Report |
 | :--- | :--- | :--- |
@@ -18,7 +18,7 @@ Each folder holds:
 
 The supervisor's requirements for this project:
 
-4. A weekly log every Monday, stating what was accomplished last week and what is
+4. A weekly log every Thursday, stating what was accomplished last week and what is
    planned for this week.
 5. The log must match the work actually committed to the repository.
 6. The weekly report will not be signed if the work is not reflected in the Git repo.

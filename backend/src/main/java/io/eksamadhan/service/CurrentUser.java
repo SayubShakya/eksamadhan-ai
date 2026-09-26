@@ -73,6 +73,15 @@ public class CurrentUser {
         return user;
     }
 
+    /** The person who created the workspace: the only one who may wipe its history. */
+    public User requireTenant() {
+        User user = require();
+        if (user.getRole() != io.eksamadhan.model.UserRole.OWNER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the tenant can do this");
+        }
+        return user;
+    }
+
     public User requireTeamManager() {
         User user = require();
         if (!user.getRole().canManageTeam()) {

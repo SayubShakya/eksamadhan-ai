@@ -117,15 +117,21 @@ public class AccountController {
         return session(user);
     }
 
+    /**
+     * Name and photo only, written as those three columns. Saving the whole user here failed
+     * twice over: the copy save() returns has its workspace unloaded, so building the new session
+     * threw LazyInitializationException (every profile save answered "Something went wrong"), and
+     * writing the full row could undo a status or last-seen change made a moment earlier.
+     */
     @PutMapping("/me")
+    @org.springframework.transaction.annotation.Transactional
     public Session updateProfile(@RequestBody UpdateProfileRequest request) {
         User user = currentUser.require();
-        if (request.firstName() != null && !request.firstName().isBlank()) {
-            user.setFirstName(request.firstName().trim());
-        }
-        user.setLastName(request.lastName() == null ? null : request.lastName().trim());
-        user.setAvatar(request.avatar());
-        return session(userRepository.save(user));
+        String firstName = request.firstName() != null && !request.firstName().isBlank()
+                ? request.firstName().trim() : user.getFirstName();
+        String lastName = request.lastName() == null || request.lastName().isBlank() ? null : request.lastName().trim();
+        userRepository.updateProfile(user.getId(), firstName, lastName, request.avatar());
+        return session(userRepository.findWithOrganizationById(user.getId()).orElseThrow());
     }
 
     /**

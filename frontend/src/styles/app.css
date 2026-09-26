@@ -88,6 +88,8 @@
 .rail__head .brand__name { display: inline; font-size: 15px; }
 .rail__collapse { color: var(--text-muted); }
 
+.rail__item--signout { color: var(--text-muted); }
+.rail__item--signout:hover { color: var(--danger); }
 .rail__item {
     position: relative;
     width: 100%;
@@ -239,6 +241,9 @@
 
 /* ── Page ──────────────────────────────────────────────────────────── */
 .page { flex: 1; overflow-y: auto; padding: 32px 36px 56px; }
+/* Every screen's content stops at the same width, so moving between pages does not change
+   where things sit. The inbox is not a .page and keeps the full width. */
+.page > * { max-width: 1120px; }
 .page__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .page__title { font-size: 26px; font-weight: 650; letter-spacing: -.02em; margin: 0 0 5px; }
 .page__sub { color: var(--text-muted); margin: 0; }
@@ -578,7 +583,7 @@
    pressable. */
 .btn:disabled {
     background: var(--surface); color: var(--text-muted);
-    border-color: transparent; box-shadow: none;
+    border-color: var(--border); box-shadow: none;
     cursor: not-allowed;
 }
 .btn:disabled:hover { background: var(--surface); }
@@ -804,7 +809,7 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 .bell__catcher { touch-action: none; }
 
 /* The full notifications page reuses the bell's rows, on cards. */
-.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-width: 760px; }
+.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .notes__row .bell__item { background: var(--bg); border: 1px solid var(--border); padding: 12px 14px; }
 .notes__row .bell__item:hover { background: var(--surface); }
 .notes__row .bell__item--unread { background: var(--accent-weak); border-color: #cfe0fb; }
@@ -1062,6 +1067,12 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 /* ── Home: clearer sections and states ─────────────────────────────────── */
 .section-head { margin: 32px 0 14px; }
 .section-head .section-title { margin: 0; }
+.section-head--row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.section-head__link {
+    display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+    border: 0; background: none; padding: 4px 0; font-size: 13px; font-weight: 500; color: var(--accent);
+}
+.section-head__link:hover { text-decoration: underline; }
 .section-sub { color: var(--text-muted); font-size: 13px; margin: 2px 0 0; }
 
 .stat--empty { background: var(--surface); box-shadow: none; }
@@ -1264,6 +1275,15 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
     background: var(--bg);
     color: var(--text);
 }
+/* Wide enough that the chosen role always shows, and as tall as the email field beside it. */
+.invite-form__role { min-width: 140px; height: 42px; cursor: pointer; }
+.invite-form .field:has(.invite-form__role) { flex: 0 0 auto; min-width: 140px; }
+
+/* Role tags: a role is not a warning, so no amber. The tenant stands out; staff is quiet. */
+.role-tag { font-weight: 500; }
+.role-tag--owner { background: var(--accent-tint); color: var(--accent); }
+.role-tag--admin { background: var(--accent-weak); color: #1d4ed8; }
+.role-tag--agent { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
 .muted { color: var(--text-muted); font-size: 13px; }
 
 /* ── Knowledge base ──────────────────────────────────────────────────────── */
@@ -1736,6 +1756,136 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
     box-shadow: var(--shadow-md); font-size: 13px;
 }
 
+/* ── Knowledge: one card, a tab per way of adding ── */
+.knowledge__addhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.knowledge__addhead h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.knowledge__addbody { padding: 18px 24px 22px; }
+.knowledge__addbody .imgform { margin-bottom: 0; }
+.knowledge__lead { margin: 0; max-width: 620px; }
+@media (max-width: 760px) { .knowledge__addbody { padding: 16px; } }
+
+/* ── Channels page (built on the Settings card and row styles) ── */
+
+.channel__head { display: flex; align-items: center; gap: 14px; }
+.channel__headtext { flex: 1; min-width: 0; }
+.channel__headtext h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.channel__headtext p { margin: 3px 0 0; font-size: 13px; color: var(--text-muted); }
+.channel__logo {
+    width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center;
+    border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--border);
+}
+.channel__tag--off { background: var(--surface); color: var(--text-muted); }
+.channels-page .settings__card:last-of-type .settings__cardhead { border-bottom: 0; }
+.settings__foot:has(> .btn:only-child) { justify-content: flex-start; }
+@media (max-width: 760px) {
+    .channel__head { flex-wrap: wrap; }
+}
+
+/* ── Profile panel ── */
+.profile__facts { margin: 4px 0 0; display: grid; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); }
+.profile__facts > div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding: 10px 12px; }
+.profile__facts > div + div { border-top: 1px solid var(--border); }
+.profile__facts dt { font-size: 13px; color: var(--text-muted); }
+.profile__facts dd { margin: 0; font-size: 14px; color: var(--text); overflow-wrap: anywhere; }
+.profile__facts dd small { display: block; font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+.profile__install {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm);
+    font-size: 13px; color: var(--text-muted);
+}
+.profile__link, .profile__remove {
+    align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
+    border: 0; background: none; padding: 4px 0; font-size: 13px; font-weight: 500; color: var(--accent);
+}
+.profile__link:hover, .profile__remove:hover { text-decoration: underline; }
+.profile__remove { align-self: center; color: var(--text-muted); font-weight: 400; margin-top: -6px; }
+
+/* ── Settings ─────────────────────────────────────────────────────────────────────────── */
+/* A section list on the left, cards on the right. Each setting is a row: its name and what it
+   does on the left, the control on the right, so the page scans as a list of decisions. */
+.settings__layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; max-width: 1120px; }
+.settings__nav { position: sticky; top: 0; display: flex; flex-direction: column; gap: 2px; }
+.settings__navitem {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    padding: 8px 10px; border: 0; background: none; border-radius: var(--r-sm);
+    color: var(--text-muted); font-size: 14px;
+}
+.settings__navitem:hover { background: var(--bg); color: var(--text); }
+.settings__navitem[aria-current="true"] { background: var(--accent-tint); color: var(--accent); font-weight: 500; }
+.settings__main { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.settings__main > form { display: contents; }
+
+.settings__card { padding: 0; scroll-margin-top: 16px; }
+.settings__cardhead { padding: 18px 24px 14px; border-bottom: 1px solid var(--border); }
+.settings__cardhead h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.settings__cardhead p { margin: 3px 0 0; font-size: 13px; color: var(--text-muted); }
+.settings__rows { padding: 0 24px; }
+.settings__foot {
+    display: flex; align-items: center; justify-content: flex-end; gap: 14px;
+    padding: 12px 24px; border-top: 1px solid var(--border); background: var(--surface);
+    border-radius: 0 0 var(--r-md) var(--r-md);
+}
+.settings__status { margin-right: auto; font-size: 13px; color: var(--text-muted); }
+/* Nothing to save yet: still visibly a button, just an inactive one, on the grey footer. */
+.settings__foot .btn:disabled:not(.btn--busy) { background: var(--bg); border-color: var(--border); color: var(--text-muted); }
+.settings__saved { color: var(--success); }
+.settings__error { color: var(--danger); }
+.settings__card--danger { border-color: #f1c4c4; }
+.settings__card--danger .settings__cardhead { border-bottom-color: #f6dada; }
+.settings__card--danger .settings__cardhead h2 { color: var(--danger); }
+
+.setting {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 8px 32px;
+    align-items: center; padding: 18px 0;
+}
+.setting + .setting { border-top: 1px solid var(--border); }
+.setting--stack { grid-template-columns: minmax(0, 1fr); }
+.setting__title { display: block; font-size: 14px; font-weight: 500; color: var(--text); }
+.setting__hint { margin: 3px 0 0; font-size: 13px; line-height: 1.5; color: var(--text-muted); }
+.setting__control { display: flex; justify-content: flex-end; min-width: 0; }
+.setting--stack .setting__control { display: block; }
+.setting__input {
+    width: 100%; padding: 9px 12px; font: inherit; font-size: 14px; color: var(--text);
+    border: 1px solid var(--border-strong); border-radius: var(--r-sm); background: var(--bg);
+}
+.setting__input:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+.setting__input:disabled { background: var(--surface); color: var(--text-muted); cursor: not-allowed; }
+.setting__textarea { resize: vertical; min-height: 64px; line-height: 1.5; field-sizing: content; }
+.setting__value { font-size: 14px; color: var(--text); overflow-wrap: anywhere; text-align: right; }
+.setting__state { font-size: 13px; color: var(--text-muted); }
+.setting__state--on { color: var(--success); font-weight: 500; }
+.setting__switch { display: flex; align-items: center; gap: 10px; }
+.setting__buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+/* On or off. Square-cornered like every other control here: nothing pill-shaped. */
+.switch {
+    position: relative; width: 40px; height: 22px; flex-shrink: 0; padding: 0;
+    border: 0; border-radius: 6px; background: var(--border-strong);
+    transition: background .15s ease;
+}
+.switch__knob {
+    position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+    border-radius: 4px; background: #fff; box-shadow: 0 1px 2px rgba(16, 24, 40, .2);
+    transition: transform .15s ease;
+}
+.switch--on { background: var(--accent); }
+.switch--on .switch__knob { transform: translateX(18px); }
+.switch:disabled { opacity: .55; cursor: not-allowed; }
+.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 900px) {
+    .settings__layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .settings__nav { display: none; }
+}
+@media (max-width: 760px) {
+    .settings__cardhead, .settings__rows, .settings__foot { padding-left: 16px; padding-right: 16px; }
+    .setting { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 16px 0; }
+    .setting__control { justify-content: flex-start; }
+    .setting__value { text-align: left; }
+    /* A switch stays beside its label on a phone; only inputs drop below. */
+    .setting:has(.setting__switch) { grid-template-columns: minmax(0, 1fr) auto; }
+}
+
 /* ── Loading states ────────────────────────────────────────────────────────────────────
    See components/Loading.jsx for which indicator is used where. Skeleton blocks sit inside
    the same classes as the content they stand in for, so a line of skeleton text is exactly as
@@ -1880,6 +2030,12 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
     .bell__panel {
         position: fixed; top: calc(var(--topbar) + env(safe-area-inset-top) + 6px);
         left: 8px; right: 8px; width: auto; max-height: 70vh;
+    }
+    /* The profile panel too: the same sheet under the top bar, equal margins on both sides. */
+    .popover {
+        top: calc(var(--topbar) + env(safe-area-inset-top) + 6px);
+        left: 8px; right: 8px; width: auto;
+        max-height: calc(100dvh - var(--topbar) - env(safe-area-inset-top) - 16px); overflow-y: auto;
     }
 
     /* Messages: the react/reply/more buttons kept their space beside every bubble even while

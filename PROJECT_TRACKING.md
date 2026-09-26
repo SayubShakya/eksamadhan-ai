@@ -2,7 +2,7 @@
 
 Supervisor: kcpawan@gmail.com
 Repo: https://github.com/SayubShakya/eksamadhan-ai
-Weekly log due: **every Monday** (next: 2026-09-21)
+Weekly log due: **every Thursday** (next: Thursday 2026-10-01, week 3)
 
 > Rule from the supervisor: the weekly report **will not be signed** if the work is
 > not reflected in this Git repo. A log entry with no matching commits does not count.
@@ -23,7 +23,7 @@ Weekly log due: **every Monday** (next: 2026-09-21)
 | 1b | `kcpawan@gmail.com` added as collaborator | 🔄 invited 2026-09-15 — awaiting acceptance |
 | 2 | All work committed to the repo | 🔄 ongoing |
 | 3 | Project environment setup, reflected in repo | ✅ done — 2026-09-16, verified running |
-| 4 | Weekly log submitted every Monday | 🔄 week 1 written — `docs/weekly-reports/` |
+| 4 | Weekly log submitted every Thursday | 🔄 week 1 written — `docs/weekly-reports/` |
 | 5 | Log entries match actual commits | ✅ week 1 lists all 29 commits |
 | 7 | Final report document in repo, tracked there | 🔄 outline in `docs/FINAL_REPORT.md` |
 
@@ -286,47 +286,6 @@ expire after 7 days — re-send if it lapses.
       and never through sign-up or invites, with its own console in the same layout as a
       workspace; its only page for now is the conversation visualizer. Workspace owners get 403
       on its endpoints, checked live
-- [x] **The dashboard installs as an app (PWA)** — its own window and icon on a laptop or phone,
-      with no app store. A branded splash paints instantly (inline in the page, before any
-      JavaScript), matching the phone's own launch screen, and hands over to the app with no
-      blank frame; the app opens offline from its cached shell without signing anyone out, and
-      offers updates instead of swapping them under an open session. Icons, the Android
-      notification badge and 42 iPhone/iPad launch images are generated from the logo. Checked:
-      Chrome's installability audit (no errors), offline start, slow 3G (splash at 1.3s,
-      bundle at 3.3s) and the dev server (no caching, edits appear live)
-- [x] **Design and copy clean-up to the project's "not AI-generated" rules** (now written into
-      the project instructions): no em dashes or emoji icons anywhere a person reads, no
-      pill-shaped buttons or purple, and every line that promised something the app does not do
-      rewritten. AI replies to customers are cleaned of dashes before sending (5 new tests,
-      66 in all)
-- [x] **Privacy Policy and Terms & Conditions pages**, written from what the system actually does
-      with data; the Meta-facing privacy, terms and data-deletion pages now link to them, and a
-      duplicate, out-of-date privacy page with an old contact address was removed
-- [x] **Brute-force protection on sign-in and sign-up** — an account is paused after five wrong
-      passwords in fifteen minutes, and one device is limited to twenty attempts a minute; tested
-      live and with 4 new unit tests (61 in all)
-- [x] Status colours made readable enough for accessibility standards; checked the frontend for
-      secrets, image descriptions, keyboard use and broken links — nothing else needed fixing
-- [x] **Phone layout fixed across every screen** — the top bar, page titles, the setup
-      checklist, team and knowledge rows, the conversation header and messages, and the
-      notification list, which opened off the edge of the screen. The cause was one ordering
-      problem in the stylesheet that let desktop rules override the phone ones; checked at phone
-      width on every screen with nothing running off the edge
-- [x] Home-screen icon kept full blue, and the installed app now shows its logo once: the loading
-      screen no longer repeats the logo (or a spinner) after Android's own launch screen
-- [x] **Installed and used on a real Android phone**, through an HTTPS tunnel. Two fixes on the
-      way: requests through a tunnel were refused by the backend's cross-origin check, and a
-      Google sign-in failure was reported as "could not reach the server" instead of its cause
-- [x] Fixed staff being signed out when the app started without a connection — any failed
-      session check cleared the sign-in; now only the server refusing it does
-- [x] **Sign in with Google (Firebase Authentication)** — on sign-in, workspace sign-up and
-      invitation acceptance, so staff join without creating another password. The backend
-      checks Google's signature on every sign-in token itself, with no service-account key; a
-      Google account only gets in as the member with that address or the person the invite was
-      sent to. Migration V24; 12 tests (6 on the token checks, including a forged and an
-      unverified one, 6 on who a Google account may become). Firebase project `eksamadhan-ai`
-      created, and verified with a real Google account: the owner signed in with Google and
-      their existing account was linked, password kept
 - [x] **Spam tab and conversation priority, both from Jev** — every conversation gets a priority
       1–3 from the urgency of its most urgent message, shown in the list and the customer panel.
       Spam gets its own tab: the AI does not answer it and nobody is alerted, and the panel says
@@ -339,9 +298,6 @@ expire after 7 days — re-send if it lapses.
       to an agent. Now a spam message is ignored on its own even in a real conversation (no
       reply, no handover, not counted as waiting, never passed to the model), and two in a row
       move the conversation back to Spam. The exact sequence is a test
-- [x] The assigned agent is no longer alerted for a spam message the AI ignores, in an otherwise
-      real conversation; a real message from the same customer still alerts them (tested). The
-      Spam tab shows how many conversations are in it, so a misjudged customer is never buried
 - [x] **Sentiment now comes from Jev alone** — the local model is no longer asked, one call fewer
       per customer message. Jev runs before every reply, in every mode, so spam is caught
       before the AI answers it
@@ -429,86 +385,11 @@ expire after 7 days — re-send if it lapses.
       refreshable on demand
 - [x] The conversation panel shows who is handling it, and which knowledge passages the AI's
       last answer used, with match scores
-- [x] **Loading states on every screen** — one shimmer primitive, and skeletons built from it
-      for the inbox, Home, Team, Knowledge, Analytics, the visualizer and the notification list,
-      laid out with the same styles as the real content (measured: each skeleton row within
-      1px of the row that replaces it, unless that row's text wraps onto a second line). A skeleton only appears on a first visit and stays at
-      least 0.45s so it never flashes; data already fetched this session shows at once; a
-      failed load ends in an error with "Try again", never an endless shimmer; after 5s it
-      says it is taking longer. Working buttons show a ring without changing size; file,
-      photo and voice uploads show real progress. Fixed on the way: the inbox said "No messages
-      yet" before it had loaded, Home flipped its setup step once the channels arrived, and
-      switching messages in the visualizer briefly showed the previous message's flow.
-      Checked: slow 3G on a phone (splash, then skeleton, then data, with no blank frame),
-      a forced server failure and retry, reduced motion (the shimmer stops) and a 3MB upload
-- [x] **Notification bell reworked into an unread inbox** — opening the panel no longer marks
-      everything read (it used to, which emptied the list while it was being read). An alert
-      leaves only when it is opened, which drops the badge by one at once and goes to its
-      conversation, or by "Mark all read", which sweeps the cards out one by one while the badge
-      counts down to zero. The panel shows the newest five; the badge and "See 7 more" carry the
-      full count. New "All notifications" page; the page behind is locked while the panel is
-      open; a push now refreshes the bell straight away. Backend: `POST
-      /api/notifications/{id}/read` (only the owner's own) and an unread-only list; 3 new tests
-      (69 in all). Checked in the browser with a mocked server holding 12 unread alerts
-- [x] Fixed the bell's position: on screens without the search box (Home, Team, Knowledge) it
-      sat at the far left of the header and its panel opened off the edge of the screen. It now
-      stays beside the account name on every screen, desktop and phone
-- [x] **Customer details on phones and tablets** — the right-hand details column (priority,
-      spam, sentiment, who handles it, the summary) was simply hidden below 1100px wide. An (i)
-      button in the conversation header now opens it as a sheet from the right; it closes with
-      the X, Escape or a tap outside. Checked at 360, 390 and 900px wide
-- [x] The phone header shows the logo with the "EkSamadhan AI" name, or no logo at all when
-      there is no room, instead of a lone logo beside the menu button. Checked from 320 to
-      1280px wide with no overflow
-- [x] **Signing out asks first** ("Sign out?", Cancel or Sign out), in the workspace and the
-      system admin console; it used to sign out on a single tap
-- [x] **Home shows real figures.** The setup steps "Add business knowledge" and "Invite your
-      team" were hard-coded as not done, and three of the four figures always said "Not measured
-      yet". Now: knowledge counts once a source is indexed, the team once anyone else has joined
-      or been invited, and the checklist disappears when all three are done; the figures are the
-      last 30 days from Analytics (resolved by AI, escalated, median AI reply time), each with
-      what it is out of, and say "No conversations yet" when there is nothing to measure
-- [x] **Refreshing the installed app showed a blank screen.** Its splash hides the logo so a
-      cold launch shows only one (Android's own), but a refresh has no Android screen before it.
-      A refresh now shows the logo, with a small loading ring under it after 0.4s; a cold launch
-      is unchanged
-- [x] **Agent availability (PRD 4.6, FR-05)** — each person sets Available or Busy in the top
-      bar, and is shown offline automatically a few minutes after closing the dashboard (it
-      reports in once a minute). The AI now only hands conversations to people who are
-      Available and online; one escalated while nobody is waits, owners and admins are alerted,
-      and it goes to the first person who becomes available. Team shows who is available now and
-      when others were last seen; the reassign picker shows each person's status. Migration V25;
-      4 new tests (73 in all); system design updated (ER, class, use case, sequence, architecture,
-      DFD) and the new columns checked against the live database
-- [x] **Presence updates live, no refresh.** A colleague switching between Available and Busy
-      now shows on everyone's screen at once (16ms measured), through a server-sent event
-      stream; closing the dashboard shows the person offline in about 5 seconds (7 if the tab
-      crashed), instead of after 3 minutes. Brand written "EkSamadhan AI" in the status menu,
-      the offline screen, the update banner and the install tooltip. 1 new end-to-end test over
-      real HTTP (74 in all); architecture and class diagrams updated
-- [x] Fixed two copies of the notifications on the notifications page: the bell no longer opens
-      its dropdown there, and is highlighted as the current page instead. Old alerts stored with
-      a siren emoji in the title (13 rows) cleaned by migration V26
-- [x] Roles renamed on screen: the workspace creator is the **Tenant** and an agent is
-      **Staff** (Admin unchanged), in every screen, the invite email, server messages and the
-      visualizer's step names. Stored values unchanged, so nothing had to be migrated
-
 **Commits this week**
 
 <!-- Regenerate before submitting:
-     git log --since=2026-09-17 --until=2026-09-27 --pretty='- %ad `%h` %s' --date=short -->
+     git log --since=2026-09-17 --until=2026-09-25 --pretty='- %ad `%h` %s' --date=short -->
 
-- 2026-09-25 `69cb50d` fix: show the logo and a loader when the installed app is refreshed
-- 2026-09-25 `3700cfc` feat: confirm sign-out, live Home figures, customer details on phones
-- 2026-09-25 `249174d` fix: keep the notification bell beside the account name on every screen
-- 2026-09-25 `d18aa0c` feat: make the notification bell an unread inbox with a full page
-- 2026-09-25 `c3901e6` feat: add skeletons, busy buttons and upload progress to every screen
-- 2026-09-25 `2c6ead5` feat: add legal pages, sign-in limits and a plain design and copy pass
-- 2026-09-25 `06da290` fix: make every dashboard screen fit a phone
-- 2026-09-25 `35a7983` feat: PWA splash, offline shell and updates; fix sign-in through a tunnel
-- 2026-09-25 `ef1c2af` feat: make the dashboard installable as a progressive web app
-- 2026-09-25 `495007b` feat: sign in with Google through Firebase Authentication
-- 2026-09-25 `a643c0f` feat: add a spam tab and conversation priority from Jev
 - 2026-09-24 `78a02f8` feat: add a spam tab and conversation priority from Jev
 - 2026-09-24 `01eefec` feat: add a spam tab and conversation priority from Jev
 - 2026-09-24 `997f270` feat: add a system admin console with a conversation visualizer
@@ -580,6 +461,191 @@ expire after 7 days — re-send if it lapses.
   the Instagram account is linked and connected. Both channels share one webhook, parser and
   inbox, so the multi-channel requirement (FR-01) is now demonstrated on real accounts rather
   than argued from the architecture.
+
+---
+
+## Week 3 — 2026-09-25 to 2026-10-01
+
+Submitted Thursday 2026-10-01.
+
+**Accomplished**
+
+- [x] **The dashboard installs as an app (PWA)** — its own window and icon on a laptop or phone,
+      with no app store. A branded splash paints instantly (inline in the page, before any
+      JavaScript), matching the phone's own launch screen, and hands over to the app with no
+      blank frame; the app opens offline from its cached shell without signing anyone out, and
+      offers updates instead of swapping them under an open session. Icons, the Android
+      notification badge and 42 iPhone/iPad launch images are generated from the logo. Checked:
+      Chrome's installability audit (no errors), offline start, slow 3G (splash at 1.3s,
+      bundle at 3.3s) and the dev server (no caching, edits appear live)
+- [x] **Design and copy clean-up to the project's "not AI-generated" rules** (now written into
+      the project instructions): no em dashes or emoji icons anywhere a person reads, no
+      pill-shaped buttons or purple, and every line that promised something the app does not do
+      rewritten. AI replies to customers are cleaned of dashes before sending (5 new tests,
+      66 in all)
+- [x] **Privacy Policy and Terms & Conditions pages**, written from what the system actually does
+      with data; the Meta-facing privacy, terms and data-deletion pages now link to them, and a
+      duplicate, out-of-date privacy page with an old contact address was removed
+- [x] **Brute-force protection on sign-in and sign-up** — an account is paused after five wrong
+      passwords in fifteen minutes, and one device is limited to twenty attempts a minute; tested
+      live and with 4 new unit tests (61 in all)
+- [x] Status colours made readable enough for accessibility standards; checked the frontend for
+      secrets, image descriptions, keyboard use and broken links — nothing else needed fixing
+- [x] **Phone layout fixed across every screen** — the top bar, page titles, the setup
+      checklist, team and knowledge rows, the conversation header and messages, and the
+      notification list, which opened off the edge of the screen. The cause was one ordering
+      problem in the stylesheet that let desktop rules override the phone ones; checked at phone
+      width on every screen with nothing running off the edge
+- [x] Home-screen icon kept full blue, and the installed app now shows its logo once: the loading
+      screen no longer repeats the logo (or a spinner) after Android's own launch screen
+- [x] **Installed and used on a real Android phone**, through an HTTPS tunnel. Two fixes on the
+      way: requests through a tunnel were refused by the backend's cross-origin check, and a
+      Google sign-in failure was reported as "could not reach the server" instead of its cause
+- [x] Fixed staff being signed out when the app started without a connection — any failed
+      session check cleared the sign-in; now only the server refusing it does
+- [x] **Sign in with Google (Firebase Authentication)** — on sign-in, workspace sign-up and
+      invitation acceptance, so staff join without creating another password. The backend
+      checks Google's signature on every sign-in token itself, with no service-account key; a
+      Google account only gets in as the member with that address or the person the invite was
+      sent to. Migration V24; 12 tests (6 on the token checks, including a forged and an
+      unverified one, 6 on who a Google account may become). Firebase project `eksamadhan-ai`
+      created, and verified with a real Google account: the owner signed in with Google and
+      their existing account was linked, password kept
+- [x] The assigned agent is no longer alerted for a spam message the AI ignores, in an otherwise
+      real conversation; a real message from the same customer still alerts them (tested). The
+      Spam tab shows how many conversations are in it, so a misjudged customer is never buried
+- [x] **Loading states on every screen** — one shimmer primitive, and skeletons built from it
+      for the inbox, Home, Team, Knowledge, Analytics, the visualizer and the notification list,
+      laid out with the same styles as the real content (measured: each skeleton row within
+      1px of the row that replaces it, unless that row's text wraps onto a second line). A skeleton only appears on a first visit and stays at
+      least 0.45s so it never flashes; data already fetched this session shows at once; a
+      failed load ends in an error with "Try again", never an endless shimmer; after 5s it
+      says it is taking longer. Working buttons show a ring without changing size; file,
+      photo and voice uploads show real progress. Fixed on the way: the inbox said "No messages
+      yet" before it had loaded, Home flipped its setup step once the channels arrived, and
+      switching messages in the visualizer briefly showed the previous message's flow.
+      Checked: slow 3G on a phone (splash, then skeleton, then data, with no blank frame),
+      a forced server failure and retry, reduced motion (the shimmer stops) and a 3MB upload
+- [x] **Notification bell reworked into an unread inbox** — opening the panel no longer marks
+      everything read (it used to, which emptied the list while it was being read). An alert
+      leaves only when it is opened, which drops the badge by one at once and goes to its
+      conversation, or by "Mark all read", which sweeps the cards out one by one while the badge
+      counts down to zero. The panel shows the newest five; the badge and "See 7 more" carry the
+      full count. New "All notifications" page; the page behind is locked while the panel is
+      open; a push now refreshes the bell straight away. Backend: `POST
+      /api/notifications/{id}/read` (only the owner's own) and an unread-only list; 3 new tests
+      (69 in all). Checked in the browser with a mocked server holding 12 unread alerts
+- [x] Fixed the bell's position: on screens without the search box (Home, Team, Knowledge) it
+      sat at the far left of the header and its panel opened off the edge of the screen. It now
+      stays beside the account name on every screen, desktop and phone
+- [x] **Customer details on phones and tablets** — the right-hand details column (priority,
+      spam, sentiment, who handles it, the summary) was simply hidden below 1100px wide. An (i)
+      button in the conversation header now opens it as a sheet from the right; it closes with
+      the X, Escape or a tap outside. Checked at 360, 390 and 900px wide
+- [x] The phone header shows the logo with the "EkSamadhan AI" name, or no logo at all when
+      there is no room, instead of a lone logo beside the menu button. Checked from 320 to
+      1280px wide with no overflow
+- [x] **Signing out asks first** ("Sign out?", Cancel or Sign out), in the workspace and the
+      system admin console; it used to sign out on a single tap
+- [x] **Home shows real figures.** The setup steps "Add business knowledge" and "Invite your
+      team" were hard-coded as not done, and three of the four figures always said "Not measured
+      yet". Now: knowledge counts once a source is indexed, the team once anyone else has joined
+      or been invited, and the checklist disappears when all three are done; the figures are the
+      last 30 days from Analytics (resolved by AI, escalated, median AI reply time), each with
+      what it is out of, and say "No conversations yet" when there is nothing to measure
+- [x] **Refreshing the installed app showed a blank screen.** Its splash hides the logo so a
+      cold launch shows only one (Android's own), but a refresh has no Android screen before it.
+      A refresh now shows the logo, with a small loading ring under it after 0.4s; a cold launch
+      is unchanged
+- [x] **Agent availability (PRD 4.6, FR-05)** — each person sets Available or Busy in the top
+      bar, and is shown offline automatically a few minutes after closing the dashboard (it
+      reports in once a minute). The AI now only hands conversations to people who are
+      Available and online; one escalated while nobody is waits, owners and admins are alerted,
+      and it goes to the first person who becomes available. Team shows who is available now and
+      when others were last seen; the reassign picker shows each person's status. Migration V25;
+      4 new tests (73 in all); system design updated (ER, class, use case, sequence, architecture,
+      DFD) and the new columns checked against the live database
+- [x] **Presence updates live, no refresh.** A colleague switching between Available and Busy
+      now shows on everyone's screen at once (16ms measured), through a server-sent event
+      stream; closing the dashboard shows the person offline in about 5 seconds (7 if the tab
+      crashed), instead of after 3 minutes. Brand written "EkSamadhan AI" in the status menu,
+      the offline screen, the update banner and the install tooltip. 1 new end-to-end test over
+      real HTTP (74 in all); architecture and class diagrams updated
+- [x] Fixed two copies of the notifications on the notifications page: the bell no longer opens
+      its dropdown there, and is highlighted as the current page instead. Old alerts stored with
+      a siren emoji in the title (13 rows) cleaned by migration V26
+- [x] Roles renamed on screen: the workspace creator is the **Tenant** and an agent is
+      **Staff** (Admin unchanged), in every screen, the invite email, server messages and the
+      visualizer's step names. Stored values unchanged, so nothing had to be migrated
+- [x] **Settings page**, holding only settings the system acts on: the workspace name; whether
+      the AI answers customers, and the handover and closing messages in the business's own
+      words; each person's device notifications, email alerts and password; and, for the tenant
+      only, "Disconnect everything". Two bugs fixed on the way: any member, Staff included,
+      could delete the whole workspace's conversations; and with AI replies off the customer
+      was silently ignored, where now they are handed to an available person. Migration V27;
+      7 new tests (81 in all); ER, class, use case, sequence and activity diagrams updated and
+      the new columns checked against the live database
+- [x] Settings page redesigned: a section list on the left, one card per section with each
+      setting's name and explanation beside its control, a Save per card, switches for on and
+      off, and a clearly marked danger zone; checked at desktop and phone width
+- [x] Edit profile cleaned up: photo (with "Remove photo"), name, and the email and role shown
+      as facts; the role no longer says "set by your workspace admin" to the tenant who created
+      the workspace; notifications moved to Settings (one place, linked from the panel); the
+      install row appears only when this device can install; centred on a phone
+- [x] **Fixed saving the profile**, which failed every time with "Something went wrong": the
+      saved copy of the user had its workspace unloaded, so issuing the new session crashed.
+      The save now writes only the name and photo columns (so it can no longer undo a status
+      change made at the same moment) and reloads the user. 1 new test over real HTTP, shown to
+      fail on the old code with the same error (82 in all)
+- [x] **Channels page** — Facebook Messenger, Instagram and (not yet available) website chat,
+      each with its connected accounts: when connected, conversations brought in, how many are
+      with the team now, and the latest message. Connect, connect another, reconnect (signs in
+      with Meta again to refresh access), and disconnect one account with a confirmation that
+      says how many conversations will be deleted. New server rules: only the tenant and admins
+      can connect a page (Staff could before), only the tenant can disconnect one, and a page from
+      another workspace cannot be touched. 4 new tests (86 in all, 1 skipped for want of a
+      second workspace in the dev database); use case diagram updated
+- [x] Sign out moved from the top bar to the bottom of the menu, under Settings (it still asks
+      first); the same in the system admin console. On Team, the role picker is wide enough to
+      show its value and as tall as the email field, and role tags are no longer amber (a role
+      is not a warning): Tenant blue, Admin light blue, Staff grey
+- [x] **Screen-by-screen UI review and fixes**, every screen checked at desktop and phone width:
+      one heading style and one content width on every page (Knowledge, Team and Analytics used
+      a smaller heading and stretched to the screen edge); disabled buttons keep a border so they
+      still read as buttons; the menu no longer opens over the page on a phone at load; Home's
+      channel names match the Channels page, the duplicate "Coming soon" button is gone, "Add a
+      channel" opens the Channels page, and Staff no longer see connect buttons they cannot
+      use; Knowledge's three stacked forms became one "Add knowledge" card with a tab per way of
+      adding, so the sources are no longer pushed a screen down; the notifications list lines up
+      with its "Mark all read"; the sign-in logo is the brand blue
+
+**Commits this week**
+
+<!-- Regenerate before submitting:
+     git log --since=2026-09-25 --until=2026-10-02 --pretty='- %ad `%h` %s' --date=short -->
+
+- 2026-09-26 `f6335c2` feat: call the roles Tenant, Admin and Staff on screen
+- 2026-09-26 `058a2e6` fix: one list on the notifications page; strip emoji from old alerts
+- 2026-09-26 `bee62e6` feat: agent availability with live presence updates
+- 2026-09-25 `69cb50d` fix: show the logo and a loader when the installed app is refreshed
+- 2026-09-25 `3700cfc` feat: confirm sign-out, live Home figures, customer details on phones
+- 2026-09-25 `249174d` fix: keep the notification bell beside the account name on every screen
+- 2026-09-25 `d18aa0c` feat: make the notification bell an unread inbox with a full page
+- 2026-09-25 `c3901e6` feat: add skeletons, busy buttons and upload progress to every screen
+- 2026-09-25 `2c6ead5` feat: add legal pages, sign-in limits and a plain design and copy pass
+- 2026-09-25 `06da290` fix: make every dashboard screen fit a phone
+- 2026-09-25 `35a7983` feat: PWA splash, offline shell and updates; fix sign-in through a tunnel
+- 2026-09-25 `ef1c2af` feat: make the dashboard installable as a progressive web app
+- 2026-09-25 `495007b` feat: sign in with Google through Firebase Authentication
+- 2026-09-25 `a643c0f` feat: add a spam tab and conversation priority from Jev
+
+**Plan for next week**
+
+- To be written with the week 3 report
+
+**Blockers**
+
+- None this week
 
 ---
 

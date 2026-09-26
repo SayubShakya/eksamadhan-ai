@@ -91,6 +91,12 @@ status machine and authentication have all since been built — see the change l
 - Build tool assumed Maven; Gradle is equally acceptable if preferred.
 - OpenAI model not pinned. Choose in Phase 2 and record it; cost matters (§5.4.2).
 
+## Reporting rhythm
+
+- **The weekly log is due every Thursday** (Sayub corrected this on 2026-09-26; earlier docs said
+  Monday). Weeks run Friday to Thursday. Week 3 = 25 Sep to 1 Oct, submitted **Thursday 1
+  October 2026**. Work is logged in the week its commit landed.
+
 ## Known issues / gotchas
 
 - **The Postgres image is now `pgvector/pgvector:pg16`**, not `postgres:16-alpine`. Same
@@ -411,6 +417,59 @@ status machine and authentication have all since been built — see the change l
   hides below 420px when the install button shows, to make room. Tests: `AvailabilityTest` (4).
   Needs a backend restart; the V25 migration has already been applied to the dev database by
   the test run.
+
+- **UI review pass (2026-09-26).** Page frame unified (see `docs/design.md`, Page frame); the
+  nav's `navOpen` is only read and written for the docked layout (>= 1024px), because a
+  remembered "open" made the phone drawer cover the screen on load; Knowledge's add forms are one
+  card with tabs (`ADD_TABS`, `addTab`); Home channel names, buttons and "Add a channel"
+  aligned with the Channels page and hidden from Staff.
+
+- **Channels page (2026-09-26).** `ChannelsPage.jsx` (reuses the Settings card/row styles) from
+  `GET /api/auth/status`, which now also returns per page `id`, `conversations`, `withPeople`,
+  `lastMessageAt` (`ConversationThreadRepository.statsPerPage`, one grouped query). `DELETE
+  /api/auth/pages/{id}` (`requireTenant`, 404 for another workspace's page) deletes messages,
+  then threads, then the page: `social_messages` and `conversation_threads` reference
+  `social_pages` with NO ACTION, while traces, triage, embeddings and notifications cascade from
+  messages/threads. The two bulk deletes use `clearAutomatically`, or stale managed threads fail
+  the flush (`TransientPropertyValueException`, seen in `ChannelsTest`). `connect-url` now needs
+  `requireTeamManager` (Staff could start an OAuth connect before). "Reconnect" is the same
+  OAuth flow: it refreshes the stored page token. No health or delivery status is shown:
+  nothing measures it. `PlaceholderPage.jsx` deleted (no view uses it). Home's Channels section
+  links to the page.
+
+- **Settings page (2026-09-26).** Built from an analysis of what the system actually acts on.
+  Sections: Workspace (name), AI replies (on/off, handover message, closing message; blank =
+  the `app.ai.*` default shown as placeholder), Notifications (this device via the shared
+  `lib/useDeviceAlerts.js`, also used by the profile panel; email alerts on handover), Sign-in and
+  security (change password; Google-only accounts told there is none), Danger zone (tenant only).
+  API `SettingsController` `/api/settings` (GET, PUT `/workspace` tenant+admin, PUT `/me`, PUT
+  `/me/password` counted by `AuthRateLimiter`). Migration V27: `organizations.ai_replies_enabled`,
+  `handover_message`, `closing_message`; `users.email_alerts`. **Two real bugs fixed on the way:**
+  (1) `POST /api/auth/disconnect` let any signed-in member, Staff included, delete every
+  conversation; now `CurrentUser.requireTenant()`. (2) With `AI_AUTO_REPLY=false`, or no model
+  configured, `AiReplyService` returned silently: no reply, no handover, nobody told. Now the
+  switch (server AND workspace) is checked after the spam gate and anything off escalates to an
+  available person with the workspace's handover words (trace step "Are AI replies switched
+  on?"). Email alerts off skips only the email in `notifyAssignee`; push and bell still go.
+  **Left out on purpose:** thresholds, models, triage mode (the graded targets are measured with
+  them), API keys and mail/push config (server secrets), channels (Home), delete workspace, data
+  export, business hours (nothing behind them; a dead switch breaks the no-fake-UI rule).
+  Tests: `SettingsTest` (5, MockMvc inside a rolled-back transaction, because it calls
+  disconnect), 2 more in `AiTraceRecordingTest` (AI off; email alerts off). 81 in all.
+
+- **Edit profile panel (2026-09-26)** holds only the profile: photo (Remove photo sends
+  `avatar: null`), first and last name, email and role as read-only facts (Tenant: "You created
+  this workspace"; others: "Set by the tenant or an admin"), an install row only when
+  `usePwa().canPrompt` or the iOS hint applies, and a link to Settings. Device notifications live
+  only in Settings now (`useDeviceAlerts` is still shared, used there). On a phone `.popover` is a
+  sheet with 8px margins like the bell panel.
+  **Profile save bug (fixed):** `PUT /api/me` did `session(userRepository.save(user))`; with
+  open-in-view off, the entity `save()` (merge) returns has an unloaded Organization proxy, so
+  `JwtService.issueSession` threw `LazyInitializationException` and every save was a 500. Now
+  `UserRepository.updateProfile` (three columns) + `findWithOrganizationById`. **Rule for this
+  codebase:** never build a response from what `save()` returns if it touches a lazy
+  association; and a test for that must run outside a test transaction (`ProfileSaveTest`
+  uses RANDOM_PORT), or the transaction keeps the session open and hides the bug.
 
 - **Roles are shown as Tenant, Admin, Staff (2026-09-26, Sayub).** Display only: the enum, the
   `users.role` values, the JWT `role` claim and the PRD/report keep OWNER, ADMIN, AGENT, so no

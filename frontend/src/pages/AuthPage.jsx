@@ -133,7 +133,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate }) {
         return (
             <div className="auth">
                 <div className="auth__card">
-                    <LogoMark size={40} />
+                    <LogoMark size={40} color="#2563eb" />
                     <h1 className="auth__title">This invite is not valid</h1>
                     <p className="auth__sub">{error || 'The link may have expired or already been used. Ask your admin for a new one.'}</p>
                     <button className="btn btn--secondary" onClick={() => onNavigate('login')}>Go to sign in</button>
@@ -145,7 +145,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate }) {
     return (
         <div className="auth">
             <form className="auth__card" onSubmit={submit}>
-                <LogoMark size={40} />
+                <LogoMark size={40} color="#2563eb" />
                 <h1 className="auth__title">{title}</h1>
                 <p className="auth__sub">{subtitle}</p>
 
