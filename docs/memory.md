@@ -555,6 +555,28 @@ status machine and authentication have all since been built — see the change l
   button in the conversation header and one on each list row (a sibling of the row button, always
   shown, grey until pinned, then blue (Sayub: not only on hover); pinning from the list does not open the chat); the change shows at once and is put back if the server refuses. Deleting an account
   removes its pins. No limit on how many. `PinTest` (2).
+- **Visual Paradigm design set (2026-09-26, Sayub: use Visual Paradigm instead of draw.io).**
+  `docs/visual-paradigm/EkSamadhan-AI.vpp` holds all 13 diagrams as native elements, with a
+  PNG per diagram. Built, not hand-drawn: `tools/build_spec.py` takes meaning from the Mermaid
+  sources and positions from the draw.io files; `tools/plugin` (a Visual Paradigm plugin run
+  through its command line) creates the elements through the Open API, fits classes and
+  tables, pushes overlapping ones apart, and saves; `tools/rebuild.sh` runs it all and exports
+  the PNGs. Why a plugin: ImportXML accepted hand-written XML but left class names, columns
+  and message labels undrawn. Community Edition limits, all in the folder's README: a
+  watermark on exported PNGs, no data flow diagram type (drawn as flowcharts in DFD
+  notation), no pgvector `vector` type (shows int4). Visual Paradigm's own scripts fail on
+  its bundled Java 11 (`-XX:MaxPermSize`), so rebuild.sh calls the classes directly. The
+  draw.io set stays: it is the layout source.
+- **Visual Paradigm diagrams tidied (2026-09-26, Sayub: messy lines, tiny text, "System1").**
+  Text 14px (13 in classes and tables); every system boundary named "EkSamadhan AI platform"
+  (each diagram now has its own package, so the five no longer clash as System, System2...);
+  extension points named after the extending use case. New `tools/layout.py`: a measure pass
+  (plugin `--measure`) records real shape sizes, then layout.py places shapes and routes all
+  lines orthogonally on an 8px grid (A* with bend and crowding costs, captions of decision and
+  end nodes treated as obstacles), and the plugin draws exactly that. Visual Paradigm's own
+  layout/router was tried and rejected: from the command line it ran lines through classes.
+  Gotchas: connectors given points must be created before openDiagram or they are not drawn;
+  ExportDiagramImage writes `name2.png` instead of overwriting, so rebuild.sh clears the folder.
 - **404 and offline pages (2026-09-26).** One `StatusPage` layout for both. An unknown top-level
   address shows a full-page 404 (brand, the path, "Go to Home" or "Go to sign in", "Go back",
   Privacy and Terms), decided before the session check so it never flashes the dashboard; an

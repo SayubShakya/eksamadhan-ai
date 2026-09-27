@@ -656,6 +656,11 @@ Submitted Thursday 2026-10-01.
 - [x] Pin a conversation: personal pins keep it at the top of your own inbox; pin button in the
       conversation header and on each conversation in the list; migration V30; 2 tests; ER, class and use
       case diagrams updated
+- [x] All 13 design diagrams converted to one Visual Paradigm project
+      (`docs/visual-paradigm/EkSamadhan-AI.vpp`) as native UML, ER and flowchart elements,
+      with a PNG per diagram; rebuilt from the Mermaid sources by `tools/rebuild.sh`
+- [x] Visual Paradigm diagrams re-laid out: larger text, named system boundaries, right-angled
+      lines routed around shapes instead of through them (new `tools/layout.py`)
 
 **Commits this week**
 
