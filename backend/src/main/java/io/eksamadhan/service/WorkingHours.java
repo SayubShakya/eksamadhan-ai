@@ -89,7 +89,8 @@ public final class WorkingHours {
 
     public static ZoneId zoneOf(User user) {
         try {
-            return user.getTimeZone() == null ? DEFAULT_ZONE : ZoneId.of(user.getTimeZone());
+            return user.getTimeZone() == null ? DEFAULT_ZONE
+                    : ZoneId.of(RENAMED.getOrDefault(user.getTimeZone(), user.getTimeZone()));
         } catch (DateTimeException e) {
             return DEFAULT_ZONE;
         }
@@ -138,9 +139,14 @@ public final class WorkingHours {
         return out;
     }
 
+    /** Old names browsers still report, stored under the current one. */
+    private static final java.util.Map<String, String> RENAMED = java.util.Map.of(
+            "Asia/Katmandu", "Asia/Kathmandu", "Asia/Calcutta", "Asia/Kolkata", "Asia/Rangoon", "Asia/Yangon",
+            "Asia/Saigon", "Asia/Ho_Chi_Minh", "Europe/Kiev", "Europe/Kyiv");
+
     public static ZoneId validZone(String zone) {
         try {
-            return ZoneId.of(zone);
+            return ZoneId.of(RENAMED.getOrDefault(zone, zone));
         } catch (DateTimeException | NullPointerException e) {
             throw new IllegalArgumentException("Unknown time zone: " + zone);
         }

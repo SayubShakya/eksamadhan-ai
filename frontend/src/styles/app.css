@@ -2280,7 +2280,6 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 .availability__hours:hover { background: var(--surface); }
 .home__hours { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 
-.hours { max-width: 760px; }
 .hours__status { margin: 0 0 12px; padding: 10px 12px; border-radius: var(--r-sm); font-size: 14px; line-height: 1.5; }
 .hours__status--in { background: var(--success-weak); color: var(--success); }
 .hours__status--out { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
@@ -2311,6 +2310,7 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 .hours__off { font-size: 14px; color: var(--text-muted); }
 .hours__times { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-muted); flex-wrap: wrap; }
 .hours__time { width: 130px; }
+.hours__allday { font-size: 12px; font-weight: 500; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
 .hours__problem { grid-column: 2 / -1; font-size: 13px; color: var(--danger); line-height: 1.45; }
 @media (max-width: 520px) {
     .hours__day { grid-template-columns: auto 1fr; row-gap: 10px; }

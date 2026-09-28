@@ -81,6 +81,17 @@ function sameZone(a, b) {
     }
 }
 
+/** "Nepal Time" for Asia/Kathmandu: the zone as a person says it. */
+function zoneName(zone) {
+    try {
+        const part = new Intl.DateTimeFormat('en', { timeZone: zone, timeZoneName: 'long' })
+            .formatToParts(new Date()).find(p => p.type === 'timeZoneName');
+        return part?.value || zone;
+    } catch {
+        return zone;
+    }
+}
+
 function Switch({ checked, onChange, label }) {
     return (
         <button type="button" role="switch" aria-checked={checked} aria-label={label}
@@ -188,8 +199,8 @@ export default function HoursPage({ onStatus }) {
     const retry = () => saveNow(days, version.current);
 
     const zoneNote = zone && !sameZone(zone, deviceZone)
-        ? `Times are in ${zone}. They will be saved in this device's zone, ${deviceZone}, when you next change them.`
-        : `Times are in ${zone || deviceZone}.`;
+        ? `Times are in ${zoneName(zone)}. They will be saved in this device's zone, ${zoneName(deviceZone)}, when you next change them.`
+        : `Times are in ${zoneName(zone || deviceZone)}.`;
 
     return (
         <div className="page hours">
@@ -255,6 +266,7 @@ export default function HoursPage({ onStatus }) {
                                                 <input type="time" className="setting__input hours__time" value={d.end}
                                                        onChange={(e) => edit(d.day, { end: e.target.value })} />
                                             </label>
+                                            {d.start === '00:00' && d.end === '00:00' && <span className="hours__allday">All day</span>}
                                         </span>
                                     ) : (
                                         <span className="hours__off">Off</span>
