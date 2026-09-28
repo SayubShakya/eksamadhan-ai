@@ -672,6 +672,9 @@ Submitted Thursday 2026-10-01.
       "Go back home" button
 - [x] "AI is typing" in the inbox while the AI is actually writing a reply (announced by the
       server when the reply starts and ends); 2 new tests (116 in all); sequence diagram updated
+- [x] Handing a conversation to someone by hand now follows the same rule as routing: not to
+      anyone Busy, offline or outside their working hours (the picker shows why); Hours page
+      redesigned with a status card, quick-set buttons and All day
 
 **Commits this week**
 

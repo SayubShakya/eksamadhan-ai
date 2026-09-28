@@ -2280,13 +2280,25 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 .availability__hours:hover { background: var(--surface); }
 .home__hours { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 
-.hours__status { margin: 0 0 12px; padding: 10px 12px; border-radius: var(--r-sm); font-size: 14px; line-height: 1.5; }
-.hours__status--in { background: var(--success-weak); color: var(--success); }
-.hours__status--out { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
-.hours__status--none { background: var(--warning-weak); color: var(--warning); }
+.hours__card {
+    display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px; margin: 0 0 18px;
+    border-radius: var(--r-md); border: 1px solid var(--border); background: var(--bg);
+}
+.hours__card--loading { align-items: center; }
+.hours__card--loading span { display: grid; gap: 8px; }
+.hours__card-icon { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; }
+.hours__card-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--text); }
+.hours__card-text { margin: 3px 0 0; font-size: 13px; line-height: 1.5; color: var(--text-muted); }
+.hours__card--in { border-color: #bfe3cb; background: var(--success-weak); }
+.hours__card--in .hours__card-icon { background: var(--bg); color: var(--success); }
+.hours__card--out .hours__card-icon, .hours__card--busy .hours__card-icon { background: var(--surface); color: var(--text-muted); }
+.hours__card--none { border-color: #f3d9a4; background: var(--warning-weak); }
+.hours__card--none .hours__card-icon { background: var(--bg); color: var(--warning); }
+
+.hours__toolbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin: 0 0 26px; }
 /* The "Saved" note hangs off the helper line, out of the flow: it appearing and going must
    not move the week under a finger about to tap it. */
-.hours__help { position: relative; margin: 0 0 26px; }
+.hours__help { position: relative; flex: 1 1 280px; }
 .hours__help .setting__hint { margin: 0; }
 .hours__saved {
     position: absolute; left: 0; top: 100%; margin: 4px 0 0; font-size: 13px; line-height: 18px;
@@ -2294,6 +2306,7 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 }
 .hours__saved--saved { color: var(--success); }
 .hours__saved--idle, .hours__saved--error { opacity: 0; }
+.hours__presets { display: flex; gap: 8px; flex-wrap: wrap; }
 .hours__error {
     display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
     background: var(--danger-weak); color: var(--danger);
@@ -2301,22 +2314,26 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 .hours__invalid { margin: 0 0 12px; font-size: 13px; color: var(--danger); }
 .hours__week { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .hours__day {
-    display: grid; grid-template-columns: auto 110px 1fr; align-items: center; gap: 14px;
-    padding: 12px 16px; margin: 0; min-height: 56px;
+    display: grid; grid-template-columns: auto 150px minmax(0, 1fr); align-items: center;
+    gap: 16px; padding: 12px 16px; margin: 0; min-height: 60px;
 }
+.hours__day--today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-weak); }
 .hours__day--bad { border-color: var(--danger); }
-.hours__name { font-weight: 600; font-size: 14px; color: var(--text); }
+.hours__name { font-weight: 600; font-size: 14px; color: var(--text); display: inline-flex; align-items: center; gap: 8px; }
+.hours__today { font-size: 11px; font-weight: 600; color: var(--accent); background: var(--accent-weak); border-radius: 999px; padding: 1px 7px; }
 .hours__day--off .hours__name { color: var(--text-muted); font-weight: 500; }
 .hours__off { font-size: 14px; color: var(--text-muted); }
 .hours__times { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-muted); flex-wrap: wrap; }
+.hours__allday-check { display: inline-flex; align-items: center; gap: 6px; color: var(--text); cursor: pointer; margin-right: 6px; }
+.hours__allday-check input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
 .hours__time { width: 130px; }
-.hours__allday { font-size: 12px; font-weight: 500; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
 .hours__problem { grid-column: 2 / -1; font-size: 13px; color: var(--danger); line-height: 1.45; }
-@media (max-width: 520px) {
+@media (max-width: 860px) {
     .hours__day { grid-template-columns: auto 1fr; row-gap: 10px; }
     .hours__times, .hours__off { grid-column: 1 / -1; }
     .hours__problem { grid-column: 1 / -1; }
     .hours__time { width: 120px; }
+}
 }
 
 /* ── AI is typing ──────────────────────────────────────────────────────────── */
@@ -2344,3 +2361,8 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
     .typing-dots i, .dot--pulse { animation: none; }
     .typing-dots i { opacity: .8; }
 }
+
+/* Someone who cannot take a new conversation now: listed, with the reason, but not choosable. */
+.assignee__option--unavailable { cursor: not-allowed; }
+.assignee__option--unavailable .avatar, .assignee__option--unavailable .assignee__who { opacity: .55; }
+.assignee__option--unavailable:hover { background: none; }

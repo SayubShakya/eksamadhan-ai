@@ -607,6 +607,15 @@ status machine and authentication have all since been built — see the change l
   "Saved" is absolutely positioned (pointer-events none, role status). Chrome reports
   Asia/Katmandu; zones with the same offsets all year count as the same. Tests:
   WorkingHoursTest (6) and a routing test (114 in all).
+- **Manual assignment follows the hours too (2026-09-28, Sayub: a conversation went to Manjit on
+  his day off).** Routing was right; the tenant had picked him by hand twice (two ASSIGNED
+  notifications). `ThreadController.assign` now refuses (409, with the reason) anyone whose
+  presence is not AVAILABLE, the same rule routing uses; assigning yourself is always allowed.
+  The picker lists them dimmed with why ("Outside hours · back tomorrow 9:00 AM", "Busy",
+  "Offline", "No working hours set") and does not offer the click. AssignRespectsAvailabilityTest.
+  Hours page redone: status card with icon and headline, quick-set buttons (every day all day,
+  Sun to Fri 9 to 6, clear all), an All day checkbox per day instead of 12:00 AM to 12:00 AM,
+  a Today badge and outline. (A 24-hour bar per day was tried and removed at Sayub's request.)
 - **"AI is typing" (2026-09-28, Sayub).** A real signal, not a guess from timestamps:
   `AiReplyService` publishes the live event `ai-typing` {threadId, typing:true} once every gate
   has passed (not a person's, not spam, not a repeat, AI on) and {typing:false} in reply()'s

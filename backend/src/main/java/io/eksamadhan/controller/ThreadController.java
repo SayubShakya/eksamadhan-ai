@@ -33,6 +33,7 @@ public class ThreadController {
     private final io.eksamadhan.service.AgentNotificationService agentNotifications;
     private final io.eksamadhan.repository.SocialMessageRepository messageRepository;
     private final io.eksamadhan.repository.PinnedConversationRepository pins;
+    private final io.eksamadhan.service.AvailabilityService availability;
 
     @GetMapping
     public List<ThreadResponse> list() {
@@ -136,9 +137,36 @@ public class ThreadController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "That person is not an active member of this workspace"));
 
+        // The same rule as routing (AvailabilityService.presence): a new conversation goes only to
+        // someone Available, online and inside their working hours. Otherwise the customer waits
+        // on a person who is not there, which is what handing it over was meant to prevent.
+        // Taking one yourself is always allowed: you are plainly here.
+        if (!target.getId().equals(me.getId())) {
+            io.eksamadhan.service.AvailabilityService.Presence presence = availability.presenceOf(target);
+            if (presence != io.eksamadhan.service.AvailabilityService.Presence.AVAILABLE) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, cannotTakeReason(target, presence));
+            }
+        }
+
         ConversationThread assigned = threadService.assign(threadId, target);
         agentNotifications.assigned(target, assigned, me);
         return ResponseEntity.ok(toDto(assigned));
+    }
+
+    /** Why someone cannot be handed a conversation now, in words fit for the person assigning. */
+    private static String cannotTakeReason(User target, io.eksamadhan.service.AvailabilityService.Presence presence) {
+        String name = target.getFirstName() == null || target.getFirstName().isBlank() ? "They" : target.getFirstName();
+        return switch (presence) {
+            case BUSY -> name + " is Busy, so new conversations do not go to them. Choose someone Available";
+            case OUTSIDE_HOURS -> {
+                io.eksamadhan.service.WorkingHours.Status hours =
+                        io.eksamadhan.service.WorkingHours.status(target, java.time.Instant.now());
+                yield !hours.hasAvailability()
+                        ? name + " has no working hours set, so new conversations do not go to them"
+                        : name + " is outside their working hours. Choose someone Available";
+            }
+            default -> name + " is offline. Choose someone Available";
+        };
     }
 
     /** Manual escalation. Phase 2 calls the same path from the confidence gate. */

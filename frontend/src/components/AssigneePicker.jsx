@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { PRESENCE } from './AvailabilityMenu.jsx';
 import { IconSearch, IconSparkle, IconCheck } from './icons.jsx';
 import Avatar from './Avatar.jsx';
+import { formatBackAt } from '../lib/format.js';
 
 /**
  * Who owns this conversation, and a way to hand it to someone else.
@@ -11,6 +12,21 @@ import Avatar from './Avatar.jsx';
  * is an option in the same list, because handing a conversation back to it is the same kind
  * of act as handing it to a colleague — not a separate button somewhere else.
  */
+/**
+ * Why someone cannot be handed a new conversation now, or '' if they can. The server decides
+ * the same way (presence, which counts working hours) and refuses anything else, so the list
+ * never offers a choice that would fail.
+ */
+function cannotTake(member) {
+    if (member.isYou || member.presence === 'AVAILABLE') return '';
+    if (member.presence === 'BUSY') return 'Busy';
+    if (member.presence === 'OUTSIDE_HOURS') {
+        if (member.hours && !member.hours.hasAvailability) return 'No working hours set';
+        return `Outside hours${member.hours?.nextAvailableAt ? ` · back ${formatBackAt(member.hours.nextAvailableAt)}` : ''}`;
+    }
+    return 'Offline';
+}
+
 export default function AssigneePicker({ thread, team = [], me, onAssign, onReturnToAi, disabled }) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
@@ -76,22 +92,29 @@ export default function AssigneePicker({ thread, team = [], me, onAssign, onRetu
                         {aiHandling && <IconCheck />}
                     </button>
 
-                    {matches.map(member => (
-                        <button className="assignee__option" key={member.id} role="option"
-                                aria-selected={member.id === thread.assignedAgentId}
-                                onClick={() => choose(member)}>
-                            <Avatar user={member} size={24} />
-                            <span className="assignee__who">
-                                {[member.firstName, member.lastName].filter(Boolean).join(' ')}
-                                {member.isYou && ' (you)'}
-                                <small>
-                                    <span className={`dot ${(PRESENCE[member.presence] || PRESENCE.OFFLINE).dot}`} aria-hidden="true" />
-                                    {' '}{(PRESENCE[member.presence] || PRESENCE.OFFLINE).label} · {member.email}
-                                </small>
-                            </span>
-                            {member.id === thread.assignedAgentId && <IconCheck />}
-                        </button>
-                    ))}
+                    {matches.map(member => {
+                        const why = member.id === thread.assignedAgentId ? '' : cannotTake(member);
+                        const presence = PRESENCE[member.presence] || PRESENCE.OFFLINE;
+                        return (
+                            <button className={`assignee__option${why ? ' assignee__option--unavailable' : ''}`}
+                                    key={member.id} role="option"
+                                    aria-selected={member.id === thread.assignedAgentId}
+                                    aria-disabled={why ? true : undefined}
+                                    title={why ? `${why}: new conversations do not go to them` : undefined}
+                                    onClick={() => { if (!why) choose(member); }}>
+                                <Avatar user={member} size={24} />
+                                <span className="assignee__who">
+                                    {[member.firstName, member.lastName].filter(Boolean).join(' ')}
+                                    {member.isYou && ' (you)'}
+                                    <small>
+                                        <span className={`dot ${presence.dot}`} aria-hidden="true" />
+                                        {' '}{why || presence.label}{why ? '' : ` · ${member.email}`}
+                                    </small>
+                                </span>
+                                {member.id === thread.assignedAgentId && <IconCheck />}
+                            </button>
+                        );
+                    })}
 
                     {matches.length === 0 && <p className="assignee__empty">Nobody matches “{query}”.</p>}
                 </div>

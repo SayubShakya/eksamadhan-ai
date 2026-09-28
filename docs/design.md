@@ -105,11 +105,13 @@ button): always shown, a grey outline until pinned, then filled blue. Pinned one
 
 ## Working hours
 
-The Hours page is a column of day cards, Sunday first: a switch, the day, and the two times
-when the day is on; an off day is just the switch and "Off". No Save button: the helper line
-says "Changes save on their own", and the "Saved" note hangs absolutely under it so nothing
-moves. A failed save shows in red with Try again and the edit stays. Being Available but outside
-your hours shows as "Outside hours" with a hollow grey dot (`.dot--away`), never as Available.
+The Hours page opens with a status card (icon, headline such as "Outside your hours · back Sun
+9:00 AM", one line on what it means), then the helper line with quick-set buttons on the right
+("Every day, all day", "Sun to Fri, 9 AM to 6 PM", "Clear all"). Each day is a card: switch,
+day (with a Today badge and a blue outline on today), and an All day checkbox or the two times;
+off days show "Off". No Save button: "Changes save on their own", with "Saved" hanging absolutely under
+it. People who cannot take a new conversation are dimmed in the assignee picker with the
+reason. Available but outside hours shows as "Outside hours" with a hollow grey dot.
 
 ## AI is typing
 

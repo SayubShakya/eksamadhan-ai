@@ -3,6 +3,7 @@ import * as api from '../lib/api.js';
 import { LoadError, Skel } from '../components/Loading.jsx';
 import { useHeldLoading } from '../lib/loading.js';
 import { formatBackAt } from '../lib/format.js';
+import { IconCheck, IconClock, IconWarning } from '../components/icons.jsx';
 
 /**
  * Your weekly working hours: when new conversations may come to you at all.
@@ -101,32 +102,44 @@ function Switch({ checked, onChange, label }) {
     );
 }
 
-/** What the server says about your hours, in words. */
-function StatusLine({ status, presence }) {
+/** What the server says about your hours: a headline, and what it means for new conversations. */
+function StatusCard({ status, presence }) {
     if (!status) return null;
+    let tone, icon, title, text;
     if (!status.hasAvailability) {
-        return (
-            <p className="hours__status hours__status--none" role="note">
-                No working hours set, so no new conversations come to you. Turn on the days you work.
-            </p>
-        );
-    }
-    if (!status.withinHours) {
-        return (
-            <p className="hours__status hours__status--out">
-                Outside your hours{status.nextAvailableAt ? ` · back ${formatBackAt(status.nextAvailableAt)}` : ''}.
-                New conversations go to others until then.
-            </p>
-        );
+        tone = 'none'; icon = <IconWarning size={20} />;
+        title = 'No working hours set';
+        text = 'No new conversations come to you until you turn on the days you work.';
+    } else if (!status.withinHours) {
+        tone = 'out'; icon = <IconClock size={20} />;
+        title = status.nextAvailableAt ? `Outside your hours · back ${formatBackAt(status.nextAvailableAt)}` : 'Outside your hours';
+        text = 'New conversations go to others until then. Conversations you already have stay with you.';
+    } else if (presence === 'BUSY') {
+        tone = 'busy'; icon = <IconClock size={20} />;
+        title = 'Inside your hours, but you are Busy';
+        text = 'New conversations go to others until you switch to Available in the top bar.';
+    } else {
+        tone = 'in'; icon = <IconCheck size={20} />;
+        title = 'Inside your hours';
+        text = 'New conversations can come to you while you are Available and have EkSamadhan AI open.';
     }
     return (
-        <p className="hours__status hours__status--in">
-            {presence === 'BUSY'
-                ? 'Inside your hours, but you are Busy, so new conversations go to others.'
-                : 'Inside your hours. New conversations can come to you while you are Available.'}
-        </p>
+        <div className={`hours__card hours__card--${tone}`}>
+            <span className="hours__card-icon" aria-hidden="true">{icon}</span>
+            <div>
+                <p className="hours__card-title">{title}</p>
+                <p className="hours__card-text">{text}</p>
+            </div>
+        </div>
     );
 }
+
+// One click sets the whole week; each is one save, like any other change.
+const PRESETS = [
+    { label: 'Every day, all day', days: () => DAYS.map(({ day }) => ({ day, on: true, start: '00:00', end: '00:00' })) },
+    { label: 'Sun to Fri, 9 AM to 6 PM', days: () => DAYS.map(({ day }) => ({ day, on: day !== 6, start: '09:00', end: '18:00' })) },
+    { label: 'Clear all', days: (list) => list.map(d => ({ ...d, on: false })) },
+];
 
 export default function HoursPage({ onStatus }) {
     const [days, setDays] = useState(null);
@@ -196,7 +209,14 @@ export default function HoursPage({ onStatus }) {
         setDays(list => list.map(d => (d.day === day ? { ...d, ...patch } : d)));
     };
 
+    const setWeek = (next) => {
+        dirty.current = true;
+        version.current += 1;
+        setDays(list => next(list));
+    };
+
     const retry = () => saveNow(days, version.current);
+    const today = new Date().getDay();
 
     const zoneNote = zone && !sameZone(zone, deviceZone)
         ? `Times are in ${zoneName(zone)}. They will be saved in this device's zone, ${zoneName(deviceZone)}, when you next change them.`
@@ -218,14 +238,25 @@ export default function HoursPage({ onStatus }) {
                 <LoadError className="empty--panel" message={api.errorMessage(loadError, 'Your hours could not be loaded.')} onRetry={load} />
             ) : (
                 <>
-                    {days && <StatusLine status={status} presence={presence} />}
+                    {days ? <StatusCard status={status} presence={presence} />
+                        : <div className="hours__card hours__card--loading" aria-hidden="true"><Skel circle w={36} h={36} /><span><Skel line w={220} /><Skel line w={320} /></span></div>}
 
-                    <div className="hours__help">
-                        <p className="setting__hint">Changes save on their own. {zoneNote}</p>
-                        {/* Out of the flow on purpose: appearing and going must not move the week. */}
-                        <p className={`hours__saved hours__saved--${save.state}`} role="status" aria-live="polite">
-                            {save.state === 'saving' ? 'Saving…' : save.state === 'saved' ? 'Saved' : ''}
-                        </p>
+                    <div className="hours__toolbar">
+                        <div className="hours__help">
+                            <p className="setting__hint">Changes save on their own. {zoneNote}</p>
+                            {/* Out of the flow on purpose: appearing and going must not move the week. */}
+                            <p className={`hours__saved hours__saved--${save.state}`} role="status" aria-live="polite">
+                                {save.state === 'saving' ? 'Saving…' : save.state === 'saved' ? 'Saved' : ''}
+                            </p>
+                        </div>
+                        {days && (
+                            <div className="hours__presets" role="group" aria-label="Quick set">
+                                {PRESETS.map(p => (
+                                    <button key={p.label} type="button" className="btn btn--sm btn--outline"
+                                            onClick={() => setWeek(p.days)}>{p.label}</button>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {save.state === 'error' && (
@@ -248,25 +279,39 @@ export default function HoursPage({ onStatus }) {
                         )) : days.map(d => {
                             const { name } = DAYS.find(x => x.day === d.day);
                             const problem = problemWith(d);
+                            const allDay = d.on && d.start === '00:00' && d.end === '00:00';
+                            const isToday = d.day === today;
                             return (
-                                <li key={d.day} className={`card hours__day${d.on ? '' : ' hours__day--off'}${problem ? ' hours__day--bad' : ''}`}>
+                                <li key={d.day} className={`card hours__day${d.on ? '' : ' hours__day--off'}${problem ? ' hours__day--bad' : ''}${isToday ? ' hours__day--today' : ''}`}>
                                     <Switch checked={d.on} label={`${name}: ${d.on ? 'on' : 'off'}`}
                                             onChange={(on) => edit(d.day, { on })} />
-                                    <span className="hours__name">{name}</span>
+                                    <span className="hours__name">
+                                        {name}
+                                        {isToday && <span className="hours__today">Today</span>}
+                                    </span>
                                     {d.on ? (
                                         <span className="hours__times">
-                                            <label>
-                                                <span className="sr-only">{name} from</span>
-                                                <input type="time" className="setting__input hours__time" value={d.start}
-                                                       onChange={(e) => edit(d.day, { start: e.target.value })} />
+                                            <label className="hours__allday-check">
+                                                <input type="checkbox" checked={allDay}
+                                                       onChange={(e) => edit(d.day, e.target.checked
+                                                           ? { start: '00:00', end: '00:00' } : { start: DEFAULT_START, end: DEFAULT_END })} />
+                                                All day
                                             </label>
-                                            <span aria-hidden="true">to</span>
-                                            <label>
-                                                <span className="sr-only">{name} until</span>
-                                                <input type="time" className="setting__input hours__time" value={d.end}
-                                                       onChange={(e) => edit(d.day, { end: e.target.value })} />
-                                            </label>
-                                            {d.start === '00:00' && d.end === '00:00' && <span className="hours__allday">All day</span>}
+                                            {!allDay && (
+                                                <>
+                                                    <label>
+                                                        <span className="sr-only">{name} from</span>
+                                                        <input type="time" className="setting__input hours__time" value={d.start}
+                                                               onChange={(e) => edit(d.day, { start: e.target.value })} />
+                                                    </label>
+                                                    <span aria-hidden="true">to</span>
+                                                    <label>
+                                                        <span className="sr-only">{name} until</span>
+                                                        <input type="time" className="setting__input hours__time" value={d.end}
+                                                               onChange={(e) => edit(d.day, { end: e.target.value })} />
+                                                    </label>
+                                                </>
+                                            )}
                                         </span>
                                     ) : (
                                         <span className="hours__off">Off</span>
