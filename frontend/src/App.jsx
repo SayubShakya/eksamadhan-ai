@@ -28,6 +28,7 @@ import * as api from './lib/api.js';
 import { mergeThreads } from './lib/format.js';
 import { clearResources, prefetch } from './lib/loading.js';
 import { connectLive } from './lib/live.js';
+import useBackToClose from './lib/useBackToClose.js';
 import './styles/tokens.css';
 import './styles/app.css';
 
@@ -222,6 +223,13 @@ export default function App() {
     const canManage = user?.role === 'OWNER' || user?.role === 'ADMIN';
 
     const [profileOpen, setProfileOpen] = useState(false);
+
+    // Phone back button: closes the menu, the profile sheet or the open conversation first.
+    const narrow = () => !window.matchMedia('(min-width: 1024px)').matches;
+    useBackToClose(navOpen, () => setNavOpen(false), narrow);
+    useBackToClose(profileOpen, () => setProfileOpen(false));
+    useBackToClose(Boolean(active) && view === 'inbox', () => setActive(null), () => !window.matchMedia('(min-width: 760px)').matches);
+
     const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
     /**

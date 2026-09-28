@@ -342,7 +342,7 @@
 .channel__desc { color: var(--text-muted); font-size: 13px; margin: 0 0 14px; line-height: 1.5; flex: 1; }
 .channel__state { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
 .channel__state--on { color: var(--success); }
-.channel .btn { width: 100%; justify-content: center; margin-top: 4px; }
+.channel .btn { align-self: flex-start; justify-content: center; margin-top: 4px; }
 
 /* Empty states */
 .empty { display: grid; place-items: center; text-align: center; padding: 48px 24px; }
@@ -513,13 +513,9 @@
     .topbar:has(.topbar__search) .brand { display: none; }
 }
 @media (max-width: 760px) {
-    /* The search box is hidden on a phone, so the brand has its room back. */
-    .topbar:has(.topbar__search) .brand { display: inline-flex; }
-    .topbar .brand__name { font-size: 15px; }
-}
-@media (max-width: 420px) {
-    /* With the install button and your status showing as well, the name no longer fits. */
-    .topbar:has(.topbar__install) .brand { display: none; }
+    /* The logo alone, next to the menu button; the name is in the menu (Sayub). */
+    .topbar .brand, .topbar:has(.topbar__search) .brand { display: inline-flex; }
+    .topbar .brand__name { display: none; }
 }
 @media (max-width: 340px) {
     .topbar:has(.brand) .brand { display: none; }
@@ -535,7 +531,7 @@
     .topbar__search { display: none; }
 
     .page { padding: 18px 14px 36px; }
-    .page__head { flex-direction: column; align-items: stretch; gap: 14px; }
+    .page__head { flex-direction: column; align-items: flex-start; gap: 14px; }
     .page__title { font-size: 21px; }
 
     /* Checklist header stacked: side by side, the title and progress collide. */
@@ -557,7 +553,7 @@
     .channel__name { margin: 0; }
     .channel__desc { display: none; }
     .channel__state { margin: 0; grid-column: 2; }
-    .channel .btn { grid-column: 1 / -1; }
+    .channel .btn { grid-column: 2; justify-self: start; }
 
     .card { padding: 16px; }
     .checklist__steps { gap: 10px; }
@@ -569,7 +565,9 @@
 
 @media (max-width: 380px) {
     .status-select { padding: 6px 8px; }
-    .stats { grid-template-columns: 1fr; }
+    /* Still two a row on the smallest phones: four stacked cards pushed everything else
+       a whole screen down. The figure stays big; the note under it wraps. */
+    .stat { padding: 10px 12px; }
 }
 
 /* Row footer: state tag plus an unread dot for anything still awaiting a reply. */
@@ -612,6 +610,9 @@
 
 /* ── Profile popover ───────────────────────────────────────────────────── */
 .popover__catcher { position: fixed; inset: 0; z-index: 55; }
+.popover__grab { display: none; place-items: center; padding: 10px 0 2px; cursor: grab; touch-action: none; }
+.popover__grab span { width: 40px; height: 4px; border-radius: 2px; background: var(--border-strong); }
+@keyframes sheet-up { from { transform: translateY(40px); opacity: 0; } }
 
 /* A dialog's backdrop must cover the docked sidebar too. */
 .confirm ~ .scrim, .scrim:not(.scrim--nav) { z-index: 65; }
@@ -1823,7 +1824,7 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 /* The same weight as the two blue buttons above it, in the danger colour: pale fill, red text. */
 .privacy__btn.btn--danger { background: var(--danger-weak); border-color: #f1c9c5; font-weight: 600; }
 .privacy__btn.btn--danger:hover:not(:disabled) { border-color: var(--danger); }
-@media (max-width: 520px) { .privacy__btn { width: 100%; } }
+
 
 .sheet__backdrop { position: fixed; inset: 0; z-index: 80; background: rgba(16, 20, 27, .4); animation: fade .15s ease; }
 .sheet {
@@ -2165,8 +2166,9 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
     /* Top bar: icons only. The name and role are one tap away, in the profile panel. */
     .topbar { gap: 6px; padding: 0 8px; }
     .topbar__actions { gap: 6px; }
-    .availability__label { display: none; }
-    .availability__button { padding: 8px; }
+    /* The state in words beside the dot: a green dot alone did not say what it meant. */
+    .availability__label { display: inline; font-size: 13px; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .availability__button { padding: 7px 9px; gap: 6px; }
     .availability__menu { position: fixed; top: calc(var(--topbar) + env(safe-area-inset-top) + 6px); left: 8px; right: 8px; width: auto; }
     .user__text { display: none; }
     .user { padding: 2px; }
@@ -2190,7 +2192,7 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
     .an__bar { width: 120px; }
 
     /* Knowledge: the form's buttons the same width, stacked, instead of three ragged widths. */
-    .knowledge__actions { flex-direction: column; align-items: stretch; }
+    .knowledge__actions { flex-direction: row; align-items: center; }
     .knowledge__actions .btn { justify-content: center; }
 
     /* Conversation header: the name on one line with "…", the channel as its icon only. */
@@ -2212,12 +2214,18 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
         position: fixed; top: calc(var(--topbar) + env(safe-area-inset-top) + 6px);
         left: 8px; right: 8px; width: auto; max-height: 70vh;
     }
-    /* The profile panel too: the same sheet under the top bar, equal margins on both sides. */
+    /* The profile panel: a sheet from the bottom, under the thumb, with a handle to drag it
+       down and away, and the page dimmed behind it. */
     .popover {
-        top: calc(var(--topbar) + env(safe-area-inset-top) + 6px);
-        left: 8px; right: 8px; width: auto;
-        max-height: calc(100dvh - var(--topbar) - env(safe-area-inset-top) - 16px); overflow-y: auto;
+        top: auto; bottom: 0; left: 0; right: 0; width: auto;
+        max-height: 88dvh; overflow-y: auto;
+        border-radius: var(--r-lg) var(--r-lg) 0 0; border-bottom: 0;
+        padding-bottom: env(safe-area-inset-bottom);
+        animation: sheet-up .22s ease-out;
+        transition: transform .18s ease;
     }
+    .popover__catcher { background: rgba(16, 20, 27, .4); animation: fade .15s ease; }
+    .popover__grab { display: grid; }
 
     /* Messages: the react/reply/more buttons kept their space beside every bubble even while
        invisible, a quarter of a phone's width, so every message wrapped into a narrow column. On a
@@ -2334,7 +2342,6 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
     .hours__problem { grid-column: 1 / -1; }
     .hours__time { width: 120px; }
 }
-}
 
 /* ── AI is typing ──────────────────────────────────────────────────────────── */
 /* Shown only while the server says a reply is being written. Three dots rising in turn,
@@ -2366,3 +2373,85 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 .assignee__option--unavailable { cursor: not-allowed; }
 .assignee__option--unavailable .avatar, .assignee__option--unavailable .assignee__who { opacity: .55; }
 .assignee__option--unavailable:hover { background: none; }
+
+/* ── Touch screens: a finger needs about 40px, whatever the control looks like ─────────── */
+@media (pointer: coarse) {
+    /* The switch keeps its look; an invisible pad around it takes the tap. */
+    .switch::after { content: ""; position: absolute; inset: -10px -6px; }
+    .availability__button { min-height: 36px; }
+    .msgacts__btn { min-width: 36px; min-height: 36px; }
+    .hours__allday-check { min-height: 40px; }
+    .hours__allday-check input { width: 20px; height: 20px; }
+    .section-head__link { min-height: 36px; display: inline-flex; align-items: center; }
+}
+
+/* Hours on a phone: "All day" on its own line, then from and to side by side, full width. */
+@media (max-width: 520px) {
+    .hours__times { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }
+    .hours__times .hours__allday-check { grid-column: 1 / -1; margin: 0; }
+    .hours__times label:not(.hours__allday-check) { min-width: 0; }
+    .hours__time { width: 100%; min-width: 0; }
+}
+
+/* Phones: a button is as wide as its label, not the screen (Sayub). Full width is kept only
+   where a form has one action and nothing beside it: sign-in and the bottom sheets. */
+@media (max-width: 760px) {
+    .setting__control .btn, .channel .btn, .page__head > .btn { width: auto; }
+}
+
+/* ── Inbox on a phone, after Messenger ─────────────────────────────────────────────── */
+.thread__more-wrap { display: none; position: relative; }
+/* The conversation's actions on a phone: a sheet from the bottom, as Messenger's is. */
+.actsheet__backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(16, 20, 27, .4); animation: fade .15s ease; }
+.actsheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 71;
+    background: var(--bg); border-radius: 18px 18px 0 0; box-shadow: 0 -12px 40px rgba(16, 20, 27, .18);
+    padding: 8px 16px calc(16px + env(safe-area-inset-bottom)); display: grid; gap: 4px;
+    animation: sheet-up .2s ease-out; transition: transform .18s ease; overscroll-behavior: contain;
+}
+.actsheet__handle { justify-self: center; width: 40px; height: 4px; border-radius: 2px; background: var(--border-strong); margin: 2px 0 8px; }
+.actsheet__who { display: flex; align-items: center; gap: 12px; padding: 4px 4px 12px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.actsheet__who strong { display: block; font-size: 16px; font-weight: 600; color: var(--text); }
+.actsheet__who small { display: block; font-size: 13px; color: var(--text-muted); margin-top: 1px; }
+.actsheet__list { display: grid; }
+.actsheet__list button {
+    display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; border: 0; background: none;
+    padding: 10px 6px; border-radius: var(--r-md); font: inherit; cursor: pointer; color: var(--text);
+}
+.actsheet__list button:active, .actsheet__list button:hover { background: var(--surface); }
+.actsheet__icon { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; background: var(--accent-weak); color: var(--accent); }
+.actsheet__text { display: flex; flex-direction: column; font-size: 15px; font-weight: 500; }
+.actsheet__text small { font-size: 13px; font-weight: 400; color: var(--text-muted); margin-top: 1px; }
+.actsheet__main { margin-top: 8px; justify-content: center; gap: 8px; min-height: 46px; font-size: 15px; }
+@media (max-width: 760px) {
+    /* Header: back, face, the name with room to breathe, details, More. */
+    .thread__avatar { display: inline-flex; }
+    .thread__actions > .btn, .thread__actions > .thread__pin, .thread__actions > .thread__info { display: none; }
+    .thread__more-wrap { display: block; }
+    .thread__head { gap: 8px; padding: 8px 8px 8px 4px; }
+    .thread__nametext { font-size: 16px; }
+
+    /* Messages: bubbles up to 80% of the screen, rounder, closer together within a run. */
+    .thread__body { padding: 12px 10px; }
+    .msg { max-width: 88%; gap: 6px; margin-bottom: 14px; }
+    .msg--grouped { margin-bottom: 2px; }
+    .msg--grouped .msg__meta { display: none; }
+    .msg--grouped .msg__avatar { visibility: hidden; }
+    .msg__avatar { align-self: flex-end; margin-bottom: 20px; }
+    .msg--grouped .msg__avatar { margin-bottom: 0; }
+    .bubble { border-radius: 18px; padding: 9px 13px; font-size: 15px; line-height: 1.4; }
+    .bubble--customer, .bubble--ai, .bubble--colleague { border-bottom-left-radius: 18px; }
+    .bubble--agent { border-bottom-right-radius: 18px; }
+    .msg__meta { margin-top: 3px; }
+
+    /* The react/reply buttons take no room beside the bubble: they appear over it when the
+       message is tapped. */
+    .msg__line { position: relative; }
+    .msgacts { display: none; }
+    .msg--picked .msgacts {
+        display: flex; opacity: 1; position: absolute; bottom: calc(100% + 4px); left: 0; z-index: 5;
+        background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md);
+        box-shadow: 0 8px 24px rgba(16, 20, 27, .14); padding: 2px;
+    }
+    .msg--out.msg--picked .msgacts { left: auto; right: 0; }
+}

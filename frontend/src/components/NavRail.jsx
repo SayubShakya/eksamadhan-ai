@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     IconHome, IconInbox, IconKnowledge,
     IconChannels, IconTeam, IconClock, IconAnalytics, IconSettings, IconChevronLeft, IconSignOut,
@@ -39,6 +39,42 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
         return () => window.removeEventListener('keydown', onKey);
     }, [open, onClose]);
 
+    // Swipe left to close, on a phone or tablet where the menu slides over the page. The menu
+    // follows the finger; let go past a third of its width, or with a quick flick, and it
+    // closes, otherwise it springs back. Up-and-down drags are left to scrolling.
+    const [drag, setDrag] = useState(0);
+    const touch = useRef(null);
+    const railRef = useRef(null);
+    const onTouchStart = (e) => {
+        if (!open || window.matchMedia(DOCKED).matches) return;
+        const t = e.touches[0];
+        touch.current = { x: t.clientX, y: t.clientY, at: Date.now(), horizontal: null };
+    };
+    const onTouchMove = (e) => {
+        const start = touch.current;
+        if (!start) return;
+        const t = e.touches[0];
+        const dx = t.clientX - start.x;
+        const dy = t.clientY - start.y;
+        if (start.horizontal == null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+            start.horizontal = Math.abs(dx) > Math.abs(dy);
+        }
+        if (start.horizontal) {
+            start.dx = Math.min(0, dx);   // kept here too: state may not have caught up by touchend
+            setDrag(start.dx);
+        }
+    };
+    const onTouchEnd = () => {
+        const start = touch.current;
+        touch.current = null;
+        if (!start || !start.horizontal) { setDrag(0); return; }
+        const width = railRef.current?.offsetWidth || 280;
+        const dx = start.dx || 0;
+        const speed = -dx / Math.max(1, Date.now() - start.at);       // px per ms
+        setDrag(0);
+        if (-dx > width / 3 || (speed > 0.3 && -dx > 30)) onClose();
+    };
+
     const go = (id) => {
         onNavigate(id);
         if (!window.matchMedia(DOCKED).matches) onClose();
@@ -46,9 +82,17 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
 
     return (
         <>
-            {open && <div className="scrim scrim--nav" onClick={onClose} aria-hidden="true" />}
+            {open && <div className="scrim scrim--nav" onClick={onClose} aria-hidden="true"
+                          onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+                          style={drag ? { opacity: Math.max(0, 1 + drag / 280) } : undefined} />}
 
             <nav
+                ref={railRef}
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+                onTouchCancel={onTouchEnd}
+                style={drag ? { transform: `translateX(${drag}px)`, transition: 'none' } : undefined}
                 className={`rail ${open ? 'rail--open' : 'rail--closed'}`}
                 aria-label="Main"
                 aria-hidden={!open}

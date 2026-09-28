@@ -16,7 +16,7 @@
 const DEV = new URL(self.location.href).searchParams.has('dev');
 
 // Bump on a release that changes caching; activate deletes every other eksamadhan- cache.
-const VERSION = 'v3';
+const VERSION = 'v11';
 const CACHE = `eksamadhan-${VERSION}`;
 const SHELL = '/';                    // the app's HTML, refreshed on every online navigation
 const OFFLINE = '/offline.html';      // self-contained: for a device that has never been online here
@@ -119,7 +119,7 @@ self.addEventListener('push', (event) => {
     const title = payload.title || 'EkSamadhan AI';
     const options = {
         body: payload.body || '',
-        icon: '/icons/icon-192.png',
+        icon: '/icons/apple-touch-icon.png',   // the plain blue tile, edge to edge
         /* Android shows only the badge's alpha, re-tinted: it must be a white silhouette on
          * transparent. An SVG or a full-colour icon shows as a blank white box. */
         badge: '/icons/badge-96.png',

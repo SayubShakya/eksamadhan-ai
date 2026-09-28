@@ -676,6 +676,20 @@ Submitted Thursday 2026-10-01.
       anyone Busy, offline or outside their working hours (the picker shows why); Hours page
       redesigned with a status card, quick-set buttons and All day
 - [x] Inbox order: pinned first, then urgent before normal before low priority, then newest
+- [x] Launch screen like a native app: a smaller logo in the middle and "EkSamadhan AI" at the
+      foot (the app's own splash and the iOS launch images); the large app icons carry a margin
+      so Android's own launch screen shows the logo smaller
+- [x] Swipe left to close the menu on phones; every screen checked at 360, 390 and 768px (no
+      sideways overflow), bigger touch targets, Hours and Home tidied for small screens
+- [x] Phones: the back button closes the profile, menu or open chat before leaving the page;
+      the profile is a bottom sheet that swipes down to close; no logo in the top bar; the
+      Hours status card removed
+- [x] Phone buttons sized to their label instead of the full screen width (checked on every screen)
+- [x] Inbox on phones redone after Messenger: full customer name in the header with actions in a
+      More menu, wider rounder bubbles grouped by sender, message actions on tap
+- [x] Phones: your status in words beside the dot in the top bar; the conversation actions
+      sheet closes on a swipe down (shared `useDragDown` hook)
+- [x] Swipe-down fixed on real phones: the browser was taking the drag as a page scroll
 
 **Commits this week**
 

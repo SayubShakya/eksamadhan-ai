@@ -23,15 +23,11 @@ const BLUE = '#2563eb';
 // and the iOS launch images all use it. If they differ, a launch flashes from one to the other.
 const SPLASH_BG = '#ffffff';
 // The blue tile on the in-app splash and the iOS launch images, in CSS pixels / points.
-const SPLASH_TILE = 116;
-// How much of the maskable icon the white mark spans: ≈ 63% of the visible home-screen icon.
-//
-// Android draws its launch screen from this same image, at 288dp — it has no separate launch
-// image. So a full-blue home icon means a large blue shape on the white launch screen; the only
-// alternatives were a white ring round the home icon or a blue launch screen, and Sayub chose
-// this (2026-09-25). Because Android's screen already shows the logo, the in-app splash hides its
-// own in the installed app (index.html), so the logo appears once, not twice.
-const MASK_SCALE = 0.42;
+const SPLASH_TILE = 88;
+// Android draws its launch screen from the maskable icon, at 288dp; it has no separate launch
+// image. On 2026-09-25 Sayub chose a full-blue home icon (a large blue shape on the launch
+// screen); on 2026-09-28 he chose the other way: a white icon with the small blue tile, so the
+// launch screen shows a small logo, as Instagram's does (see `maskable` below).
 
 const ARMS = `
     <rect x="3" y="7" width="23" height="6.8" rx="3.4"/>
@@ -47,12 +43,17 @@ const LETTERS = `
 /** The mark in white, "AI" knocked out in the tile colour. */
 const mark = (fg, knock) => `<g fill="${fg}">${ARMS}</g><g fill="${knock}">${LETTERS}</g>`;
 
-/** A blue tile with the white mark. `scale` = share of the tile the 48-unit mark spans. */
-function tile(size, scale, radius) {
-    const m = size * scale;
-    const off = (size - m) / 2;
+/**
+ * A blue tile with the white mark. `scale` = share of the tile the 48-unit mark spans.
+ * `inset` = share of the image the tile itself fills, the rest transparent around it.
+ */
+function tile(size, scale, radius, inset = 1) {
+    const t = size * inset;
+    const o = (size - t) / 2;
+    const m = t * scale;
+    const off = o + (t - m) / 2;
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" rx="${size * radius}" fill="${BLUE}"/>
+  <rect x="${o}" y="${o}" width="${t}" height="${t}" rx="${t * radius}" fill="${BLUE}"/>
   <g transform="translate(${off},${off + m * 0.03}) scale(${m / 48})">${mark('#fff', BLUE)}</g>
 </svg>`;
 }
@@ -70,14 +71,32 @@ function badge(size) {
 }
 
 /** The maskable icon: brand blue to the edges (Android crops it), the white mark centred. */
-const maskable = (size) => tile(size, MASK_SCALE, 0);
+/**
+ * The maskable icon: white to the edges with the blue tile small in the middle (Sayub, 28 Sep).
+ * Android 12+ draws its own launch screen from this icon at a fixed size; an all-blue icon
+ * filled most of the screen, and a web app cannot set a separate, smaller launch icon the way
+ * a native app does. White on the white launch background leaves just the small tile, as on
+ * Instagram's. The tile sits inside the 80% safe circle, so no launcher mask cuts it.
+ */
+const maskable = (size) => {
+    const inner = tile(size, 0.62, 0.22, 0.5).replace(/<\/?svg[^>]*>/g, '');
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <rect width="${size}" height="${size}" fill="${SPLASH_BG}"/>${inner}
+</svg>`;
+};
 
 /** An iOS launch image: the launch background with the blue tile at SPLASH_TILE points. */
 function launch(w, h, dpr) {
     const t = SPLASH_TILE * dpr;
+    // The name near the foot, as the app's own splash has it (index.html #splash).
+    const fs = 18 * dpr;
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
   <rect width="${w}" height="${h}" fill="${SPLASH_BG}"/>
   <g transform="translate(${(w - t) / 2},${(h - t) / 2})">${tile(t, 0.62, 0.22).replace(/<\/?svg[^>]*>/g, '')}</g>
+  <text x="${w / 2}" y="${h - 70 * dpr}" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
+        font-size="${14 * dpr}" fill="#667085">from</text>
+  <text x="${w / 2}" y="${h - 48 * dpr}" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
+        font-size="${fs}" font-weight="650" fill="#101828">EkSamadhan <tspan fill="${BLUE}">AI</tspan></text>
 </svg>`;
 }
 
@@ -115,8 +134,13 @@ async function main() {
     }
 
     // "any": a rounded tile, as it shows in a dock, the Chrome app list or a Windows Start menu.
-    for (const size of [192, 512, 1024]) await png(tile(size, 0.62, 0.22), size, size, `${out}/icon-${size}.png`, true);
-    writeFileSync(`${out}/icon.svg`, tile(512, 0.62, 0.22));
+    // Android's launch screen draws the largest "any" icon, and edge to edge it filled most of
+    // the phone's width; the large ones carry a transparent margin so it opens smaller. The home
+    // screen uses the maskable icon, so it is not affected.
+    for (const size of [192, 512, 1024]) {
+        await png(tile(size, 0.62, 0.22, 0.6), size, size, `${out}/icon-${size}.png`, true);
+    }
+    writeFileSync(`${out}/icon.svg`, tile(512, 0.62, 0.22, 0.6));
     // maskable: opaque to the edges (Android crops it), the mark well inside the safe zone.
     for (const size of [192, 512]) await png(maskable(size), size, size, `${out}/icon-maskable-${size}.png`, false);
     // iOS: square and opaque — it rounds the corners itself and renders any transparency black.

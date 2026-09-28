@@ -625,6 +625,29 @@ status machine and authentication have all since been built — see the change l
   end clears after 90s; a repeated "stopped" does not extend the fade. Tests: typing on then off
   in order, and never for a conversation a person owns. AvailabilityTest now gives its members
   all-week hours, since real people's hours made it depend on the time of day.
+- **Back button, profile sheet (2026-09-28, Sayub).** `lib/useBackToClose.js`: opening the
+  profile, the phone menu or a conversation on a phone pushes one history entry; back pops it and
+  closes; closing by tap removes it (unless the page moved on meanwhile). Profile is a bottom
+  sheet at 760px and below, dragged down to close (from the top of its scroll only). No logo in
+  the phone top bar. The Hours status card was removed (the top bar menu already says it). A stray
+  `}` in app.css from the Hours redesign was removed.
+- **Status in words and swipe-down sheets on phones (2026-09-28, Sayub).** The top-bar status
+  button shows its label beside the dot on phones (a green dot alone did not say what it meant;
+  13px, ellipsis past 96px, checked at 360px with no overflow). `lib/useDragDown.js` is the one
+  drag-down-to-close for bottom sheets: starts only from the top of the sheet's scroll, closes past
+  a quarter of its height or on a quick flick, otherwise springs back. The inbox actions sheet uses it. First version failed on a real phone: React's touch
+  handlers are passive, so Chrome took the drag as a page scroll; the hook now uses native
+  non-passive listeners and sets `touch-action: none` on a sheet that fits (pan-y if it scrolls).
+  Emulated touch in Puppeteer did not show the bug. Service worker bumped to v11.
+- **Swipe to close the menu, and a phone pass (2026-09-28, Sayub).** The drawer follows the
+  finger; released past a third of its width, or flicked (over 0.3px/ms and 30px), it closes;
+  vertical drags scroll. On touch screens controls get about 40px to tap (switches by an
+  invisible pad); Hours stacks All day over a full-width from/to row; Home keeps two stat
+  cards a row down to 360px. Checked at 360, 390 and 768: no sideways overflow on any screen.
+- **Home-screen icon now white with a small blue tile (2026-09-28, Sayub).** Android 12+ draws
+  its launch screen from the maskable icon at a fixed size, which a web app cannot change; the
+  all-blue icon (chosen 25 Sep) filled most of the screen. Margins on the "any" icons did
+  nothing. Icon URLs carry ?v=2 so Chrome and Google's WebAPK server fetch the new files.
 - **404 restyled (2026-09-28, Sayub's reference):** amber warning circle, large 404, "Not Found", one
   "Go back home" button; the path line and "Go back" were dropped.
 - **404 and offline pages (2026-09-26).** One `StatusPage` layout for both. An unknown top-level

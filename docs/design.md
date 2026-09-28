@@ -105,8 +105,7 @@ button): always shown, a grey outline until pinned, then filled blue. Pinned one
 
 ## Working hours
 
-The Hours page opens with a status card (icon, headline such as "Outside your hours · back Sun
-9:00 AM", one line on what it means), then the helper line with quick-set buttons on the right
+The Hours page opens with the helper line with quick-set buttons on the right
 ("Every day, all day", "Sun to Fri, 9 AM to 6 PM", "Clear all"). Each day is a card: switch,
 day (with a Today badge and a blue outline on today), and an All day checkbox or the two times;
 off days show "Off". No Save button: "Changes save on their own", with "Saved" hanging absolutely under
@@ -118,6 +117,26 @@ reason. Available but outside hours shows as "Outside hours" with a hollow grey 
 While the server says a reply is being written, the composer's status line reads "AI is
 typing" in green with three small dots rising in turn, and the list preview reads "AI is
 typing…" in green italics. Gentle, 1.1s a cycle; still under reduced motion.
+
+## Phones
+
+The top bar on a phone is the menu button, the logo on its own (no name) and your controls;
+the name is in the menu. Buttons are as wide as their label, left-aligned; only sign-in and the bottom sheets use
+full-width buttons. The profile opens as a sheet from the bottom with a handle, the page dimmed behind; drag
+it down to close. The menu closes on a swipe left. Your status shows in words beside its dot (Available, Busy, Outside hours), not the dot alone. The inbox follows Messenger: the conversation header is back, the customer's face and full
+name, and a More button that opens a sheet from the bottom: who it is and who is handling it, then
+each action with an icon and one line on what it does, and Resolve as the blue button at the foot (drag the sheet down to close it, as with the profile); bubbles run up to
+about three quarters of the screen, 18px round, a run from one sender close together with the
+face and time on the last only; tapping a message shows react, reply and more above it. The back button closes whatever is open (the
+profile, the menu, an open conversation) before it goes to the previous page.
+
+## Launch screen
+
+Opening the installed app shows one launch screen: Android's own, the small blue tile on white
+(from the white home-screen icon). The app's splash then shows nothing of its own, only a small
+ring if loading passes 1.2s. A browser tab, or a reload of the installed app (no Android screen
+before it), shows the app's splash: the blue tile in the middle and "from / EkSamadhan AI" at
+the foot. The iOS launch images match that splash.
 
 ## Status pages
 

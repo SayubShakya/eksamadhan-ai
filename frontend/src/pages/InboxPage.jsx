@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    IconInfo, IconPin,
+    IconInfo, IconPin, IconDots, IconUser, IconCheck, IconSparkle as IconAi,
     IconSend, IconInbox, IconPlus, IconBack, IconReply, IconClose, IconMic, IconStop, IconImage,
     IconSmile, IconThumb, IconSparkle,
     IconFacebook, IconInstagram,
@@ -9,6 +9,8 @@ import { isRecordingSupported, startRecording, formatDuration } from '../lib/rec
 import MessageActions from '../components/MessageActions.jsx';
 import { LoadError, LoadingRegion, Skel, UploadProgress } from '../components/Loading.jsx';
 import { useHeldLoading } from '../lib/loading.js';
+import useBackToClose from '../lib/useBackToClose.js';
+import useDragDown from '../lib/useDragDown.js';
 import AssigneePicker from '../components/AssigneePicker.jsx';
 import { formatTimestamp, formatTime, formatDay, initials, STATUS_LABEL, ownershipLabel, SENTIMENT, PRIORITY, SPAM_KIND, participantsOf } from '../lib/format.js';
 
@@ -238,6 +240,12 @@ export default function InboxPage({
     // Below 1100px there is no room for the details column beside the thread, so it opens as a
     // sheet from this button instead of disappearing.
     const [detailsOpen, setDetailsOpen] = useState(false);
+    // Phone only: the conversation's actions sit in a "More" menu, as in Messenger, so the name
+    // gets the header; and a tapped message shows its react/reply buttons.
+    const [moreOpen, setMoreOpen] = useState(false);
+    const [picked, setPicked] = useState(null);
+    useBackToClose(moreOpen, () => setMoreOpen(false));
+    const sheetDrag = useDragDown(() => setMoreOpen(false));
     // What is being sent from the composer, and how far the upload has got (null = unknown).
     const [sending, setSending] = useState(null);     // { label, fraction } | null
     // The conversation action in flight, so its button can show that it is working.
@@ -663,6 +671,67 @@ export default function InboxPage({
                                 >
                                     <IconInfo />
                                 </button>
+                                {/* Phone: one "More" button in place of pin and the text buttons. */}
+                                <div className="thread__more-wrap">
+                                    <button type="button" className="icon-btn thread__more-btn" aria-haspopup="menu"
+                                            aria-expanded={moreOpen} aria-label="More actions" onClick={() => setMoreOpen(o => !o)}>
+                                        <IconDots />
+                                    </button>
+                                    {moreOpen && (
+                                        <>
+                                            <div className="actsheet__backdrop" onClick={() => setMoreOpen(false)} aria-hidden="true" />
+                                            <div className="actsheet" role="menu" aria-label="Conversation actions"
+                                                 ref={sheetDrag.ref} style={sheetDrag.style}>
+                                                <span className="actsheet__handle" aria-hidden="true" />
+                                                <div className="actsheet__who">
+                                                    <PersonAvatar name={activeThread.name} url={activeThread.avatarUrl} size={40} />
+                                                    <span>
+                                                        <strong>{activeThread.name}</strong>
+                                                        <small>{activeThread.spam ? 'In the Spam tab'
+                                                            : ownershipLabel(activeThread, me?.id) || STATUS_LABEL[activeThread.status]}</small>
+                                                    </span>
+                                                </div>
+                                                <div className="actsheet__list">
+                                                    {activeThread.spam && (
+                                                        <button role="menuitem" onClick={() => { setMoreOpen(false); act(activeThread, 'not-spam'); }}>
+                                                            <span className="actsheet__icon"><IconCheck size={18} /></span>
+                                                            <span className="actsheet__text">Not spam<small>Back to Active, and the AI answers again</small></span>
+                                                        </button>
+                                                    )}
+                                                    {activeThread.status === 'AI_HANDLING' && !activeThread.spam && (
+                                                        <button role="menuitem" onClick={() => { setMoreOpen(false); act(activeThread, 'take-over'); }}>
+                                                            <span className="actsheet__icon"><IconUser size={18} /></span>
+                                                            <span className="actsheet__text">Take over<small>You reply; the AI stops answering here</small></span>
+                                                        </button>
+                                                    )}
+                                                    {activeThread.status === 'RESOLVED' && (
+                                                        <button role="menuitem" onClick={() => { setMoreOpen(false); act(activeThread, 'return-to-ai'); }}>
+                                                            <span className="actsheet__icon"><IconAi size={18} /></span>
+                                                            <span className="actsheet__text">Reopen<small>Back to Active, with the AI answering</small></span>
+                                                        </button>
+                                                    )}
+                                                    {onPin && (
+                                                        <button role="menuitem" onClick={() => { setMoreOpen(false); onPin(activeThread); }}>
+                                                            <span className="actsheet__icon"><IconPin size={18} filled={activeThread.pinned} /></span>
+                                                            <span className="actsheet__text">{activeThread.pinned ? 'Unpin' : 'Pin to the top'}
+                                                                <small>{activeThread.pinned ? 'Back into the list by time' : 'Keep it first in your list'}</small></span>
+                                                        </button>
+                                                    )}
+                                                    <button role="menuitem" onClick={() => { setMoreOpen(false); setDetailsOpen(true); }}>
+                                                        <span className="actsheet__icon"><IconInfo size={18} /></span>
+                                                        <span className="actsheet__text">Customer details<small>Sentiment, priority, who replied, the summary</small></span>
+                                                    </button>
+                                                </div>
+                                                {activeThread.status !== 'RESOLVED' && (
+                                                    <button type="button" className="btn btn--primary actsheet__main"
+                                                            onClick={() => { setMoreOpen(false); act(activeThread, 'resolve'); }}>
+                                                        <IconCheck size={16} /> Resolve conversation
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                                 {activeThread.spam && (
                                     <button className={`btn btn--sm btn--secondary${acting === 'not-spam' ? ' btn--busy' : ''}`}
                                             disabled={Boolean(acting)} aria-busy={acting === 'not-spam'}
@@ -723,10 +792,18 @@ export default function InboxPage({
                                 const quoted = m.replyToId
                                     ? activeThread.messages.find(x => x.metaMessageId === m.replyToId)
                                     : null;
+                                // Messenger groups a run from the same sender: the face and the
+                                // time only on the last of the run, the bubbles close together.
+                                const next = visibleMessages[i + 1];
+                                const senderOf = (x) => (x.direction !== 'outbound' ? 'customer'
+                                    : (x.authorType === 'AI' || x.aiGenerated) ? 'ai' : `agent:${x.authorId}`);
+                                const lastOfRun = !next || senderOf(next) !== senderOf(m)
+                                    || new Date(next.timestamp) - new Date(m.timestamp) > 5 * 60000
+                                    || new Date(next.timestamp).toDateString() !== new Date(m.timestamp).toDateString();
                                 return (
                                     <div key={m.id || i}>
                                         {newDay && <div className="day"><span>{formatDay(m.timestamp)}</span></div>}
-                                        <div className={`msg ${mine ? 'msg--out' : 'msg--in'}`}>
+                                        <div className={`msg ${mine ? 'msg--out' : 'msg--in'}${lastOfRun ? ' msg--last' : ' msg--grouped'}${picked === (m.id || i) ? ' msg--picked' : ''}`}>
                                             {/* The AI's mark uses the same .avatar base as a
                                                 person's, so the two cannot drift apart in size. */}
                                             {!mine && (isAi ? (
@@ -773,7 +850,7 @@ export default function InboxPage({
                                                 {/* Bubble and actions share a row, so the
                                                     buttons centre on the bubble rather than
                                                     on the bubble plus its timestamp. */}
-                                                <div className="msg__line">
+                                                <div className="msg__line" onClick={() => setPicked(p => (p === (m.id || i) ? null : (m.id || i)))}>
                                                     <div className={`bubble ${!outbound ? 'bubble--customer' : isAi ? 'bubble--ai' : mine ? 'bubble--agent' : 'bubble--colleague'} ${m.attachmentType === 'sticker' ? 'bubble--sticker' : m.attachmentUrl ? 'bubble--media' : ''}`}>
                                                         <Attachment message={m} onOpenImage={setLightbox} />
                                                         {/* What the voice note said, marked as

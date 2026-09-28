@@ -35,6 +35,37 @@ export default function ProfilePanel({ open, user, onSave, onClose, onOpenSettin
         return () => window.removeEventListener('keydown', onKey);
     }, [open, onClose]);
 
+    // On a phone this is a sheet from the bottom: drag it down to close. Only from the top of
+    // its scroll, so scrolling the form down and back up does not throw it away. Past a
+    // quarter of its height, or a quick flick, it closes; otherwise it springs back.
+    const sheetRef = useRef(null);
+    const touch = useRef(null);
+    const [dragY, setDragY] = useState(0);
+    const isSheet = () => window.matchMedia('(max-width: 760px)').matches;
+    const onTouchStart = (e) => {
+        if (!isSheet()) return;
+        const t = e.touches[0];
+        touch.current = { y: t.clientY, x: t.clientX, at: Date.now(), dy: 0, down: null,
+                          fromTop: (sheetRef.current?.scrollTop || 0) <= 0 };
+    };
+    const onTouchMove = (e) => {
+        const s = touch.current;
+        if (!s || !s.fromTop) return;
+        const t = e.touches[0];
+        const dy = t.clientY - s.y;
+        if (s.down == null && (Math.abs(dy) > 8 || Math.abs(t.clientX - s.x) > 8)) s.down = dy > 0 && Math.abs(dy) > Math.abs(t.clientX - s.x);
+        if (s.down) { s.dy = Math.max(0, dy); setDragY(s.dy); }
+    };
+    const onTouchEnd = () => {
+        const s = touch.current;
+        touch.current = null;
+        if (!s || !s.down) { setDragY(0); return; }
+        const h = sheetRef.current?.offsetHeight || 500;
+        const speed = s.dy / Math.max(1, Date.now() - s.at);
+        setDragY(0);
+        if (s.dy > h / 4 || (speed > 0.3 && s.dy > 40)) onClose();
+    };
+
     if (!open) return null;
 
     const firstName = (draft.firstName || '').trim();
@@ -70,7 +101,10 @@ export default function ProfilePanel({ open, user, onSave, onClose, onOpenSettin
                 which would be heavy-handed for a menu hanging off the avatar. */}
             <div className="popover__catcher" onClick={onClose} aria-hidden="true" />
 
-            <div className="popover" role="dialog" aria-label="Edit profile">
+            <div className="popover" role="dialog" aria-label="Edit profile" ref={sheetRef}
+                 style={dragY ? { transform: `translateY(${dragY}px)`, transition: 'none' } : undefined}
+                 onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
+                <div className="popover__grab" aria-hidden="true"><span /></div>
                 <header className="panel__head">
                     <h2 className="panel__title">Edit profile</h2>
                     <button className="icon-btn" onClick={onClose} aria-label="Close">

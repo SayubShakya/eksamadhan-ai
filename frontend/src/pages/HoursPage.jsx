@@ -3,7 +3,6 @@ import * as api from '../lib/api.js';
 import { LoadError, Skel } from '../components/Loading.jsx';
 import { useHeldLoading } from '../lib/loading.js';
 import { formatBackAt } from '../lib/format.js';
-import { IconCheck, IconClock, IconWarning } from '../components/icons.jsx';
 
 /**
  * Your weekly working hours: when new conversations may come to you at all.
@@ -99,38 +98,6 @@ function Switch({ checked, onChange, label }) {
                 className={`switch${checked ? ' switch--on' : ''}`} onClick={() => onChange(!checked)}>
             <span className="switch__knob" aria-hidden="true" />
         </button>
-    );
-}
-
-/** What the server says about your hours: a headline, and what it means for new conversations. */
-function StatusCard({ status, presence }) {
-    if (!status) return null;
-    let tone, icon, title, text;
-    if (!status.hasAvailability) {
-        tone = 'none'; icon = <IconWarning size={20} />;
-        title = 'No working hours set';
-        text = 'No new conversations come to you until you turn on the days you work.';
-    } else if (!status.withinHours) {
-        tone = 'out'; icon = <IconClock size={20} />;
-        title = status.nextAvailableAt ? `Outside your hours · back ${formatBackAt(status.nextAvailableAt)}` : 'Outside your hours';
-        text = 'New conversations go to others until then. Conversations you already have stay with you.';
-    } else if (presence === 'BUSY') {
-        tone = 'busy'; icon = <IconClock size={20} />;
-        title = 'Inside your hours, but you are Busy';
-        text = 'New conversations go to others until you switch to Available in the top bar.';
-    } else {
-        tone = 'in'; icon = <IconCheck size={20} />;
-        title = 'Inside your hours';
-        text = 'New conversations can come to you while you are Available and have EkSamadhan AI open.';
-    }
-    return (
-        <div className={`hours__card hours__card--${tone}`}>
-            <span className="hours__card-icon" aria-hidden="true">{icon}</span>
-            <div>
-                <p className="hours__card-title">{title}</p>
-                <p className="hours__card-text">{text}</p>
-            </div>
-        </div>
     );
 }
 
@@ -238,9 +205,6 @@ export default function HoursPage({ onStatus }) {
                 <LoadError className="empty--panel" message={api.errorMessage(loadError, 'Your hours could not be loaded.')} onRetry={load} />
             ) : (
                 <>
-                    {days ? <StatusCard status={status} presence={presence} />
-                        : <div className="hours__card hours__card--loading" aria-hidden="true"><Skel circle w={36} h={36} /><span><Skel line w={220} /><Skel line w={320} /></span></div>}
-
                     <div className="hours__toolbar">
                         <div className="hours__help">
                             <p className="setting__hint">Changes save on their own. {zoneNote}</p>
