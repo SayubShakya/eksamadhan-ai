@@ -631,6 +631,32 @@ status machine and authentication have all since been built — see the change l
   sheet at 760px and below, dragged down to close (from the top of its scroll only). No logo in
   the phone top bar. The Hours status card was removed (the top bar menu already says it). A stray
   `}` in app.css from the Hours redesign was removed.
+- **Use case: install from the sign-in page, with the no-space case as an extend (2026-09-28).**
+  Support Agent view, draw.io and Visual Paradigm sets rebuilt.
+- **"AI is typing" on phones (2026-09-28, Sayub).** It showed on desktop but never on the phone.
+  Cause, measured: through the Cloudflare quick tunnel the phone uses, `/api/me/events` sends its
+  headers but no body at all (not the `ready` event, not the 10 s keep-alive, in 25 s), while on
+  localhost it streams at once, with or without gzip; `Cache-Control: no-transform` at the Vite proxy
+  did not help and was reverted. New messages still arrived because the inbox polls. Fix that does
+  not depend on the tunnel: `AiTypingState` (in memory) holds which threads the AI is writing in,
+  set beside the live event, and `ThreadResponse.aiTyping` carries it in the thread list polled
+  every 1.5 s; the inbox shows typing when either says so. Test in `AiTraceRecordingTest`.
+  Other live events (presence) are held back over the tunnel the same way; not yet addressed.
+  **Needs a backend restart.**
+- **Install: out-of-space notice (2026-09-28, Sayub).** The browser's install dialog fails silently
+  when a phone has no storage, so `pwa.install()` first checks `navigator.storage.estimate()`: under
+  10 MB free it does not open the dialog and shows "There is not enough free space on this device to
+  install the app...". An accepted install with no `appinstalled` within 30 s shows "The app did not
+  finish installing...". Shown by `InstallProblem.jsx` (top notice, OK to dismiss) on the sign-in
+  page and in the dashboard. It is an on-screen notice, not a Web Push: a push needs notification
+  permission and a signed-in device, neither of which exists before install. `quota - usage` is the
+  browser's share of free disk, an estimate, so unknown means "let the install try".
+- **Install offered on the sign-in page (2026-09-28, Sayub).** The sign-in, sign-up and invite
+  page has "Get EkSamadhan AI as an app on this device" and an Install app button below the card,
+  outside it (moved out on Sayub's request: it is about the device, not signing in) (or the
+  Safari steps on an iPhone), shown only when the browser can install now, same `usePwa` rule as
+  the top bar and profile. The service worker already registers on every page, so Chrome offers
+  the install before anyone signs in.
 - **Status in words and swipe-down sheets on phones (2026-09-28, Sayub).** The top-bar status
   button shows its label beside the dot on phones (a green dot alone did not say what it meant;
   13px, ellipsis past 96px, checked at 360px with no overflow). `lib/useDragDown.js` is the one

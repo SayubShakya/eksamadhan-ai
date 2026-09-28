@@ -690,6 +690,12 @@ Submitted Thursday 2026-10-01.
 - [x] Phones: your status in words beside the dot in the top bar; the conversation actions
       sheet closes on a swipe down (shared `useDragDown` hook)
 - [x] Swipe-down fixed on real phones: the browser was taking the drag as a page scroll
+- [x] Install app offered on the sign-in page (below the card), not only after signing in
+- [x] Install: a notice when the device has no space, or the install never finishes
+- [x] "AI is typing" now shows on phones too: the tunnel was holding back the live stream, so
+      the polled thread list carries it as well (`AiTypingState`, one new test, 118 pass)
+- [x] Diagrams updated: use case (install before sign-in, no-space extend), service-layer class
+      diagram (`AiTypingState`), sequence diagram; draw.io and Visual Paradigm rebuilt
 
 **Commits this week**
 

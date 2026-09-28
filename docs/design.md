@@ -123,7 +123,7 @@ typing…" in green italics. Gentle, 1.1s a cycle; still under reduced motion.
 The top bar on a phone is the menu button, the logo on its own (no name) and your controls;
 the name is in the menu. Buttons are as wide as their label, left-aligned; only sign-in and the bottom sheets use
 full-width buttons. The profile opens as a sheet from the bottom with a handle, the page dimmed behind; drag
-it down to close. The menu closes on a swipe left. Your status shows in words beside its dot (Available, Busy, Outside hours), not the dot alone. The inbox follows Messenger: the conversation header is back, the customer's face and full
+it down to close. Below the sign-in card, outside it, an Install app line shows while the browser can install. The menu closes on a swipe left. Your status shows in words beside its dot (Available, Busy, Outside hours), not the dot alone. The inbox follows Messenger: the conversation header is back, the customer's face and full
 name, and a More button that opens a sheet from the bottom: who it is and who is handling it, then
 each action with an icon and one line on what it does, and Resolve as the blue button at the foot (drag the sheet down to close it, as with the profile); bubbles run up to
 about three quarters of the screen, 18px round, a run from one sender close together with the

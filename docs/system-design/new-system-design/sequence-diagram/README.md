@@ -61,7 +61,7 @@ sequenceDiagram
         Note over AI,J: Greet, thank, or hand over without the model.
     else everything else
 
-    AI-->>A: "AI is typing" (live event, until this reply is done)
+    AI-->>A: "AI is typing" (live event, and in the polled thread list, until this reply is done)
     AI->>R: search(question, 5 passages)
     R->>V: cosine nearest neighbour
     V-->>R: passages + similarity

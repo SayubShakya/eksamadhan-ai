@@ -520,7 +520,7 @@ export default function InboxPage({
                                         state pill for space and ended up alone on a line. */}
                                     <div className="conv__mid">
                                         <div className="conv__preview">
-                                            {aiTyping[t.id] && t.status === 'AI_HANDLING'
+                                            {(aiTyping[t.id] || t.aiTyping) && t.status === 'AI_HANDLING'
                                                 ? <span className="conv__typing">AI is typing…</span> : previewOf(t.last)}
                                         </div>
                                         {t.unanswered > 0 && t.status !== 'RESOLVED' && !t.spam && (
@@ -907,7 +907,7 @@ export default function InboxPage({
                         </div>
 
                         <div className="composer">
-                            {aiTyping[activeThread.id] && activeThread.status === 'AI_HANDLING' ? (
+                            {(aiTyping[activeThread.id] || activeThread.aiTyping) && activeThread.status === 'AI_HANDLING' ? (
                             <div className="composer__status composer__status--typing" role="status" aria-live="polite">
                                 <span className="dot dot--online dot--pulse" aria-hidden="true" />
                                 <span className="composer__owner">AI is typing</span>

@@ -66,7 +66,8 @@ flowchart LR
         b18["Pin a conversation to the top<br/>personal, not shared"]
         b13["Join from an invite with Google<br/>no password to create"]
         b7["Enable notifications on this device"]
-        b14["Install the dashboard as an app"]
+        b14["Install the dashboard as an app<br/>from the sign-in page or once signed in"]
+        b20["Told the device has no space<br/>the install does not start"]
         b8["Receive alert when needed<br/>FR-09"]
         b15["Read and clear alerts in the bell<br/>open one · mark all read"]
         b16["Manage own settings<br/>email alerts · change password"]
@@ -93,6 +94,7 @@ flowchart LR
     agent --- b18
     agent --- b19
     agent --- b9
+    b20 -.->|"extends"| b14
 ```
 
 ### End User and Meta

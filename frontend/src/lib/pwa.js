@@ -8,6 +8,8 @@
  */
 let deferred = null;
 let waiting = null;                 // a new service worker, installed and waiting to take over
+let problem = null;                 // why the last install did not happen, in words for the person
+let installTimer = null;
 const listeners = new Set();
 
 const notify = () => listeners.forEach(fn => fn(state()));
@@ -32,6 +34,7 @@ export function state() {
         canPrompt: Boolean(deferred) && !isInstalled(),
         iosHint: iosCanAddToHomeScreen(),
         updateReady: Boolean(waiting),
+        installProblem: problem,
     };
 }
 
@@ -74,6 +77,8 @@ export function init() {
     });
     window.addEventListener('appinstalled', () => {
         deferred = null;
+        problem = null;
+        clearTimeout(installTimer);
         notify();
     });
     if (!('serviceWorker' in navigator)) return;
@@ -92,14 +97,49 @@ export function init() {
 }
 
 /** Shows the browser's install dialog, from a click. Resolves true when the person accepted. */
+/**
+ * The app needs a few megabytes (its files, cached by the service worker). The browser's install
+ * dialog says nothing when a phone is out of storage: it just does not install. So the free space
+ * the browser reports is checked first, and an accepted install that never finishes is reported.
+ */
+const MIN_FREE_BYTES = 10 * 1024 * 1024;
+const INSTALL_WAIT_MS = 30_000;
+export const NO_SPACE = 'There is not enough free space on this device to install the app. Free some space, then reload this page and try again.';
+export const DID_NOT_FINISH = 'The app did not finish installing. If this device is low on storage, free some space, then reload this page and try again.';
+
+async function freeBytes() {
+    try {
+        const { quota, usage } = await navigator.storage.estimate();
+        return typeof quota === 'number' ? quota - (usage || 0) : null;
+    } catch {
+        return null;                            // unknown: let the install try
+    }
+}
+
 export async function install() {
     if (!deferred) return false;
     const prompt = deferred;
+    const free = await freeBytes();             // quick; the click still counts for the dialog
+    if (free != null && free < MIN_FREE_BYTES) {
+        problem = NO_SPACE;
+        notify();
+        return false;
+    }
     deferred = null;                            // a prompt can only be shown once
+    problem = null;
     prompt.prompt();
     const { outcome } = await prompt.userChoice;
+    if (outcome === 'accepted' && !isInstalled()) {
+        clearTimeout(installTimer);
+        installTimer = setTimeout(() => { problem = DID_NOT_FINISH; notify(); }, INSTALL_WAIT_MS);
+    }
     notify();
     return outcome === 'accepted';
+}
+
+export function dismissProblem() {
+    problem = null;
+    notify();
 }
 
 /** "Reload" on the update banner: let the waiting worker take over; controllerchange reloads. */

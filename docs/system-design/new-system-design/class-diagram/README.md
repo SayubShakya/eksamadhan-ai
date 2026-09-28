@@ -349,6 +349,12 @@ classDiagram
         +normalise(text)$ String
     }
 
+    class AiTypingState {
+        -threads Set~UUID~
+        +set(threadId, typing)
+        +isTyping(threadId) boolean
+    }
+
     class PinnedConversationRepository {
         +threadIdsFor(userId) Set~UUID~
         +pin(userId, threadId)
@@ -549,6 +555,8 @@ classDiagram
     AiReplyService --> ConversationMemoryService
     AiReplyService --> ThreadService
     AiReplyService --> RepeatDetector : one answer per repeated message
+    AiReplyService --> AiTypingState : typing while it writes
+    AiReplyService ..> LiveEvents : ai-typing event
     AccountLifecycleService --> PinnedConversationRepository : removes their pins
     AiReplyService --> AgentRoutingService
     AgentRoutingService ..> AvailabilityService : only available and online

@@ -203,11 +203,15 @@ public class AiReplyService {
      */
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private LiveEvents live;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private AiTypingState typingState;
     private final ThreadLocal<UUID[]> typingIn = new ThreadLocal<>();     // {organization, thread}
 
     private void typing(boolean on, Organization organization, ConversationThread thread) {
-        if (live == null || organization == null || thread == null) return;
+        if (organization == null || thread == null) return;
         if (on) typingIn.set(new UUID[] { organization.getId(), thread.getId() });
+        if (typingState != null) typingState.set(thread.getId(), on);
+        if (live == null) return;
         try {
             live.publish(organization.getId(), "ai-typing",
                     java.util.Map.of("threadId", thread.getId().toString(), "typing", on));
@@ -220,6 +224,8 @@ public class AiReplyService {
         UUID[] where = typingIn.get();
         if (where == null) return;
         typingIn.remove();
+        if (typingState != null) typingState.set(where[1], on);
+        if (live == null) return;
         try {
             live.publish(where[0], "ai-typing", java.util.Map.of("threadId", where[1].toString(), "typing", on));
         } catch (RuntimeException e) {

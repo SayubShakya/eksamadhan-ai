@@ -34,6 +34,7 @@ public class ThreadController {
     private final io.eksamadhan.repository.SocialMessageRepository messageRepository;
     private final io.eksamadhan.repository.PinnedConversationRepository pins;
     private final io.eksamadhan.service.AvailabilityService availability;
+    private final io.eksamadhan.service.AiTypingState aiTyping;
 
     @GetMapping
     public List<ThreadResponse> list() {
@@ -240,6 +241,7 @@ public class ThreadController {
                 .spamCleared(t.isSpamCleared())
                 .spamMessage(spamMessage(t))
                 .pinned(pinned.contains(t.getId()))
+                .aiTyping(aiTyping.isTyping(t.getId()))
                 .build();
     }
 

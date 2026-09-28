@@ -51,6 +51,7 @@ class AiTraceRecordingTest {
     @MockitoBean EmailService emailService;
     @MockitoBean ConversationSummaryService summaryService;
     @MockitoBean LiveEvents liveEvents;
+    @Autowired AiTypingState typingState;
 
     private SocialPage page;
 
@@ -152,6 +153,25 @@ class AiTraceRecordingTest {
         org.mockito.InOrder order = org.mockito.Mockito.inOrder(liveEvents);
         order.verify(liveEvents).publish(any(), eq("ai-typing"), eq(Map.of("threadId", threadId, "typing", true)));
         order.verify(liveEvents).publish(any(), eq("ai-typing"), eq(Map.of("threadId", threadId, "typing", false)));
+    }
+
+    @Test
+    void theThreadListSeesTypingWhileTheAnswerIsWritten() {
+        // The live event can be held back on the way (a phone through a tunnel got none), so
+        // the polled thread list carries the same fact.
+        java.util.concurrent.atomic.AtomicReference<UUID> thread = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.atomic.AtomicBoolean typingDuring = new java.util.concurrent.atomic.AtomicBoolean();
+        when(llmClient.complete(anyString(), anyString())).thenAnswer(inv -> {
+            typingDuring.set(typingState.isTyping(thread.get()));
+            return "{\"related\": true, \"answered\": true, \"confidence\": 0.9, \"reply\": \"Open 9 to 6.\"}";
+        });
+        UUID id = customerAsks("When are you open today?");
+        thread.set(messages.findWithThreadById(id).orElseThrow().getThread().getId());
+
+        aiReplyService.reply(id, page.getId());
+
+        org.assertj.core.api.Assertions.assertThat(typingDuring.get()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(typingState.isTyping(thread.get())).isFalse();
     }
 
     @Test

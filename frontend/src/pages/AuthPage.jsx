@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ROLE_IN_SENTENCE } from '../lib/format.js';
 import { LogoMark } from '../components/Logo.jsx';
-import { IconEye, IconEyeOff } from '../components/icons.jsx';
+import { IconDownload, IconEye, IconEyeOff } from '../components/icons.jsx';
+import usePwa from '../lib/usePwa.js';
+import InstallProblem from '../components/InstallProblem.jsx';
 import * as api from '../lib/api.js';
 import { CenteredSpinner } from '../components/Loading.jsx';
 import { googleSignInAvailable, googleIdToken, isCancelled, googleErrorMessage } from '../lib/firebase.js';
@@ -25,6 +27,7 @@ function GoogleMark() {
  * `mode` is 'login' | 'signup' | 'invite'. On success the parent receives the session.
  */
 export default function AuthPage({ mode, inviteToken, onSession, onNavigate, notice }) {
+    const app = usePwa();
     const [showPassword, setShowPassword] = useState(false);
     const [form, setForm] = useState({
         organizationName: '', firstName: '', lastName: '', email: '', password: '',
@@ -241,6 +244,26 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                     <a href="/terms">Terms &amp; Conditions</a>
                 </nav>
             </form>
+            <InstallProblem />
+
+            {/* Offered here too, not only once signed in: on a phone the first visit is when
+                people decide whether to keep it on the home screen. Outside the card: it is about
+                this device, not signing in. Shown only when this
+                browser can install now (or, on an iPhone, how to do it by hand). */}
+            {!app.installed && (app.canPrompt || app.iosHint) && (
+                <div className="auth__install">
+                    {app.canPrompt ? (
+                        <>
+                            <span>Get EkSamadhan AI as an app on this device</span>
+                            <button type="button" className="btn btn--secondary btn--sm" onClick={app.install}>
+                                <IconDownload size={15} /> Install app
+                            </button>
+                        </>
+                    ) : (
+                        <span>To add it to your home screen: in Safari, tap Share, then "Add to Home Screen".</span>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

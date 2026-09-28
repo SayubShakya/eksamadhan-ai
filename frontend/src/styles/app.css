@@ -1181,6 +1181,8 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
              calc(24px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
     display: grid;
     place-items: center;
+    align-content: center;
+    gap: 16px;
     background: var(--panel);
 }
 .auth__card {
@@ -1206,6 +1208,13 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
     font-size: 13px;
     margin: 0;
 }
+/* Below the card, not in it: installing is about this device, not about signing in. */
+.auth__install {
+    width: 100%; max-width: 400px; box-sizing: border-box;
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 12px;
+    font-size: 13px; color: var(--text-muted); text-align: center;
+}
+.auth__install .btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; }
 .auth__switch { font-size: 13px; color: var(--text-muted); text-align: center; margin: 2px 0 0; }
 
 .field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500; }
@@ -1774,6 +1783,9 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
     background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md);
     box-shadow: var(--shadow-md); font-size: 13px;
 }
+
+.update-banner--problem { width: min(440px, calc(100vw - 32px)); box-sizing: border-box; justify-content: space-between; }
+.update-banner--problem span { line-height: 1.45; }
 
 /* ── Status pages: 404 and offline ── */
 .status-page { min-height: 100dvh; display: flex; flex-direction: column; background: var(--surface); }

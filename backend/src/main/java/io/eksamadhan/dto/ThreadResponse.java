@@ -35,6 +35,7 @@ public class ThreadResponse {
     private boolean spamCleared;     // a person said it is not spam
     private SpamMessage spamMessage; // the message that decided it
     private boolean pinned;          // pinned by the person asking, not by anyone else
+    private boolean aiTyping;        // the AI is writing a reply right now (AiTypingState)
 
     public record SpamMessage(String id, String text, String timestamp) {}
 }

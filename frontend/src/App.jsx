@@ -20,6 +20,7 @@ import NotificationPrompt from './components/NotificationPrompt.jsx';
 import * as push from './lib/push.js';
 import { hideSplash } from './lib/splash.js';
 import usePwa from './lib/usePwa.js';
+import InstallProblem from './components/InstallProblem.jsx';
 import { LogoMark } from './components/Logo.jsx';
 import StatusPage, { IconCloudOff } from './components/StatusPage.jsx';
 import { IconHome, IconWarning } from './components/icons.jsx';
@@ -837,6 +838,7 @@ export default function App() {
                     <button className="btn btn--sm btn--primary" onClick={app.applyUpdate}>Reload</button>
                 </div>
             )}
+            <InstallProblem />
             <NavRail
                 view={view}
                 onNavigate={setView}
