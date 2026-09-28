@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import {
     IconHome, IconInbox, IconKnowledge,
-    IconChannels, IconTeam, IconAnalytics, IconSettings, IconChevronLeft, IconSignOut,
+    IconChannels, IconTeam, IconClock, IconAnalytics, IconSettings, IconChevronLeft, IconSignOut,
 } from './icons.jsx';
 import { LogoMark } from './Logo.jsx';
 
@@ -11,6 +11,7 @@ const ITEMS = [
     { id: 'knowledge', label: 'Knowledge', Icon: IconKnowledge },
     { id: 'channels', label: 'Channels', Icon: IconChannels },
     { id: 'team', label: 'Team', Icon: IconTeam },
+    { id: 'hours', label: 'Hours', Icon: IconClock },
     { id: 'analytics', label: 'Analytics', Icon: IconAnalytics },
 ];
 

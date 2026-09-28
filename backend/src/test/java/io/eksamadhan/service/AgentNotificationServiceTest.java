@@ -112,6 +112,9 @@ class AgentNotificationServiceTest {
         }
 
         @Override
+        public int setWorkingHours(java.util.UUID id, String hours, String zone) { return 0; }
+
+        @Override
         public int touchLastSeen(java.util.UUID id, java.time.OffsetDateTime at) {
             return 0;
         }

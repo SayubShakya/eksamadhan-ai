@@ -24,7 +24,7 @@ function greeting() {
 
 export default function HomePage({
     user, pages, threadCount, todayCount, recent = [], onConnect, onNavigate, onOpenConversation,
-    statusLoaded = true, threadsLoaded = true, loadError = null, onRetry,
+    statusLoaded = true, threadsLoaded = true, loadError = null, onRetry, hours = null,
 }) {
     // Skeletons stand in for what depends on the server: which channels are connected (and so
     // which setup step is next) and the recent conversations. The rest of the page is fixed
@@ -101,6 +101,20 @@ export default function HomePage({
                     </button>
                 )}
             </div>
+
+            {/* An empty week means no new conversations: say so here rather than leave them
+                wondering why nothing arrives. */}
+            {hours && !hours.hasAvailability && (
+                <div className="notice notice--warn home__hours" role="note">
+                    <span>
+                        <strong>Set your working hours.</strong> Until you do, no new conversations come to
+                        you, even while you are Available.
+                    </span>
+                    <button type="button" className="btn btn--sm btn--secondary" onClick={() => onNavigate('hours')}>
+                        Set hours
+                    </button>
+                </div>
+            )}
 
             {!setupDone && (
             <section className="card" aria-labelledby="setup-h">

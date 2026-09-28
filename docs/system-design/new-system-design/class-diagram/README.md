@@ -41,6 +41,8 @@ classDiagram
         +Availability availability
         +OffsetDateTime lastSeenAt
         +boolean emailAlerts
+        +String workingHours
+        +String timeZone
         +OffsetDateTime deactivatedAt
         +OffsetDateTime deletedAt
         +displayName() String
@@ -392,6 +394,13 @@ classDiagram
         +export(user) Map
     }
 
+    class WorkingHours {
+        +status(user, now)$ Status
+        +validate(windows)$ List~Window~
+        +parse(json)$ List~Window~
+        +zoneOf(user)$ ZoneId
+    }
+
     class AvailabilityService {
         +ONLINE_WINDOW$ Duration
         +presence(user, now, goneAt)$ Presence
@@ -399,6 +408,7 @@ classDiagram
         +presenceOf(user) Presence
         +heartbeat(user) Presence
         +choose(user, availability) Presence
+        +hoursChanged(user, before) Presence
         +claimQueue(organization) int
     }
 
@@ -543,6 +553,7 @@ classDiagram
     AiReplyService --> AgentRoutingService
     AgentRoutingService ..> AvailabilityService : only available and online
     AvailabilityService --> AgentRoutingService
+    AvailabilityService --> WorkingHours : outside hours means not routed to
     AvailabilityService --> AgentNotificationService
     AvailabilityService --> LiveEvents : publishes presence
     AccountLifecycleService --> AvailabilityService : hands their conversations on

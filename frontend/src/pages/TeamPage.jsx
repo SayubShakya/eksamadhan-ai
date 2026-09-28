@@ -5,7 +5,7 @@ import * as api from '../lib/api.js';
 import { LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
 import { PRESENCE } from '../components/AvailabilityMenu.jsx';
-import { timeAgo } from '../lib/format.js';
+import { timeAgo, formatBackAt } from '../lib/format.js';
 
 import { ROLE_LABEL } from '../lib/format.js';
 
@@ -15,14 +15,18 @@ import { ROLE_LABEL } from '../lib/format.js';
  * Invites are links, not emails: creating one shows a URL to copy and send. That avoids an
  * email provider, and the admin can see exactly what they are sending.
  */
-/** Available, Busy, or Offline with when they were last here. */
+/** Available, Busy, Outside hours with when they are back, or Offline with when they were last here. */
 function Presence({ member }) {
     const p = PRESENCE[member.presence] || PRESENCE.OFFLINE;
-    const offline = member.presence !== 'AVAILABLE' && member.presence !== 'BUSY';
+    const offline = member.presence === 'OFFLINE' || !member.presence;
+    // Online and set to Available, but outside their working hours: say until when.
+    const outside = member.presence === 'OUTSIDE_HOURS';
+    const back = outside && member.hours?.nextAvailableAt ? `, back ${formatBackAt(member.hours.nextAvailableAt)}` : '';
     return (
         <span className={`presence presence--${(member.presence || 'OFFLINE').toLowerCase()}`}>
             <span className={`dot ${p.dot}`} aria-hidden="true" />
-            {p.label}
+            {outside && member.hours && !member.hours.hasAvailability ? 'No working hours set' : p.label}
+            {back}
             {offline && (member.lastSeenAt ? `, last seen ${timeAgo(member.lastSeenAt)}` : ', not seen yet')}
         </span>
     );

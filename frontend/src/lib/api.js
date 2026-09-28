@@ -51,6 +51,9 @@ export const logIn = (payload) => axios.post('/api/auth/login', payload).then(r 
 export const getMe = () => axios.get('/api/me').then(r => r.data);
 export const updateMe = (payload) => axios.put('/api/me', payload).then(r => r.data);
 // Availability (FR-05): the choice, and the heartbeat that tells the team this dashboard is open.
+// Working hours: the week, and the server's answer to "may conversations come to me now?".
+export const getHours = () => axios.get('/api/me/hours').then(r => r.data);
+export const saveHours = (windows, timeZone) => axios.put('/api/me/hours', { windows, timeZone }).then(r => r.data);
 export const heartbeat = () => axios.post('/api/me/heartbeat').then(r => r.data);
 export const setAvailability = (availability) =>
     axios.put('/api/me/availability', { availability }).then(r => r.data);

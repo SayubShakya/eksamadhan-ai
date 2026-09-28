@@ -18,7 +18,7 @@ import { ROLE_LABEL } from '../lib/format.js';
 export default function TopBar({
     query, onQueryChange, user,
     onToggleNav, onHome, unread = 0, navOpen, showSearch, onEditProfile, onSignOut,
-    onOpenNotification, onSeeAllNotifications, onAvailabilityChange, view,
+    onOpenNotification, onSeeAllNotifications, onAvailabilityChange, view, hours, onSetHours,
 }) {
     const role = ROLE_LABEL[user?.role] ?? user?.role ?? '';
     const app = usePwa();
@@ -68,7 +68,8 @@ export default function TopBar({
             {/* Before the account chip: the same alerts that go out as browser
                 notifications, readable here whatever a device did with them. */}
             {onAvailabilityChange && (
-                <AvailabilityMenu value={user?.availability} onChange={onAvailabilityChange} />
+                <AvailabilityMenu value={user?.availability} onChange={onAvailabilityChange}
+                                  hours={hours} onSetHours={onSetHours} />
             )}
 
             <NotificationBell onOpen={onOpenNotification} onSeeAll={onSeeAllNotifications} onPage={view === 'notifications'} />

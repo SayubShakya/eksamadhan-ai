@@ -590,6 +590,25 @@ status machine and authentication have all since been built — see the change l
   test proving one model call and one Meta send for two copies. Also fixed
   `emailAlertsOffMeansAPushButNoEmail`, which failed whenever a colleague was signed in to the
   running app (it now sets everyone's last seen, not only their availability).
+- **Weekly working hours (2026-09-28, Sayub).** Hours page (sidebar item "Hours", everyone).
+  Working hours are the recurring rule, Available/Busy plus online the live fact; new
+  conversations need both. `users.working_hours` (JSON windows, dayOfWeek 0 = Sunday, minutes
+  in local wall-clock time, never UTC) and `users.time_zone` (V31). One helper, `WorkingHours`
+  (status: hasAvailability, withinHours, nextAvailableAt), read only through
+  `AvailabilityService.presence`, which gained OUTSIDE_HOURS; so routing, claimQueue, the Team
+  page, the assignee picker and the top-bar menu all agree. Decisions: empty = no new
+  conversations (never "always"); startMin 0 to 1439, endMin 1 to 1440; overnight rejected
+  (split at midnight) in the UI and on the server; overlapping windows rejected; the boundary
+  cuts off new conversations only, assigned ones stay. java.time ZoneId handles DST, no library
+  (Nepal has none). Existing users were backfilled with every day 00:00 to 24:00 so routing did
+  not stop; people invited from now start with none and Home asks them to set hours. A window
+  opening is noticed by the minute's heartbeat, which also hands out the queue. Autosave, 500ms
+  debounce, dirty flag, idle/saving/saved/error; a failed save keeps the edit with Try again;
+  "Saved" is absolutely positioned (pointer-events none, role status). Chrome reports
+  Asia/Katmandu; zones with the same offsets all year count as the same. Tests:
+  WorkingHoursTest (6) and a routing test (114 in all).
+- **404 restyled (2026-09-28, Sayub's reference):** amber warning circle, large 404, "Not Found", one
+  "Go back home" button; the path line and "Go back" were dropped.
 - **404 and offline pages (2026-09-26).** One `StatusPage` layout for both. An unknown top-level
   address shows a full-page 404 (brand, the path, "Go to Home" or "Go to sign in", "Go back",
   Privacy and Terms), decided before the session check so it never flashes the dashboard; an

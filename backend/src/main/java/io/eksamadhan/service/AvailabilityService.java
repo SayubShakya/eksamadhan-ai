@@ -18,7 +18,9 @@ import java.util.Optional;
 /**
  * Who can take a conversation right now (PRD FR-05).
  *
- * Two facts make up a person's presence. One they choose: Available or Busy. The other is
+ * Three facts make up a person's presence. Their weekly working hours (WorkingHours), set on
+ * the Hours page, say when they are willing to be handed new conversations at all. Then two
+ * more. One they choose: Available or Busy. The other is
  * observed: an open dashboard reports in every minute, and someone not heard from for
  * ONLINE_WINDOW is offline, whatever they chose. That second half is the point — a toggle
  * alone says "Available" all night for someone who closed the laptop at six, and routing
@@ -36,7 +38,12 @@ public class AvailabilityService {
     /** Three missed heartbeats (one a minute) before someone counts as gone. */
     public static final Duration ONLINE_WINDOW = Duration.ofMinutes(3);
 
-    public enum Presence { AVAILABLE, BUSY, OFFLINE }
+    /**
+     * OUTSIDE_HOURS: online and set to Available, but outside their weekly working hours (or
+     * with none set), so new conversations do not come to them. Shown as such everywhere,
+     * so nobody is told "Available" while routing passes them by.
+     */
+    public enum Presence { AVAILABLE, BUSY, OUTSIDE_HOURS, OFFLINE }
 
     private final UserRepository users;
     private final ConversationThreadRepository threads;
@@ -65,7 +72,9 @@ public class AvailabilityService {
         OffsetDateTime seen = user.getLastSeenAt();
         if (seen == null || seen.isBefore(now.minus(ONLINE_WINDOW))) return Presence.OFFLINE;
         if (goneAt != null && !goneAt.isBefore(seen)) return Presence.OFFLINE;
-        return user.getAvailability() == Availability.BUSY ? Presence.BUSY : Presence.AVAILABLE;
+        if (user.getAvailability() == Availability.BUSY) return Presence.BUSY;
+        // The schedule and the live state, both: see WorkingHours.
+        return WorkingHours.status(user, now.toInstant()).withinHours() ? Presence.AVAILABLE : Presence.OUTSIDE_HOURS;
     }
 
     public static Presence presence(User user, OffsetDateTime now) {
@@ -86,7 +95,10 @@ public class AvailabilityService {
         return presence(user, OffsetDateTime.now(), user == null ? null : live.goneAt(user.getId()));
     }
 
-    /** The dashboard is open. Coming back online as Available picks up whatever is waiting. */
+    /**
+     * The dashboard is open. Coming back online as Available picks up whatever is waiting, and
+     * so does a working-hours window opening: the minute's heartbeat notices the change.
+     */
     @Transactional
     public Presence heartbeat(User me) {
         OffsetDateTime now = OffsetDateTime.now();
@@ -104,6 +116,12 @@ public class AvailabilityService {
         me.setAvailability(availability);
         me.setLastSeenAt(now);
         log.info("{} is now {}", me.getEmail(), availability);
+        return changed(me, before);
+    }
+
+    /** New working hours take effect at once: presence, the team's view and the queue. */
+    @Transactional
+    public Presence hoursChanged(User me, Presence before) {
         return changed(me, before);
     }
 

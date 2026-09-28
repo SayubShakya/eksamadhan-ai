@@ -59,7 +59,7 @@ public class AvailabilityController {
     public Map<String, Object> heartbeat() {
         User me = currentUser.require();
         AvailabilityService.Presence presence = availability.heartbeat(me);
-        return Map.of("availability", me.getAvailability(), "presence", presence);
+        return Map.of("availability", me.getAvailability(), "presence", presence, "hours", HoursController.status(me));
     }
 
     @PutMapping("/availability")
@@ -69,6 +69,6 @@ public class AvailabilityController {
         }
         User me = currentUser.require();
         AvailabilityService.Presence presence = availability.choose(me, request.availability());
-        return Map.of("availability", me.getAvailability(), "presence", presence);
+        return Map.of("availability", me.getAvailability(), "presence", presence, "hours", HoursController.status(me));
     }
 }

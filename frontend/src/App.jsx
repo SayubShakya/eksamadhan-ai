@@ -4,6 +4,7 @@ import TopBar from './components/TopBar.jsx';
 import HomePage from './pages/HomePage.jsx';
 import InboxPage from './pages/InboxPage.jsx';
 import ChannelsPage from './pages/ChannelsPage.jsx';
+import HoursPage from './pages/HoursPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import DeleteAccountPage from './pages/DeleteAccountPage.jsx';
@@ -20,7 +21,8 @@ import * as push from './lib/push.js';
 import { hideSplash } from './lib/splash.js';
 import usePwa from './lib/usePwa.js';
 import { LogoMark } from './components/Logo.jsx';
-import StatusPage, { IconCloudOff, IconCompass } from './components/StatusPage.jsx';
+import StatusPage, { IconCloudOff } from './components/StatusPage.jsx';
+import { IconHome, IconWarning } from './components/icons.jsx';
 import { Spinner } from './components/Loading.jsx';
 import * as api from './lib/api.js';
 import { mergeThreads } from './lib/format.js';
@@ -29,7 +31,7 @@ import { connectLive } from './lib/live.js';
 import './styles/tokens.css';
 import './styles/app.css';
 
-const VIEWS = ['home', 'inbox', 'knowledge', 'channels', 'team', 'analytics', 'settings', 'notifications', 'delete-account'];
+const VIEWS = ['home', 'inbox', 'knowledge', 'channels', 'team', 'hours', 'analytics', 'settings', 'notifications', 'delete-account'];
 const BASE = '/dashboard';
 
 const viewFromPath = () => {
@@ -74,26 +76,21 @@ function legalFromPath() {
  * the menu still there, for an unknown /dashboard/... screen.
  */
 function NotFound({ inShell = false, signedIn = false, onHome }) {
-    const path = window.location.pathname;
     const home = () => (onHome ? onHome() : window.location.assign(signedIn ? BASE : '/login'));
-    const canGoBack = window.history.length > 1;
     return (
         <StatusPage
             inShell={inShell}
-            icon={<IconCompass />}
+            tone="warning"
+            icon={<IconWarning size={34} />}
             code="404"
-            title="This page does not exist"
+            title="Not Found"
             actions={(
-                <>
-                    <button className="btn btn--primary" onClick={home}>
-                        {inShell || signedIn ? 'Go to Home' : 'Go to sign in'}
-                    </button>
-                    {canGoBack && <button className="btn btn--secondary" onClick={() => window.history.back()}>Go back</button>}
-                </>
+                <button className="btn btn--primary status__home" onClick={home}>
+                    <IconHome size={16} /> {inShell || signedIn ? 'Go back home' : 'Go to sign in'}
+                </button>
             )}
         >
-            <p>There is nothing at <code className="status__path">{path}</code>. The link may be mistyped,
-                or the page may have moved.</p>
+            <p>The page you are looking for does not exist or has been moved.</p>
         </StatusPage>
     );
 }
@@ -316,12 +313,19 @@ export default function App() {
         return () => clearInterval(id);
     }, [workspaceSession]);
 
+    // Your working-hours status as the server last reported it: { hasAvailability,
+    // withinHours, nextAvailableAt }. Every screen shows this one, never its own guess.
+    const [myHours, setMyHours] = useState(null);
+
     // FR-05: tell the server this dashboard is open, once a minute and whenever the tab comes
     // back into view. Stop, and the server counts this person offline after a few minutes,
     // so new conversations stop coming to them.
     useEffect(() => {
         if (!workspaceSession) return undefined;
-        const beat = () => api.heartbeat().catch(() => { /* next beat will try again */ });
+        // The heartbeat's answer carries the working-hours status, so the top bar notices a
+        // window opening or closing within the minute.
+        const beat = () => api.heartbeat().then(r => { if (r?.hours) setMyHours(r.hours); })
+            .catch(() => { /* next beat will try again */ });
         beat();
         const id = setInterval(beat, 60000);
         const onVisible = () => { if (document.visibilityState === 'visible') beat(); };
@@ -350,6 +354,7 @@ export default function App() {
     const changeAvailability = useCallback(async (next) => {
         try {
             const result = await api.setAvailability(next);
+            if (result?.hours) setMyHours(result.hours);
             setSession(s => (s ? { ...s, user: { ...s.user, availability: result.availability } } : s));
         } catch (err) {
             setSendError(api.errorMessage(err, 'Your status could not be changed.'));
@@ -822,6 +827,8 @@ export default function App() {
                     onOpenNotification={openNotification}
                     onSeeAllNotifications={() => setView('notifications')}
                     onAvailabilityChange={changeAvailability}
+                    hours={myHours}
+                    onSetHours={() => setView('hours')}
                     view={view}
                 />
 
@@ -839,6 +846,7 @@ export default function App() {
                         onOpenConversation={(thread) => { setActive(thread); setView('inbox'); }}
                         onConnect={handleConnect}
                         onNavigate={setView}
+                        hours={myHours}
                     />
                 )}
 
@@ -903,6 +911,7 @@ export default function App() {
 
                 {view === 'not-found' && <NotFound inShell onHome={() => setView('home')} />}
 
+                {view === 'hours' && <HoursPage onStatus={setMyHours} />}
                 {view === 'channels' && (
                     <ChannelsPage
                         user={user}

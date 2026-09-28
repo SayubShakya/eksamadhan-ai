@@ -24,6 +24,21 @@ export function formatSeconds(seconds) {
 }
 
 /** "just now", "4 min ago", "3 hr ago", "yesterday", "5 days ago", then the date. */
+/**
+ * When someone's working hours next begin, as a person would say it: "today 9:00 AM",
+ * "tomorrow 9:00 AM", or "Sun 9:00 AM" within the week.
+ */
+export function formatBackAt(iso, now = new Date()) {
+    if (!iso) return '';
+    const at = new Date(iso);
+    const time = at.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    const day = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const diff = Math.round((day(at) - day(now)) / 86400000);
+    if (diff === 0) return `today ${time}`;
+    if (diff === 1) return `tomorrow ${time}`;
+    return `${at.toLocaleDateString(undefined, { weekday: 'short' })} ${time}`;
+}
+
 export function timeAgo(iso, now = Date.now()) {
     if (!iso) return '';
     const then = new Date(iso).getTime();

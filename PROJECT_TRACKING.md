@@ -664,6 +664,12 @@ Submitted Thursday 2026-10-01.
 - [x] The same message sent again (double send, resend while waiting, "hi" twice) gets one
       answer, not one per copy; a third copy after the answer goes to a person. 8 new tests
       (107 in all); activity, sequence and class diagrams and the Visual Paradigm set updated
+- [x] Weekly working hours: a Hours page that saves as you edit; new conversations go only to
+      people who are Available, online and inside their hours, and every screen says which one
+      is missing ("Outside your hours · back Sun 9:00 AM"). Migration V31; 7 new tests (114 in
+      all); ER, class, use case and sequence diagrams and the Visual Paradigm set updated
+- [x] 404 page redesigned to the chosen reference: warning icon, large 404, "Not Found", one
+      "Go back home" button
 
 **Commits this week**
 

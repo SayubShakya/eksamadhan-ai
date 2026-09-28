@@ -39,8 +39,12 @@ class AvailabilityTest {
     @Autowired ConversationThreadRepository threads;
     @Autowired EntityManager entityManager;
 
+    private static final String ALL_WEEK = WorkingHours.write(java.util.stream.IntStream.range(0, 7)
+            .mapToObj(d -> new WorkingHours.Window(d, 0, 1440)).toList());
+
     private static User person(Availability choice, OffsetDateTime seen) {
-        return User.builder().status(UserStatus.ACTIVE).availability(choice).lastSeenAt(seen).build();
+        return User.builder().status(UserStatus.ACTIVE).availability(choice).lastSeenAt(seen)
+                .workingHours(ALL_WEEK).build();
     }
 
     @Test
@@ -83,6 +87,28 @@ class AvailabilityTest {
         for (int i = 0; i < 10; i++) {
             assertEquals(members.get(1).getId(), routing.pickAgent(org).orElseThrow().getId());
         }
+    }
+
+    @Test
+    void routingSkipsSomeoneOutsideTheirWorkingHours() {
+        List<User> members = activeMembers(2);
+        for (User u : members) users.setWorkingHours(u.getId(), ALL_WEEK, "Asia/Kathmandu");
+        // Both Available and online; the first one's only window ended an hour ago.
+        java.time.ZonedDateTime local = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Kathmandu"));
+        int m = local.getHour() * 60 + local.getMinute();
+        int d = local.getDayOfWeek().getValue() % 7;
+        WorkingHours.Window past = m >= 61 ? new WorkingHours.Window(d, Math.max(0, m - 90), m - 60)
+                : new WorkingHours.Window((d + 3) % 7, 540, 1080);
+        users.setWorkingHours(members.get(0).getId(), WorkingHours.write(List.of(past)), "Asia/Kathmandu");
+        Organization org = workspaceWith(members, Availability.AVAILABLE, Availability.AVAILABLE);
+        for (int i = 0; i < 10; i++) {
+            assertEquals(members.get(1).getId(), routing.pickAgent(org).orElseThrow().getId());
+        }
+        // The second turns every day off: nobody is inside their hours, so nobody is picked.
+        users.setWorkingHours(members.get(1).getId(), "[]", "Asia/Kathmandu");
+        entityManager.flush();
+        entityManager.clear();
+        assertTrue(routing.pickAgent(org).isEmpty(), "an empty week receives nothing");
     }
 
     @Test

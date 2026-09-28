@@ -103,13 +103,21 @@ off, filled blue on a pale blue ground when on, with `aria-pressed`. Each list r
 button at the end of its top line, after the time, beside the row rather than inside it (a button cannot hold a
 button): always shown, a grey outline until pinned, then filled blue. Pinned ones sit first.
 
+## Working hours
+
+The Hours page is a column of day cards, Sunday first: a switch, the day, and the two times
+when the day is on; an off day is just the switch and "Off". No Save button: the helper line
+says "Changes save on their own", and the "Saved" note hangs absolutely under it so nothing
+moves. A failed save shows in red with Try again and the edit stays. Being Available but outside
+your hours shows as "Outside hours" with a hollow grey dot (`.dot--away`), never as Available.
+
 ## Status pages
 
-A missing page and a lost connection share one layout (`StatusPage`): an icon in a pale blue
-circle, an optional code ("404") in small blue type, a plain title, one or two sentences that
-say what happened and what is safe, then at most two buttons, the useful one filled. Full page
-has the brand at the top and Privacy and Terms at the foot; inside the dashboard it sits in the
-page frame with the menu still there.
+A missing page and a lost connection share one layout (`StatusPage`). A 404 follows the error
+reference Sayub chose: a warning icon in a pale amber circle, "404" large and bold, "Not Found"
+under it, one sentence, and one button, "Go back home" with a home icon (blue, `--r-sm`). Inside
+the dashboard it sits in the page with the menu still there; signed out it is a full page and
+the button reads "Go to sign in". The offline screen keeps the blue icon and its spinner.
 
 ## Role names
 

@@ -96,6 +96,19 @@ public class User {
     @Column(name = "last_seen_at")
     private OffsetDateTime lastSeenAt;
 
+    /**
+     * Weekly working hours as JSON (see WorkingHours): when new conversations may come to this
+     * person. Empty means none do. Minutes are in {@link #timeZone}'s wall-clock time.
+     */
+    @Column(name = "working_hours", nullable = false, columnDefinition = "text")
+    @Builder.Default
+    private String workingHours = "[]";
+
+    /** The zone the working hours are written in, e.g. Asia/Kathmandu. */
+    @Column(name = "time_zone", nullable = false, length = 64)
+    @Builder.Default
+    private String timeZone = "Asia/Kathmandu";
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) createdAt = OffsetDateTime.now();

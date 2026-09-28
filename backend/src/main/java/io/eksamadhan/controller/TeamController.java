@@ -55,13 +55,15 @@ public class TeamController {
     }
 
     /**
-     * @param presence   AVAILABLE, BUSY or OFFLINE right now (FR-05): what routing goes by
+     * @param presence   AVAILABLE, BUSY, OUTSIDE_HOURS or OFFLINE right now (FR-05): what
+     *                   routing goes by
      * @param lastSeenAt when their dashboard last reported in, for "last seen 2 hr ago"
+     * @param hours      their working-hours status (WorkingHours.Status), for "back Sun 9:00 AM"
      */
     public record Member(String id, String firstName, String lastName, String email,
                          UserRole role, UserStatus status, String avatar, boolean isYou,
                          io.eksamadhan.service.AvailabilityService.Presence presence,
-                         String lastSeenAt) {}
+                         String lastSeenAt, java.util.Map<String, Object> hours) {}
 
     /**
      * @param emailed     whether the invitation email was actually delivered
@@ -85,7 +87,8 @@ public class TeamController {
                 .map(u -> new Member(u.getId().toString(), u.getFirstName(), u.getLastName(),
                         u.getEmail(), u.getRole(), u.getStatus(), u.getAvatar(), u.getId().equals(me.getId()),
                         availability.presenceOf(u),
-                        u.getLastSeenAt() == null ? null : u.getLastSeenAt().toString()))
+                        u.getLastSeenAt() == null ? null : u.getLastSeenAt().toString(),
+                        HoursController.status(u)))
                 .toList();
 
         // Invite links are only shown to someone who could have created them.

@@ -30,6 +30,7 @@ flowchart LR
         a6["View unified inbox<br/>FR-06 · pin conversations to the top"]
         a7["Generate website widget script<br/>PLANNED · FR-03"]
         a8["Sign up and sign in with Google"]
+        a11["Set weekly working hours<br/>see who is outside theirs"]
         a9["Configure the workspace and AI replies<br/>name · AI on or off · handover and closing words"]
         a10["Leave the workspace<br/>download my data · deactivate · hand over to a member, then delete"]
     end
@@ -41,6 +42,7 @@ flowchart LR
     owner --- a6
     owner --- a8
     owner --- a9
+    owner --- a11
     owner --- a10
     owner -.- a7
     style a7 stroke-dasharray: 5 5
@@ -70,6 +72,7 @@ flowchart LR
         b16["Manage own settings<br/>email alerts · change password"]
         b17["Leave the workspace<br/>download my data · deactivate · delete my account"]
         b9["Set availability<br/>Available or Busy · FR-05"]
+        b19["Set weekly working hours<br/>no new conversations outside them"]
     end
     agent --- b1
     agent --- b2
@@ -88,6 +91,7 @@ flowchart LR
     agent --- b16
     agent --- b17
     agent --- b18
+    agent --- b19
     agent --- b9
 ```
 

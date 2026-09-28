@@ -7,9 +7,9 @@ import { LogoMark } from './Logo.jsx';
  * `inShell` is for use inside the dashboard, where the menu and top bar are already there: no
  * brand header or footer then, just the message in the page.
  */
-export default function StatusPage({ icon, code, title, children, actions, inShell = false }) {
+export default function StatusPage({ icon, code, title, children, actions, inShell = false, tone }) {
     const body = (
-        <div className="status" role="status">
+        <div className={`status${tone ? ` status--${tone}` : ''}${code ? ' status--coded' : ''}`} role="status">
             <div className="status__icon" aria-hidden="true">{icon}</div>
             {code && <p className="status__code">{code}</p>}
             <h1 className="status__title">{title}</h1>

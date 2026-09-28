@@ -62,6 +62,8 @@ erDiagram
         varchar availability "AVAILABLE BUSY, chosen by the person"
         timestamptz last_seen_at "dashboard heartbeat, online if recent"
         boolean email_alerts "handover also by email"
+        text working_hours "weekly windows as JSON, local minutes; [] means none"
+        varchar time_zone "the zone those minutes are in, e.g. Asia/Kathmandu"
         timestamptz deactivated_at
         timestamptz deleted_at "row kept, personal fields overwritten"
     }

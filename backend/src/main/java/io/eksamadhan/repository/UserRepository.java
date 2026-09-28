@@ -35,6 +35,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * Only the presence columns, never the whole row: a heartbeat saving a stale copy of the
      * user would undo a profile edit made in another tab a moment earlier.
      */
+    /** Only the working-hours columns, for the same reason as touchLastSeen. */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE User u SET u.workingHours = :hours, u.timeZone = :zone WHERE u.id = :id")
+    int setWorkingHours(java.util.UUID id, String hours, String zone);
+
     @org.springframework.data.jpa.repository.Modifying
     @Query("UPDATE User u SET u.lastSeenAt = :at WHERE u.id = :id")
     int touchLastSeen(java.util.UUID id, java.time.OffsetDateTime at);
