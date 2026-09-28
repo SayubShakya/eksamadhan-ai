@@ -675,6 +675,7 @@ Submitted Thursday 2026-10-01.
 - [x] Handing a conversation to someone by hand now follows the same rule as routing: not to
       anyone Busy, offline or outside their working hours (the picker shows why); Hours page
       redesigned with a status card, quick-set buttons and All day
+- [x] Inbox order: pinned first, then urgent before normal before low priority, then newest
 
 **Commits this week**
 

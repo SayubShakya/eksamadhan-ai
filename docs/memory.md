@@ -551,7 +551,7 @@ status machine and authentication have all since been built — see the change l
   reorder the whole team's queue). Table `pinned_conversations` (V30, PK user and thread, both
   cascade); `PinnedConversationRepository` (plain SQL); `PUT` / `DELETE /api/threads/{id}/pin`,
   allowed on anything you can see (404 otherwise, so staff only their own); `/api/threads`
-  returns `pinned` for the caller. The inbox sorts pinned first, then by latest message; a pin
+  returns `pinned` for the caller. The inbox sorts pinned first, then by priority (P1 before P2 before P3, unjudged as P2; 2026-09-28), then by latest message; a pin
   button in the conversation header and one on each list row (a sibling of the row button, always
   shown, grey until pinned, then blue (Sayub: not only on hover); pinning from the list does not open the chat); the change shows at once and is put back if the server refuses. Deleting an account
   removes its pins. No limit on how many. `PinTest` (2).

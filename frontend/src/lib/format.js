@@ -200,7 +200,9 @@ export function mergeThreads(threads, messages, { status = 'all', platform = 'al
                 },
             };
         })
-        // Your pinned conversations first, then everything by the latest message.
+        // Your pinned conversations first, then the most urgent (Jev's priority: 1 urgent,
+        // 2 normal, 3 low; not judged yet counts as normal), then the latest message.
         .sort((a, b) => (Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)))
+            || ((a.priority ?? 2) - (b.priority ?? 2))
             || (new Date(b.lastMessageAt) - new Date(a.lastMessageAt)));
 }
