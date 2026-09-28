@@ -111,6 +111,12 @@ says "Changes save on their own", and the "Saved" note hangs absolutely under it
 moves. A failed save shows in red with Try again and the edit stays. Being Available but outside
 your hours shows as "Outside hours" with a hollow grey dot (`.dot--away`), never as Available.
 
+## AI is typing
+
+While the server says a reply is being written, the composer's status line reads "AI is
+typing" in green with three small dots rising in turn, and the list preview reads "AI is
+typing…" in green italics. Gentle, 1.1s a cycle; still under reduced motion.
+
 ## Status pages
 
 A missing page and a lost connection share one layout (`StatusPage`). A 404 follows the error

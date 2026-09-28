@@ -333,12 +333,39 @@ export default function App() {
         return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible); };
     }, [workspaceSession]);
 
+    // Conversations the AI is writing a reply in right now, as the server announces them.
+    // "Stopped" is shown a moment late, so the typing line gives way to the reply itself
+    // (messages are fetched every 1.5s) rather than to a blank; and a start never heard to
+    // stop clears itself after 90s.
+    const [aiTyping, setAiTyping] = useState({});
+    const typingTimers = useRef({});
+    const showTyping = useCallback((threadId, on) => {
+        const pending = typingTimers.current[threadId];
+        // A second "stopped" must not push the end back: only the first one starts the fade.
+        if (!on && pending?.stopping) return;
+        clearTimeout(pending?.id);
+        const off = () => {
+            delete typingTimers.current[threadId];
+            setAiTyping(t => { const next = { ...t }; delete next[threadId]; return next; });
+        };
+        if (on) {
+            setAiTyping(t => ({ ...t, [threadId]: true }));
+            typingTimers.current[threadId] = { id: setTimeout(off, 90000), stopping: false };
+        } else {
+            typingTimers.current[threadId] = { id: setTimeout(off, 1600), stopping: true };
+        }
+    }, []);
+
     // Live updates: a colleague switching to Busy, or closing their dashboard, shows here at
     // once. The event carries the new state, so screens patch themselves without refetching.
     useEffect(() => {
         if (!workspaceSession) return undefined;
         const myId = workspaceSession.user?.id;
         return connectLive(({ event, data }) => {
+            if (event === 'ai-typing' && data?.threadId) {
+                showTyping(data.threadId, data.typing);
+                return;
+            }
             if (event !== 'presence' || !data?.userId) return;
             setTeam(list => list.map(m => (m.id === data.userId
                 ? { ...m, presence: data.presence, lastSeenAt: data.lastSeenAt ?? m.lastSeenAt } : m)));
@@ -349,7 +376,7 @@ export default function App() {
             }
             window.dispatchEvent(new CustomEvent('presence', { detail: data }));
         });
-    }, [workspaceSession]);
+    }, [workspaceSession, showTyping]);
 
     const changeAvailability = useCallback(async (next) => {
         try {
@@ -870,6 +897,7 @@ export default function App() {
                         onSendImage={handleSendImage}
                         onReact={handleReact}
                         onThreadAction={handleThreadAction}
+                        aiTyping={aiTyping}
                         onHideMessage={handleHideMessage}
                         onConnect={handleConnect}
                         search={query}

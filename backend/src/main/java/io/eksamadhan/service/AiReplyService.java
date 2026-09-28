@@ -190,7 +190,40 @@ public class AiReplyService {
         try {
             replyTraced(messageId, pageId);
         } finally {
+            typing(false);
             trace.end();
+        }
+    }
+
+    /**
+     * Tells the open dashboards the AI is writing a reply in this conversation, so its status
+     * line reads "AI is typing". Only from the moment an answer is really being prepared
+     * (every gate passed) to the moment this reply is done, answered or handed over: never a
+     * guess from timestamps. Also ended by reply()'s finally, whatever happens in between.
+     */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private LiveEvents live;
+    private final ThreadLocal<UUID[]> typingIn = new ThreadLocal<>();     // {organization, thread}
+
+    private void typing(boolean on, Organization organization, ConversationThread thread) {
+        if (live == null || organization == null || thread == null) return;
+        if (on) typingIn.set(new UUID[] { organization.getId(), thread.getId() });
+        try {
+            live.publish(organization.getId(), "ai-typing",
+                    java.util.Map.of("threadId", thread.getId().toString(), "typing", on));
+        } catch (RuntimeException e) {
+            log.debug("Could not announce typing: {}", e.getMessage());
+        }
+    }
+
+    private void typing(boolean on) {
+        UUID[] where = typingIn.get();
+        if (where == null) return;
+        typingIn.remove();
+        try {
+            live.publish(where[0], "ai-typing", java.util.Map.of("threadId", where[1].toString(), "typing", on));
+        } catch (RuntimeException e) {
+            log.debug("Could not announce typing stopped: {}", e.getMessage());
         }
     }
 
@@ -315,6 +348,9 @@ public class AiReplyService {
         // People send a question in two or three goes, and a reply that only addresses the last
         // one leaves the earlier ones answered by nobody — "list products" sat unanswered
         // forever because a second question arrived before the first was picked up.
+        // Every gate is passed: an answer is being written from here on.
+        typing(true, organization, thread);
+
         String ownQuestion = question;
         question = outstanding(thread, message, question);
         trace.here(TraceRecorder.Kind.ACTION, "Gather unanswered messages",

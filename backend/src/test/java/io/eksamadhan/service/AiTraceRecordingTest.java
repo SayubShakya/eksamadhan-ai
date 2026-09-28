@@ -50,6 +50,7 @@ class AiTraceRecordingTest {
     @MockitoBean AgentNotificationService agentNotifications;
     @MockitoBean EmailService emailService;
     @MockitoBean ConversationSummaryService summaryService;
+    @MockitoBean LiveEvents liveEvents;
 
     private SocialPage page;
 
@@ -137,6 +138,32 @@ class AiTraceRecordingTest {
         // One model call and one message to Meta for two copies.
         org.mockito.Mockito.verify(llmClient, org.mockito.Mockito.times(1)).complete(anyString(), anyString());
         org.mockito.Mockito.verify(metaService, org.mockito.Mockito.times(1)).sendMessage(anyString(), anyString(), any(), any());
+    }
+
+    @Test
+    void typingIsAnnouncedWhileTheAnswerIsWrittenAndEndedAfter() {
+        when(llmClient.complete(anyString(), anyString())).thenReturn(
+                "{\"related\": true, \"answered\": true, \"confidence\": 0.9, \"reply\": \"Open 9 to 6.\"}");
+        UUID id = customerAsks("When are you open?");
+        String threadId = messages.findWithThreadById(id).orElseThrow().getThread().getId().toString();
+
+        aiReplyService.reply(id, page.getId());
+
+        org.mockito.InOrder order = org.mockito.Mockito.inOrder(liveEvents);
+        order.verify(liveEvents).publish(any(), eq("ai-typing"), eq(Map.of("threadId", threadId, "typing", true)));
+        order.verify(liveEvents).publish(any(), eq("ai-typing"), eq(Map.of("threadId", threadId, "typing", false)));
+    }
+
+    @Test
+    void noTypingWhenAPersonOwnsTheConversation() {
+        UUID id = customerAsks("Any update?");
+        ConversationThread thread = messages.findWithThreadById(id).orElseThrow().getThread();
+        thread.setStatus(ThreadStatus.AGENT_HANDLING);
+        threads.saveAndFlush(thread);
+
+        aiReplyService.reply(id, page.getId());
+
+        verify(liveEvents, never()).publish(any(), eq("ai-typing"), any());
     }
 
     private List<String> titles(UUID messageId) {

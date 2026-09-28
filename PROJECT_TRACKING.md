@@ -670,6 +670,8 @@ Submitted Thursday 2026-10-01.
       all); ER, class, use case and sequence diagrams and the Visual Paradigm set updated
 - [x] 404 page redesigned to the chosen reference: warning icon, large 404, "Not Found", one
       "Go back home" button
+- [x] "AI is typing" in the inbox while the AI is actually writing a reply (announced by the
+      server when the reply starts and ends); 2 new tests (116 in all); sequence diagram updated
 
 **Commits this week**
 

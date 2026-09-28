@@ -64,6 +64,9 @@ class AvailabilityTest {
     /** Everyone in the workspace offline, then the given people online with their choice. */
     private Organization workspaceWith(List<User> members, Availability... online) {
         OffsetDateTime now = OffsetDateTime.now();
+        // These tests are about the choice and being online, so everyone is inside their hours
+        // (whatever the real people have set), unless a test narrows them afterwards.
+        for (User u : members) users.setWorkingHours(u.getId(), ALL_WEEK, "Asia/Kathmandu");
         for (User u : members) users.setAvailability(u.getId(), Availability.AVAILABLE, now.minusHours(1));
         for (int i = 0; i < online.length; i++) users.setAvailability(members.get(i).getId(), online[i], now);
         entityManager.flush();
@@ -92,15 +95,17 @@ class AvailabilityTest {
     @Test
     void routingSkipsSomeoneOutsideTheirWorkingHours() {
         List<User> members = activeMembers(2);
-        for (User u : members) users.setWorkingHours(u.getId(), ALL_WEEK, "Asia/Kathmandu");
         // Both Available and online; the first one's only window ended an hour ago.
         java.time.ZonedDateTime local = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Kathmandu"));
         int m = local.getHour() * 60 + local.getMinute();
         int d = local.getDayOfWeek().getValue() % 7;
         WorkingHours.Window past = m >= 61 ? new WorkingHours.Window(d, Math.max(0, m - 90), m - 60)
                 : new WorkingHours.Window((d + 3) % 7, 540, 1080);
+        workspaceWith(members, Availability.AVAILABLE, Availability.AVAILABLE);
         users.setWorkingHours(members.get(0).getId(), WorkingHours.write(List.of(past)), "Asia/Kathmandu");
-        Organization org = workspaceWith(members, Availability.AVAILABLE, Availability.AVAILABLE);
+        entityManager.flush();
+        entityManager.clear();
+        Organization org = users.findById(members.get(0).getId()).orElseThrow().getOrganization();
         for (int i = 0; i < 10; i++) {
             assertEquals(members.get(1).getId(), routing.pickAgent(org).orElseThrow().getId());
         }

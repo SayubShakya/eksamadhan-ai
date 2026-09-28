@@ -224,7 +224,7 @@ export default function InboxPage({
     active, onSelect, onSend, onSendVoice, onSendImage, onReact, onHideMessage, onThreadAction,
     onConnect, search, onSearchChange, sendError, onDismissError, me, team = [], onAssign,
     platform: platformFilter = 'all', onPlatformChange,
-    onSummarise, summarising, onPin,
+    onSummarise, summarising, onPin, aiTyping = {},
 }) {
     const [copiedId, setCopiedId] = useState(false);
     const [draft, setDraft] = useState('');
@@ -511,7 +511,10 @@ export default function InboxPage({
                                         messaging apps put it — in the footer it competed with the
                                         state pill for space and ended up alone on a line. */}
                                     <div className="conv__mid">
-                                        <div className="conv__preview">{previewOf(t.last)}</div>
+                                        <div className="conv__preview">
+                                            {aiTyping[t.id] && t.status === 'AI_HANDLING'
+                                                ? <span className="conv__typing">AI is typing…</span> : previewOf(t.last)}
+                                        </div>
                                         {t.unanswered > 0 && t.status !== 'RESOLVED' && !t.spam && (
                                             <span
                                                 className="unread-count"
@@ -827,6 +830,13 @@ export default function InboxPage({
                         </div>
 
                         <div className="composer">
+                            {aiTyping[activeThread.id] && activeThread.status === 'AI_HANDLING' ? (
+                            <div className="composer__status composer__status--typing" role="status" aria-live="polite">
+                                <span className="dot dot--online dot--pulse" aria-hidden="true" />
+                                <span className="composer__owner">AI is typing</span>
+                                <span className="typing-dots" aria-hidden="true"><i /><i /><i /></span>
+                            </div>
+                            ) : (
                             <div className="composer__status">
                                 <span className={`dot ${activeThread.spam || activeThread.status === 'RESOLVED' ? 'dot--offline' : activeThread.status === 'OPEN_FOR_AGENT' ? 'dot--busy' : 'dot--online'}`} />
                                 {/* Bolder when it is yours: an agent scanning the inbox needs
@@ -838,6 +848,7 @@ export default function InboxPage({
                                 </span>
 
                             </div>
+                            )}
 
                             {sendError && (
                                 <div className="composer__error" role="alert">

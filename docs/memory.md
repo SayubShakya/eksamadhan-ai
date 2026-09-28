@@ -607,6 +607,15 @@ status machine and authentication have all since been built — see the change l
   "Saved" is absolutely positioned (pointer-events none, role status). Chrome reports
   Asia/Katmandu; zones with the same offsets all year count as the same. Tests:
   WorkingHoursTest (6) and a routing test (114 in all).
+- **"AI is typing" (2026-09-28, Sayub).** A real signal, not a guess from timestamps:
+  `AiReplyService` publishes the live event `ai-typing` {threadId, typing:true} once every gate
+  has passed (not a person's, not spam, not a repeat, AI on) and {typing:false} in reply()'s
+  finally, whatever the outcome. The inbox status bar then reads "AI is typing" with three dots
+  rising in turn (still under reduced motion), and the list preview says "AI is typing…". The
+  end is held 1.6s so the reply appears before the line changes back; a start never heard to
+  end clears after 90s; a repeated "stopped" does not extend the fade. Tests: typing on then off
+  in order, and never for a conversation a person owns. AvailabilityTest now gives its members
+  all-week hours, since real people's hours made it depend on the time of day.
 - **404 restyled (2026-09-28, Sayub's reference):** amber warning circle, large 404, "Not Found", one
   "Go back home" button; the path line and "Go back" were dropped.
 - **404 and offline pages (2026-09-26).** One `StatusPage` layout for both. An unknown top-level
