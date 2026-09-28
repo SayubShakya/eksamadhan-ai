@@ -98,6 +98,8 @@ public class AiReplyService {
 
     private static final int OUTSTANDING_SCAN = 10;
     private static final int OUTSTANDING_LIMIT = 4;
+    /** How far back to look for an earlier copy of the same message. */
+    private static final int REPEAT_SCAN = 40;
 
     private final EmailService emailService;
     private final AgentNotificationService agentNotifications;
@@ -243,6 +245,34 @@ public class AiReplyService {
         SocialPage page = pageRepository.findWithOrganizationById(pageId).orElse(null);
         if (page == null) return;
         Organization organization = page.getOrganization();
+
+        // The same message again: sent twice, resent while the reply was on its way, or "hi"
+        // a second time. One answer covers every copy; see RepeatDetector for the rules.
+        RepeatDetector.Result repeat = RepeatDetector.check(message,
+                messageRepository.findRecent(thread, org.springframework.data.domain.PageRequest.of(0, REPEAT_SCAN)));
+        trace.here(TraceRecorder.Kind.DECISION, "Same as a message just sent?",
+                switch (repeat.outcome()) {
+                    case NONE -> "no";
+                    case IN_FLIGHT -> "yes, the first copy is being answered";
+                    case ANSWERED -> "yes, and it was already answered";
+                    case KEEPS_REPEATING -> "yes, again after the answer";
+                },
+                TraceRecorder.of("message", message.getText() == null ? "" : message.getText(),
+                        "copies in the last 30 minutes", repeat.copies()),
+                TraceRecorder.of("AI may reply", repeat.outcome() == RepeatDetector.Outcome.NONE));
+        if (repeat.skip()) {
+            // Not waiting for anything: the reply to the first copy answers this one.
+            threadRepository.forgetOneWaiting(thread.getId());
+            trace.here(TraceRecorder.Kind.END, "No second answer", "the first copy's reply covers it",
+                    null, TraceRecorder.of("counted as waiting", false));
+            return;
+        }
+        if (repeat.outcome() == RepeatDetector.Outcome.KEEPS_REPEATING) {
+            escalate(thread, page, message.getSenderId(),
+                    "The customer has sent the same message " + repeat.copies()
+                            + " times, so the AI's answer did not help");
+            return;
+        }
 
         // A message with no words still says something. An image becomes a sentence so the
         // rest of the pipeline can treat it as a question; anything we cannot read goes to a
@@ -468,7 +498,12 @@ public class AiReplyService {
                 // the next real question would hand it to the model.
                 if (triageService.ignoreAsSpam(m.getId(), thread)) continue;
                 String text = m.getText() == null ? m.getContent() : m.getText();
-                if (text != null && !text.isBlank()) earlier.add(text.strip());
+                // A copy of something already gathered adds nothing but length.
+                if (text != null && !text.isBlank() && earlier.stream().noneMatch(e ->
+                        RepeatDetector.normalise(e).equals(RepeatDetector.normalise(text)))
+                        && !RepeatDetector.normalise(text).equals(RepeatDetector.normalise(question))) {
+                    earlier.add(text.strip());
+                }
                 if (earlier.size() >= OUTSTANDING_LIMIT) break;
             }
             if (earlier.isEmpty()) return question;

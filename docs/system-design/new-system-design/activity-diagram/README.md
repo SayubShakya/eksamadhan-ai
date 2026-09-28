@@ -25,7 +25,10 @@ flowchart TD
     owned -->|yes| quiet(["AI stays silent —<br/>the agent owns it"])
     owned -->|no| spamGate{"Conversation, or<br/>this message, spam?"}
     spamGate -->|yes| quietSpam(["AI stays silent, nobody alerted —<br/>it waits in the Spam tab"])
-    spamGate -->|no| sticker{"Only a sticker<br/>or a like?"}
+    spamGate -->|no| repeat{"Same as a message sent<br/>in the last 30 minutes?"}
+    repeat -->|"yes, not answered yet,<br/>or once since the answer"| quietRepeat(["No second answer:<br/>the first copy's reply covers it"])
+    repeat -->|"yes, a third time<br/>after the answer"| escRepeat(["Escalate: the answer<br/>did not help"])
+    repeat -->|no| sticker{"Only a sticker<br/>or a like?"}
     sticker -->|yes| quietSticker(["Nothing to answer —<br/>not counted as waiting"])
     sticker -->|no| aiOn{"AI replies switched on<br/>for this workspace,<br/>and a model configured?"}
     aiOn -->|no| escOff(["Escalate to an available person,<br/>with the workspace's handover words"])
@@ -136,6 +139,13 @@ version was beaten in testing. A genuine request brings a flagged conversation b
 a person says "not spam" none of this applies to it again. Spam
 gets no reply and no alert, because answering tells a bot the page is live and escalating puts
 it in front of a person.
+
+**One answer per repeated message.** Customers tap send twice, resend while the reply is on its
+way, or say "hi" again. A message identical to one from the last 30 minutes (ignoring case,
+punctuation, emoji and stretched letters, so "Hi!!" and "hiii" match "hi") gets no answer of its
+own when the first copy has not been answered yet, or has been answered once already: the one
+reply covers every copy, and the copy is not counted as waiting. A third copy after the answer
+means the answer did not help, so it goes to a person (`RepeatDetector`).
 
 **A sticker asks nothing.** A Messenger "like" is a sticker: it is shown, not answered, and it
 does not count the conversation as waiting for a reply.

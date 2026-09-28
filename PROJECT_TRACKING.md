@@ -661,6 +661,9 @@ Submitted Thursday 2026-10-01.
       with a PNG per diagram; rebuilt from the Mermaid sources by `tools/rebuild.sh`
 - [x] Visual Paradigm diagrams re-laid out: larger text, named system boundaries, right-angled
       lines routed around shapes instead of through them (new `tools/layout.py`)
+- [x] The same message sent again (double send, resend while waiting, "hi" twice) gets one
+      answer, not one per copy; a third copy after the answer goes to a person. 8 new tests
+      (107 in all); activity, sequence and class diagrams and the Visual Paradigm set updated
 
 **Commits this week**
 

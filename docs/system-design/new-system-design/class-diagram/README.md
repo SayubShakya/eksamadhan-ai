@@ -341,6 +341,12 @@ classDiagram
         +backfillAsync(tenantId)
     }
 
+    class RepeatDetector {
+        +WINDOW$ Duration
+        +check(trigger, recent)$ Result
+        +normalise(text)$ String
+    }
+
     class PinnedConversationRepository {
         +threadIdsFor(userId) Set~UUID~
         +pin(userId, threadId)
@@ -532,6 +538,7 @@ classDiagram
     AiReplyService --> LlmClient
     AiReplyService --> ConversationMemoryService
     AiReplyService --> ThreadService
+    AiReplyService --> RepeatDetector : one answer per repeated message
     AccountLifecycleService --> PinnedConversationRepository : removes their pins
     AiReplyService --> AgentRoutingService
     AgentRoutingService ..> AvailabilityService : only available and online

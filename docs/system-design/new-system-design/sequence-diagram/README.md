@@ -53,6 +53,8 @@ sequenceDiagram
 
     alt conversation is spam
         Note over AI: No reply, no handover, no alert.<br/>It waits in the Spam tab until a person says otherwise.
+    else the same message again, within 30 minutes
+        Note over AI: One answer covers every copy. A third copy after the answer goes to a person.
     else AI replies switched off (Settings), or no model configured
         Note over AI: Handed to a person at once: escalate, assign an available<br/>staff member, send the workspace's handover words. Never silent.
     else firewall on, and sure

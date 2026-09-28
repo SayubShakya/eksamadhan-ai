@@ -95,6 +95,50 @@ class AiTraceRecordingTest {
         return message.getId();
     }
 
+    /** Another message from the same customer, in the conversation `earlier` belongs to. */
+    private UUID customerAsksAgain(UUID earlier, String text) {
+        SocialMessage first = messages.findWithThreadById(earlier).orElseThrow();
+        SocialMessage message = messages.saveAndFlush(SocialMessage.builder()
+                .thread(first.getThread())
+                .socialPage(page)
+                .tenantId(page.getOrganization().getApiKey())
+                .pageId(page.getPageId())
+                .senderId("trace-test-customer")
+                .senderName("Trace Test")
+                .recipientId(page.getPageId())
+                .text(text)
+                .content(text)
+                .direction("inbound")
+                .platform("facebook")
+                .metaMessageId("m_trace_in_" + UUID.randomUUID())
+                .timestamp(first.getTimestamp().plusSeconds(5))
+                .build());
+        return message.getId();
+    }
+
+    @Test
+    void aSecondCopySentWhileTheFirstIsAnsweredGetsNoAnswerOfItsOwn() {
+        when(llmClient.complete(anyString(), anyString())).thenReturn(
+                "{\"related\": true, \"answered\": true, \"confidence\": 0.9, \"reply\": \"Delivery is NPR 150.\"}");
+        UUID first = customerAsks("Delivery charge kati ho?");
+        UUID second = customerAsksAgain(first, "Delivery charge kati ho??");
+
+        // The copy is picked up first, as it can be when both arrive together.
+        aiReplyService.reply(second, page.getId());
+        aiReplyService.reply(first, page.getId());
+
+        assertEquals(List.of(
+                "Customer message received",
+                "Is a person already handling it?",
+                "Marked as spam?",
+                "Same as a message just sent?",
+                "No second answer"), titles(second));
+        assertTrue(titles(first).contains("Reply sent to the customer"), "the first copy is answered");
+        // One model call and one message to Meta for two copies.
+        org.mockito.Mockito.verify(llmClient, org.mockito.Mockito.times(1)).complete(anyString(), anyString());
+        org.mockito.Mockito.verify(metaService, org.mockito.Mockito.times(1)).sendMessage(anyString(), anyString(), any(), any());
+    }
+
     private List<String> titles(UUID messageId) {
         return traces.findBySocialMessageIdOrderBySeqAsc(messageId).stream().map(AiTraceStep::getTitle).toList();
     }
@@ -111,6 +155,7 @@ class AiTraceRecordingTest {
                 "Customer message received",
                 "Is a person already handling it?",
                 "Marked as spam?",
+                "Same as a message just sent?",
                 "Are AI replies switched on?",
                 "Gather unanswered messages",
                 "Knowledge search",
@@ -181,9 +226,15 @@ class AiTraceRecordingTest {
         assumeFalse(members.isEmpty(), "needs a member to hand to");
         java.time.OffsetDateTime now = java.time.OffsetDateTime.now();
         // Only this one person is available and online, so routing must pick them.
-        for (User u : members) users.setAvailability(u.getId(), Availability.AVAILABLE, now.minusHours(1));
+        // Everyone else last seen an hour ago, so a colleague signed in to the running app at
+        // the time does not count as online and take the conversation instead.
+        for (User u : members) {
+            users.setAvailability(u.getId(), Availability.AVAILABLE, now.minusHours(1));
+            users.touchLastSeen(u.getId(), now.minusHours(1));
+        }
         User quiet = members.get(0);
         users.setAvailability(quiet.getId(), Availability.AVAILABLE, now);
+        users.touchLastSeen(quiet.getId(), now);
         User fresh = users.findById(quiet.getId()).orElseThrow();
         fresh.setEmailAlerts(false);
         users.saveAndFlush(fresh);

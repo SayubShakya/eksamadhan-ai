@@ -577,6 +577,19 @@ status machine and authentication have all since been built — see the change l
   layout/router was tried and rejected: from the command line it ran lines through classes.
   Gotchas: connectors given points must be created before openDiagram or they are not drawn;
   ExportDiagramImage writes `name2.png` instead of overwriting, so rebuild.sh clears the folder.
+- **One answer per repeated message (2026-09-28, Sayub: four "Delivery charge kati ho?" got four
+  replies).** `RepeatDetector` (pure, unit-tested) runs in `AiReplyService` after the spam gate:
+  a message identical to one from the last 30 minutes, after normalising (case, punctuation,
+  emoji, stretched letters; Devanagari kept), gets no reply of its own if the first copy is not
+  answered yet (IN_FLIGHT: the copies arrived together and are processed in parallel) or was
+  answered once (ANSWERED); either way `forgetOneWaiting`, so it is not counted as waiting. A
+  third copy after the answer (KEEPS_REPEATING) escalates: the answer did not help, and the
+  never-lose-a-client rule wins over staying quiet. Same-instant copies are ordered by id so
+  exactly one proceeds. `outstanding()` also drops duplicates when folding earlier messages.
+  New trace step "Same as a message just sent?". Tests: RepeatDetectorTest (7), and a pipeline
+  test proving one model call and one Meta send for two copies. Also fixed
+  `emailAlertsOffMeansAPushButNoEmail`, which failed whenever a colleague was signed in to the
+  running app (it now sets everyone's last seen, not only their availability).
 - **404 and offline pages (2026-09-26).** One `StatusPage` layout for both. An unknown top-level
   address shows a full-page 404 (brand, the path, "Go to Home" or "Go to sign in", "Go back",
   Privacy and Terms), decided before the session check so it never flashes the dashboard; an
