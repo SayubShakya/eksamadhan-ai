@@ -23,7 +23,7 @@ Weekly log due: **every Thursday** (next: Thursday 2026-10-01, week 3)
 | 1b | `kcpawan@gmail.com` added as collaborator | 🔄 invited 2026-09-15 — awaiting acceptance |
 | 2 | All work committed to the repo | 🔄 ongoing |
 | 3 | Project environment setup, reflected in repo | ✅ done — 2026-09-16, verified running |
-| 4 | Weekly log submitted every Thursday | 🔄 week 1 written — `docs/weekly-reports/` |
+| 4 | Weekly log submitted every Thursday | 🔄 weeks 1 to 3 written — `docs/weekly-reports/` |
 | 5 | Log entries match actual commits | ✅ week 1 lists all 29 commits |
 | 7 | Final report document in repo, tracked there | 🔄 outline in `docs/FINAL_REPORT.md` |
 
@@ -714,6 +714,7 @@ Submitted Thursday 2026-10-01.
 - [x] The 404 is always a full page, also for an unknown address inside the dashboard
 - [x] Show/hide button on the three password fields in Settings, the same as sign-in
       (shared `PasswordInput`)
+- [x] Week 3 progress report written: `docs/weekly-reports/week-03/`
 
 **Commits this week**
 

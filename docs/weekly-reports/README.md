@@ -6,6 +6,7 @@ One folder per week, submitted to the supervisor every Thursday.
 | :--- | :--- | :--- |
 | 1 | 15–16 Sep 2026 | [`week-01/`](week-01/) |
 | 2 | 17–24 Sep 2026 | [`week-02/`](week-02/) |
+| 3 | 25 Sep – 1 Oct 2026 | [`week-03/`](week-03/) |
 
 Each folder holds:
 
