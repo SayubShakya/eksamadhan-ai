@@ -1,0 +1,11 @@
+# Only the public pages are for search engines: sign-in, sign-up and the legal pages.
+# The dashboard, invite links and the API are private (they also say noindex themselves).
+User-agent: *
+Allow: /$
+Allow: /login
+Allow: /signup
+Allow: /privacy
+Allow: /terms
+Disallow: /dashboard
+Disallow: /invite/
+Disallow: /api/

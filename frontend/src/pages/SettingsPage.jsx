@@ -5,6 +5,7 @@ import { useHeldLoading, useResource } from '../lib/loading.js';
 import useDeviceAlerts from '../lib/useDeviceAlerts.js';
 import { IconBell, IconLock, IconSettings, IconSparkle, IconTrash, IconUser } from '../components/icons.jsx';
 import DataPrivacyCard from '../components/DataPrivacyCard.jsx';
+import PasswordInput from '../components/PasswordInput.jsx';
 
 /**
  * Settings: only what the system acts on.
@@ -329,15 +330,15 @@ function SecurityCard({ settings, email }) {
                                    label="Change password" savedLabel="Password changed." />}>
                 {signedIn}
                 <Row title="Current password" htmlFor="set-pw-current">
-                    <input id="set-pw-current" className="setting__input" type="password" autoComplete="current-password"
+                    <PasswordInput id="set-pw-current" className="setting__input" autoComplete="current-password"
                            value={form.current} onChange={set('current')} required />
                 </Row>
                 <Row title="New password" htmlFor="set-pw-new" hint="At least 8 characters.">
-                    <input id="set-pw-new" className="setting__input" type="password" autoComplete="new-password"
+                    <PasswordInput id="set-pw-new" className="setting__input" autoComplete="new-password"
                            minLength={8} value={form.next} onChange={set('next')} required />
                 </Row>
                 <Row title="New password again" htmlFor="set-pw-again">
-                    <input id="set-pw-again" className="setting__input" type="password" autoComplete="new-password"
+                    <PasswordInput id="set-pw-again" className="setting__input" autoComplete="new-password"
                            minLength={8} value={form.again} onChange={set('again')} required />
                 </Row>
             </Card>

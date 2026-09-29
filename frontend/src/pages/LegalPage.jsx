@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { LogoMark } from '../components/Logo.jsx';
 
 /**
@@ -216,10 +215,6 @@ function Terms() {
 }
 
 export default function LegalPage({ page }) {
-    useEffect(() => {
-        document.title = `${page === 'privacy' ? 'Privacy Policy' : 'Terms & Conditions'} | EkSamadhan AI`;
-    }, [page]);
-
     return (
         <div className="legal">
             <header className="legal__head">

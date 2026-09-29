@@ -16,7 +16,7 @@
 const DEV = new URL(self.location.href).searchParams.has('dev');
 
 // Bump on a release that changes caching; activate deletes every other eksamadhan- cache.
-const VERSION = 'v11';
+const VERSION = 'v12';
 const CACHE = `eksamadhan-${VERSION}`;
 const SHELL = '/';                    // the app's HTML, refreshed on every online navigation
 const OFFLINE = '/offline.html';      // self-contained: for a device that has never been online here

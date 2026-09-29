@@ -705,6 +705,15 @@ Submitted Thursday 2026-10-01.
       fixed for the new path
 - [x] A Visual Paradigm project (`.vpp`) of its own in each supervisor-view folder, not only
       PNG exports
+- [x] Site polish: a title and description per screen, noindex on private screens,
+      robots.txt, one h1 per screen, share image and tags, pages loaded on demand (first
+      load 449 kB to 314 kB), no source maps, no console errors on 18 routes
+- [x] Launch checklist pass: colleagues' emails on the Team page are clickable; checked at
+      360px that no screen scrolls sideways, every list has an empty state, every public link
+      and file loads, images are small (largest 40 kB)
+- [x] The 404 is always a full page, also for an unknown address inside the dashboard
+- [x] Show/hide button on the three password fields in Settings, the same as sign-in
+      (shared `PasswordInput`)
 
 **Commits this week**
 

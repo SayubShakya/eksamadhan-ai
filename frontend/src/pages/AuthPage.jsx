@@ -121,7 +121,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
 
     const title = mode === 'login' ? 'Welcome back'
         : mode === 'signup' ? 'Create your workspace'
-        : invite ? `Join ${invite.organizationName}` : 'Join the team';
+        : invite?.organizationName ? `Join ${invite.organizationName}` : 'Join the team';
 
     const subtitle = mode === 'login' ? 'Sign in to your support inbox.'
         : mode === 'signup' ? 'One inbox for your Facebook and Instagram messages.'

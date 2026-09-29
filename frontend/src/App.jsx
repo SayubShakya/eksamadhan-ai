@@ -1,19 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import NavRail from './components/NavRail.jsx';
 import TopBar from './components/TopBar.jsx';
-import HomePage from './pages/HomePage.jsx';
-import InboxPage from './pages/InboxPage.jsx';
-import ChannelsPage from './pages/ChannelsPage.jsx';
-import HoursPage from './pages/HoursPage.jsx';
-import NotificationsPage from './pages/NotificationsPage.jsx';
-import SettingsPage from './pages/SettingsPage.jsx';
-import DeleteAccountPage from './pages/DeleteAccountPage.jsx';
-import TeamPage from './pages/TeamPage.jsx';
-import KnowledgePage from './pages/KnowledgePage.jsx';
-import AnalyticsPage from './pages/AnalyticsPage.jsx';
 import AuthPage from './pages/AuthPage.jsx';
-import LegalPage from './pages/LegalPage.jsx';
-import SystemConsole from './pages/SystemConsole.jsx';
+import { lazyPage, prefetchPages } from './lib/pages.js';
+import { setPageMeta, PUBLIC_META, VIEW_TITLES } from './lib/pageMeta.js';
 import ProfilePanel from './components/ProfilePanel.jsx';
 import ConfirmDialog from './components/ConfirmDialog.jsx';
 import NotificationPrompt from './components/NotificationPrompt.jsx';
@@ -24,7 +14,7 @@ import InstallProblem from './components/InstallProblem.jsx';
 import { LogoMark } from './components/Logo.jsx';
 import StatusPage, { IconCloudOff } from './components/StatusPage.jsx';
 import { IconHome, IconWarning } from './components/icons.jsx';
-import { Spinner } from './components/Loading.jsx';
+import { CenteredSpinner, Spinner } from './components/Loading.jsx';
 import * as api from './lib/api.js';
 import { mergeThreads } from './lib/format.js';
 import { clearResources, prefetch } from './lib/loading.js';
@@ -32,6 +22,21 @@ import { connectLive } from './lib/live.js';
 import useBackToClose from './lib/useBackToClose.js';
 import './styles/tokens.css';
 import './styles/app.css';
+
+// Each page is its own file, fetched the first time it is opened, so signing in does not
+// download the inbox, the analytics and the system console first (see lib/pages.js).
+const HomePage = lazyPage('home');
+const InboxPage = lazyPage('inbox');
+const ChannelsPage = lazyPage('channels');
+const HoursPage = lazyPage('hours');
+const NotificationsPage = lazyPage('notifications');
+const SettingsPage = lazyPage('settings');
+const DeleteAccountPage = lazyPage('delete-account');
+const TeamPage = lazyPage('team');
+const KnowledgePage = lazyPage('knowledge');
+const AnalyticsPage = lazyPage('analytics');
+const LegalPage = lazyPage('legal');
+const SystemConsole = lazyPage('system');
 
 const VIEWS = ['home', 'inbox', 'knowledge', 'channels', 'team', 'hours', 'analytics', 'settings', 'notifications', 'delete-account'];
 const BASE = '/dashboard';
@@ -74,21 +79,20 @@ function legalFromPath() {
 }
 
 /**
- * "Page not found". Full-page for any address the app does not know; inside the dashboard, with
- * the menu still there, for an unknown /dashboard/... screen.
+ * "Page not found", always the full page: an unknown /dashboard/... screen too, not inside the
+ * dashboard with its menu (Sayub, 2026-09-29: a 404 is a page of its own).
  */
-function NotFound({ inShell = false, signedIn = false, onHome }) {
+function NotFound({ signedIn = false, onHome }) {
     const home = () => (onHome ? onHome() : window.location.assign(signedIn ? BASE : '/login'));
     return (
         <StatusPage
-            inShell={inShell}
             tone="warning"
             icon={<IconWarning size={34} />}
             code="404"
             title="Not Found"
             actions={(
                 <button className="btn btn--primary status__home" onClick={home}>
-                    <IconHome size={16} /> {inShell || signedIn ? 'Go back home' : 'Go to sign in'}
+                    <IconHome size={16} /> {signedIn ? 'Go back home' : 'Go to sign in'}
                 </button>
             )}
         >
@@ -777,8 +781,29 @@ export default function App() {
         window.history.pushState({}, '', '/login');
     }, []);
 
+    // The tab title, description and robots tag for what is on screen (lib/pageMeta.js).
+    useEffect(() => {
+        if (legal) { setPageMeta(PUBLIC_META[legal]); return; }
+        if (!knownPath) { setPageMeta({ title: 'Page not found' }); return; }
+        if (session === undefined) { if (unreachable) setPageMeta({ title: 'Offline' }); return; }
+        if (!session) {
+            // A /dashboard address signed out shows sign-in too, but it is not the sign-in page:
+            // only /login itself (and the site root) may be listed.
+            const meta = PUBLIC_META[(authRoute ?? { mode: 'login' }).mode] || PUBLIC_META.login;
+            setPageMeta(window.location.pathname.startsWith(BASE) ? { ...meta, index: false } : meta);
+            return;
+        }
+        if (session.user?.systemAdmin) { setPageMeta({ title: 'System console' }); return; }
+        setPageMeta({ title: VIEW_TITLES[view] || 'Home' });
+    }, [legal, knownPath, session, unreachable, authRoute, view]);
+
+    // Signed in: fetch the other pages' files while the browser is idle (lib/pages.js).
+    useEffect(() => {
+        if (session && !session.user?.systemAdmin) prefetchPages();
+    }, [session]);
+
     // Legal pages first: they are for anyone, and must not wait on the session check.
-    if (legal) return <LegalPage page={legal} />;
+    if (legal) return <Suspense fallback={null}><LegalPage page={legal} /></Suspense>;
     if (!knownPath) return <NotFound signedIn={Boolean(api.getToken())} />;
 
     // Still asking the server. Rendering nothing beats flashing the sign-in screen at
@@ -823,11 +848,16 @@ export default function App() {
     if (session.user?.systemAdmin) {
         return (
             <>
-                <SystemConsole user={session.user} onSignOut={requestSignOut} />
+                <Suspense fallback={<CenteredSpinner label="Loading" />}>
+                    <SystemConsole user={session.user} onSignOut={requestSignOut} />
+                </Suspense>
                 {signOutDialog}
             </>
         );
     }
+
+    // An unknown /dashboard/... address: the full-page 404, without the menu around it.
+    if (view === 'not-found') return <NotFound signedIn onHome={() => setView('home')} />;
 
     return (
         <div className="shell">
@@ -869,6 +899,7 @@ export default function App() {
                     view={view}
                 />
 
+                <Suspense fallback={<CenteredSpinner label="Loading" />}>
                 {view === 'home' && (
                     <HomePage
                         user={user}
@@ -947,7 +978,6 @@ export default function App() {
                     />
                 )}
 
-                {view === 'not-found' && <NotFound inShell onHome={() => setView('home')} />}
 
                 {view === 'hours' && <HoursPage onStatus={setMyHours} />}
                 {view === 'channels' && (
@@ -958,6 +988,7 @@ export default function App() {
                         onChanged={() => { refreshStatus(); refreshThreads(); refreshMessages(); }}
                     />
                 )}
+                </Suspense>
             </div>
 
             <ConfirmDialog

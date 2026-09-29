@@ -430,6 +430,7 @@ export default function InboxPage({
     if (pending || failed) {
         return (
             <div className="inbox">
+                <h1 className="sr-only">Inbox</h1>
                 <aside className="convlist" aria-label="Conversations">
                     {listHead}
                     {failed ? (
@@ -465,6 +466,7 @@ export default function InboxPage({
     if (nothingAtAll) {
         return (
             <div className="inbox">
+                <h1 className="sr-only">Inbox</h1>
                 <div className="convlist">
                     <div className="convlist__head">
                         <div className="convlist__title"><h2>Conversations</h2></div>
@@ -495,6 +497,8 @@ export default function InboxPage({
 
     return (
         <div className={`inbox ${activeThread ? 'inbox--has-active' : ''}`}>
+            {/* The page's one heading, for screen readers and search: the layout has no room for a visible title. */}
+            <h1 className="sr-only">Inbox</h1>
             <aside className="convlist" aria-label="Conversations">
                 {listHead}
 

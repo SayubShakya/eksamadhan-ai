@@ -51,6 +51,7 @@ export default function SystemConsole({ user, onSignOut }) {
                         </span>
                     </div>
                 </header>
+                <h1 className="sr-only">System console</h1>
                 <ConversationVisualizer />
             </div>
         </div>

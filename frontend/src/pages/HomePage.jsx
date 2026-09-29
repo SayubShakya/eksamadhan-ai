@@ -234,7 +234,7 @@ export default function HomePage({
                             ) : (<>
                             <span className={`pill ${connected ? 'pill--positive' : comingSoon ? 'pill--neutral' : 'pill--idle'}`}>
                                 {connected ? `Connected · ${live.map(p => p.pageName).join(', ')}`
-                                    : comingSoon ? 'Coming soon' : 'Not connected'}
+                                    : comingSoon ? 'Planned' : 'Not connected'}
                             </span>
 
                             {/* Short, parallel labels. No button at all where there is nothing to

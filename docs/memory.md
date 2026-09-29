@@ -657,6 +657,27 @@ status machine and authentication have all since been built — see the change l
   Safari steps on an iPhone), shown only when the browser can install now, same `usePwa` rule as
   the top bar and profile. The service worker already registers on every page, so Chrome offers
   the install before anyone signs in.
+- **Site polish pass (2026-09-29, Sayub's checklist, "only what our project needs").** Done:
+  per-screen titles, descriptions and robots tags (`lib/pageMeta.js`, public pages index, the
+  rest noindex, including a signed-out /dashboard address); one h1 per screen (sr-only on the
+  inbox and system console); `public/robots.txt`; Open Graph and Twitter tags with
+  `public/social-card.png`; "Coming soon" on the website-chat card is now "Planned"; pages
+  split into their own files (`lib/pages.js`, React.lazy): first load 449 kB to 314 kB (139 to
+  102 kB gzip), the rest prefetched after sign-in, and a "could not be loaded" page if a file
+  cannot be fetched; `build.sourcemap: false` stated; service worker v12. Canonical, og:url and
+  sitemap.xml are built only when `VITE_SITE_URL` is set (vite.config.js), because there is no
+  domain yet and a tunnel address must never become the canonical one. Checked: 18 routes, no
+  console errors or warnings, one h1 and a unique title each. Not done, on purpose: custom
+  domain (none bought), llms.txt, breadcrumbs, structured data and LocalBusiness schema (a
+  sign-in-gated SaaS tool, not a local business or a content site; a schema would claim what
+  the app is not). Alt text was already right (avatars beside a name use alt="").
+  Found while testing: Docker had hung, so the backend could not reach the database and
+  every sign-in answered "Something went wrong". Second checklist the same day: only the Team page's
+  colleague emails needed changing (now mailto links); overflow at 360px, empty states, links,
+  image sizes, 404, titles, favicon and messages were already right. There is no phone number
+  anywhere in the app, so no tel: link. The 404 inside the dashboard is now full-page too (no
+  menu), on Sayub's request. Settings' three password fields got the sign-in page's show/hide
+  button (`components/PasswordInput.jsx`, each field toggles on its own).
 - **Supervisor's diagram set (2026-09-29, Sayub; supervisor's reference slides).** Business
   context, functional architecture, one-canvas use case, DFD levels 0/1/2, system architecture
   by zone, in both `docs/system-design/draw.io/` and `docs/system-design/visual-paradigm/` (new

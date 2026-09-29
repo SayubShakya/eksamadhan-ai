@@ -1,9 +1,46 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { appendFileSync, writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+// The public pages, the only ones listed for search engines (see src/lib/pageMeta.js).
+const PUBLIC_PATHS = ['/login', '/signup', '/privacy', '/terms']
+
+/**
+ * Only once the app has a real address (VITE_SITE_URL, e.g. https://eksamadhan.com): the share
+ * image's absolute URL and og:url in index.html, sitemap.xml, and the Sitemap line in
+ * robots.txt. Without it nothing is added, because a development tunnel's address changes on
+ * every restart and must never be written into the site as its home.
+ */
+function siteAddress(siteUrl) {
+    const site = (siteUrl || '').replace(/\/+$/, '')
+    let out = 'dist'
+    return {
+        name: 'eksamadhan-site-address',
+        apply: 'build',
+        configResolved(config) { out = resolve(config.root, config.build.outDir) },
+        transformIndexHtml(html) {
+            if (!site) return html
+            return html
+                .replace('content="/social-card.png"', `content="${site}/social-card.png"`)
+                .replace('<meta property="og:type"', `<meta property="og:url" content="${site}/login" />\n    <meta property="og:type"`)
+        },
+        closeBundle() {
+            if (!site) return
+            const urls = PUBLIC_PATHS.map((p) => `  <url><loc>${site}${p}</loc></url>`).join('\n')
+            writeFileSync(resolve(out, 'sitemap.xml'),
+                `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`)
+            appendFileSync(resolve(out, 'robots.txt'), `\nSitemap: ${site}/sitemap.xml\n`)
+        },
+    }
+}
 
 // https://vitejs.dev/config/
-export default defineConfig({
-    plugins: [react()],
+export default defineConfig(({ mode }) => ({
+    plugins: [react(), siteAddress(loadEnv(mode, process.cwd(), 'VITE_').VITE_SITE_URL)],
+    // No source maps in a production build (Vite's default, stated so it stays that way): they
+    // would publish the app's source to anyone who opens the browser's developer tools.
+    build: { sourcemap: false },
     server: {
         port: 5174,
         strictPort: true, // fail loudly rather than drifting to another port
@@ -27,4 +64,4 @@ export default defineConfig({
             },
         },
     },
-})
+}))

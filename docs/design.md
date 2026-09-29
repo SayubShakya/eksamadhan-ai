@@ -142,9 +142,9 @@ the foot. The iOS launch images match that splash.
 
 A missing page and a lost connection share one layout (`StatusPage`). A 404 follows the error
 reference Sayub chose: a warning icon in a pale amber circle, "404" large and bold, "Not Found"
-under it, one sentence, and one button, "Go back home" with a home icon (blue, `--r-sm`). Inside
-the dashboard it sits in the page with the menu still there; signed out it is a full page and
-the button reads "Go to sign in". The offline screen keeps the blue icon and its spinner.
+under it, one sentence, and one button, "Go back home" with a home icon (blue, `--r-sm`). It is
+always a full page, an unknown /dashboard/... address too (no menu or top bar around it, Sayub
+2026-09-29); signed out the button reads "Go to sign in". The offline screen keeps the blue icon and its spinner.
 
 ## Role names
 
@@ -228,6 +228,20 @@ One indicator per kind of wait (code: `components/Loading.jsx`, `lib/loading.js`
   button rings give way to the dimmed label.
 - Skeleton blocks are `aria-hidden`; the region carries `aria-busy` and one `role="status"`
   line ("Loading the team").
+
+## Page titles, headings and search
+
+- Every screen has its own tab title, "Inbox | EkSamadhan AI", set in one place
+  (`src/lib/pageMeta.js`). Never "Vite" or "React".
+- One `<h1>` per screen. Where the layout has no room for a visible title (the inbox, the system
+  console) it is there for screen readers only (`.sr-only`).
+- Only the public pages are for search engines: `/login`, `/signup`, `/privacy`, `/terms`. Every
+  other screen says `noindex`, and `robots.txt` keeps crawlers out of `/dashboard`, `/invite/`
+  and `/api/`.
+- A shared link shows `public/social-card.png` (1200 x 630, the logo, the name and what the app
+  does; `scripts/generate-social-card.mjs`). No screenshots with made-up data on it.
+- Canonical links, `og:url` and `sitemap.xml` need the real domain: they appear only in a build
+  with `VITE_SITE_URL` set, never with a tunnel's address.
 
 ## Accessibility (non-negotiable)
 

@@ -14,6 +14,18 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="description" content="One inbox for Messenger and Instagram. The AI answers from your own knowledge and hands the rest to your team." />
     <title>EkSamadhan AI | Support inbox</title>
+    <!-- What a shared link shows (an invite pasted into WhatsApp or Messenger). The image is
+         public/social-card.png (scripts/generate-social-card.mjs); a build with VITE_SITE_URL set
+         makes its address absolute and adds og:url and the canonical link (vite.config.js). -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="EkSamadhan AI" />
+    <meta property="og:title" content="EkSamadhan AI | Support inbox" />
+    <meta property="og:description" content="One inbox for Messenger and Instagram. The AI answers from your own knowledge and hands the rest to your team." />
+    <meta property="og:image" content="/social-card.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The EkSamadhan AI logo and name, with the line: One inbox for Messenger and Instagram." />
+    <meta name="twitter:card" content="summary_large_image" />
     <!-- The in-app splash. Inline on purpose: it paints while this file is still being parsed,
          long before the bundle arrives and React mounts. White, like the manifest's
          background_color and the iOS launch images, so nothing flashes between them.

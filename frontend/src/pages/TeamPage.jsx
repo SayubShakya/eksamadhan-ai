@@ -220,7 +220,10 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                             {[member.firstName, member.lastName].filter(Boolean).join(' ')}
                             {member.isYou && <span className="tag tag--ai" style={{ marginLeft: 8 }}>You</span>}
                         </div>
-                        <div className="member__email">{member.email}</div>
+                        {/* A colleague's address opens a new email to them; your own is just shown. */}
+                        <div className="member__email">
+                            {member.isYou ? member.email : <a href={`mailto:${member.email}`}>{member.email}</a>}
+                        </div>
                         {member.status === 'ACTIVE' && <Presence member={member} />}
                     </div>
                     <div className="member__actions">
