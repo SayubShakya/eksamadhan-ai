@@ -470,6 +470,11 @@ def main(spec_path, sizes_path, out_path):
     out = []
     for d in diagrams:
         kind, stem = d['kind'], d['stem']
+        if len(d['head']) > 5 and d['head'][5] == 'FIXED':
+            # Placed and routed by hand (draw.io/tools/views.py): drawn exactly as given.
+            out.append('\t'.join(d['head']))
+            out.extend('\t'.join(r) for r in d['records'])
+            continue
         shapes = [Shape(r) for r in d['records'] if r[0] == 'SHAPE']
         for s in shapes:
             if (stem, s.id) in sizes and s.kind not in CONTAINERS:

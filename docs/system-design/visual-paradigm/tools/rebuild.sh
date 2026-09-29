@@ -1,7 +1,8 @@
 #!/bin/sh
-# Rebuilds docs/visual-paradigm from the Mermaid sources in docs/system-design/new-system-design.
+# Rebuilds docs/system-design/visual-paradigm from the Mermaid sources in
+# docs/system-design/new-system-design, plus the seven views in draw.io/tools/views.py.
 #
-#     sh docs/visual-paradigm/tools/rebuild.sh
+#     sh docs/system-design/visual-paradigm/tools/rebuild.sh
 #
 # Needs Visual Paradigm (Community Edition is enough) in /Applications and a JDK 11+ `javac`
 # (JAVA_HOME or PATH). Close the project in Visual Paradigm first: it is replaced.
@@ -52,14 +53,34 @@ vp ImportXML -project "$PROJECT" -file "$WORK/empty.xml" > "$WORK/import.log" 2>
 # sizes; pass two draws exactly that.
 # (VPBUILD_REUSE_SIZES=1 with VPBUILD_WORK keeps an earlier measurement: text unchanged.)
 if [ -z "$VPBUILD_REUSE_SIZES" ] || [ ! -s "$WORK/sizes.tsv" ]; then
-    cp "$PROJECT" "$WORK/measure.vpp"
-    vp Plugin -project "$WORK/measure.vpp" -pluginid eksamadhan.vpbuild -pluginargs "--measure $WORK/spec.tsv $WORK/sizes.tsv" > "$WORK/measure.log" 2>&1 || true
+    # Visual Paradigm now and then fails inside its own undo stack (EmptyStackException) on a
+    # fresh project; a second try on a clean copy goes through.
+    for try in 1 2; do
+        cp "$PROJECT" "$WORK/measure.vpp"
+        vp Plugin -project "$WORK/measure.vpp" -pluginid eksamadhan.vpbuild -pluginargs "--measure $WORK/spec.tsv $WORK/sizes.tsv" > "$WORK/measure.log" 2>&1 || true
+        grep -q "VPBUILD measured=" "$WORK/measure.log" && break
+    done
     grep -q "VPBUILD measured=" "$WORK/measure.log" || { cat "$WORK/measure.log"; exit 1; }
 fi
 python3 "$HERE/layout.py" "$WORK/spec.tsv" "$WORK/sizes.tsv" "$WORK/final.tsv"
 vp Plugin -project "$PROJECT" -pluginid eksamadhan.vpbuild -pluginargs "$WORK/final.tsv" > "$WORK/build.log" 2>&1 || true
 grep VPBUILD "$WORK/build.log" || { cat "$WORK/build.log"; exit 1; }
-grep -q "VPBUILD diagrams=13 saved=true" "$WORK/build.log" || exit 1
+EXPECT=$(grep -c '^DIAGRAM' "$WORK/spec.tsv")
+grep -q "VPBUILD diagrams=$EXPECT saved=true" "$WORK/build.log" || exit 1
+# The supervisor's views also get a project of their own in their folder, so each can be
+# opened alone: <folder>/<folder>.vpp, holding only that folder's hand-placed diagrams.
+for folder in business-context functional-architecture data-flow-diagram system-architecture use-case; do
+    awk -F '\t' -v want="$folder" '$1 == "DIAGRAM" { keep = ($4 == want && $6 == "FIXED") } keep' \
+        "$WORK/final.tsv" > "$WORK/$folder.tsv"
+    n=$(grep -c '^DIAGRAM' "$WORK/$folder.tsv" || true)
+    [ "$n" -gt 0 ] || continue
+    rm -f "$OUT/$folder/$folder.vpp"
+    vp ImportXML -project "$OUT/$folder/$folder.vpp" -file "$WORK/empty.xml" > "$WORK/$folder-import.log" 2>&1
+    vp Plugin -project "$OUT/$folder/$folder.vpp" -pluginid eksamadhan.vpbuild -pluginargs "$WORK/$folder.tsv" > "$WORK/$folder.log" 2>&1 || true
+    grep -q "VPBUILD diagrams=$n saved=true" "$WORK/$folder.log" || { cat "$WORK/$folder.log"; exit 1; }
+    echo "  $folder/$folder.vpp: $n diagram(s)"
+done
+rm -f "$OUT"/*/*.vpp.bak*
 echo "4/4 images"
 rm -rf "$WORK/png"      # the export writes "name2.png" beside an existing file, never over it
 vp ExportDiagramImage -project "$PROJECT" -out "$WORK/png" -diagram '*' -type png_with_background > "$WORK/export.log" 2>&1

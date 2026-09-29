@@ -6,8 +6,8 @@ Two complete sets of design documents, kept side by side on purpose.
 | :--- | :--- |
 | [`old-system-design/`](old-system-design/) | **Semester 1.** Drawn before any code existed, as part of the project proposal. |
 | [`new-system-design/`](new-system-design/) | **Semester 2.** Redrawn against the system that was actually built. |
-| [`draw.io/`](draw.io/) | The Semester 2 diagrams as editable `.drawio` files, for redrawing. |
-| [`../visual-paradigm/`](../visual-paradigm/) | The same diagrams as one Visual Paradigm project (`EkSamadhan-AI.vpp`), native elements, with PNG exports. |
+| [`draw.io/`](draw.io/) | The Semester 2 diagrams as editable `.drawio` files, for redrawing, plus the supervisor's seven views (business context, functional architecture, one-canvas use case, DFD levels 0 to 2, system architecture by zone). |
+| [`visual-paradigm/`](visual-paradigm/) | The same diagrams, and the seven views, as one Visual Paradigm project (`EkSamadhan-AI.vpp`), native elements, with PNG exports. |
 
 Both folders hold the same six views, under the same folder names, so any diagram can be
 compared with its predecessor by opening the two files together:

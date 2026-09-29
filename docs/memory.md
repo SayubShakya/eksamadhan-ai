@@ -657,6 +657,25 @@ status machine and authentication have all since been built — see the change l
   Safari steps on an iPhone), shown only when the browser can install now, same `usePwa` rule as
   the top bar and profile. The service worker already registers on every page, so Chrome offers
   the install before anyone signs in.
+- **Supervisor's diagram set (2026-09-29, Sayub; supervisor's reference slides).** Business
+  context, functional architecture, one-canvas use case, DFD levels 0/1/2, system architecture
+  by zone, in both `docs/system-design/draw.io/` and `docs/system-design/visual-paradigm/` (new
+  folders `business-context/`, `functional-architecture/`, `data-flow-diagram/`, plus
+  `use-case-diagram` and `system-architecture-diagram` beside the old ones). Laid out by hand in
+  `draw.io/tools/views.py`, which writes the draw.io files and feeds the Visual Paradigm build
+  (records marked `FIXED`, left alone by `layout.py`); edit views.py when the app changes.
+  Decisions: two-way data is two arrows; Admin, D1 and D3 drawn twice on level 1 to avoid
+  crossings; the handover notice and the "asks for a person" handover are credited to 3.0,
+  because `AiReplyService` does both. Visual Paradigm CE limits worked around: no DFD diagram
+  type (flowchart instead; process = start shape drawn as a circle, since the connector circle
+  prints its name under itself and paints over lines; start-to-start flowlines are refused,
+  so those are arrowed associations); labels cannot be moved, so up-and-down pairs share one
+  "sent / returned" label; Visual Paradigm puts a generalization's and an extend's head at the
+  "from" end, so views.py gives those reversed. The measuring pass sometimes fails with
+  EmptyStackException inside Visual Paradigm; rebuild.sh retries it once. The folder moved from
+  `docs/visual-paradigm/`; build_spec.py's path and CLAUDE.md fixed. Each supervisor-view folder also gets its own
+  `<folder>/<folder>.vpp` (only its FIXED diagrams), built at the end of rebuild.sh, because
+  Sayub wanted Visual Paradigm files in those folders, not only PNG exports.
 - **Status in words and swipe-down sheets on phones (2026-09-28, Sayub).** The top-bar status
   button shows its label beside the dot on phones (a green dot alone did not say what it meant;
   13px, ellipsis past 96px, checked at 360px with no overflow). `lib/useDragDown.js` is the one

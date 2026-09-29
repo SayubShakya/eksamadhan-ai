@@ -24,6 +24,42 @@ is at the same path in both:
 
 Each name is both a `.drawio` and a `.png`. The converter lives in [`tools/`](tools/).
 
+## The supervisor's views
+
+Five more kinds of diagram, in the style the supervisor set out (reference slides of a
+business context diagram, a layered functional architecture, a level 1 DFD and a zoned system
+architecture), in seven files:
+
+| # | Folder | Files | What it shows |
+| :--- | :--- | :--- | :--- |
+| 1 | `business-context/` | `business-context-diagram` | Who the platform exchanges value with, and why. No internal design, no technology |
+| 2 | `functional-architecture/` | `functional-architecture-diagram` | Five layers: channels, API, core modules, cross-cutting services, data and integration |
+| 3 | `use-case/` | `use-case-diagram` | Every actor and main use case on one canvas, with include, extend and generalization |
+| 4 | `data-flow-diagram/` | `level-0-data-flow-diagram`, `level-1-data-flow-diagram`, `level-2-data-flow-diagram-answer-with-ai` | DFD levels 0, 1 and 2 (level 2 opens process 3.0, Answer with AI) |
+| 5 | `system-architecture/` | `system-architecture-diagram` | Five zones: clients, edge, application, data, platform and external services |
+
+These are **not** converted from Mermaid: Mermaid has no hub-and-spoke context view, no
+layered architecture and no DFD notation. Each is laid out by hand, in coordinates, in
+[`tools/views.py`](tools/views.py), which writes the `.drawio` files and their PNGs:
+
+```bash
+python3 tools/views.py          # run from docs/system-design/draw.io
+```
+
+The same file feeds the Visual Paradigm set, so the two cannot drift apart. Edit `views.py`
+(not the `.drawio` files) when the application changes, then run it and the Visual Paradigm
+rebuild.
+
+Data flow notation used, as in the reference: a process is a numbered circle, an external
+entity a dark box, a data store an open-ended box with its ID (D1, D2 ...). Every arrow names
+the data it carries, never the mechanism, and data both ways between the same pair is two
+arrows, one per direction. A store or entity drawn twice (Tenant / Admin, D1 and D3 in level
+1) is the same one, drawn again to keep lines from crossing. Levels balance: every flow into or
+out of process 3.0 on level 1 appears on level 2, with the dashed circles standing for the
+level 1 processes it trades with. Two flows credit process 3.0 rather than 4.0 because that is
+where the code does it: `AiReplyService` sends the handover notice and makes the "asks for a
+person" handover itself.
+
 Eight views, thirteen files: the class diagram has two, and the use case diagram is split
 one file per actor, exactly as the Mermaid sources are.
 

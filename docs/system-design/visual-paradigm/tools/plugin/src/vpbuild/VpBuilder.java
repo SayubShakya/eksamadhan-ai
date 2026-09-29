@@ -66,6 +66,8 @@ public class VpBuilder implements VPPlugin, VPPluginCommandLineSupport {
     private final List<String> sizes = new ArrayList<>();
     private boolean measuring;
     private String stem;
+    private boolean fixed;
+    private boolean skipping;       // measuring, and this diagram is hand-placed          // placed by hand (views.py): straight lines, own colours
     private final Set<String> unknownTypes = new TreeSet<>();
 
     @Override public void loaded(VPPluginInfo info) {}
@@ -94,6 +96,9 @@ public class VpBuilder implements VPPlugin, VPPluginCommandLineSupport {
                 if (line.isEmpty()) continue;
                 String[] r = line.split("\t", -1);
                 for (int i = 0; i < r.length; i++) r[i] = r[i].replace("\\n", "\n");
+                // Hand-placed diagrams have nothing to measure: the measuring pass skips them.
+                if (measuring && r[0].equals("DIAGRAM")) skipping = r.length > 5 && r[5].equals("FIXED");
+                if (skipping) { if (r[0].equals("DIAGRAM")) { finish(); count++; } continue; }
                 switch (r[0]) {
                     case "DIAGRAM": finish(); start(r); count++; break;
                     case "SHAPE": shape(r); break;
@@ -146,6 +151,7 @@ public class VpBuilder implements VPPlugin, VPPluginCommandLineSupport {
     private void start(String[] r) {
         kind = r[1];
         stem = r[4];
+        fixed = r.length > 5 && r[5].equals("FIXED");
         diagram = dm.createDiagram(DIAGRAM_TYPES.get(kind));
         diagram.setName(r[2]);
         home = null;
@@ -182,7 +188,7 @@ public class VpBuilder implements VPPlugin, VPPluginCommandLineSupport {
         for (Map.Entry<String, IDiagramElement> e : shapes.entrySet()) {
             IModelElement m = models.get(e.getKey());
             if (!(m instanceof IActor) && !(m instanceof ISystem) && !(m instanceof IPackage) && !(m instanceof IInteractionActor)) {
-                try { e.getValue().getElementFont().setSize(m instanceof IClass || m instanceof IDBTable ? 13 : 14); } catch (Throwable ignored) { }
+                try { e.getValue().getElementFont().setSize(fixed || m instanceof IClass || m instanceof IDBTable ? 13 : 14); } catch (Throwable ignored) { }
             }
         }
         for (IDiagramElement e : diagram.toDiagramElementArray()) {
@@ -194,7 +200,7 @@ public class VpBuilder implements VPPlugin, VPPluginCommandLineSupport {
         // laid out. Fitting is also what lays out names; without it classes draw nameless.
         for (int pass = 0; pass < 2; pass++) {
             for (Map.Entry<String, IDiagramElement> e : shapes.entrySet()) {
-                if (fits(models.get(e.getKey())) && e.getValue() instanceof IShapeUIModel) ((IShapeUIModel) e.getValue()).fitSize();
+                if (!fixed && fits(models.get(e.getKey())) && e.getValue() instanceof IShapeUIModel) ((IShapeUIModel) e.getValue()).fitSize();
             }
         }
         for (IDiagramElement e : diagram.toDiagramElementArray()) e.setRequestResetCaption(true);
@@ -203,7 +209,7 @@ public class VpBuilder implements VPPlugin, VPPluginCommandLineSupport {
             // laid out. Fitted after the lines, because a foreign key changes its table.
             for (int pass = 0; pass < 2; pass++) {
                 for (Map.Entry<String, IDiagramElement> e : shapes.entrySet()) {
-                    if (fits(models.get(e.getKey())) && e.getValue() instanceof IShapeUIModel) ((IShapeUIModel) e.getValue()).fitSize();
+                    if (!fixed && fits(models.get(e.getKey())) && e.getValue() instanceof IShapeUIModel) ((IShapeUIModel) e.getValue()).fitSize();
                 }
             }
             for (Map.Entry<String, IDiagramElement> e : shapes.entrySet()) {
@@ -253,6 +259,7 @@ public class VpBuilder implements VPPlugin, VPPluginCommandLineSupport {
         int x = Integer.parseInt(r[3]), y = Integer.parseInt(r[4]);
         int w = Integer.parseInt(r[5]), h = Integer.parseInt(r[6]);
         IModelElement m;
+        if (kind.equals("DFStartCircle")) { startCircle(id, x, y, w, h, name, r); return; }
         switch (kind) {
             case "Actor": m = f.createActor(); break;
             case "UseCase": m = f.createUseCase(); break;
@@ -284,8 +291,29 @@ public class VpBuilder implements VPPlugin, VPPluginCommandLineSupport {
         if ((m instanceof ISystem || m instanceof IPackage) && s instanceof IShapeUIModel) {
             ((IShapeUIModel) s).getFillColor().setColor1(java.awt.Color.WHITE);
         }
+        // A hand-placed view brings its own colours: fill, then text.
+        if (r.length > 10 && !r[10].isEmpty() && s instanceof IShapeUIModel) {
+            ((IShapeUIModel) s).getFillColor().setColor1(java.awt.Color.decode(r[10]));
+        }
+        if (r.length > 11 && !r[11].isEmpty()) {
+            try { s.getElementFont().setColor(java.awt.Color.decode(r[11])); } catch (Throwable ignored) { }
+        }
         IDiagramElement ownerShape = shapes.get(parent);
         if (ownerShape != null && s instanceof IShapeUIModel) ownerShape.addChild((IShapeUIModel) s);
+        models.put(id, m);
+        shapes.put(id, s);
+        bounds.put(id, new int[] { x, y, w, h });
+    }
+
+    /** A flowchart start shape drawn as a circle: round, and its name sits inside it. */
+    private void startCircle(String id, int x, int y, int w, int h, String name, String[] r) {
+        IDiagramElement s = dm.createDiagramElement(diagram, com.vp.plugin.diagram.IShapeTypeConstants.SHAPE_TYPE_FLOWCHART_START_CIRCLE);
+        IModelElement m = s.getModelElement();
+        m.setName(name);
+        if (home != null) home.addChild(m);
+        s.setBounds(x, y, w, h);
+        if (r.length > 10 && !r[10].isEmpty() && s instanceof IShapeUIModel) ((IShapeUIModel) s).getFillColor().setColor1(java.awt.Color.decode(r[10]));
+        if (r.length > 11 && !r[11].isEmpty()) { try { s.getElementFont().setColor(java.awt.Color.decode(r[11])); } catch (Throwable ignored) { } }
         models.put(id, m);
         shapes.put(id, s);
         bounds.put(id, new int[] { x, y, w, h });
@@ -420,6 +448,7 @@ public class VpBuilder implements VPPlugin, VPPluginCommandLineSupport {
         switch (kind) {
             case "Association":
             case "DirectedAssociation":
+            case "BiAssociation":
             case "Aggregation":
             case "Composition": {
                 IAssociation a = f.createAssociation();
@@ -432,6 +461,11 @@ public class VpBuilder implements VPPlugin, VPPluginCommandLineSupport {
                 if (r.length > 6 && !r[6].isEmpty()) te.setMultiplicity(r[6]);
                 if (kind.equals("Aggregation")) fe.setAggregationKind(IAssociationEnd.AGGREGATION_KIND_AGGREGATION);
                 if (kind.equals("Composition")) fe.setAggregationKind(IAssociationEnd.AGGREGATION_KIND_COMPOSITED);
+                // Data both ways between the same pair: one line, an arrowhead at each end.
+                if (kind.equals("BiAssociation")) {
+                    fe.setNavigable(IAssociationEnd.NAVIGABLE_NAV_NAVIGABLE);
+                    te.setNavigable(IAssociationEnd.NAVIGABLE_NAV_NAVIGABLE);
+                }
                 if (kind.equals("DirectedAssociation")) {
                     fe.setNavigable(IAssociationEnd.NAVIGABLE_NAV_UNSPECIFIED);
                     te.setNavigable(IAssociationEnd.NAVIGABLE_NAV_NAVIGABLE);
@@ -455,14 +489,14 @@ public class VpBuilder implements VPPlugin, VPPluginCommandLineSupport {
             default: problems.add("unknown link kind " + kind); return;
         }
         if (!kind.startsWith("Association") && !kind.equals("DirectedAssociation")
-                && !kind.equals("Aggregation") && !kind.equals("Composition")) {
+                && !kind.equals("Aggregation") && !kind.equals("Composition") && !kind.equals("BiAssociation")) {
             rel.setFrom(from);
             rel.setTo(to);
         }
         if (!label.isEmpty()) rel.setName(label);
         Point[] route = points(r.length > 7 ? r[7] : "");
         IDiagramElement c = dm.createConnector(diagram, rel, fs, ts, route);
-        if (route != null && c instanceof com.vp.plugin.diagram.IConnectorUIModel) {
+        if (route != null && !fixed && c instanceof com.vp.plugin.diagram.IConnectorUIModel) {
             ((com.vp.plugin.diagram.IConnectorUIModel) c).setConnectorStyle(com.vp.plugin.diagram.IConnectorUIModel.CS_RECTI_LINEAR);
         }
         if (kind.equals("ForeignKey")) dropGeneratedColumns(r[3]);

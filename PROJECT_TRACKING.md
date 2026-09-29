@@ -696,12 +696,32 @@ Submitted Thursday 2026-10-01.
       the polled thread list carries it as well (`AiTypingState`, one new test, 118 pass)
 - [x] Diagrams updated: use case (install before sign-in, no-space extend), service-layer class
       diagram (`AiTypingState`), sequence diagram; draw.io and Visual Paradigm rebuilt
+- [x] Supervisor's diagram set, in draw.io and Visual Paradigm, in the style of the reference
+      slides: business context, functional architecture (five layers), one-canvas use case,
+      DFD levels 0, 1 and 2 (level 2 opens 3.0 Answer with AI; levels balance), system
+      architecture by zone. One source, `draw.io/tools/views.py`, feeds both tools; the
+      Visual Paradigm project now holds 20 diagrams
+- [x] Visual Paradigm folder moved to `docs/system-design/visual-paradigm/`; its build tools
+      fixed for the new path
+- [x] A Visual Paradigm project (`.vpp`) of its own in each supervisor-view folder, not only
+      PNG exports
 
 **Commits this week**
 
 <!-- Regenerate before submitting:
      git log --since=2026-09-25 --until=2026-10-02 --pretty='- %ad `%h` %s' --date=short -->
 
+- 2026-09-29 `e3d2884` fix: update diagrams folder inside docs
+- 2026-09-28 `56fad1a` fix: show AI is typing on phones behind the tunnel; update diagrams
+- 2026-09-28 `63be76c` fix: Updated UI sections
+- 2026-09-28 `1183ae0` feat: sort the inbox by priority after pinned conversations
+- 2026-09-28 `cb6114a` fix: weekly availability
+- 2026-09-28 `9e692d6` feat: show when the AI is typing a reply
+- 2026-09-28 `202374e` fix: centre the Hours page and show the time zone by name
+- 2026-09-28 `7ff5227` feat: redesign the 404 page
+- 2026-09-28 `f7ade69` feat: one answer per repeated message
+- 2026-09-27 `9fef175` docs: added visual paradigm diagram
+- 2026-09-26 `8cbb435` feat: account deletion with handover, pinned conversations, 404 page and a tenant deletes by choosing who takes over; pins are personal to each person.
 - 2026-09-26 `1d458a1` feat: channels and settings pages, profile fixes, centred page layout
 - 2026-09-26 `a1dd512` feat: settings page for the workspace, AI replies and your account
 - 2026-09-26 `f6335c2` feat: call the roles Tenant, Admin and Staff on screen
@@ -715,9 +735,6 @@ Submitted Thursday 2026-10-01.
 - 2026-09-25 `2c6ead5` feat: add legal pages, sign-in limits and a plain design and copy pass
 - 2026-09-25 `06da290` fix: make every dashboard screen fit a phone
 - 2026-09-25 `35a7983` feat: PWA splash, offline shell and updates; fix sign-in through a tunnel
-- 2026-09-25 `ef1c2af` feat: make the dashboard installable as a progressive web app
-- 2026-09-25 `495007b` feat: sign in with Google through Firebase Authentication
-- 2026-09-25 `a643c0f` feat: add a spam tab and conversation priority from Jev
 
 **Plan for next week**
 

@@ -28,7 +28,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-DESIGN = HERE.parents[1] / 'system-design'
+DESIGN = HERE.parents[1]                  # docs/system-design
 SOURCES = DESIGN / 'new-system-design'
 DRAWIO = DESIGN / 'draw.io'
 
@@ -486,8 +486,16 @@ def main(out):
         direction = 'LR' if re.match(r'\s*flowchart\s+(LR|RL)', src) else 'TB'
         spec.add('DIAGRAM', kind, name, outdir, stem, direction)
         BUILDERS[kind](spec, src, geometry(stem))
+    # The seven supervisor views are laid out by hand in draw.io/tools/views.py; they come
+    # with their own positions (direction FIXED), which layout.py leaves as they are.
+    vspec = importlib.util.spec_from_file_location('views', DRAWIO / 'tools' / 'views.py')
+    views = importlib.util.module_from_spec(vspec)
+    vspec.loader.exec_module(views)
+    extra = views.vp_records()
+    spec.lines.extend(extra)
+    count = len(DIAGRAMS) + sum(1 for r in extra if r.startswith('DIAGRAM\t'))
     Path(out).write_text('\n'.join(spec.lines) + '\n')
-    print(f'{len(DIAGRAMS)} diagrams, {len(spec.lines)} records -> {out}')
+    print(f'{count} diagrams, {len(spec.lines)} records -> {out}')
 
 
 if __name__ == '__main__':
