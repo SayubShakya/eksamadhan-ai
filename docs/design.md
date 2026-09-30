@@ -158,7 +158,7 @@ on the server. "Your AI agent" means the AI and is not a role, so it stays.
 
 ## Never
 
-Required by the project owner, 2026-09-25, and repeated in `CLAUDE.md`: no purple gradients or
+Required by the project owner, 2026-09-25: no purple gradients or
 accents, no pill-shaped buttons, no fake reviews, metrics or counters, no vague or filler copy,
 no emoji used as icons, no em or en dashes in visible text, no heavy scroll or cursor
 animation, no "made with AI" tag, no AI stock photos. Status is shown in words with a colour,

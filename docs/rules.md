@@ -25,7 +25,7 @@ Read this before writing code. It overrides default habits.
   2026-09-16).
 - CodeRabbit is installed but only reviews pull requests, so it is effectively dormant.
   `.coderabbit.yaml` is kept for if the workflow changes back.
-- Claude never commits or pushes — it prints the commands. See the top of this file.
+- Commits and pushes are made by the project owner only.
 
 ## Coding rules
 

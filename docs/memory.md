@@ -720,7 +720,7 @@ status machine and authentication have all since been built — see the change l
   "sent / returned" label; Visual Paradigm puts a generalization's and an extend's head at the
   "from" end, so views.py gives those reversed. The measuring pass sometimes fails with
   EmptyStackException inside Visual Paradigm; rebuild.sh retries it once. The folder moved from
-  `docs/visual-paradigm/`; build_spec.py's path and CLAUDE.md fixed. Each supervisor-view folder also gets its own
+  `docs/visual-paradigm/`; build_spec.py's path fixed. Each supervisor-view folder also gets its own
   `<folder>/<folder>.vpp` (only its FIXED diagrams), built at the end of rebuild.sh, because
   Sayub wanted Visual Paradigm files in those folders, not only PNG exports.
 - **Status in words and swipe-down sheets on phones (2026-09-28, Sayub).** The top-bar status
@@ -837,7 +837,7 @@ status machine and authentication have all since been built — see the change l
   removed its spinner on purpose). Skeleton rows that differ from the real ones only do so when
   the real text wraps (a long name, a second tag line), which a skeleton cannot know.
 
-- **"Not vibe coded" rules (2026-09-25)** — now in `CLAUDE.md` and `docs/design.md`. Applied
+- **"Not vibe coded" rules (2026-09-25)** — now in `docs/design.md`. Applied
   across the site: every em/en dash removed from visible text (74 lines in 21 files: screens,
   errors, alerts, the customer handover message, visualizer step names — tests updated to the
   new step names); emoji icons replaced (mood faces → word tags, 🎤📷📎 previews → words, 🚨 in
@@ -1261,7 +1261,6 @@ status machine and authentication have all since been built — see the change l
   handling for no gain at this stage. Record it in the report's Limitations.
 - **`/api/media/**` is unauthenticated** — `<img>` and `<audio>` cannot send a bearer
   token. Filenames are unguessable UUIDs; signed URLs are future work.
-- `CLAUDE.md` is git-ignored (local instructions, not project work).
 - **Meta App Review is blocked, permanently for practical purposes.** Advanced access
   requires Business Verification → a business portfolio → an account without an
   advertising restriction. Manjit's account is restricted (discovered 2026-09-17), so

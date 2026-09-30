@@ -2,9 +2,6 @@
 .DS_Store
 Thumbs.db
 
-# Claude Code project instructions (local only)
-CLAUDE.md
-
 # IDEs
 .idea/
 .vscode/
@@ -41,8 +38,21 @@ dist/
 # Voice recordings stored by the backend
 backend/media/
 
-# Claude Code local settings (machine-specific, not part of the project)
-.claude/settings.local.json
-
 # draw.io desktop backups
 .$*.bkp
+
+# Python (the diagram tools)
+__pycache__/
+*.pyc
+
+# Visual Paradigm backups
+*.vpp.bak*
+
+# Keys and certificates
+*.pem
+*.key
+*.p12
+*.jks
+
+# Project documents: kept on this computer, not in the repository (owner's decision, 2026-09-30).
+docs/
