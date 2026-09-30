@@ -54,5 +54,7 @@ __pycache__/
 *.p12
 *.jks
 
-# Project documents: kept on this computer, not in the repository (owner's decision, 2026-09-30).
+# Project documents and the progress log: kept on this computer, not in the repository
+# (owner's decision, 2026-09-30).
 docs/
+PROJECT_TRACKING.md

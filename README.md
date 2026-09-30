@@ -4,11 +4,11 @@ AI-powered customer support for e-commerce businesses — one inbox for Instagra
 Facebook Messenger and an embeddable website widget, answered by a RAG agent that
 hands over to a human when it is out of its depth.
 
-> **Status: Meta connector, accounts and semantic retrieval working; AI answers next.**
-> Facebook and Instagram OAuth, webhook ingestion, a unified inbox, accounts with workspaces
-> and roles, and a per-workspace knowledge base with pgvector semantic search are in place.
-> Answer generation, sentiment escalation and browser notifications are next — see
-> [`docs/phases.md`](docs/phases.md).
+> **Status:** the AI answers customers on Facebook Messenger and Instagram from each business's
+> own knowledge, and hands a chat to an available staff member when it cannot answer. Built:
+> accounts, workspaces and roles, Google sign-in, the unified inbox, the knowledge base with
+> semantic search, triage with Jev, availability and working hours, alerts, analytics, and an
+> installable app. Next: the website chat widget.
 
 Final-year college project · Author: Sayub Shakya · Supervisor: Pawan KC
 
@@ -51,8 +51,7 @@ The agent is alerted by push notification even if the tab is in the background.
 | Embeddings | OpenAI `text-embedding-3-small` via OpenRouter |
 | Hosting | PrabhuHost |
 
-Rationale for each choice is in the contextual report §5.2, summarised in
-[`docs/architecture.md`](docs/architecture.md).
+Rationale for each choice is in the contextual report §5.2.
 
 ## Targets
 
@@ -63,29 +62,12 @@ Rationale for each choice is in the contextual report §5.2, summarised in
 | Handover alert latency | < 3 seconds |
 | Queries resolved without a human | 60–65% |
 
-## Documentation
-
-| Document | Contents |
-| :--- | :--- |
-| [`docs/Eksamadhan_AI_PRD.md`](docs/Eksamadhan_AI_PRD.md) | Requirements, user roles, feature modules, FR-01..FR-10 |
-| [`docs/architecture.md`](docs/architecture.md) | Stack, repo layout, data model, request flows |
-| [`docs/weekly-plan.md`](docs/weekly-plan.md) | **Eight-week delivery plan, week by week** |
-| [`docs/weekly-reports/`](docs/weekly-reports/) | Weekly progress reports for the supervisor |
-| [`docs/phases.md`](docs/phases.md) | Build order, Phase 0–7 |
-| [`docs/design.md`](docs/design.md) | Colour, typography, layout, accessibility |
-| [`docs/rules.md`](docs/rules.md) | Engineering rules and boundaries |
-| [`docs/memory.md`](docs/memory.md) | Current state, decisions and rationale |
-| [`docs/2337659_SayubShakya_CIS013-3_Contextual_Report_final.docx`](docs/2337659_SayubShakya_CIS013-3_Contextual_Report_final.docx) | **Submitted contextual report — the authoritative specification** |
-| [`docs/FINAL_REPORT.md`](docs/FINAL_REPORT.md) | Semester 2 final report (in progress) |
-| [`PROJECT_TRACKING.md`](PROJECT_TRACKING.md) | Weekly log and supervisor requirements |
-
 ## Repository layout
 
 ```
 backend/    Spring Boot API — Meta OAuth, webhooks, message ingestion
 frontend/   React + Vite agent dashboard (unified inbox)
 meta-proxy/ Vercel proxy giving Meta a stable webhook/callback URL in development
-docs/       Specification, architecture, phases, design, project memory
 run.sh      Starts database, tunnel, backend and frontend together
 ```
 
@@ -128,6 +110,4 @@ export JAVA_HOME=/opt/homebrew/opt/openjdk@21
 ## Build plan
 
 Eight weeks, 15 September – 9 November 2026 — a compression of the contextual report's
-twelve-week plan, with the trade-offs written down. Week by week in
-[`docs/weekly-plan.md`](docs/weekly-plan.md); phase detail in
-[`docs/phases.md`](docs/phases.md).
+twelve-week plan, with the trade-offs written down.
