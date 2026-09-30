@@ -62,6 +62,18 @@ public class SecurityConfig {
                         .requestMatchers("/api/media/**").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder)))
+                // Spring already sends nosniff, frame DENY and no-store. On top: this API serves
+                // JSON, media files and three plain HTML pages (privacy, terms, data deletion)
+                // styled inline, so nothing it returns may load or run anything else; no page
+                // may frame it; and no address is passed on in the Referer header.
+                .headers(headers -> headers
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                                "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; "
+                                        + "media-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"))
+                        .referrerPolicy(referrer -> referrer.policy(
+                                org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+                        .permissionsPolicyHeader(permissions -> permissions.policy(
+                                "camera=(), microphone=(), geolocation=(), payment=()")))
                 .build();
     }
 

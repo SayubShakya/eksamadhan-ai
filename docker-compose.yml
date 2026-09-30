@@ -11,8 +11,10 @@ services:
       POSTGRES_DB: ${DB_NAME:-eksamadhan}
       POSTGRES_USER: ${DB_USERNAME:-eksamadhan}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    # This computer only. "5432:5432" listened on every network the laptop joins, so anyone on
+    # the same Wi-Fi could reach the database and try its password.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

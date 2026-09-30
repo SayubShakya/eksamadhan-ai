@@ -715,6 +715,14 @@ Submitted Thursday 2026-10-01.
 - [x] Show/hide button on the three password fields in Settings, the same as sign-in
       (shared `PasswordInput`)
 - [x] Week 3 progress report written: `docs/weekly-reports/week-03/`
+- [x] Security audit: the website crawl can no longer reach the server's own network
+      (SSRF), no account can become system admin by registering its email first, invite
+      emails escape the workspace name, uploads type-checked, security headers on the API
+      and frontend, database reachable from this computer only, Spring Boot 4.0.8, all npm
+      vulnerabilities fixed (11 to 0), one unused package removed; 6 new tests (124 in all);
+      class diagram, draw.io and Visual Paradigm updated
+- [x] "Skip to content" link for keyboard and screen-reader users (the rest of that checklist
+      already existed or does not apply to a sign-in dashboard)
 
 **Commits this week**
 

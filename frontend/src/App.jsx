@@ -869,6 +869,12 @@ export default function App() {
                 </div>
             )}
             <InstallProblem />
+            {/* The first thing a keyboard or screen reader reaches: past the menu and the top bar,
+                straight to the page. Focus is moved by hand, since the address carries the route. */}
+            <a className="skip-link" href="#main-content"
+               onClick={(e) => { e.preventDefault(); document.getElementById('main-content')?.focus(); }}>
+                Skip to content
+            </a>
             <NavRail
                 view={view}
                 onNavigate={setView}
@@ -898,6 +904,7 @@ export default function App() {
                     onSetHours={() => setView('hours')}
                     view={view}
                 />
+                <span id="main-content" tabIndex={-1} className="skip-target" />
 
                 <Suspense fallback={<CenteredSpinner label="Loading" />}>
                 {view === 'home' && (

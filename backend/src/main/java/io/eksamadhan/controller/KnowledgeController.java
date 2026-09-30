@@ -108,6 +108,12 @@ public class KnowledgeController {
         // Extraction is synchronous so a password-protected or unreadable file is reported
         // straight away, rather than as a FAILED source a minute later.
         String text = extractor.extract(file);
+        // The same limit as pasted text: without it one large file became thousands of passages,
+        // each embedded (and paid for) and stored.
+        if (text.length() > MAX_TEXT_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "This file has more text than one source can hold (500,000 characters). Split it into smaller files.");
+        }
         String name = file.getOriginalFilename();
         String resolvedTitle = (title != null && !title.isBlank()) ? title.strip()
                 : (name != null && !name.isBlank()) ? name : title(null, text);
@@ -183,6 +189,11 @@ public class KnowledgeController {
         Organization organization = currentUser.requireTeamManager().getOrganization();
         if (request.url() == null || request.url().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter a website address");
+        }
+        try {
+            knowledgeService.checkWebsite(request.url().strip());
+        } catch (IllegalArgumentException refused) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, refused.getMessage());
         }
         knowledgeService.crawlAsync(organization.getId(), request.url().strip());
         return Map.of("started", true, "url", request.url().strip());

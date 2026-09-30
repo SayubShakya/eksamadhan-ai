@@ -189,8 +189,10 @@ public class AuthController {
             
         } catch (Exception e) {
             log.error("❌ OAuth Error: {}", e.getMessage(), e);
-            return new RedirectView(frontendUrl + "/dashboard?status=error&message=" + 
-                URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8));
+            // The detail stays in the log: an exception's text can name internals, and a URL
+            // ends up in browser history and anyone's screenshot.
+            return new RedirectView(frontendUrl + "/dashboard?status=error&message=" +
+                URLEncoder.encode("Connecting the page did not work. Please try again.", StandardCharsets.UTF_8));
         }
     }
 

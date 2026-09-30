@@ -110,6 +110,11 @@ public class EmailService {
                 """.formatted(heading, bodyHtml);
     }
 
+    /**
+     * Label and link are escaped here, not by the caller: the invite's label carries the
+     * workspace name, which its tenant or an admin types, and it went into the email as HTML
+     * (a name such as <a href=...>Reset password</a> became a real link in a genuine email).
+     */
     public String button(String href, String label) {
         return """
                 <p style="margin:20px 0;">
@@ -117,6 +122,12 @@ public class EmailService {
                      padding:11px 18px;border-radius:8px;display:inline-block;font-weight:600;">%s</a>
                 </p>
                 <p style="font-size:12px;color:#667085;">Or paste this into your browser:<br>%s</p>
-                """.formatted(href, label, href);
+                """.formatted(html(href), html(label), html(href));
+    }
+
+    private static String html(String value) {
+        if (value == null) return "";
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
     }
 }

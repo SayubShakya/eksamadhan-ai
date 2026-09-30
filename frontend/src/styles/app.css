@@ -2088,6 +2088,14 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
    the same classes as the content they stand in for, so a line of skeleton text is exactly as
    tall as the line of text that replaces it. Motion stops under prefers-reduced-motion (the
    rule in tokens.css), which leaves plain grey blocks and a still ring beside its label. */
+.skip-link {
+    position: fixed; top: 8px; left: 8px; z-index: 2000;
+    padding: 10px 14px; border-radius: var(--r-sm);
+    background: var(--accent); color: #ffffff; font-weight: 600; text-decoration: none;
+    transform: translateY(-160%);
+}
+.skip-link:focus, .skip-link:focus-visible { transform: none; outline: 2px solid var(--text); outline-offset: 2px; }
+.skip-target { display: block; height: 0; outline: none; }
 .sr-only {
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
     overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;

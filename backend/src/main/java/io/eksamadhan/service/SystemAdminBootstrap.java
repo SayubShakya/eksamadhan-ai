@@ -27,7 +27,9 @@ import java.util.Locale;
  * no customer data. Unset, there is no system admin at all.
  *
  * An existing account is never given a new password here: the password is only read to create
- * the account, so rotating it later is done in the app, not by editing the environment.
+ * the account, so rotating it later is done in the app, not by editing the environment. Nor is an
+ * existing ordinary account ever promoted: whoever registered that address first would become
+ * system admin, and sign-up does not verify addresses.
  */
 @Component
 @Slf4j
@@ -63,10 +65,12 @@ public class SystemAdminBootstrap {
 
         User existing = userRepository.findByEmailIgnoreCase(email).orElse(null);
         if (existing != null) {
+            // Never promote an account this did not create. Sign-up does not verify email
+            // addresses, so anyone could register SYSTEM_ADMIN_EMAIL before the admin exists and
+            // be handed every workspace's conversations at the next restart.
             if (!existing.isSystemAdmin()) {
-                existing.setSystemAdmin(true);
-                userRepository.save(existing);
-                log.info("Granted system admin to existing account {}", email);
+                log.warn("SYSTEM_ADMIN_EMAIL {} belongs to an ordinary account; not making it system admin. "
+                        + "Use an address with no account, or grant the flag in the database by hand.", email);
             }
             return;
         }

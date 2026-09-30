@@ -27,7 +27,9 @@ public class WebhookController {
         this.signatureVerifier = signatureVerifier;
         this.objectMapper = objectMapper;
         Dotenv dotenv = Dotenv.load();
-        this.verifyToken = dotenv.get("WEBHOOK_VERIFY_TOKEN", "eksamadhan_verify_token");
+        // No built-in fallback: a default token is public in the source, and anyone could
+        // answer Meta's handshake with it. Unset, the handshake is refused (below).
+        this.verifyToken = dotenv.get("WEBHOOK_VERIFY_TOKEN", "");
     }
 
     @GetMapping(produces = "text/plain")
@@ -38,7 +40,9 @@ public class WebhookController {
 
         log.info("Webhook verification request: mode={}", mode);
 
-        if ("subscribe".equals(mode) && verifyToken.equals(token)) {
+        if ("subscribe".equals(mode) && !verifyToken.isEmpty() && token != null
+                && java.security.MessageDigest.isEqual(verifyToken.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                        token.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
             log.info("Webhook verified successfully!");
             return ResponseEntity.ok(challenge);
         }

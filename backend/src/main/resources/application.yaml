@@ -44,7 +44,9 @@ app:
   # The workspace that predates accounts. The first person to sign up adopts it, so the
   # connected Facebook Page and its message history survive the move to real accounts.
   # Clearing this disables adoption; it can only ever fire once in any case.
-  adoptable-organization-api-key: ${ADOPTABLE_ORG_API_KEY:demo-tenant-1}
+  # Off unless set: with it on, the first sign-up takes over that workspace's page and history
+  # whenever it has no users (a fresh deployment or a restored database).
+  adoptable-organization-api-key: ${ADOPTABLE_ORG_API_KEY:}
   # Retrieval-augmented generation. One OpenRouter key covers embeddings now and chat
   # completions in the next phase.
   ai:

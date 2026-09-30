@@ -657,6 +657,32 @@ status machine and authentication have all since been built — see the change l
   Safari steps on an iPhone), shown only when the browser can install now, same `usePwa` rule as
   the top bar and profile. The service worker already registers on every page, so Chrome offers
   the install before anyone signs in.
+- **Security audit (2026-09-29, Sayub's checklist).** Fixed: website crawl could be pointed at
+  localhost, the LAN or 169.254.169.254 and the text read back (SSRF; new `PublicAddress`,
+  checked on the start URL, robots.txt and every redirect, redirects followed by hand; the
+  controller answers 400 before the async crawl); `SystemAdminBootstrap` no longer promotes an
+  existing account with SYSTEM_ADMIN_EMAIL (sign-up does not verify email); adoptable
+  workspace default `demo-tenant-1` removed (off unless ADOPTABLE_ORG_API_KEY is set); invite
+  email button now escapes its label (workspace name was raw HTML); webhook verify token has
+  no hard-coded default and is compared in constant time; OAuth error no longer puts the
+  exception text in the redirect URL; reply photos must be image/*, voice notes audio/* (or
+  video/webm, video/mp4); knowledge file text capped at 500k; API security headers (CSP
+  default-src none + inline styles, frame-ancestors none, no-referrer, Permissions-Policy);
+  Vite dev/preview headers; Postgres bound to 127.0.0.1; Spring Boot 4.0.2 to 4.0.8, PDFBox
+  3.0.8; npm audit fix (axios 1.20.0, vite 7.3.6, 11 to 0 vulnerabilities); lucide-react
+  removed (unused). 6 new tests, 124 in all. **The repo is PUBLIC** and the real
+  WEBHOOK_VERIFY_TOKEN equals the value once committed in .env.example: Sayub must rotate it
+  (new value in backend/.env and in Meta's webhook settings). No other secret in git history.
+  Accepted for now (in architecture.md §7): public media URLs, no email verification (Google
+  pre-hijack), Facebook connect state not bound to the browser, Staff can act on unassigned
+  AI-handled threads and read analytics.
+- **Feature checklist (2026-09-30):** only a skip-to-content link was missing and added. Not
+  added on purpose: dark mode, site search beyond the inbox's, scroll-to-top and progress bars,
+  print styles, UTM tracking, FAQ, floating contact button (a sign-in tool, not a marketing
+  site); no cookie banner because the app sets no cookies and no tracking (Privacy Policy,
+  "Cookies and browser storage"). Already present: mobile menu, loading states, hover states,
+  copy buttons, fixed top bar, password toggles, form success and error states, confirmation
+  dialogs, last-updated dates on the legal pages.
 - **Site polish pass (2026-09-29, Sayub's checklist, "only what our project needs").** Done:
   per-screen titles, descriptions and robots tags (`lib/pageMeta.js`, public pages index, the
   rest noindex, including a signed-out /dashboard address); one h1 per screen (sr-only on the

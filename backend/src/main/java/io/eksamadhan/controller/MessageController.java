@@ -115,6 +115,9 @@ public class MessageController {
         Organization organization = currentUser.organization();
         SocialPage page = requirePage(organization, pageId);
         requireMayAnswer(page, recipientId);
+        // Only recordings go to ffmpeg: it reads many formats, and a crafted non-audio file
+        // (a playlist that points elsewhere, say) is untrusted input it should never be handed.
+        requireType(file, "Only a voice recording can be sent here.", "audio/", "video/webm", "video/mp4");
 
         try {
             String stored = voiceMessageService.convertAndStore(file);
@@ -148,6 +151,7 @@ public class MessageController {
         Organization organization = currentUser.organization();
         SocialPage page = requirePage(organization, pageId);
         requireMayAnswer(page, recipientId);
+        requireType(file, "Only a photo can be sent here.", "image/");
 
         try {
             String stored = voiceMessageService.store(file);
@@ -323,5 +327,14 @@ public class MessageController {
                 .sentiment(msg.getSentiment() == null ? null : msg.getSentiment().name())
                 .transcript(msg.getTranscript())
                 .build();
+    }
+
+    /** The upload's declared type starts with one of {@code allowed}, or the request is refused. */
+    private static void requireType(MultipartFile file, String message, String... allowed) {
+        String type = file == null || file.getContentType() == null ? "" : file.getContentType().toLowerCase(java.util.Locale.ROOT);
+        for (String prefix : allowed) {
+            if (type.startsWith(prefix)) return;
+        }
+        throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, message);
     }
 }

@@ -449,8 +449,15 @@ classDiagram
 
     class WebCrawler {
         +crawl(startUrl) List~Page~
+        +checkStart(startUrl) URI
+        -fetch(url, timeoutMs, anyContentType) Response
         -readable(document) String
         -content(document) Element
+    }
+
+    class PublicAddress {
+        +require(uri)$
+        ~isPublic(address)$ boolean
     }
 
     class AgentNotificationService {
@@ -581,6 +588,7 @@ classDiagram
     KnowledgeService --> TextChunker
     KnowledgeService --> EmbeddingClient
     KnowledgeService --> WebCrawler
+    WebCrawler ..> PublicAddress : every address and redirect is public
     KnowledgeController --> DocumentTextExtractor
     KnowledgeController --> KnowledgeService
 

@@ -173,3 +173,39 @@ in-memory) so repeat questions skip the embedding and completion calls entirely.
 - **Embeddings are versioned.** Store the embedding model name per chunk — changing
   model invalidates every vector and forces a re-index.
 - **Encrypt tokens at rest.** Meta OAuth tokens in the DB must be encrypted (§5.4.3).
+
+## 7. Security measures (audit 2026-09-29)
+
+What protects the system, so a change does not quietly remove it:
+
+- **Secrets** live only in `backend/.env` (ignored by git; the repository is public). The
+  frontend holds no secret: its Firebase values are public by design. Git history was scanned
+  for keys and tokens: none, except the webhook verify token, which was committed in
+  `.env.example` and must be rotated (a new value in `.env` and in Meta's webhook settings).
+- **Authentication:** stateless JWT on every request except the webhook (HMAC-signed by
+  Meta), sign-in and sign-up, invitations (32-byte random tokens), OAuth callbacks (signed
+  state), the legal pages and media (random UUID file names). Passwords are BCrypt. Google
+  tokens are verified against Google's keys (issuer, audience, verified email).
+- **Access:** every lookup by id is scoped to the caller's workspace; roles are checked in
+  `CurrentUser` (team manager, tenant, system admin). The system admin is made only from
+  configuration, never by promoting an existing account.
+- **Rate limits:** sign-in, sign-up, Google sign-in and invite acceptance (per device and per
+  account); password change and the deletion code count attempts too.
+- **Outbound requests a user can steer** (the website crawl) go only to public addresses,
+  checked on every redirect (`PublicAddress`).
+- **Uploads:** 25 MB per request; reply photos must be images and voice notes audio; a
+  knowledge file's text is capped at 500,000 characters.
+- **Output:** React escapes all text (no `dangerouslySetInnerHTML` anywhere); email HTML
+  escapes every user-typed value.
+- **Headers:** the API sends a Content-Security-Policy that loads nothing but inline styles,
+  frame-ancestors none, no-referrer, a Permissions-Policy, nosniff and no-store. The frontend's
+  dev and preview servers send nosniff, frame DENY, a referrer policy and a Permissions-Policy
+  that allows only the microphone (voice notes). A production host must send the same.
+- **Database:** PostgreSQL listens on 127.0.0.1 only. No debug output: SQL logging off, no
+  stack traces in responses, devtools left out of a packaged build.
+
+Known and accepted for now: media URLs are public to anyone holding one; email addresses are
+not verified at sign-up (so an account could be pre-registered under someone else's address
+before they sign in with Google); the Facebook connect flow's state is tied to the workspace,
+not to the browser that started it.
+

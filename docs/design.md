@@ -245,6 +245,9 @@ One indicator per kind of wait (code: `components/Loading.jsx`, `lib/loading.js`
 
 ## Accessibility (non-negotiable)
 
+- A "Skip to content" link is the first thing Tab reaches in the dashboard: hidden until focused,
+  it moves focus past the menu and top bar to the page.
+
 - 4.5:1 contrast on all text; verify `--text-muted` on `--surface`.
 - Every interactive element keyboard-reachable with a visible focus ring.
 - New messages announced via `aria-live="polite"`.

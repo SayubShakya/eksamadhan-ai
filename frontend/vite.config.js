@@ -35,13 +35,25 @@ function siteAddress(siteUrl) {
     }
 }
 
+// Sent by the dev and preview servers, which is what a phone reaches through the tunnel. A
+// production host must send the same (see docs/architecture.md). The microphone stays allowed
+// for this page itself: staff record voice notes. No framing: nothing may embed the dashboard.
+const SECURITY_HEADERS = {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), geolocation=(), payment=(), microphone=(self)',
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
     plugins: [react(), siteAddress(loadEnv(mode, process.cwd(), 'VITE_').VITE_SITE_URL)],
     // No source maps in a production build (Vite's default, stated so it stays that way): they
     // would publish the app's source to anyone who opens the browser's developer tools.
     build: { sourcemap: false },
+    preview: { headers: SECURITY_HEADERS },
     server: {
+        headers: SECURITY_HEADERS,
         port: 5174,
         strictPort: true, // fail loudly rather than drifting to another port
         allowedHosts: true, // Allow all tunnel hosts

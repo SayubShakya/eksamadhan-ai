@@ -83,6 +83,16 @@ public class KnowledgeService {
     }
 
     /**
+     * Refuses, before anything runs, an address the crawl may not visit (a private or local
+     * one, see PublicAddress), so the person is told why instead of seeing nothing arrive.
+     *
+     * @throws IllegalArgumentException with a message fit to show the person
+     */
+    public void checkWebsite(String startUrl) {
+        crawler.checkStart(startUrl);
+    }
+
+    /**
      * Crawls a website and indexes each page as its own source.
      *
      * Runs async and page by page, so a slow site fills the list as it goes rather than

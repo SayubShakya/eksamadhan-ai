@@ -1,12 +1,14 @@
 package io.eksamadhan.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.*;
 
@@ -33,6 +35,8 @@ public class WebCrawler {
     private static final int MAX_PAGE_CHARACTERS = 20_000;
 
     private static final String USER_AGENT = "EkSamadhanAI/1.0 (support knowledge base crawler)";
+    /** Redirects followed per page, each to a public address only (see PublicAddress). */
+    private static final int MAX_REDIRECTS = 5;
 
     /** Nav, footers and cookie banners repeat on every page and drown the actual content. */
     private static final String BOILERPLATE = "nav, header, footer, script, style, noscript, "
@@ -66,6 +70,18 @@ public class WebCrawler {
         this.politenessMs = politenessMs;
     }
 
+    /**
+     * The address a crawl would start from, if it may be crawled at all: only the public
+     * internet, never this server, its network or a cloud metadata address (PublicAddress).
+     *
+     * @throws IllegalArgumentException with a message fit to show the person
+     */
+    public URI checkStart(String startUrl) {
+        URI start = normalise(startUrl);
+        PublicAddress.require(start);
+        return start;
+    }
+
     /** One crawled page: what to call it, where it came from, and what it said. */
     public record Page(String url, String title, String text) {}
 
@@ -76,7 +92,7 @@ public class WebCrawler {
      *         than left watching an empty list
      */
     public List<Page> crawl(String startUrl) {
-        URI start = normalise(startUrl);
+        URI start = checkStart(startUrl);
         String host = start.getHost();
         Set<String> disallowed = robotsDisallow(start);
 
@@ -99,11 +115,7 @@ public class WebCrawler {
 
             Document document;
             try {
-                document = Jsoup.connect(url.toString())
-                        .userAgent(USER_AGENT)
-                        .timeout(15000)
-                        .followRedirects(true)
-                        .get();
+                document = fetch(url, 15000, false).parse();
             } catch (Exception e) {
                 log.debug("Skipped {}: {}", url, e.getMessage());
                 continue;
@@ -242,12 +254,42 @@ public class WebCrawler {
         }
     }
 
+    /**
+     * One GET, following redirects by hand so that every address on the way is checked: a public
+     * page may redirect to a private one, which Jsoup's own redirect handling would just follow.
+     */
+    private Connection.Response fetch(URI url, int timeoutMs, boolean anyContentType) throws IOException {
+        URI current = url;
+        for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
+            try {
+                PublicAddress.require(current);
+            } catch (IllegalArgumentException notPublic) {
+                throw new IOException(notPublic.getMessage());
+            }
+            Connection.Response response = Jsoup.connect(current.toString())
+                    .userAgent(USER_AGENT)
+                    .timeout(timeoutMs)
+                    .followRedirects(false)
+                    .ignoreHttpErrors(true)
+                    .ignoreContentType(anyContentType)
+                    .execute();
+            int status = response.statusCode();
+            String location = response.header("Location");
+            if (status >= 300 && status < 400 && location != null) {
+                current = current.resolve(location.strip());
+                continue;
+            }
+            if (status >= 400) throw new IOException("HTTP " + status);
+            return response;
+        }
+        throw new IOException("Too many redirects");
+    }
+
     /** The paths robots.txt asks every crawler to leave alone. */
     private Set<String> robotsDisallow(URI site) {
         Set<String> rules = new HashSet<>();
         try {
-            String body = Jsoup.connect(site.getScheme() + "://" + site.getHost() + "/robots.txt")
-                    .userAgent(USER_AGENT).timeout(8000).ignoreContentType(true).execute().body();
+            String body = fetch(URI.create(site.getScheme() + "://" + site.getHost() + "/robots.txt"), 8000, true).body();
 
             boolean appliesToUs = false;
             for (String line : body.split("\n")) {
