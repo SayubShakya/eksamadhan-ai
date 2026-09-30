@@ -1,7 +1,0 @@
-<plugin id="eksamadhan.vpbuild" name="EkSamadhan AI diagram builder"
-        description="Builds the EkSamadhan AI design diagrams from build_spec.py's spec"
-        provider="EkSamadhan AI" class="vpbuild.VpBuilder">
-  <runtime>
-    <library path="lib/vpbuild.jar" relativePath="true"/>
-  </runtime>
-</plugin>
