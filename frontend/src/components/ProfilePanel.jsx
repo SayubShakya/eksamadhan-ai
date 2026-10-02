@@ -5,6 +5,7 @@ import Avatar from './Avatar.jsx';
 import { fileToAvatar } from '../lib/avatar.js';
 import usePwa from '../lib/usePwa.js';
 import * as api from '../lib/api.js';
+import { t } from '../lib/i18n.js';
 
 /**
  * Edit the agent profile shown in the top bar.
@@ -101,7 +102,7 @@ export default function ProfilePanel({ open, user, onSave, onClose, onOpenSettin
                 which would be heavy-handed for a menu hanging off the avatar. */}
             <div className="popover__catcher profile-drawer__scrim" onClick={onClose} aria-hidden="true" />
 
-            <div className="popover profile-drawer" role="dialog" aria-label="Edit profile" ref={sheetRef}
+            <div className="popover profile-drawer" role="dialog" aria-label={t('Edit profile')} ref={sheetRef}
                  style={dragY ? { transform: `translateY(${dragY}px)`, transition: 'none' } : undefined}
                  onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
                 <div className="popover__grab" aria-hidden="true"><span /></div>
@@ -115,41 +116,41 @@ export default function ProfilePanel({ open, user, onSave, onClose, onOpenSettin
                             <path d="M0 90 C 90 60, 160 110, 250 80 S 380 60, 400 70 V120 H0 Z" fill="#a9c4f5" opacity=".55" />
                         </svg>
                     </div>
-                    <button type="button" className="pd__close" onClick={onClose} aria-label="Close"><IconClose size={18} /></button>
+                    <button type="button" className="pd__close" onClick={onClose} aria-label={t('Close')}><IconClose size={18} /></button>
 
                     <div className="pd__top">
                         <input ref={fileRef} type="file" accept="image/*" onChange={pickFile} hidden />
                         <button type="button" className="pd__avatar" onClick={() => fileRef.current?.click()}
-                                aria-label={draft.avatar ? 'Change photo' : 'Upload photo'}>
+                                aria-label={draft.avatar ? t('Change photo') : t('Upload photo')}>
                             <Avatar user={draft} size={88} />
                             <span className="pd__badge" aria-hidden="true"><IconPlus size={14} /></span>
                         </button>
                     </div>
 
                     <div className="pd__who">
-                        <h2 className="pd__name">{[draft.firstName, draft.lastName].filter(Boolean).join(' ') || 'Your name'}
+                        <h2 className="pd__name">{[draft.firstName, draft.lastName].filter(Boolean).join(' ') || t('Your name')}
                             <span className="pd__role">{ROLE_LABEL[draft.role] || draft.role}</span>
                         </h2>
                         <p className="pd__email">{draft.email}</p>
                         <p className="pd__meta">
                             <span className={`pd__status${draft.availability === 'BUSY' ? ' pd__status--busy' : ''}`} />
-                            {draft.availability === 'BUSY' ? 'Busy' : 'Available'}
+                            {draft.availability === 'BUSY' ? t('Busy') : t('Available')}
                             <span aria-hidden="true">·</span>
-                            {draft.role === 'OWNER' ? 'You created this workspace' : 'Role set by the tenant or an admin'}
+                            {draft.role === 'OWNER' ? t('You created this workspace') : t('Role set by the tenant or an admin')}
                         </p>
                     </div>
 
                     <div className="pd__section pd__photo">
-                        <span className="pd__label">Photo</span>
+                        <span className="pd__label">{t('Photo')}</span>
                         <div className="pd__photorow">
-                            <span className="pd__hint">Shown to your team beside your name.</span>
+                            <span className="pd__hint">{t('Shown to your team beside your name.')}</span>
                             <span className="pd__photobtns">
                                 <button type="button" className="btn btn--secondary btn--sm" onClick={() => fileRef.current?.click()}>
-                                    {draft.avatar ? 'Change' : 'Upload'}
+                                    {draft.avatar ? t('Change') : t('Upload')}
                                 </button>
                                 {draft.avatar && (
                                     <button type="button" className="btn btn--ghost btn--sm pd__remove"
-                                            onClick={() => setDraft(d => ({ ...d, avatar: null }))}>Remove</button>
+                                            onClick={() => setDraft(d => ({ ...d, avatar: null }))}>{t('Remove')}</button>
                                 )}
                             </span>
                         </div>
@@ -158,25 +159,25 @@ export default function ProfilePanel({ open, user, onSave, onClose, onOpenSettin
                     {error && <p className="panel__error" role="alert">{error}</p>}
 
                     <div className="pd__section">
-                    <span className="pd__label">Name</span>
+                    <span className="pd__label">{t('Name')}</span>
                     <div className="field-row">
                         <label className="field">
-                            <span className="sr-only">First name</span>
+                            <span className="sr-only">{t('First name')}</span>
                             <input
                                 value={draft.firstName}
                                 onChange={(e) => setDraft({ ...draft, firstName: e.target.value })}
-                                placeholder="First name"
+                                placeholder={t('First name')}
                                 maxLength={30}
                                 autoFocus
                             />
                         </label>
 
                         <label className="field">
-                            <span className="sr-only">Last name</span>
+                            <span className="sr-only">{t('Last name')}</span>
                             <input
                                 value={draft.lastName || ''}
                                 onChange={(e) => setDraft({ ...draft, lastName: e.target.value })}
-                                placeholder="Last name"
+                                placeholder={t('Last name')}
                                 maxLength={30}
                             />
                         </label>
@@ -188,12 +189,12 @@ export default function ProfilePanel({ open, user, onSave, onClose, onOpenSettin
                         the tenant or an admin (letting people set their own would let anyone
                         promote themselves). */}
                     <div className="pd__section">
-                        <span className="pd__label">Email address</span>
+                        <span className="pd__label">{t('Email address')}</span>
                         <span className="pd__readonly">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m4 7 8 6 8-6" /></svg>
                             {draft.email}
                         </span>
-                        <span className="pd__hint"><IconCheck size={13} /> Used to sign in. It cannot be changed here.</span>
+                        <span className="pd__hint"><IconCheck size={13} /> {t('Used to sign in. It cannot be changed here.')}</span>
                     </div>
 
 
@@ -202,11 +203,11 @@ export default function ProfilePanel({ open, user, onSave, onClose, onOpenSettin
                         <div className="profile__install pd__section">
                             {app.canPrompt ? (
                                 <>
-                                    <span>Install EkSamadhan AI on this device, in its own window with its own icon.</span>
-                                    <button type="button" className="btn btn--secondary btn--sm" onClick={app.install}>Install</button>
+                                    <span>{t('Install EkSamadhan AI on this device, in its own window with its own icon.')}</span>
+                                    <button type="button" className="btn btn--secondary btn--sm" onClick={app.install}>{t('Install')}</button>
                                 </>
                             ) : (
-                                <span>Add it to your home screen: in Safari, tap Share, then "Add to Home Screen".</span>
+                                <span>{t('Add it to your home screen: in Safari, tap Share, then "Add to Home Screen".')}</span>
                             )}
                         </div>
                     )}
@@ -214,15 +215,15 @@ export default function ProfilePanel({ open, user, onSave, onClose, onOpenSettin
                     <div className="panel__actions pd__foot">
                         {onOpenSettings && (
                             <button type="button" className="pd__settings" onClick={onOpenSettings}>
-                                <IconSettings size={15} /> Settings
+                                <IconSettings size={15} /> {t('Settings')}
                             </button>
                         )}
                         <button type="button" className="btn btn--secondary" onClick={onClose}>
-                            Cancel
+                            {t('Cancel')}
                         </button>
                         <button type="submit" className={`btn btn--primary${saving ? ' btn--busy' : ''}`}
                                 disabled={!firstName || saving} aria-busy={saving}>
-                            Save changes
+                            {t('Save changes')}
                         </button>
                     </div>
                 </form>

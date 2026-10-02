@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { IconEye, IconEyeOff } from './icons.jsx';
+import { t } from '../lib/i18n.js';
 
 /**
  * A password field with a show/hide button inside its right edge, as on the sign-in page.
@@ -12,8 +13,8 @@ export default function PasswordInput({ className = '', ...input }) {
         <span className="field__password">
             <input {...input} className={className} type={shown ? 'text' : 'password'} />
             <button type="button" className="field__reveal" onClick={() => setShown(v => !v)}
-                    aria-label={shown ? 'Hide password' : 'Show password'} aria-pressed={shown}
-                    title={shown ? 'Hide password' : 'Show password'}>
+                    aria-label={shown ? t('Hide password') : t('Show password')} aria-pressed={shown}
+                    title={shown ? t('Hide password') : t('Show password')}>
                 {shown ? <IconEyeOff size={18} /> : <IconEye size={18} />}
             </button>
         </span>

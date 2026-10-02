@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import {
     IconHome, IconInbox, IconKnowledge,
-    IconChannels, IconTeam, IconClock, IconAnalytics, IconSettings, IconChevronLeft, IconSignOut, IconPlus, IconGrid, IconMoon,
+    IconChannels, IconTeam, IconClock, IconAnalytics, IconSettings, IconChevronLeft, IconSignOut, IconPlus, IconGrid, 
 } from './icons.jsx';
 import Avatar from './Avatar.jsx';
 import { fullName } from '../lib/avatar.js';
-import * as theme from '../lib/theme.js';
 import { LogoMark } from './Logo.jsx';
+import { t } from '../lib/i18n.js';
 
 const ITEMS = [
     { id: 'home', label: 'Dashboard', Icon: IconGrid },
@@ -33,8 +33,6 @@ const DOCKED = '(min-width: 1024px)';
  */
 export default function NavRail({ view, onNavigate, unread = 0, open, onClose, onToggle, onHome,
                                   items = ITEMS, showSettings = true, onSignOut, user, onProfile, action }) {
-    const [mode, setMode] = useState(theme.current);
-    useEffect(() => theme.subscribe(setMode), []);
 
     useEffect(() => {
         if (!open) return;
@@ -100,7 +98,7 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                 onTouchCancel={onTouchEnd}
                 style={drag ? { transform: `translateX(${drag}px)`, transition: 'none' } : undefined}
                 className={`rail ${open ? 'rail--open' : 'rail--closed'}`}
-                aria-label="Main"
+                aria-label={t('Main')}
                 aria-hidden={!open}
                 inert={!open ? '' : undefined}
             >
@@ -108,7 +106,7 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                     <button
                         className="brand"
                         onClick={onHome}
-                        aria-label="EkSamadhan AI home"
+                        aria-label={t('EkSamadhan AI home')}
                     >
                         <LogoMark size={28} color="#2563eb" />
                         <span className="brand__name">EkSamadhan AI</span>
@@ -116,7 +114,7 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                     <button
                         className="icon-btn rail__collapse"
                         onClick={onToggle}
-                        aria-label={open ? 'Collapse menu' : 'Expand menu'}
+                        aria-label={open ? t('Collapse menu') : t('Expand menu')}
                         aria-expanded={open}
                     >
                         <IconChevronLeft />
@@ -133,7 +131,11 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                     </button>
                 )}
 
-                {items.map(({ id, label, Icon }) => (
+                {items.map(({ id, label: raw, Icon }) => {
+                    // The workspace menu is translated here, at render; a menu passed in (the
+                    // system console's) is shown as given.
+                    const label = items === ITEMS ? t(raw) : raw;
+                    return (
                     <button
                         key={id}
                         className="rail__item"
@@ -147,21 +149,15 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                         </span>
                         <span>{label}</span>
                         {id === 'inbox' && unread > 0 && (
-                            <span className="rail__badge" aria-label={`${unread} awaiting reply`}>{unread}</span>
+                            <span className="rail__badge" aria-label={t('{n} awaiting reply', { n: unread })}>{unread}</span>
                         )}
                     </button>
-                ))}
+                    );
+                })}
 
                 <div className="rail__spacer" />
                 <hr className="rail__rule" />
 
-                <button className="rail__item rail__theme" role="switch" aria-checked={mode === 'dark'}
-                        title={open ? undefined : 'Dark mode'}
-                        onClick={() => theme.set(mode === 'dark' ? 'light' : 'dark')}>
-                    <span className="rail__icon"><IconMoon /></span>
-                    <span>Dark mode</span>
-                    <span className={`switch switch--sm${mode === 'dark' ? ' switch--on' : ''}`} aria-hidden="true"><span className="switch__knob" /></span>
-                </button>
                 {showSettings && (
                     <button
                         className="rail__item"
@@ -169,22 +165,22 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                         onClick={() => go('settings')}
                     >
                         <IconSettings />
-                        <span>Settings</span>
+                        <span>{t('Settings')}</span>
                     </button>
                 )}
                 {/* Last in the menu, under Settings, where people look for it. It asks first. */}
                 {onSignOut && (
                     <button className="rail__item rail__item--signout" onClick={onSignOut}>
                         <IconSignOut />
-                        <span>Sign out</span>
+                        <span>{t('Sign out')}</span>
                     </button>
                 )}
                 {user && onProfile && (
                     <button className="rail__me" onClick={() => { onProfile(); if (!window.matchMedia(DOCKED).matches) onClose(); }}
-                            aria-label="Your profile" title="Your profile">
+                            aria-label={t('Your profile')} title={t('Your profile')}>
                         <Avatar user={user} size={40} />
                         <span className="rail__me-text">
-                            <strong>{fullName(user) || 'Your profile'}</strong>
+                            <strong>{fullName(user) || t('Your profile')}</strong>
                             <small>{user.email}</small>
                         </span>
                     </button>

@@ -8,6 +8,7 @@ import { fullName } from '../lib/avatar.js';
 
 import { ROLE_LABEL } from '../lib/format.js';
 import { VIEW_TITLES } from '../lib/pageMeta.js';
+import { t, lang, longDate } from '../lib/i18n.js';
 
 
 /**
@@ -27,12 +28,12 @@ export default function TopBar({
         <header className="topbar">
             {!navOpen && (
                 <>
-                    <button className="icon-btn topbar__menu" onClick={onToggleNav} aria-label="Open menu">
+                    <button className="icon-btn topbar__menu" onClick={onToggleNav} aria-label={t('Open menu')}>
                         <IconMenu />
                         {unread > 0 && <span className="topbar__menudot" aria-hidden="true" />}
                     </button>
 
-                    <button className="brand" onClick={onHome} aria-label="EkSamadhan AI home">
+                    <button className="brand" onClick={onHome} aria-label={t('EkSamadhan AI home')}>
                         <LogoMark size={28} color="#2563eb" />
                         <span className="brand__name">EkSamadhan AI</span>
                     </button>
@@ -43,7 +44,7 @@ export default function TopBar({
             {VIEW_TITLES[view] && (
                 <span className="topbar__where" aria-hidden="true">
                     <span className="topbar__title">{VIEW_TITLES[view]}</span>
-                    <span className="topbar__date">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                    <span className="topbar__date">{longDate()}</span>
                 </span>
             )}
 
@@ -52,10 +53,10 @@ export default function TopBar({
                     <IconSearch />
                     <input
                         type="search"
-                        placeholder="Search name, CONV-id or message…"
+                        placeholder={t('Search name, CONV-id or message…')}
                         value={query}
                         onChange={(e) => onQueryChange(e.target.value)}
-                        aria-label="Search conversations"
+                        aria-label={t('Search conversations')}
                     />
                 </div>
             )}
@@ -68,9 +69,9 @@ export default function TopBar({
                 a button that did nothing, or offered what is already there, would be noise. */}
             {app.canPrompt && !app.installed && (
                 <button className="btn btn--secondary btn--sm topbar__install" onClick={app.install}
-                        title="Install EkSamadhan AI as an app on this device">
+                        title={t('Install EkSamadhan AI as an app on this device')}>
                     <IconDownload size={15} />
-                    <span className="topbar__install-text">Install app</span>
+                    <span className="topbar__install-text">{t('Install app')}</span>
                 </button>
             )}
 
@@ -84,10 +85,10 @@ export default function TopBar({
             <span className="topbar__sep" aria-hidden="true" />
             <NotificationBell onOpen={onOpenNotification} onSeeAll={onSeeAllNotifications} onPage={view === 'notifications'} />
 
-            <button className="user" onClick={onEditProfile} aria-label="Edit profile">
+            <button className="user" onClick={onEditProfile} aria-label={t('Edit profile')}>
                 <Avatar user={user} size={34} />
                 <span className="user__text">
-                    <span className="user__name">{fullName(user) || 'Set up profile'}</span>
+                    <span className="user__name">{fullName(user) || t('Set up profile')}</span>
                     <span className="user__role">{role}</span>
                 </span>
             </button>

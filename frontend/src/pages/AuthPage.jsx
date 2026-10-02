@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ROLE_IN_SENTENCE } from '../lib/format.js';
+import { Fragment, useEffect, useState } from 'react';
+import { t } from '../lib/i18n.js';
 import { LogoMark } from '../components/Logo.jsx';
 import { IconArrowLeft, IconDownload, IconEye, IconEyeOff, IconLock } from '../components/icons.jsx';
 import AuthArt from '../components/AuthArt.jsx';
@@ -15,6 +15,22 @@ export const IconMail = () => (
         <rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m4 7 8 6 8-6" />
     </svg>
 );
+
+/**
+ * A translated title with its accent word marked *like this*: the marked part is set in the
+ * italic serif. The translation decides where the accent falls, since Nepali puts the verb last.
+ */
+export function emph(text) {
+    return text.split(/\*([^*]+)\*/).map((s, i) => (i % 2 ? <em key={i}>{s}</em> : s));
+}
+
+/** A translated sentence with {name} slots filled by elements, so word order stays the translator's. */
+function rich(text, parts) {
+    return text.split(/(\{\w+\})/).map((s, i) => {
+        const m = s.match(/^\{(\w+)\}$/);
+        return m && parts[m[1]] !== undefined ? <Fragment key={i}>{parts[m[1]]}</Fragment> : s;
+    });
+}
 
 /** Google's own mark, as its sign-in branding asks for: the four-colour G, unaltered. */
 function GoogleMark() {
@@ -54,7 +70,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
         setLoadingInvite(true);
         api.previewInvite(inviteToken)
             .then(data => { if (!cancelled) { setInvite(data); setError(''); } })
-            .catch(err => { if (!cancelled) setError(api.errorMessage(err, 'This invite link is not valid.')); })
+            .catch(err => { if (!cancelled) setError(api.errorMessage(err, t('This invite link is not valid.'))); })
             .finally(() => { if (!cancelled) setLoadingInvite(false); });
         return () => { cancelled = true; };
     }, [mode, inviteToken]);
@@ -78,7 +94,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
             }
             onSession(session);
         } catch (err) {
-            setError(api.errorMessage(err, 'That did not work. Please check the details and try again.'));
+            setError(api.errorMessage(err, t('That did not work. Please check the details and try again.')));
             setBusy(false);
         }
     };
@@ -89,7 +105,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
     const withGoogle = async () => {
         setError('');
         if (mode === 'signup' && !form.organizationName.trim()) {
-            setError('Name your workspace first. It is the one thing Google cannot tell us.');
+            setError(t('Name your workspace first. It is the one thing Google cannot tell us.'));
             return;
         }
         setGoogleBusy(true);
@@ -104,7 +120,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                 // Firebase's own failures first: they have no HTTP response, and the generic
                 // handler would call every one of them "could not reach the server".
                 setError(googleErrorMessage(err)
-                    ?? api.errorMessage(err, 'Google sign-in did not work. Please try again.'));
+                    ?? api.errorMessage(err, t('Google sign-in did not work. Please try again.')));
             }
             setGoogleBusy(false);
         }
@@ -116,30 +132,35 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                     onClick={withGoogle} disabled={googleBusy || busy} aria-busy={googleBusy}>
                 <GoogleMark />
                 <span>
-                    {mode === 'login' ? 'Continue with Google'
-                        : mode === 'signup' ? 'Sign up with Google' : 'Join with Google'}
+                    {mode === 'login' ? t('Continue with Google')
+                        : mode === 'signup' ? t('Sign up with Google') : t('Join with Google')}
                 </span>
             </button>
             {mode === 'invite' && invite && (
-                <small className="field__hint auth__google-hint">Use the Google account for {invite.email}.</small>
+                <small className="field__hint auth__google-hint">{t('Use the Google account for {email}.', { email: invite.email })}</small>
             )}
-            <div className="auth__or" role="separator"><span>{mode === 'login' ? 'or' : 'or use a password'}</span></div>
+            <div className="auth__or" role="separator"><span>{mode === 'login' ? t('or') : t('or use a password')}</span></div>
         </>
     );
 
-    const title = mode === 'login' ? 'Welcome back'
-        : mode === 'signup' ? 'Create your workspace'
-        : invite?.organizationName ? `Join ${invite.organizationName}` : 'Join the team';
+    // The accent word, *marked*, in the product page's italic serif, so the two pages read as
+    // one site. Only the fixed titles carry one: a workspace name is shown as typed.
+    const title = mode === 'login' ? emph(t('Welcome *back*'))
+        : mode === 'signup' ? emph(t('Create your *workspace*'))
+        : invite?.organizationName ? t('Join {name}', { name: invite.organizationName }) : t('Join the team');
 
-    // The last word in the product page's italic serif, so the two pages read as one site.
-    const titleAccent = mode === 'login' ? 'back' : mode === 'signup' ? 'workspace' : '';
+    // A whole sentence per role, not a role dropped into one: the words around it change in Nepali.
+    const invitedAs = invite && ({
+        OWNER: t('You were invited as the tenant, using {email}.', { email: invite.email }),
+        ADMIN: t('You were invited as an admin, using {email}.', { email: invite.email }),
+    }[invite.role] || t('You were invited as staff, using {email}.', { email: invite.email }));
 
-    const subtitle = mode === 'login' ? 'Sign in to your support inbox.'
-        : mode === 'signup' ? 'One inbox for your Facebook and Instagram messages.'
-        : invite ? `You were invited as ${ROLE_IN_SENTENCE[invite.role] || 'staff'}, using ${invite.email}.` : '';
+    const subtitle = mode === 'login' ? t('Sign in to your support inbox.')
+        : mode === 'signup' ? t('One inbox for your Facebook and Instagram messages.')
+        : invitedAs || '';
 
     if (loadingInvite) {
-        return <div className="auth"><div className="auth__card"><CenteredSpinner label="Checking your invite" /></div></div>;
+        return <div className="auth"><div className="auth__card"><CenteredSpinner label={t('Checking your invite')} /></div></div>;
     }
 
     // A dead invite link has nothing to submit, so offer the way out rather than a form.
@@ -148,9 +169,9 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
             <div className="auth">
                 <div className="auth__card">
                     <LogoMark size={40} color="#2563eb" />
-                    <h1 className="auth__title">This invite is not valid</h1>
-                    <p className="auth__sub">{error || 'The link may have expired or already been used. Ask your admin for a new one.'}</p>
-                    <button className="btn btn--secondary" onClick={() => onNavigate('login')}>Go to sign in</button>
+                    <h1 className="auth__title">{t('This invite is not valid')}</h1>
+                    <p className="auth__sub">{error || t('The link may have expired or already been used. Ask your admin for a new one.')}</p>
+                    <button className="btn btn--secondary" onClick={() => onNavigate('login')}>{t('Go to sign in')}</button>
                 </div>
             </div>
         );
@@ -160,18 +181,18 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
         <div className="auth auth--split">
             <div className="auth__main">
             <form className="auth__card" onSubmit={submit}>
-                <a className="auth__back" href="/"><span className="auth__back-ico"><IconArrowLeft size={15} /></span> Back to home</a>
-                <a className="auth__logo" href="/" aria-label="EkSamadhan AI home"><LogoMark size={40} color="#2563eb" /></a>
-                <h1 className="auth__title">{titleAccent ? <>{title.slice(0, -titleAccent.length)}<em>{titleAccent}</em></> : title}</h1>
+                <a className="auth__back" href="/"><span className="auth__back-ico"><IconArrowLeft size={15} /></span> {t('Back to home')}</a>
+                <a className="auth__logo" href="/" aria-label={t('EkSamadhan AI home')}><LogoMark size={40} color="#2563eb" /></a>
+                <h1 className="auth__title">{title}</h1>
                 <p className="auth__sub">{subtitle}</p>
                 {mode === 'login' && (
                     <p className="auth__switch">
-                        New here? <button type="button" className="linkish" onClick={() => onNavigate('signup')}>Create a workspace</button>
+                        {t('New here?')} <button type="button" className="linkish" onClick={() => onNavigate('signup')}>{t('Create a workspace')}</button>
                     </p>
                 )}
                 {mode === 'signup' && (
                     <p className="auth__switch">
-                        Already have an account? <button type="button" className="linkish" onClick={() => onNavigate('login')}>Sign in</button>
+                        {t('Already have an account?')} <button type="button" className="linkish" onClick={() => onNavigate('login')}>{t('Sign in')}</button>
                     </p>
                 )}
                 {notice && mode === 'login' && <p className="notice notice--ok" role="status">{notice}</p>}
@@ -180,7 +201,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
 
                 {mode === 'signup' && (
                     <label className="field">
-                        <span>Workspace name</span>
+                        <span>{t('Workspace name')}</span>
                         <input value={form.organizationName} onChange={set('organizationName')}
                                placeholder="Acme Support" maxLength={60} required autoFocus />
                     </label>
@@ -192,12 +213,12 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                 {mode !== 'login' && (
                     <div className="field-row">
                         <label className="field">
-                            <span>First name</span>
+                            <span>{t('First name')}</span>
                             <input value={form.firstName} onChange={set('firstName')}
                                    maxLength={30} required autoFocus={mode === 'invite'} />
                         </label>
                         <label className="field">
-                            <span>Last name</span>
+                            <span>{t('Last name')}</span>
                             <input value={form.lastName} onChange={set('lastName')} maxLength={30} />
                         </label>
                     </div>
@@ -205,7 +226,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
 
                 {mode !== 'invite' && (
                     <label className="field">
-                        <span>Email</span>
+                        <span>{t('Email')}</span>
                         <span className="field__iconed">
                             <IconMail />
                             <input type="email" value={form.email} onChange={set('email')} placeholder="you@business.com"
@@ -215,7 +236,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                 )}
 
                 <label className="field">
-                    <span>Password</span>
+                    <span>{t('Password')}</span>
                     <span className="field__password field__iconed">
                         <IconLock size={18} />
                         <input type={showPassword ? 'text' : 'password'} value={form.password}
@@ -226,24 +247,24 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                             its state, or a screen-reader user cannot check what they typed. */}
                         <button type="button" className="field__reveal"
                                 onClick={() => setShowPassword(v => !v)}
-                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                aria-label={showPassword ? t('Hide password') : t('Show password')}
                                 aria-pressed={showPassword}
-                                title={showPassword ? 'Hide password' : 'Show password'}>
+                                title={showPassword ? t('Hide password') : t('Show password')}>
                             {showPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
                         </button>
                     </span>
-                    {mode !== 'login' && <small className="field__hint">At least 8 characters.</small>}
+                    {mode !== 'login' && <small className="field__hint">{t('At least 8 characters.')}</small>}
                 </label>
                 {mode === 'login' && (
-                    <button type="button" className="auth__forgot" onClick={() => onNavigate('forgot')}>Forgot password?</button>
+                    <button type="button" className="auth__forgot" onClick={() => onNavigate('forgot')}>{t('Forgot password?')}</button>
                 )}
 
                 {error && <p className="auth__error" role="alert">{error}</p>}
 
                 <button className={`btn btn--primary auth__submit${busy ? ' btn--busy' : ''}`} type="submit"
                         disabled={busy || googleBusy} aria-busy={busy}>
-                    {mode === 'login' ? 'Sign in'
-                        : mode === 'signup' ? 'Create workspace' : 'Join the team'}
+                    {mode === 'login' ? t('Sign in')
+                        : mode === 'signup' ? t('Create workspace') : t('Join the team')}
                 </button>
 
                 {/* Creating or joining an account is accepting the terms, so say so where both ways
@@ -251,16 +272,18 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                     new tab, so reading them does not lose what has been typed. */}
                 {mode !== 'login' && (
                     <p className="auth__legal">
-                        By {mode === 'signup' ? 'creating a workspace' : 'joining'}, you agree to the{' '}
-                        <a href="/terms" target="_blank" rel="noopener">Terms &amp; Conditions</a> and
-                        confirm you have read the{' '}
-                        <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.
+                        {rich(mode === 'signup'
+                            ? t('By creating a workspace, you agree to the {terms} and confirm you have read the {privacy}.')
+                            : t('By joining, you agree to the {terms} and confirm you have read the {privacy}.'), {
+                            terms: <a href="/terms" target="_blank" rel="noopener">{t('Terms & Conditions')}</a>,
+                            privacy: <a href="/privacy" target="_blank" rel="noopener">{t('Privacy Policy')}</a>,
+                        })}
                     </p>
                 )}
 
-                <nav className="auth__footer" aria-label="Legal">
-                    <a href="/privacy">Privacy Policy</a>
-                    <a href="/terms">Terms &amp; Conditions</a>
+                <nav className="auth__footer" aria-label={t('Legal')}>
+                    <a href="/privacy">{t('Privacy Policy')}</a>
+                    <a href="/terms">{t('Terms & Conditions')}</a>
                 </nav>
             </form>
             <InstallProblem />
@@ -273,13 +296,13 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                 <div className="auth__install">
                     {app.canPrompt ? (
                         <>
-                            <span>Get EkSamadhan AI as an app on this device</span>
+                            <span>{t('Get EkSamadhan AI as an app on this device')}</span>
                             <button type="button" className="btn btn--secondary btn--sm" onClick={app.install}>
-                                <IconDownload size={15} /> Install app
+                                <IconDownload size={15} /> {t('Install app')}
                             </button>
                         </>
                     ) : (
-                        <span>To add it to your home screen: in Safari, tap Share, then "Add to Home Screen".</span>
+                        <span>{t('To add it to your home screen: in Safari, tap Share, then "Add to Home Screen".')}</span>
                     )}
                 </div>
             )}

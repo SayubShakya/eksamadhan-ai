@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { IconClose } from './icons.jsx';
+import { t } from '../lib/i18n.js';
 
 /**
  * In-page confirmation for destructive actions.
@@ -8,7 +9,7 @@ import { IconClose } from './icons.jsx';
  * styled, and blocks the whole browser — fine for a prototype, wrong for a product.
  */
 export default function ConfirmDialog({
-    open, title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel',
+    open, title, message, confirmLabel, cancelLabel,
     danger = false, onConfirm, onCancel,
 }) {
     useEffect(() => {
@@ -26,7 +27,7 @@ export default function ConfirmDialog({
             <div className="confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title">
                 <header className="panel__head">
                     <h2 className="panel__title" id="confirm-title">{title}</h2>
-                    <button className="icon-btn" onClick={onCancel} aria-label="Close">
+                    <button className="icon-btn" onClick={onCancel} aria-label={t('Close')}>
                         <IconClose />
                     </button>
                 </header>
@@ -34,13 +35,13 @@ export default function ConfirmDialog({
                 <div className="confirm__body">
                     <p className="confirm__message">{message}</p>
                     <div className="panel__actions">
-                        <button className="btn btn--secondary" onClick={onCancel}>{cancelLabel}</button>
+                        <button className="btn btn--secondary" onClick={onCancel}>{cancelLabel ?? t('Cancel')}</button>
                         <button
                             className={`btn ${danger ? 'btn--destructive' : 'btn--primary'}`}
                             onClick={onConfirm}
                             autoFocus
                         >
-                            {confirmLabel}
+                            {confirmLabel ?? t('Confirm')}
                         </button>
                     </div>
                 </div>

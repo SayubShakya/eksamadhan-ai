@@ -1,4 +1,5 @@
 import { useLongWait } from '../lib/loading.js';
+import { t } from '../lib/i18n.js';
 
 /**
  * The loading indicators, one per kind of wait:
@@ -29,9 +30,9 @@ export function LoadingRegion({ label, children, className = '', as: Tag = 'div'
     const long = useLongWait(true);
     return (
         <Tag className={className} aria-busy="true">
-            <span className="sr-only" role="status">Loading {label}</span>
+            <span className="sr-only" role="status">{t('Loading {label}', { label })}</span>
             <div className="loading__content" aria-hidden="true">{children}</div>
-            {long && <p className="loading__long">Taking longer than usual. Still trying.</p>}
+            {long && <p className="loading__long">{t('Taking longer than usual. Still trying.')}</p>}
         </Tag>
     );
 }
@@ -48,7 +49,7 @@ export function CenteredSpinner({ label, className = '' }) {
     return (
         <div className={`loading ${className}`} role="status" aria-busy="true">
             <Spinner size={24} />
-            <p className="loading__label">{long ? 'Taking longer than usual. Still trying.' : label}</p>
+            <p className="loading__label">{long ? t('Taking longer than usual. Still trying.') : label}</p>
         </div>
     );
 }
@@ -60,7 +61,7 @@ export function LoadError({ message, onRetry, className = '' }) {
             <p className="loading__label">{message}</p>
             {onRetry && (
                 <button type="button" className="btn btn--secondary btn--sm" onClick={onRetry}>
-                    Try again
+                    {t('Try again')}
                 </button>
             )}
         </div>
@@ -82,7 +83,7 @@ export function UploadProgress({ label, fraction }) {
     }
     const pct = Math.round(fraction * 100);
     // Every byte sent is not the end: the server still has to read the file.
-    const text = pct >= 100 ? `${label}: processing` : `${label}: ${pct}%`;
+    const text = pct >= 100 ? t('{label}: processing', { label }) : `${label}: ${pct}%`;
     return (
         <div className="upload">
             <div className="upload__text">{text}</div>

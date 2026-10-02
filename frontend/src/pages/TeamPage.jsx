@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import Avatar from '../components/Avatar.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import * as api from '../lib/api.js';
@@ -9,6 +9,15 @@ import { timeAgo, formatBackAt } from '../lib/format.js';
 
 import { ROLE_LABEL } from '../lib/format.js';
 import { toast } from '../lib/toast.js';
+import { t } from '../lib/i18n.js';
+
+/** A translated sentence with {name} slots filled by elements, so word order stays the translator's. */
+function rich(text, parts) {
+    return text.split(/(\{\w+\})/).map((s, i) => {
+        const m = s.match(/^\{(\w+)\}$/);
+        return m && parts[m[1]] !== undefined ? <Fragment key={i}>{parts[m[1]]}</Fragment> : s;
+    });
+}
 
 /**
  * The workspace team (PRD FR-04).
@@ -22,13 +31,19 @@ function Presence({ member }) {
     const offline = member.presence === 'OFFLINE' || !member.presence;
     // Online and set to Available, but outside their working hours: say until when.
     const outside = member.presence === 'OUTSIDE_HOURS';
-    const back = outside && member.hours?.nextAvailableAt ? `, back ${formatBackAt(member.hours.nextAvailableAt)}` : '';
+    const status = outside && member.hours && !member.hours.hasAvailability ? t('No working hours set') : t(p.label);
+    let text = status;
+    if (outside && member.hours?.nextAvailableAt) {
+        text = t('{status}, back {when}', { status, when: formatBackAt(member.hours.nextAvailableAt) });
+    } else if (offline) {
+        text = member.lastSeenAt
+            ? t('{status}, last seen {when}', { status, when: timeAgo(member.lastSeenAt) })
+            : t('{status}, not seen yet', { status });
+    }
     return (
         <span className={`presence presence--${(member.presence || 'OFFLINE').toLowerCase()}`}>
             <span className={`dot ${p.dot}`} aria-hidden="true" />
-            {outside && member.hours && !member.hours.hasAvailability ? 'No working hours set' : p.label}
-            {back}
-            {offline && (member.lastSeenAt ? `, last seen ${timeAgo(member.lastSeenAt)}` : ', not seen yet')}
+            {text}
         </span>
     );
 }
@@ -74,9 +89,9 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
     useEffect(() => {
         const onPresence = (e) => {
             const { userId, presence, lastSeenAt } = e.detail || {};
-            mutate(t => ({
-                ...t,
-                members: t.members.map(m => (m.id === userId
+            mutate(prev => ({
+                ...prev,
+                members: prev.members.map(m => (m.id === userId
                     ? { ...m, presence, lastSeenAt: lastSeenAt ?? m.lastSeenAt } : m)),
             }));
         };
@@ -101,16 +116,16 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
         try {
             const created = await api.createInvite({ email, role });
             setLastInvite(created);
-            const copyLink = created?.inviteUrl ? [{ label: 'Copy link', onClick: () => navigator.clipboard?.writeText(created.inviteUrl) }] : [];
+            const copyLink = created?.inviteUrl ? [{ label: t('Copy link'), onClick: () => navigator.clipboard?.writeText(created.inviteUrl) }] : [];
             if (created?.emailed === false) {
-                toast.warning('Invite created, email not sent', { body: 'Copy the link and send it to them yourself.', actions: copyLink });
+                toast.warning(t('Invite created, email not sent'), { body: t('Copy the link and send it to them yourself.'), actions: copyLink });
             } else {
-                toast.success('Invitation sent', { body: `An email with the link went to ${email}.`, actions: copyLink });
+                toast.success(t('Invitation sent'), { body: t('An email with the link went to {email}.', { email }), actions: copyLink });
             }
             setEmail('');
             await load();
         } catch (err) {
-            setError(api.errorMessage(err, 'Could not create that invite.'));
+            setError(api.errorMessage(err, t('Could not create that invite.')));
         } finally {
             setBusy(false);
         }
@@ -120,24 +135,24 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
         try {
             await navigator.clipboard.writeText(url);
             setCopied(id);
-            toast.success('Invite link copied', { body: 'Paste it in a message to the person you invited.' });
+            toast.success(t('Invite link copied'), { body: t('Paste it in a message to the person you invited.') });
             setTimeout(() => setCopied(''), 2000);
         } catch {
             // Clipboard access needs a secure context; the field is selectable either way.
-            setError('Your browser blocked copying. Select the link and copy it manually.');
+            setError(t('Your browser blocked copying. Select the link and copy it manually.'));
         }
     };
 
     const revoke = async (id) => {
-        try { await api.revokeInvite(id); await load(); toast.success('Invite revoked', { body: 'The link no longer works.' }); }
-        catch (err) { setError(api.errorMessage(err, 'Could not revoke that invite.')); }
+        try { await api.revokeInvite(id); await load(); toast.success(t('Invite revoked'), { body: t('The link no longer works.') }); }
+        catch (err) { setError(api.errorMessage(err, t('Could not revoke that invite.'))); }
     };
 
     const confirmRemove = async () => {
         const member = removing;
         setRemoving(null);
-        try { await api.removeMember(member.id); await load(); toast.success('Removed from the team', { body: `${[member.firstName, member.lastName].filter(Boolean).join(' ') || 'That person'} can no longer sign in to this workspace.` }); }
-        catch (err) { setError(api.errorMessage(err, 'Could not remove that person.')); }
+        try { await api.removeMember(member.id); await load(); toast.success(t('Removed from the team'), { body: t('{name} can no longer sign in to this workspace.', { name: [member.firstName, member.lastName].filter(Boolean).join(' ') || t('That person') }) }); }
+        catch (err) { setError(api.errorMessage(err, t('Could not remove that person.'))); }
     };
 
     const canManage = team ? team.canManage : roleCanManage;
@@ -147,10 +162,9 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
         <div className="page">
             <div className="page__head">
                 <div>
-                    <h1 className="page__title">Team</h1>
+                    <h1 className="page__title">{t('Team')}</h1>
                     <p className="page__sub">
-                        The tenant created this workspace. Admins help run it: they can invite people and
-                        change knowledge, channels and settings. Staff answer the conversations handed to them.
+                        {t('The tenant created this workspace. Admins help run it: they can invite people and change knowledge, channels and settings. Staff answer the conversations handed to them.')}
                     </p>
                 </div>
             </div>
@@ -158,26 +172,26 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
             {canManage && (
                 <form className="invite-form" onSubmit={invite}>
                     <label className="field">
-                        <span>Invite by email</span>
+                        <span>{t('Invite by email')}</span>
                         <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                                placeholder="colleague@example.com" required />
                     </label>
                     <label className="field">
-                        <span>Role</span>
+                        <span>{t('Role')}</span>
                         <select className="invite-form__role" value={role} onChange={e => setRole(e.target.value)}
                                 aria-describedby="role-meaning">
-                            <option value="AGENT">Staff</option>
-                            <option value="ADMIN">Admin</option>
+                            <option value="AGENT">{t('Staff')}</option>
+                            <option value="ADMIN">{t('Admin')}</option>
                         </select>
                     </label>
                     <button className={`btn btn--primary${busy ? ' btn--busy' : ''}`} type="submit"
                             disabled={busy} aria-busy={busy}>
-                        Create invite link
+                        {t('Create invite link')}
                     </button>
                     {/* What the chosen role can do, in the form itself: a bare "Admin" left the
                         difference from the tenant and from staff to guesswork. */}
                     <p id="role-meaning" className="invite-form__meaning">
-                        {ROLE_MEANING[role]}
+                        {t(ROLE_MEANING[role])}
                     </p>
                 </form>
             )}
@@ -186,36 +200,35 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
 
             {lastInvite && (lastInvite.emailed ? (
                 <p className="notice notice--ok">
-                    Invitation emailed to <strong>{lastInvite.email}</strong>.
+                    {rich(t('Invitation emailed to {email}.'), { email: <strong>{lastInvite.email}</strong> })}
                 </p>
             ) : (
                 <p className="notice notice--warn">
-                    <strong>The invitation was created, but the email could not be sent.</strong>
+                    <strong>{t('The invitation was created, but the email could not be sent.')}</strong>
                     {lastInvite.emailError ? ` ${lastInvite.emailError}` : ''}
-                    {' '}Copy the link below and send it to them yourself.
+                    {' '}{t('Copy the link below and send it to them yourself.')}
                 </p>
             ))}
 
             <h2 className="section-title">
-                Members
+                {t('Members')}
                 {!loading && (() => {
                     const active = team.members.filter(m => m.status === 'ACTIVE');
                     const here = active.filter(m => m.presence === 'AVAILABLE').length;
-                    return <span className="count"> · {here} of {active.length} available now</span>;
+                    return <span className="count"> · {t('{here} of {total} available now', { here, total: active.length })}</span>;
                 })()}
             </h2>
             {!loading && !team.members.some(m => m.status === 'ACTIVE' && m.presence === 'AVAILABLE') && (
                 <p className="notice notice--warn">
-                    Nobody is available right now. Conversations the AI hands over will wait, and go to
-                    the first person who becomes available. The tenant and admins are alerted meanwhile.
+                    {t('Nobody is available right now. Conversations the AI hands over will wait, and go to the first person who becomes available. The tenant and admins are alerted meanwhile.')}
                 </p>
             )}
             {loading && (loadError && !firstLoad ? (
                 <LoadError className="empty--panel"
-                           message={api.errorMessage(loadError, 'Could not load the team.')}
+                           message={api.errorMessage(loadError, t('Could not load the team.'))}
                            onRetry={load} />
             ) : (
-                <LoadingRegion label="the team">
+                <LoadingRegion label={t('the team')}>
                     <MemberSkeleton name={140} email={190} />
                     <MemberSkeleton name={110} email={160} />
                 </LoadingRegion>
@@ -226,7 +239,7 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                     <div>
                         <div className="member__name">
                             {[member.firstName, member.lastName].filter(Boolean).join(' ')}
-                            {member.isYou && <span className="tag tag--ai" style={{ marginLeft: 8 }}>You</span>}
+                            {member.isYou && <span className="tag tag--ai" style={{ marginLeft: 8 }}>{t('You')}</span>}
                         </div>
                         {/* A colleague's address opens a new email to them; your own is just shown. */}
                         <div className="member__email">
@@ -235,12 +248,12 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                         {member.status === 'ACTIVE' && <Presence member={member} />}
                     </div>
                     <div className="member__actions">
-                        <span className={`tag role-tag role-tag--${member.role.toLowerCase()}`}>{ROLE_LABEL[member.role]}</span>
-                        {member.status === 'DISABLED' && <span className="muted">Removed</span>}
-                        {member.status === 'DEACTIVATED' && <span className="muted">Deactivated</span>}
+                        <span className={`tag role-tag role-tag--${member.role.toLowerCase()}`}>{t(ROLE_LABEL[member.role])}</span>
+                        {member.status === 'DISABLED' && <span className="muted">{t('Removed')}</span>}
+                        {member.status === 'DEACTIVATED' && <span className="muted">{t('Deactivated')}</span>}
                         {team.canManage && !member.isYou && member.role !== 'OWNER' && member.status !== 'DISABLED' && (
                             <button className="btn btn--danger btn--sm" onClick={() => setRemoving(member)}>
-                                Remove
+                                {t('Remove')}
                             </button>
                         )}
                     </div>
@@ -249,25 +262,25 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
 
             {!loading && team.canManage && (
                 <>
-                    <h2 className="section-title">Pending invites</h2>
-                    {team.invites.length === 0 && <p className="muted">No invites waiting to be accepted.</p>}
+                    <h2 className="section-title">{t('Pending invites')}</h2>
+                    {team.invites.length === 0 && <p className="muted">{t('No invites waiting to be accepted.')}</p>}
                     {team.invites.map(pending => (
                         <div className="card" key={pending.id} style={{ marginBottom: 10 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                 <strong style={{ fontSize: 14 }}>{pending.email}</strong>
-                                <span className={`tag role-tag role-tag--${pending.role.toLowerCase()}`}>{ROLE_LABEL[pending.role]}</span>
+                                <span className={`tag role-tag role-tag--${pending.role.toLowerCase()}`}>{t(ROLE_LABEL[pending.role])}</span>
                                 <button className="btn btn--secondary btn--sm" style={{ marginLeft: 'auto' }}
                                         onClick={() => revoke(pending.id)}>
-                                    Revoke
+                                    {t('Revoke')}
                                 </button>
                             </div>
                             <div className="invite-link">
                                 <input readOnly value={pending.inviteUrl} onFocus={e => e.target.select()} />
                                 <button className="btn btn--primary btn--sm" onClick={() => copy(pending.inviteUrl, pending.id)}>
-                                    {copied === pending.id ? 'Copied' : 'Copy link'}
+                                    {copied === pending.id ? t('Copied') : t('Copy link')}
                                 </button>
                             </div>
-                            <small className="muted">Send this link yourself. It works once and expires in seven days.</small>
+                            <small className="muted">{t('Send this link yourself. It works once and expires in seven days.')}</small>
                         </div>
                     ))}
                 </>
@@ -275,9 +288,9 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
 
             <ConfirmDialog
                 open={Boolean(removing)}
-                title={removing ? `Remove ${removing.firstName}?` : ''}
-                message="They lose access to the inbox immediately. Conversations they handled keep their name."
-                confirmLabel="Remove"
+                title={removing ? t('Remove {name}?', { name: removing.firstName }) : ''}
+                message={t('They lose access to the inbox immediately. Conversations they handled keep their name.')}
+                confirmLabel={t('Remove')}
                 danger
                 onConfirm={confirmRemove}
                 onCancel={() => setRemoving(null)}

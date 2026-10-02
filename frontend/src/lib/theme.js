@@ -23,10 +23,28 @@ function apply(theme) {
 
 export function init() { apply(current()); }
 
-export function set(theme) {
-    try { localStorage.setItem(KEY, theme); } catch { /* private mode: this visit only */ }
-    apply(theme);
-    listeners.forEach(fn => fn(theme));
+/** What the person picked: 'light', 'dark', or 'system' (follow the device). */
+export function choice() {
+    const t = stored();
+    return t === 'light' || t === 'dark' ? t : 'system';
 }
+
+export function set(theme) {
+    try {
+        if (theme === 'system') localStorage.removeItem(KEY);
+        else localStorage.setItem(KEY, theme);
+    } catch { /* private mode: this visit only */ }
+    const now = current();
+    apply(now);
+    listeners.forEach(fn => fn(now));
+}
+
+// Following the device: change with it while the app is open.
+window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
+    if (choice() !== 'system') return;
+    const now = current();
+    apply(now);
+    listeners.forEach(fn => fn(now));
+});
 
 export function subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }

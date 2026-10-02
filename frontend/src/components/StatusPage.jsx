@@ -1,4 +1,5 @@
 import { LogoMark } from './Logo.jsx';
+import { t } from '../lib/i18n.js';
 
 /**
  * A whole-screen message for when the app cannot show what was asked for: an address that does
@@ -21,15 +22,15 @@ export default function StatusPage({ icon, code, title, children, actions, inShe
     return (
         <div className="status-page">
             <header className="status-page__head">
-                <a href="/" className="legal__brand" aria-label="EkSamadhan AI home">
+                <a href="/" className="legal__brand" aria-label={t('EkSamadhan AI home')}>
                     <LogoMark size={28} color="#2563eb" />
                     <span>EkSamadhan AI</span>
                 </a>
             </header>
             <main className="status-page__main">{body}</main>
             <footer className="status-page__foot">
-                <a href="/privacy">Privacy Policy</a>
-                <a href="/terms">Terms &amp; Conditions</a>
+                <a href="/privacy">{t('Privacy Policy')}</a>
+                <a href="/terms">{t('Terms & Conditions')}</a>
             </footer>
         </div>
     );

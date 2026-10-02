@@ -5,7 +5,8 @@ import PasswordInput from '../components/PasswordInput.jsx';
 import { IconArrowLeft, IconCheck, IconWarning } from '../components/icons.jsx';
 import { CenteredSpinner } from '../components/Loading.jsx';
 import * as api from '../lib/api.js';
-import { IconMail } from './AuthPage.jsx';
+import { IconMail, emph } from './AuthPage.jsx';
+import { t } from '../lib/i18n.js';
 
 /**
  * The three screens reached from an email or the sign-in page:
@@ -20,9 +21,9 @@ export default function AccountLinkPage({ mode, token, onSession, onNavigate }) 
             <div className="auth__main">
                 <div className="auth__card">
                     <a className="auth__back" href="/login" onClick={(e) => { e.preventDefault(); onNavigate('login'); }}>
-                        <span className="auth__back-ico"><IconArrowLeft size={15} /></span> Back to sign in
+                        <span className="auth__back-ico"><IconArrowLeft size={15} /></span> {t('Back to sign in')}
                     </a>
-                    <a className="auth__logo" href="/" aria-label="EkSamadhan AI home"><LogoMark size={40} color="#2563eb" /></a>
+                    <a className="auth__logo" href="/" aria-label={t('EkSamadhan AI home')}><LogoMark size={40} color="#2563eb" /></a>
                     {mode === 'forgot' && <Forgot />}
                     {mode === 'reset' && <Reset token={token} onSession={onSession} onNavigate={onNavigate} />}
                     {mode === 'verify' && <Verify token={token} onNavigate={onNavigate} />}
@@ -42,27 +43,26 @@ function Forgot() {
         e.preventDefault();
         setError(''); setBusy(true);
         try { await api.forgotPassword(email.trim()); setSent(true); }
-        catch (err) { setError(api.errorMessage(err, 'That did not work. Please try again.')); }
+        catch (err) { setError(api.errorMessage(err, t('That did not work. Please try again.'))); }
         finally { setBusy(false); }
     };
     if (sent) {
         return (
             <>
-                <h1 className="auth__title">Check your <em>email</em></h1>
+                <h1 className="auth__title">{emph(t('Check your *email*'))}</h1>
                 <p className="auth__sub">
-                    If {email.trim()} has an account, a link to choose a new password is on its way. It works
-                    once and for 30 minutes. Nothing there? Check spam, or try again in a minute.
+                    {t('If {email} has an account, a link to choose a new password is on its way. It works once and for 30 minutes. Nothing there? Check spam, or try again in a minute.', { email: email.trim() })}
                 </p>
-                <button type="button" className="btn btn--secondary" onClick={() => setSent(false)}>Use a different email</button>
+                <button type="button" className="btn btn--secondary" onClick={() => setSent(false)}>{t('Use a different email')}</button>
             </>
         );
     }
     return (
         <form onSubmit={submit} className="auth__form">
-            <h1 className="auth__title">Forgot your <em>password?</em></h1>
-            <p className="auth__sub">Enter the email you sign in with, and we will send a link to choose a new one.</p>
+            <h1 className="auth__title">{emph(t('Forgot your *password?*'))}</h1>
+            <p className="auth__sub">{t('Enter the email you sign in with, and we will send a link to choose a new one.')}</p>
             <label className="field">
-                <span>Email</span>
+                <span>{t('Email')}</span>
                 <span className="field__iconed">
                     <IconMail />
                     <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@business.com"
@@ -70,8 +70,8 @@ function Forgot() {
                 </span>
             </label>
             {error && <p className="auth__error" role="alert">{error}</p>}
-            <button className={`btn btn--primary auth__submit${busy ? ' btn--busy' : ''}`} type="submit" disabled={busy}>Send reset link</button>
-            <p className="auth__legal">Signed up with Google? Use "Continue with Google" instead; there is no password to reset.</p>
+            <button className={`btn btn--primary auth__submit${busy ? ' btn--busy' : ''}`} type="submit" disabled={busy}>{t('Send reset link')}</button>
+            <p className="auth__legal">{t('Signed up with Google? Use "Continue with Google" instead; there is no password to reset.')}</p>
         </form>
     );
 }
@@ -87,40 +87,40 @@ function Reset({ token, onSession, onNavigate }) {
     const submit = async (e) => {
         e.preventDefault();
         setError('');
-        if (form.next.length < 8) { setError('Use at least 8 characters.'); return; }
-        if (form.next !== form.again) { setError('The two passwords do not match.'); return; }
+        if (form.next.length < 8) { setError(t('Use at least 8 characters.')); return; }
+        if (form.next !== form.again) { setError(t('The two passwords do not match.')); return; }
         setBusy(true);
         try {
             const session = await api.resetPassword(token, form.next);
-            onSession(session, 'Password changed. You are signed in.');
+            onSession(session, t('Password changed. You are signed in.'));
         } catch (err) {
-            setError(api.errorMessage(err, 'Your password could not be changed.'));
+            setError(api.errorMessage(err, t('Your password could not be changed.')));
             setBusy(false);
         }
     };
-    if (state === 'checking') return <CenteredSpinner label="Checking your link" />;
+    if (state === 'checking') return <CenteredSpinner label={t('Checking your link')} />;
     if (state === 'dead') {
         return (
             <>
                 <span className="link-state link-state--bad" aria-hidden="true"><IconWarning size={22} /></span>
-                <h1 className="auth__title">This link has <em>expired</em></h1>
-                <p className="auth__sub">Reset links work once and for 30 minutes. Ask for a new one and use the latest email.</p>
-                <button type="button" className="btn btn--primary auth__submit" onClick={() => onNavigate('forgot')}>Send a new link</button>
+                <h1 className="auth__title">{emph(t('This link has *expired*'))}</h1>
+                <p className="auth__sub">{t('Reset links work once and for 30 minutes. Ask for a new one and use the latest email.')}</p>
+                <button type="button" className="btn btn--primary auth__submit" onClick={() => onNavigate('forgot')}>{t('Send a new link')}</button>
             </>
         );
     }
     return (
         <form onSubmit={submit} className="auth__form">
-            <h1 className="auth__title">Choose a new <em>password</em></h1>
-            <p className="auth__sub">At least 8 characters. You will be signed in straight after.</p>
-            <label className="field"><span>New password</span>
+            <h1 className="auth__title">{emph(t('Choose a new *password*'))}</h1>
+            <p className="auth__sub">{t('At least 8 characters. You will be signed in straight after.')}</p>
+            <label className="field"><span>{t('New password')}</span>
                 <PasswordInput value={form.next} onChange={(e) => setForm(f => ({ ...f, next: e.target.value }))} autoComplete="new-password" minLength={8} required autoFocus />
             </label>
-            <label className="field"><span>New password again</span>
+            <label className="field"><span>{t('New password again')}</span>
                 <PasswordInput value={form.again} onChange={(e) => setForm(f => ({ ...f, again: e.target.value }))} autoComplete="new-password" minLength={8} required />
             </label>
             {error && <p className="auth__error" role="alert">{error}</p>}
-            <button className={`btn btn--primary auth__submit${busy ? ' btn--busy' : ''}`} type="submit" disabled={busy}>Save and sign in</button>
+            <button className={`btn btn--primary auth__submit${busy ? ' btn--busy' : ''}`} type="submit" disabled={busy}>{t('Save and sign in')}</button>
         </form>
     );
 }
@@ -133,26 +133,26 @@ function Verify({ token, onNavigate }) {
         once.current = true;
         api.verifyEmail(token || '').then(() => setState('done'), () => setState('dead'));
     }, [token]);
-    if (state === 'checking') return <CenteredSpinner label="Confirming your email" />;
+    if (state === 'checking') return <CenteredSpinner label={t('Confirming your email')} />;
     const signedIn = Boolean(api.getToken());
     return state === 'done' ? (
         <>
             <span className="link-state link-state--ok" aria-hidden="true"><IconCheck size={22} /></span>
-            <h1 className="auth__title">Email <em>confirmed</em></h1>
-            <p className="auth__sub">Thank you. Your account is all set.</p>
+            <h1 className="auth__title">{emph(t('Email *confirmed*'))}</h1>
+            <p className="auth__sub">{t('Thank you. Your account is all set.')}</p>
             <button type="button" className="btn btn--primary auth__submit"
                     onClick={() => (signedIn ? window.location.assign('/dashboard') : onNavigate('login'))}>
-                {signedIn ? 'Go to your dashboard' : 'Sign in'}
+                {signedIn ? t('Go to your dashboard') : t('Sign in')}
             </button>
         </>
     ) : (
         <>
             <span className="link-state link-state--bad" aria-hidden="true"><IconWarning size={22} /></span>
-            <h1 className="auth__title">This link has <em>expired</em></h1>
-            <p className="auth__sub">Confirmation links work once and for 24 hours. Sign in and use "Send it again" on your dashboard for a new one.</p>
+            <h1 className="auth__title">{emph(t('This link has *expired*'))}</h1>
+            <p className="auth__sub">{t('Confirmation links work once and for 24 hours. Sign in and use "Send it again" on your dashboard for a new one.')}</p>
             <button type="button" className="btn btn--primary auth__submit"
                     onClick={() => (signedIn ? window.location.assign('/dashboard') : onNavigate('login'))}>
-                {signedIn ? 'Go to your dashboard' : 'Sign in'}
+                {signedIn ? t('Go to your dashboard') : t('Sign in')}
             </button>
         </>
     );

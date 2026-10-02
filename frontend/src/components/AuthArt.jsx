@@ -1,4 +1,5 @@
 import { IconBolt, IconFacebook, IconInstagram, IconKnowledge, IconTeam, IconArrowRight, IconCheck, IconInbox } from './icons.jsx';
+import { t } from '../lib/i18n.js';
 
 /**
  * The picture beside the sign-in and sign-up form, after the reference Sayub chose (a portal
@@ -56,7 +57,7 @@ function Scene() {
         && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     return (
         <svg className="auth-art__scene" viewBox="0 0 640 600" role="img"
-             aria-label="A customer's message travelling from Messenger and Instagram into the EkSamadhan inbox, and out to the team">
+             aria-label={t("A customer's message travelling from Messenger and Instagram into the EkSamadhan inbox, and out to the team")}>
             <defs>
                 <pattern id="aa-dots" width="9" height="9" patternUnits="userSpaceOnUse">
                     <circle cx="2" cy="2" r="1.6" fill="#9aa9bf" />
@@ -92,7 +93,7 @@ function Scene() {
                 <ellipse cx="240" cy="48" rx="20" ry="7" fill="#fff" opacity=".8" />
                 {/* shop sign and awning behind */}
                 <rect x="96" y="40" width="168" height="30" rx="6" fill="#1f4f8f" />
-                <text x="180" y="60" textAnchor="middle" fontSize="13" fontWeight="700" fill="#fff" fontFamily="Inter, system-ui, sans-serif">YOUR SHOP</text>
+                <text x="180" y="60" textAnchor="middle" fontSize="13" fontWeight="700" fill="#fff" fontFamily="Inter, system-ui, sans-serif">{t('YOUR SHOP')}</text>
                 <path d="M92 70 h176 l-6 16 h-164 z" fill="#2f7cf6" />
                 <path d="M110 70 v16 M128 70 v16 M146 70 v16 M164 70 v16 M182 70 v16 M200 70 v16 M218 70 v16 M236 70 v16 M254 70 v16" stroke="#fff" strokeWidth="6" opacity=".85" />
                 <rect x="98" y="86" width="164" height="90" fill="#f3f7ff" />
@@ -110,7 +111,7 @@ function Scene() {
                 <rect x="164" y="160" width="86" height="4" rx="2" fill="#2a3446" />
                 <rect x="60" y="172" width="250" height="28" fill="#b9dca2" />
             </g>
-            <text x="185" y="214" textAnchor="middle" fontSize="13" fontWeight="600" fill="#1f4f8f" fontFamily="Inter, system-ui, sans-serif">Your business</text>
+            <text x="185" y="214" textAnchor="middle" fontSize="13" fontWeight="600" fill="#1f4f8f" fontFamily="Inter, system-ui, sans-serif">{t('Your business')}</text>
 
             {/* Right picture: the customer, writing from a phone */}
             <g clipPath="url(#aa-blob2)">
@@ -132,7 +133,7 @@ function Scene() {
                 <circle cy="-4" r="6" fill="#c97a4a" />
                 <path d="M-10 10 a10 8 0 0 1 20 0" fill="#c97a4a" />
             </g>
-            <text x="436" y="244" textAnchor="middle" fontSize="13" fontWeight="600" fill="#1f4f8f" fontFamily="Inter, system-ui, sans-serif">Your customer</text>
+            <text x="436" y="244" textAnchor="middle" fontSize="13" fontWeight="600" fill="#1f4f8f" fontFamily="Inter, system-ui, sans-serif">{t('Your customer')}</text>
 
             {/* A message from the customer to the business */}
             <path id="aa-cb" d="M372 150 C 350 120, 280 120, 250 140" fill="none" />
@@ -207,21 +208,21 @@ const JOURNEY = [
 
 export default function AuthArt() {
     return (
-        <aside className="auth-art" aria-label="What EkSamadhan AI does">
+        <aside className="auth-art" aria-label={t('What EkSamadhan AI does')}>
             <div className="auth-art__top">
                 <div className="auth-art__lead">
-                    <strong>One inbox</strong>
-                    <span>for every customer</span>
+                    <strong>{t('One inbox')}</strong>
+                    <span>{t('for every customer')}</span>
                     <span className="auth-art__faces" aria-hidden="true">
                         <i><IconFacebook size={16} /></i>
                         <i><IconInstagram size={16} /></i>
-                        <i className="is-you">You</i>
+                        <i className="is-you">{t('You')}</i>
                     </span>
                 </div>
-                {TOP.map(t => (
-                    <div className="auth-art__fact" key={t.label}>
-                        <span className="auth-art__ico">{t.icon}</span>
-                        <span>{t.label}</span>
+                {TOP.map(fact => (
+                    <div className="auth-art__fact" key={fact.label}>
+                        <span className="auth-art__ico">{fact.icon}</span>
+                        <span>{t(fact.label)}</span>
                     </div>
                 ))}
             </div>
@@ -231,7 +232,7 @@ export default function AuthArt() {
                     const Icon = j.icon;
                     return (
                         <li key={j.label}>
-                            <span className="auth-art__step"><Icon size={14} /> {j.label}</span>
+                            <span className="auth-art__step"><Icon size={14} /> {t(j.label)}</span>
                             {i < JOURNEY.length - 1 && <IconArrowRight size={14} aria-hidden="true" />}
                         </li>
                     );

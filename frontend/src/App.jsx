@@ -13,6 +13,7 @@ import usePwa from './lib/usePwa.js';
 import InstallProblem from './components/InstallProblem.jsx';
 import Toaster from './components/Toaster.jsx';
 import { toast } from './lib/toast.js';
+import * as prefs from './lib/prefs.js';
 import { LogoMark } from './components/Logo.jsx';
 import StatusPage, { IconCloudOff } from './components/StatusPage.jsx';
 import { IconHome, IconWarning } from './components/icons.jsx';
@@ -22,6 +23,7 @@ import { mergeThreads } from './lib/format.js';
 import { clearResources, prefetch } from './lib/loading.js';
 import { connectLive } from './lib/live.js';
 import useBackToClose from './lib/useBackToClose.js';
+import { t } from './lib/i18n.js';
 import './styles/tokens.css';
 import './styles/app.css';
 
@@ -110,14 +112,14 @@ function NotFound({ signedIn = false, onHome }) {
             tone="warning"
             icon={<IconWarning size={34} />}
             code="404"
-            title="Not Found"
+            title={t('Not Found')}
             actions={(
                 <button className="btn btn--primary status__home" onClick={home}>
-                    <IconHome size={16} /> {signedIn ? 'Go back home' : 'Go to sign in'}
+                    <IconHome size={16} /> {signedIn ? t('Go back home') : t('Go to sign in')}
                 </button>
             )}
         >
-            <p>The page you are looking for does not exist or has been moved.</p>
+            <p>{t('The page you are looking for does not exist or has been moved.')}</p>
         </StatusPage>
     );
 }
@@ -137,15 +139,15 @@ const SYNC_MS = 10000;
 function friendlySendError(err) {
     const raw = err?.response?.data?.error || err?.response?.data?.details || '';
     if (/outside.*allowed window|#10\b|policy/i.test(raw)) {
-        return 'Meta will not deliver this. You can only message a customer within 24 hours of their last message.';
+        return t('Meta will not deliver this. You can only message a customer within 24 hours of their last message.');
     }
     if (/access token|#190/i.test(raw)) {
-        return 'The connection to this page has expired. Reconnect it under Channels.';
+        return t('The connection to this page has expired. Reconnect it under Channels.');
     }
     if (!err?.response) {
-        return 'Could not reach the server. Check that the backend is running.';
+        return t('Could not reach the server. Check that the backend is running.');
     }
-    return 'The message could not be sent. See the server log for details.';
+    return t('The message could not be sent. See the server log for details.');
 }
 
 export default function App() {
@@ -191,6 +193,41 @@ export default function App() {
         setViewState(next);
         if (viewFromPath() !== next) window.history.pushState({}, '', pathForView(next));
     }, []);
+
+    // Keyboard shortcuts (Settings > Keyboard shortcuts, on unless switched off on this device):
+    // "g" then a letter opens a page, "/" jumps to the inbox search, "?" lists them all.
+    const signedInRef = useRef(false);
+    useEffect(() => {
+        let pendingG = 0;
+        const GO = { d: 'home', i: 'inbox', k: 'knowledge', c: 'channels', t: 'team', h: 'hours', a: 'analytics', n: 'notifications', s: 'settings' };
+        const onKey = (e) => {
+            if (!signedInRef.current || !prefs.get().shortcuts) return;
+            if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
+            const el = e.target;
+            if (el.closest?.('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
+            const key = e.key;
+            if (pendingG && Date.now() - pendingG < 1200 && GO[key.toLowerCase()]) {
+                pendingG = 0;
+                e.preventDefault();
+                setView(GO[key.toLowerCase()]);
+                return;
+            }
+            pendingG = key === 'g' ? Date.now() : 0;
+            if (key === '/') {
+                e.preventDefault();
+                setView('inbox');
+                setTimeout(() => document.querySelector('.topbar__search input')?.focus(), 60);
+            } else if (key === '?') {
+                e.preventDefault();
+                setView('settings');
+                window.history.replaceState(window.history.state, '', `${pathForView('settings')}?section=shortcuts`);
+                window.dispatchEvent(new CustomEvent('eks:settings-section', { detail: 'shortcuts' }));
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [setView]);
+    useEffect(() => { signedInRef.current = Boolean(session && !session.user?.systemAdmin); }, [session]);
 
     useEffect(() => {
         const onPop = () => { setAuthRoute(authRouteFromPath()); setLinkRoute(linkRouteFromPath()); setLegal(legalFromPath()); setKnownPath(isKnownPath()); setViewState(viewFromPath()); };
@@ -273,10 +310,10 @@ export default function App() {
             });
             api.setToken(updated.token);
             setSession(updated);
-            toast.success('Profile saved', { body: 'Your team sees your new name and photo.' });
+            toast.success(t('Profile saved'), { body: t('Your team sees your new name and photo.') });
             return null;
         } catch (err) {
-            return api.errorMessage(err, 'Your profile could not be saved.');
+            return api.errorMessage(err, t('Your profile could not be saved.'));
         }
     }, []);
 
@@ -420,9 +457,9 @@ export default function App() {
             const result = await api.setAvailability(next);
             if (result?.hours) setMyHours(result.hours);
             setSession(s => (s ? { ...s, user: { ...s.user, availability: result.availability } } : s));
-            toast.success(result.availability === 'BUSY' ? 'You are now Busy' : 'You are now Available', { body: result.availability === 'BUSY' ? 'You keep your conversations; new ones go to others.' : 'New conversations can come to you.' });
+            toast.success(result.availability === 'BUSY' ? t('You are now Busy') : t('You are now Available'), { body: result.availability === 'BUSY' ? t('You keep your conversations; new ones go to others.') : t('New conversations can come to you.') });
         } catch (err) {
-            toast.error('Status not changed', { body: api.errorMessage(err, 'Your status could not be changed.') });
+            toast.error(t('Status not changed'), { body: api.errorMessage(err, t('Your status could not be changed.')) });
         }
     }, []);
 
@@ -438,10 +475,10 @@ export default function App() {
         set(next);
         try {
             await api.pinThread(thread.id, next);
-            toast.success(next ? 'Conversation pinned' : 'Conversation unpinned', { body: next ? 'It stays at the top of your inbox.' : undefined, actions: [{ label: 'Undo', onClick: () => handlePinRef.current?.({ ...thread, pinned: next }) }] });
+            toast.success(next ? t('Conversation pinned') : t('Conversation unpinned'), { body: next ? t('It stays at the top of your inbox.') : undefined, actions: [{ label: t('Undo'), onClick: () => handlePinRef.current?.({ ...thread, pinned: next }) }] });
         } catch (err) {
             set(!next);
-            setSendError(api.errorMessage(err, next ? 'Could not pin the conversation.' : 'Could not unpin the conversation.'));
+            setSendError(api.errorMessage(err, next ? t('Could not pin the conversation.') : t('Could not unpin the conversation.')));
         }
     }, []);
 
@@ -452,9 +489,9 @@ export default function App() {
         try {
             await api.summariseThread(thread.id);
             await refreshThreadsRef.current?.();
-            toast.success('Summary written', { body: 'It is in the conversation details.' });
+            toast.success(t('Summary written'), { body: t('It is in the conversation details.') });
         } catch (err) {
-            setSendError(api.errorMessage(err, 'Could not write a summary for that conversation.'));
+            setSendError(api.errorMessage(err, t('Could not write a summary for that conversation.')));
         } finally {
             setSummarising(false);
         }
@@ -465,14 +502,14 @@ export default function App() {
         try {
             await api.assignThread(thread.id, userId);
             await refreshThreadsRef.current?.();
-            toast.success('Conversation reassigned', { body: 'The new owner has been alerted.' });
+            toast.success(t('Conversation reassigned'), { body: t('The new owner has been alerted.') });
         } catch (err) {
-            setSendError(api.errorMessage(err, 'Could not reassign that conversation.'));
+            setSendError(api.errorMessage(err, t('Could not reassign that conversation.')));
         }
     }, []);
 
     const firstLoadFailed = useCallback((err) => {
-        setLoadError(api.errorMessage(err, 'Your conversations could not be loaded.'));
+        setLoadError(api.errorMessage(err, t('Your conversations could not be loaded.')));
     }, []);
 
     const refreshStatus = useCallback(async () => {
@@ -557,8 +594,11 @@ export default function App() {
         if (params.get('status') === 'error') {
             console.warn('OAuth callback reported an error:', params.get('message'));
         }
-        if (params.toString()) {
-            window.history.replaceState({}, '', window.location.pathname);
+        // Drop only what the callback added; ?section= (Settings) and ?thread= (Inbox) stay.
+        if (['platform', 'status', 'message'].some(k => params.has(k))) {
+            ['platform', 'status', 'message'].forEach(k => params.delete(k));
+            const rest = params.toString();
+            window.history.replaceState({}, '', window.location.pathname + (rest ? `?${rest}` : ''));
         }
 
         return () => { clearInterval(m); clearInterval(t); clearInterval(s); };
@@ -666,7 +706,7 @@ export default function App() {
             window.location.href = await api.connectUrl(platform);
         } catch (err) {
             console.error('Could not start the connection', err);
-            setSendError(api.errorMessage(err, 'Could not start the connection. Please try again.'));
+            setSendError(api.errorMessage(err, t('Could not start the connection. Please try again.')));
         }
     };
 
@@ -741,7 +781,7 @@ export default function App() {
             refreshMessages();
         } catch (err) {
             console.error('Reaction failed', err);
-            setSendError('Meta would not accept that reaction. It may be unsupported on this channel or the message may be too old.');
+            setSendError(t('Meta would not accept that reaction. It may be unsupported on this channel or the message may be too old.'));
         }
     };
 
@@ -750,14 +790,14 @@ export default function App() {
         try {
             await api.setThreadState(thread.id, action);
             await refreshThreads();
-            const done = { 'take-over': ['You took over', 'The AI stops replying in this conversation.'],
-                'return-to-ai': ['Handed back to the AI', 'It answers the customer again.'],
-                resolve: ['Conversation resolved', 'It moves to Resolved. A new message opens it again.'],
-                'not-spam': ['Moved out of Spam', 'The AI answers this customer again.'] }[action] || ['Conversation updated', ''];
-            toast.success(done[0], { body: done[1] });
+            const done = { 'take-over': [t('You took over'), t('The AI stops replying in this conversation.')],
+                'return-to-ai': [t('Handed back to the AI'), t('It answers the customer again.')],
+                resolve: [t('Conversation resolved'), t('It moves to Resolved. A new message opens it again.')],
+                'not-spam': [t('Moved out of Spam'), t('The AI answers this customer again.')] }[action] || [t('Conversation updated'), ''];
+            toast.success(done[0], { body: done[1] || undefined });
         } catch (err) {
             console.error(`Thread action ${action} failed`, err);
-            setSendError('Could not update the conversation state.');
+            setSendError(t('Could not update the conversation state.'));
         }
     }, [refreshThreads]);
 
@@ -773,10 +813,10 @@ export default function App() {
         setConfirmDisconnect(false);
         try {
             await api.disconnectChannels();
-            toast.success('Channels disconnected', { body: 'Every page was removed and its conversations deleted.' });
+            toast.success(t('Channels disconnected'), { body: t('Every page was removed and its conversations deleted.') });
         } catch (err) {
             console.error('Disconnect failed', err);
-            setSendError(api.errorMessage(err, 'Could not disconnect the channels.'));
+            setSendError(api.errorMessage(err, t('Could not disconnect the channels.')));
         }
         refreshStatus();
         refreshMessages();
@@ -789,9 +829,9 @@ export default function App() {
     const signOutDialog = (
         <ConfirmDialog
             open={confirmSignOut}
-            title="Sign out?"
-            message="You will need to sign in again to see your inbox. Anything you have typed and not sent will be lost."
-            confirmLabel="Sign out"
+            title={t('Sign out?')}
+            message={t('You will need to sign in again to see your inbox. Anything you have typed and not sent will be lost.')}
+            confirmLabel={t('Sign out')}
             onConfirm={() => { setConfirmSignOut(false); handleSignOut(); }}
             onCancel={() => setConfirmSignOut(false)}
         />
@@ -823,8 +863,8 @@ export default function App() {
         if (landing) { setPageMeta(PUBLIC_META.landing); return; }
         if (legal) { setPageMeta(PUBLIC_META[legal]); return; }
         if (linkRoute) { setPageMeta(PUBLIC_META[linkRoute.mode]); return; }
-        if (!knownPath) { setPageMeta({ title: 'Page not found' }); return; }
-        if (session === undefined) { if (unreachable) setPageMeta({ title: 'Offline' }); return; }
+        if (!knownPath) { setPageMeta({ title: t('Page not found') }); return; }
+        if (session === undefined) { if (unreachable) setPageMeta({ title: t('Offline') }); return; }
         if (!session) {
             // A /dashboard address signed out shows sign-in too, but it is not the sign-in page:
             // only /login itself (and the site root) may be listed.
@@ -833,7 +873,7 @@ export default function App() {
             return;
         }
         if (session.user?.systemAdmin) { setPageMeta({ title: 'System console' }); return; }
-        setPageMeta({ title: VIEW_TITLES[view] || 'Dashboard' });
+        setPageMeta({ title: VIEW_TITLES[view] || t('Dashboard') });
     }, [landing, legal, linkRoute, knownPath, session, unreachable, authRoute, view]);
 
     // Signed in: fetch the other pages' files while the browser is idle (lib/pages.js).
@@ -882,12 +922,11 @@ export default function App() {
         return (
             <StatusPage
                 icon={<IconCloudOff />}
-                title="You're offline"
-                actions={<button className="btn btn--primary" onClick={() => window.location.reload()}>Try again now</button>}
+                title={t("You're offline")}
+                actions={<button className="btn btn--primary" onClick={() => window.location.reload()}>{t('Try again now')}</button>}
             >
-                <p>EkSamadhan AI cannot reach the server. You are still signed in, and nothing you
-                    were doing is lost.</p>
-                <p className="status__live"><Spinner size={14} /> Reconnecting on its own as soon as it can</p>
+                <p>{t('EkSamadhan AI cannot reach the server. You are still signed in, and nothing you were doing is lost.')}</p>
+                <p className="status__live"><Spinner size={14} /> {t('Reconnecting on its own as soon as it can')}</p>
             </StatusPage>
         );
     }
@@ -938,8 +977,8 @@ export default function App() {
             {/* A new version is installed and waiting (see public/sw.js on why it waits). */}
             {app.updateReady && (
                 <div className="update-banner" role="status">
-                    <span>A new version of EkSamadhan AI is ready.</span>
-                    <button className="btn btn--sm btn--primary" onClick={app.applyUpdate}>Reload</button>
+                    <span>{t('A new version of EkSamadhan AI is ready.')}</span>
+                    <button className="btn btn--sm btn--primary" onClick={app.applyUpdate}>{t('Reload')}</button>
                 </div>
             )}
             <InstallProblem />
@@ -948,7 +987,7 @@ export default function App() {
                 straight to the page. Focus is moved by hand, since the address carries the route. */}
             <a className="skip-link" href="#main-content"
                onClick={(e) => { e.preventDefault(); document.getElementById('main-content')?.focus(); }}>
-                Skip to content
+                {t('Skip to content')}
             </a>
             <NavRail
                 view={view}
@@ -981,7 +1020,7 @@ export default function App() {
                 />
                 <span id="main-content" tabIndex={-1} className="skip-target" />
 
-                <Suspense fallback={<CenteredSpinner label="Loading" />}>
+                <Suspense fallback={<CenteredSpinner label={t('Loading')} />}>
                 {view === 'home' && (
                     <HomePage
                         user={user}
@@ -1048,17 +1087,17 @@ export default function App() {
                 {view === 'notifications' && <NotificationsPage onOpen={openNotification} />}
 
                 {view === 'settings' && (
-                    <SettingsPage user={user} onDisconnect={() => setConfirmDisconnect(true)}
+                    <SettingsPage user={user} onDisconnect={() => setConfirmDisconnect(true)} onNavigate={setView}
                                   onStartDeletion={() => setView('delete-account')}
                                   onSignedOut={() => signedOutWithNotice(
-                                      'Your account is deactivated. Sign in any time to turn it back on.')} />
+                                      t('Your account is deactivated. Sign in any time to turn it back on.'))} />
                 )}
 
                 {view === 'delete-account' && (
                     <DeleteAccountPage
                         onCancel={() => setView('settings')}
                         onDeleted={(masked) => signedOutWithNotice(
-                            `Your account was deleted. A receipt was sent to ${masked}.`)}
+                            t('Your account was deleted. A receipt was sent to {email}.', { email: masked }))}
                     />
                 )}
 
@@ -1077,9 +1116,9 @@ export default function App() {
 
             <ConfirmDialog
                 open={confirmDisconnect}
-                title="Disconnect everything?"
-                message="Every connected page is removed and all stored message history is deleted. This cannot be undone. The messages stay in Messenger, but this app loses its copy."
-                confirmLabel="Disconnect"
+                title={t('Disconnect everything?')}
+                message={t('Every connected page is removed and all stored message history is deleted. This cannot be undone. The messages stay in Messenger, but this app loses its copy.')}
+                confirmLabel={t('Disconnect')}
                 danger
                 onConfirm={handleDisconnect}
                 onCancel={() => setConfirmDisconnect(false)}

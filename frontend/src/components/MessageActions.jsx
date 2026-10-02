@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { IconSmile, IconReply, IconDots, IconCopy, IconTrash } from './icons.jsx';
+import { t } from '../lib/i18n.js';
 
 /** The six Messenger offers, so a reaction sent from here looks native to the customer. */
 const REACTIONS = ['❤️', '😆', '😮', '😢', '😡', '👍'];
@@ -33,8 +34,8 @@ export default function MessageActions({ message, onReact, onReply, onCopy, onHi
             <button
                 className="msgacts__btn"
                 onClick={() => setOpen(o => (o === 'emoji' ? null : 'emoji'))}
-                aria-label="React to this message"
-                title="React"
+                aria-label={t('React to this message')}
+                title={t('React')}
             >
                 <IconSmile />
             </button>
@@ -42,8 +43,8 @@ export default function MessageActions({ message, onReact, onReply, onCopy, onHi
             <button
                 className="msgacts__btn"
                 onClick={() => onReply(message)}
-                aria-label="Reply to this message"
-                title="Reply"
+                aria-label={t('Reply to this message')}
+                title={t('Reply')}
             >
                 <IconReply />
             </button>
@@ -51,8 +52,8 @@ export default function MessageActions({ message, onReact, onReply, onCopy, onHi
             <button
                 className="msgacts__btn"
                 onClick={() => setOpen(o => (o === 'menu' ? null : 'menu'))}
-                aria-label="More actions"
-                title="More"
+                aria-label={t('More actions')}
+                title={t('More')}
             >
                 <IconDots />
             </button>
@@ -64,7 +65,7 @@ export default function MessageActions({ message, onReact, onReply, onCopy, onHi
                             key={emoji}
                             className="popmenu__emoji"
                             onClick={() => run(() => onReact(message, emoji))}
-                            aria-label={`React with ${emoji}`}
+                            aria-label={t('React with {emoji}', { emoji })}
                         >
                             {emoji}
                         </button>
@@ -75,13 +76,13 @@ export default function MessageActions({ message, onReact, onReply, onCopy, onHi
             {open === 'menu' && (
                 <div className="popmenu" role="menu">
                     <button className="popmenu__item" onClick={() => run(() => onCopy(message))}>
-                        <IconCopy /> Copy text
+                        <IconCopy /> {t('Copy text')}
                     </button>
                     <button className="popmenu__item" onClick={() => run(() => onReply(message))}>
-                        <IconReply /> Reply
+                        <IconReply /> {t('Reply')}
                     </button>
                     <button className="popmenu__item popmenu__item--danger" onClick={() => run(() => onHide(message))}>
-                        <IconTrash /> Delete for me
+                        <IconTrash /> {t('Delete for me')}
                     </button>
                 </div>
             )}

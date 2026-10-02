@@ -3,6 +3,7 @@ import * as api from '../lib/api.js';
 import { formatSeconds as duration } from '../lib/format.js';
 import { LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
+import { t } from '../lib/i18n.js';
 
 const WINDOWS = [
     { days: 7, label: '7 days' },
@@ -23,7 +24,7 @@ const percent = (n) => `${Math.round(n * 100)}%`;
 /** The page's figures as shimmer blocks, laid out with the same classes as the real ones. */
 function FiguresSkeleton() {
     return (
-        <LoadingRegion label="the figures">
+        <LoadingRegion label={t('the figures')}>
             <div className="card an__hero">
                 <div>
                     <div className="context__key"><Skel line w={100} /></div>
@@ -73,17 +74,16 @@ export default function AnalyticsPage() {
         <div className="page">
             <div className="page__head">
                 <div>
-                    <h1 className="page__title">Analytics</h1>
+                    <h1 className="page__title">{t('Analytics')}</h1>
                     <p className="page__sub">
-                        How much the AI is handling, how quickly customers get an answer, and where
-                        the human workload comes from.
+                        {t('How much the AI is handling, how quickly customers get an answer, and where the human workload comes from.')}
                     </p>
                 </div>
                 <div className="chips">
                     {WINDOWS.map(w => (
                         <button key={w.days} className="chip" aria-pressed={days === w.days}
                                 onClick={() => setDays(w.days)}>
-                            {w.label}
+                            {t('{n} days', { n: w.days })}
                         </button>
                     ))}
                 </div>
@@ -91,14 +91,14 @@ export default function AnalyticsPage() {
 
             {firstLoad || (!data && !error) ? <FiguresSkeleton /> : !data ? (
                 <LoadError className="empty--panel"
-                           message={api.errorMessage(error, 'Could not load the figures.')}
+                           message={api.errorMessage(error, t('Could not load the figures.'))}
                            onRetry={reload} />
             ) : (
                 <div className={refreshing ? 'is-refreshing' : ''} aria-busy={refreshing}>
-                    {refreshing && <span className="sr-only" role="status">Loading the figures for {days} days</span>}
+                    {refreshing && <span className="sr-only" role="status">{t('Loading the figures for {n} days', { n: days })}</span>}
                     {error && !refreshing && (
                         <p className="auth__error" role="alert">
-                            {api.errorMessage(error, 'Could not load the figures.')}
+                            {api.errorMessage(error, t('Could not load the figures.'))}
                         </p>
                     )}
                     <Figures data={data} />
@@ -115,19 +115,18 @@ function Figures({ data }) {
         <>
             {d.total === 0 ? (
                 <div className="empty empty--panel">
-                    <p className="muted">No conversations in this period yet.</p>
+                    <p className="muted">{t('No conversations in this period yet.')}</p>
                 </div>
             ) : (
                 <>
                     <div className="card an__hero">
                         <div>
-                            <div className="context__key">Deflection rate</div>
+                            <div className="context__key">{t('Deflection rate')}</div>
                             <div className={`an__big ${met ? 'an__big--good' : 'an__big--under'}`}>
                                 {percent(d.rate)}
                             </div>
                             <div className="muted">
-                                {d.handledByAi} of {d.total} conversations resolved without a person.
-                                Target {percent(d.target)}.
+                                {t('{n} of {total} conversations resolved without a person. Target {target}.', { n: d.handledByAi, total: d.total, target: percent(d.target) })}
                             </div>
                         </div>
                         {/* The bar is the target, not the maximum: being over it is the point. */}
@@ -140,36 +139,36 @@ function Figures({ data }) {
 
                     <div className="stats">
                         <div className="stat">
-                            <div className="stat__label">AI reply time (median)</div>
+                            <div className="stat__label">{t('AI reply time (median)')}</div>
                             <div className="stat__value">{duration(r.aiMedianSeconds)}</div>
-                            <div className="muted">{r.aiSamples} replies · 90th percentile {duration(r.aiP90Seconds)}</div>
+                            <div className="muted">{t('{n} replies', { n: r.aiSamples })} · {t('90th percentile {time}', { time: duration(r.aiP90Seconds) })}</div>
                         </div>
                         <div className="stat">
-                            <div className="stat__label">Human reply time (median)</div>
+                            <div className="stat__label">{t('Human reply time (median)')}</div>
                             <div className="stat__value">{duration(r.humanMedianSeconds)}</div>
-                            <div className="muted">{r.humanSamples} replies</div>
+                            <div className="muted">{t('{n} replies', { n: r.humanSamples })}</div>
                         </div>
                         <div className="stat">
-                            <div className="stat__label">Escalated to a person</div>
+                            <div className="stat__label">{t('Escalated to a person')}</div>
                             <div className="stat__value">{d.escalated}</div>
-                            <div className="muted">of {d.total} conversations</div>
+                            <div className="muted">{t('of {total} conversations', { total: d.total })}</div>
                         </div>
                         <div className="stat">
-                            <div className="stat__label">Closed as unrelated</div>
+                            <div className="stat__label">{t('Closed as unrelated')}</div>
                             <div className="stat__value">{spamClosed}</div>
-                            <div className="muted">excluded from the rate above</div>
+                            <div className="muted">{t('excluded from the rate above')}</div>
                         </div>
                     </div>
 
-                    <h2 className="section-title">Escalation by channel</h2>
+                    <h2 className="section-title">{t('Escalation by channel')}</h2>
                     {channels.map(c => (
                         <div className="member" key={c.platform}>
                             <div style={{ minWidth: 0 }}>
                                 <div className="member__name" style={{ textTransform: 'capitalize' }}>
-                                    {c.platform}
+                                    {c.platform === 'instagram' ? 'Instagram' : c.platform === 'facebook' ? 'Messenger' : c.platform}
                                 </div>
                                 <div className="member__email">
-                                    {c.escalated} of {c.conversations} conversations reached a person
+                                    {t('{n} of {total} conversations reached a person', { n: c.escalated, total: c.conversations })}
                                 </div>
                             </div>
                             <div className="member__actions">
@@ -182,9 +181,7 @@ function Figures({ data }) {
                     ))}
 
                     <p className="muted" style={{ marginTop: 18 }}>
-                        A conversation counts as deflected when no person ever touched it. Ones the AI
-                        closed as unrelated are left out of both halves: someone using the page as a
-                        free chatbot is neither a query resolved nor work saved.
+                        {t('A conversation counts as deflected when no person ever touched it. Ones the AI closed as unrelated are left out of both halves: someone using the page as a free chatbot is neither a query resolved nor work saved.')}
                     </p>
                 </>
             )}

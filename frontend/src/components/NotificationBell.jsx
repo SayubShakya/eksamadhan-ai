@@ -5,6 +5,7 @@ import * as api from '../lib/api.js';
 import { LoadingRegion, Skel } from './Loading.jsx';
 import { KINDS, NoteAvatar, NoteTag, kindOf } from './NoteParts.jsx';
 import { toast } from '../lib/toast.js';
+import { t } from '../lib/i18n.js';
 
 /**
  * The bell in the header, and its panel: an inbox of what is still unread.
@@ -118,7 +119,7 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
         if (!open) return undefined;
         const root = document.documentElement;
         root.classList.add('scroll-locked');
-        const id = setInterval(() => setTick(t => t + 1), 30000);
+        const id = setInterval(() => setTick(n => n + 1), 30000);
         return () => { root.classList.remove('scroll-locked'); clearInterval(id); };
     }, [open]);
 
@@ -160,7 +161,7 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
         clearingRef.current = true;
         setClearing(true);
 
-        const request = api.markNotificationsRead().then(() => toast.success('All caught up', { body: 'Every notification is marked as read.' }), () => { /* next poll tells the truth */ });
+        const request = api.markNotificationsRead().then(() => toast.success(t('All caught up'), { body: t('Every notification is marked as read.') }), () => { /* next poll tells the truth */ });
 
         const cards = items;
         const total = unread;
@@ -205,7 +206,7 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
                 className={`icon-btn bell__button${onPage ? ' bell__button--current' : ''}`}
                 style={color ? { color } : undefined}
                 onClick={toggle}
-                aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
+                aria-label={unread > 0 ? t('Notifications, {n} unread', { n: unread }) : t('Notifications')}
                 aria-haspopup={onPage ? undefined : 'menu'}
                 aria-expanded={onPage ? undefined : open}
                 aria-current={onPage ? 'page' : undefined}
@@ -218,18 +219,18 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
                 <>
                     <div className="popover__catcher bell__catcher" onClick={() => close()} aria-hidden="true" />
 
-                    <div className="bell__panel" role="menu" aria-label="Unread notifications" ref={panelRef}>
+                    <div className="bell__panel" role="menu" aria-label={t('Unread notifications')} ref={panelRef}>
                         <header className="bell__head">
-                            <h2 className="panel__title">Notifications</h2>
+                            <h2 className="panel__title">{t('Notifications')}</h2>
                             {items.length > 0 && (
                                 <button type="button" role="menuitem" className="bell__markall" onClick={clearAll} disabled={clearing}>
-                                    {clearing ? 'Clearing…' : 'Mark all as read'}
+                                    {clearing ? t('Clearing…') : t('Mark all as read')}
                                 </button>
                             )}
                         </header>
                         {items.length > 0 && (
-                            <div className="bell__tabs" role="tablist" aria-label="Filter notifications">
-                                {[['all', `Unread (${unread})`], ...Object.entries(
+                            <div className="bell__tabs" role="tablist" aria-label={t('Filter notifications')}>
+                                {[['all', t('Unread ({n})', { n: unread })], ...Object.entries(
                                     items.reduce((acc, n) => { const l = kindOf(n.kind).label; acc[l] = (acc[l] || 0) + 1; return acc; }, {}),
                                 ).map(([l, c]) => [l, `${l} (${c})`])].map(([key, text]) => (
                                     <button key={key} type="button" role="tab" aria-selected={tab === key}
@@ -240,7 +241,7 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
 
                         <div className="bell__scroll">
                             {state === 'loading' ? (
-                                <LoadingRegion label="notifications" className="bell__list">
+                                <LoadingRegion label={t('notifications')} className="bell__list">
                                     {[['70%', '90%'], ['55%', '80%']].map(([title, body], i) => (
                                         <div className="bell__item" key={i}>
                                             <span className="bell__text">
@@ -253,18 +254,17 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
                                 </LoadingRegion>
                             ) : state === 'failed' && items.length === 0 ? (
                                 <p className="bell__empty">
-                                    Notifications could not be loaded. They will appear here once the
-                                    connection is back.
+                                    {t('Notifications could not be loaded. They will appear here once the connection is back.')}
                                 </p>
                             ) : items.length === 0 ? (
                                 <div className="bell__caughtup">
                                     <span className="bell__caughtup-icon"><IconCheck size={20} /></span>
-                                    <p className="bell__caughtup-title">You're all caught up</p>
+                                    <p className="bell__caughtup-title">{t("You're all caught up")}</p>
                                     <p className="bell__caughtup-text">
-                                        When a conversation needs you, it will show up here.
+                                        {t('When a conversation needs you, it will show up here.')}
                                     </p>
                                     <button type="button" role="menuitem" className="bell__link" onClick={seeAll}>
-                                        See all notifications
+                                        {t('See all notifications')}
                                     </button>
                                 </div>
                             ) : (
@@ -304,7 +304,7 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
                         {(items.length > 0 || clearing) && (
                             <footer className="bell__foot">
                                 <button type="button" role="menuitem" className="bell__viewall" onClick={seeAll}>
-                                    {more > 0 && !clearing ? `View all notifications (${more} more)` : 'View all notifications'}
+                                    {more > 0 && !clearing ? t('View all notifications ({n} more)', { n: more }) : t('View all notifications')}
                                 </button>
                             </footer>
                         )}

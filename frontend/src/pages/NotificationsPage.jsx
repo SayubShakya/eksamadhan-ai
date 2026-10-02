@@ -6,6 +6,7 @@ import { useHeldLoading, useResource } from '../lib/loading.js';
 import * as api from '../lib/api.js';
 import { NoteAvatar, NoteTag, kindOf } from '../components/NoteParts.jsx';
 import { toast } from '../lib/toast.js';
+import { t } from '../lib/i18n.js';
 
 const URGENT = new Set(['ESCALATED']);
 const announce = () => window.dispatchEvent(new Event('notifications:changed'));
@@ -43,29 +44,29 @@ export default function NotificationsPage({ onOpen }) {
 
     const markAll = () => {
         setAllRead(true);
-        api.markNotificationsRead().then(() => { announce(); toast.success('All caught up', { body: 'Every notification is marked as read.' }); }, () => setAllRead(false));
+        api.markNotificationsRead().then(() => { announce(); toast.success(t('All caught up'), { body: t('Every notification is marked as read.') }); }, () => setAllRead(false));
     };
 
     return (
         <div className="page">
             <div className="page__head">
                 <div>
-                    <h1 className="page__title">Notifications</h1>
-                    <p className="page__sub">What you have been alerted about, newest first. The latest 30 are kept.</p>
+                    <h1 className="page__title">{t('Notifications')}</h1>
+                    <p className="page__sub">{t('What you have been alerted about, newest first. The latest 30 are kept.')}</p>
                 </div>
                 {unread > 0 && (
-                    <button className="btn btn--secondary" onClick={markAll}>Mark all read</button>
+                    <button className="btn btn--secondary" onClick={markAll}>{t('Mark all read')}</button>
                 )}
             </div>
 
             {firstLoad || (!data && !error) ? (
-                <LoadingRegion label="notifications" className="notes">
-                    {[['40%', '70%'], ['55%', '60%'], ['35%', '75%']].map(([t, b], i) => (
+                <LoadingRegion label={t('notifications')} className="notes">
+                    {[['40%', '70%'], ['55%', '60%'], ['35%', '75%']].map(([tw, bw], i) => (
                         <div className="notes__row" key={i}>
                             <div className="bell__item">
                                 <span className="bell__text">
-                                    <span className="bell__title"><Skel line w={t} /></span>
-                                    <span className="bell__body"><Skel line w={b} /></span>
+                                    <span className="bell__title"><Skel line w={tw} /></span>
+                                    <span className="bell__body"><Skel line w={bw} /></span>
                                     <span className="bell__time"><Skel line w={60} /></span>
                                 </span>
                             </div>
@@ -74,15 +75,14 @@ export default function NotificationsPage({ onOpen }) {
                 </LoadingRegion>
             ) : !data ? (
                 <LoadError className="empty--panel"
-                           message={api.errorMessage(error, 'Could not load your notifications.')}
+                           message={api.errorMessage(error, t('Could not load your notifications.'))}
                            onRetry={reload} />
             ) : items.length === 0 ? (
                 <div className="empty empty--panel">
                     <div className="empty__icon"><IconBell size={26} /></div>
-                    <p className="empty__title">No notifications yet</p>
+                    <p className="empty__title">{t('No notifications yet')}</p>
                     <p className="empty__text">
-                        You are alerted when a conversation is handed to you, and when a customer
-                        replies in one you hold.
+                        {t('You are alerted when a conversation is handed to you, and when a customer replies in one you hold.')}
                     </p>
                 </div>
             ) : (
@@ -99,7 +99,7 @@ export default function NotificationsPage({ onOpen }) {
                                 <span className="bell__text">
                                     <span className="bell__title">
                                         {item.title}
-                                        {!item.read && <span className="sr-only"> (unread)</span>}
+                                        {!item.read && <span className="sr-only"> ({t('unread')})</span>}
                                     </span>
                                     {item.body && <span className="bell__body">{item.body}</span>}
                                     <span className="note__meta">

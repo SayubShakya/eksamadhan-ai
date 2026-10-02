@@ -4,6 +4,7 @@ import BottomSheet from './BottomSheet.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import { IconDownload, IconWarning } from './icons.jsx';
 import { toast } from '../lib/toast.js';
+import { t } from '../lib/i18n.js';
 
 /**
  * Settings, Data and privacy: three rows like the rest of Settings, the reversible ones first,
@@ -41,9 +42,9 @@ export default function DataPrivacyCard({ user, settings, onStartDeletion, onSig
             a.download = 'eksamadhan-my-data.json';
             a.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
-            toast.success('Your data was downloaded', { body: 'Saved as eksamadhan-my-data.json.' });
+            toast.success(t('Your data was downloaded'), { body: t('Saved as {file}.', { file: 'eksamadhan-my-data.json' }) });
         } catch (err) {
-            setError(api.errorMessage(err, 'Your data could not be downloaded.'));
+            setError(api.errorMessage(err, t('Your data could not be downloaded.')));
         } finally {
             setBusy('');
         }
@@ -58,75 +59,79 @@ export default function DataPrivacyCard({ user, settings, onStartDeletion, onSig
             await api.deactivateAccount();
             onSignedOut?.('deactivated');
         } catch (err) {
-            setError(api.errorMessage(err, 'Your account could not be deactivated.'));
+            setError(api.errorMessage(err, t('Your account could not be deactivated.')));
             setBusy('');
         }
     };
 
+    // The link sits wherever the sentence puts it, so Nepali can keep its own word order.
+    const [subBefore, subAfter = ''] = t('Your own data in EkSamadhan AI, and leaving it. How it is used is in the {link}.').split('{link}');
+
     return (
-        <Card id="privacy" title="Data and privacy"
-              sub={<>Your own data in EkSamadhan AI, and leaving it. How it is used is in the <a href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.</>}
+        <Card id="privacy" title={t('Data and privacy')}
+              sub={<>{subBefore}<a href="/privacy" target="_blank" rel="noreferrer">{t('Privacy Policy')}</a>{subAfter}</>}
               footer={error ? <span className="settings__status"><span className="settings__error">{error}</span></span> : null}>
-            <Row title="Download my data"
-                 hint="Your profile, how you sign in, your devices and your notifications, as one file.">
+            <Row title={t('Download my data')}
+                 hint={t('Your profile, how you sign in, your devices and your notifications, as one file.')}>
                 <button type="button" className={`btn btn--secondary privacy__btn${busy === 'download' ? ' btn--busy' : ''}`}
                         onClick={download} disabled={Boolean(busy)} aria-busy={busy === 'download'}>
-                    <IconDownload size={16} /> Download
+                    <IconDownload size={16} /> {t('Download')}
                 </button>
             </Row>
-            <Row title="Deactivate account"
-                 hint="Signs you out everywhere and stops conversations and alerts coming to you. Sign in again to undo it.">
+            <Row title={t('Deactivate account')}
+                 hint={t('Signs you out everywhere and stops conversations and alerts coming to you. Sign in again to undo it.')}>
                 <button type="button" className={`btn btn--secondary privacy__btn${busy === 'deactivate' ? ' btn--busy' : ''}`}
                         onClick={() => setConfirmDeactivate(true)} disabled={Boolean(busy)} aria-busy={busy === 'deactivate'}>
-                    Deactivate
+                    {t('Deactivate')}
                 </button>
             </Row>
-            <Row title="Delete my account"
+            <Row title={t('Delete my account')}
                  hint={!canDelete ? blocked
                      : isTenant
-                         ? 'You choose who takes over as tenant first. Then your name, email, photo, sign-in and devices are erased for good; the workspace carries on.'
-                         : 'Erases your name, email, photo, sign-in and devices for good. Your replies to customers stay with the business, with no name.'}>
+                         ? t('You choose who takes over as tenant first. Then your name, email, photo, sign-in and devices are erased for good; the workspace carries on.')
+                         : t('Erases your name, email, photo, sign-in and devices for good. Your replies to customers stay with the business, with no name.')}>
                 {canDelete ? (
                     <button type="button" className="btn btn--danger privacy__btn"
                             onClick={() => setSheet(true)} disabled={Boolean(busy)}>
-                        <IconWarning size={16} /> Delete
+                        <IconWarning size={16} /> {t('Delete')}
                     </button>
                 ) : (
-                    <span className="setting__state">Not available yet</span>
+                    <span className="setting__state">{t('Not available yet')}</span>
                 )}
             </Row>
 
             <BottomSheet open={sheet} onClose={() => setSheet(false)} labelledBy="sheet-title" initialFocusRef={safeRef}>
-                <h2 id="sheet-title" className="sheet__title">Delete your account?</h2>
+                <h2 id="sheet-title" className="sheet__title">{t('Delete your account?')}</h2>
                 <p className="sheet__text">
-                    {isTenant && 'You choose who takes over as tenant first. '}
-                    Your name, email, photo, sign-in and devices are erased for good. This cannot be undone.
+                    {isTenant
+                        ? t('You choose who takes over as tenant first. Your name, email, photo, sign-in and devices are erased for good. This cannot be undone.')
+                        : t('Your name, email, photo, sign-in and devices are erased for good. This cannot be undone.')}
                 </p>
                 <p className="sheet__text sheet__text--quiet">
-                    Only need a break? Deactivating stops conversations and alerts coming to you, and
-                    signing in again undoes it.
+                    {t('Only need a break? Deactivating stops conversations and alerts coming to you, and signing in again undoes it.')}
                 </p>
                 <div className="sheet__actions">
                     <button type="button" className="btn btn--primary" onClick={deactivate}>
-                        Deactivate instead
+                        {t('Deactivate instead')}
                     </button>
                     <button ref={safeRef} type="button" className="btn btn--secondary" onClick={() => setSheet(false)}>
-                        Cancel
+                        {t('Cancel')}
                     </button>
                 </div>
                 <p className="sheet__more">
                     <button type="button" className="sheet__more-link"
                             onClick={() => { setSheet(false); onStartDeletion?.(); }}>
-                        Still want to delete your account?
+                        {t('Still want to delete your account?')}
                     </button>
                 </p>
             </BottomSheet>
 
             <ConfirmDialog
                 open={confirmDeactivate}
-                title="Deactivate your account?"
-                message="You are signed out on every device and no conversations or alerts come to you. Conversations you had open go to someone available. Sign in again any time to turn it back on."
-                confirmLabel="Deactivate"
+                title={t('Deactivate your account?')}
+                message={t('You are signed out on every device and no conversations or alerts come to you. Conversations you had open go to someone available. Sign in again any time to turn it back on.')}
+                confirmLabel={t('Deactivate')}
+                cancelLabel={t('Cancel')}
                 onConfirm={deactivate}
                 onCancel={() => setConfirmDeactivate(false)}
             />

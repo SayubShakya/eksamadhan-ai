@@ -1,18 +1,25 @@
 import Avatar from './Avatar.jsx';
 import { IconBell, IconReply, IconTeam, IconWarning } from './icons.jsx';
+import { t } from '../lib/i18n.js';
 
 /**
  * The pieces of one notification, shared by the bell and the full page: who it is about (their
  * initials, with a small badge for the kind of alert), and a tag that names that kind.
  */
+// tag and label are getters so they are translated when read, not frozen at import time.
+const kind = (tag, label, Icon, tone) => ({
+    get tag() { return t(tag); },
+    get label() { return t(label); },
+    Icon, tone,
+});
 export const KINDS = {
-    ESCALATED: { tag: 'handover', label: 'Handovers', Icon: IconWarning, tone: 'urgent' },
-    ASSIGNED: { tag: 'assigned', label: 'Assigned', Icon: IconTeam, tone: 'blue' },
-    CUSTOMER_REPLIED: { tag: 'reply', label: 'Replies', Icon: IconReply, tone: 'green' },
-    NEW_TENANT: { tag: 'team', label: 'Team', Icon: IconTeam, tone: 'blue' },
-    MEMBER_LEFT: { tag: 'team', label: 'Team', Icon: IconTeam, tone: 'blue' },
+    ESCALATED: kind('handover', 'Handovers', IconWarning, 'urgent'),
+    ASSIGNED: kind('assigned', 'Assigned', IconTeam, 'blue'),
+    CUSTOMER_REPLIED: kind('reply', 'Replies', IconReply, 'green'),
+    NEW_TENANT: kind('team', 'Team', IconTeam, 'blue'),
+    MEMBER_LEFT: kind('team', 'Team', IconTeam, 'blue'),
 };
-const FALLBACK = { tag: 'alert', label: 'Other', Icon: IconBell, tone: 'blue' };
+const FALLBACK = kind('alert', 'Other', IconBell, 'blue');
 export const kindOf = (kind) => KINDS[kind] || FALLBACK;
 
 /** "Aarav Karki needs human support" -> "Aarav Karki": the person the alert is about. */

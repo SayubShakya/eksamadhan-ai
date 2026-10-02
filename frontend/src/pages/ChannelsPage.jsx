@@ -6,6 +6,7 @@ import { useHeldLoading } from '../lib/loading.js';
 import { timeAgo } from '../lib/format.js';
 import { IconFacebook, IconInstagram, IconPlus, IconWidget } from '../components/icons.jsx';
 import { toast } from '../lib/toast.js';
+import { t } from '../lib/i18n.js';
 
 /**
  * Channels: where customers message the workspace from, and each connected account on its own.
@@ -44,30 +45,30 @@ const connectedOn = (value) => {
 function AccountRow({ page, isTenant, canManage, onReconnect, onDisconnect, reconnecting }) {
     const since = connectedOn(page.connectedAt);
     const facts = [
-        since && `Connected ${since}`,
-        `${page.conversations ?? 0} ${page.conversations === 1 ? 'conversation' : 'conversations'}`,
-        page.withPeople ? `${page.withPeople} with your team now` : null,
-        page.lastMessageAt ? `last message ${timeAgo(page.lastMessageAt)}` : 'no messages yet',
+        since && t('Connected {date}', { date: since }),
+        page.conversations === 1 ? t('1 conversation') : t('{n} conversations', { n: page.conversations ?? 0 }),
+        page.withPeople ? t('{n} with your team now', { n: page.withPeople }) : null,
+        page.lastMessageAt ? t('last message {time}', { time: timeAgo(page.lastMessageAt) }) : t('no messages yet'),
     ].filter(Boolean);
 
     return (
-        <div className="setting channel-row">
-            <div className="setting__text">
-                <span className="setting__title">{page.pageName}</span>
-                <p className="setting__hint">{facts.join(' · ')}</p>
+        <div className="sp-row">
+            <div className="sp-row__text">
+                <span className="sp-row__title">{page.pageName}</span>
+                <p className="sp-row__hint">{facts.join(' · ')}</p>
             </div>
             {canManage && (
-                <div className="setting__control">
+                <div className="sp-row__control">
                     <div className="setting__buttons">
                         {/* Signing in again with Meta refreshes the page's access, which is the fix
                             when Meta stops accepting the stored one. */}
-                        <button type="button" className={btn('btn btn--secondary btn--sm', reconnecting)}
+                        <button type="button" className={btn('btn btn--secondary', reconnecting)}
                                 onClick={onReconnect} disabled={reconnecting} aria-busy={reconnecting}>
-                            Reconnect
+                            {t('Reconnect')}
                         </button>
                         {isTenant && (
-                            <button type="button" className="btn btn--danger btn--sm" onClick={onDisconnect}>
-                                Disconnect
+                            <button type="button" className="btn btn--danger" onClick={onDisconnect}>
+                                {t('Disconnect')}
                             </button>
                         )}
                     </div>
@@ -79,18 +80,16 @@ function AccountRow({ page, isTenant, canManage, onReconnect, onDisconnect, reco
 
 function ChannelsSkeleton() {
     return (
-        <LoadingRegion label="channels" className="settings__main">
+        <LoadingRegion label={t('channels')}>
             {[0, 1].map(i => (
-                <section className="card settings__card" key={i}>
-                    <header className="settings__cardhead channel__head">
-                        <Skel w={40} h={40} style={{ borderRadius: 10 }} />
-                        <div style={{ flex: 1 }}><Skel line w={160} /><div><Skel line w={240} /></div></div>
+                <section className="sp-section ch-section" key={i}>
+                    <header className="sp-section__head ch-head">
+                        <Skel w={44} h={44} style={{ borderRadius: 12 }} />
+                        <div style={{ flex: 1 }}><Skel line w={160} /><Skel line w={260} /></div>
                     </header>
-                    <div className="settings__rows">
-                        <div className="setting">
-                            <div className="setting__text"><Skel line w="45%" /><Skel line w="75%" /></div>
-                            <div className="setting__control"><Skel w={180} h={33} style={{ borderRadius: 8 }} /></div>
-                        </div>
+                    <div className="sp-row">
+                        <div className="sp-row__text"><Skel line w="45%" /><Skel line w="75%" /></div>
+                        <div className="sp-row__control"><Skel w={180} h={40} style={{ borderRadius: 8 }} /></div>
                     </div>
                 </section>
             ))}
@@ -115,7 +114,7 @@ export default function ChannelsPage({ user, pages = [], statusLoaded = true, on
         try {
             window.location.href = await api.connectUrl(platform);
         } catch (err) {
-            setError(api.errorMessage(err, 'Could not start the connection. Please try again.'));
+            setError(api.errorMessage(err, t('Could not start the connection. Please try again.')));
             setBusy('');
         }
     };
@@ -126,57 +125,56 @@ export default function ChannelsPage({ user, pages = [], statusLoaded = true, on
         setError('');
         try {
             await api.disconnectPage(page.id);
-            setRemoved(`${page.pageName} was disconnected and its conversations deleted.`);
-            toast.success('Account disconnected', { body: `${page.pageName} and its conversations were removed.` });
+            setRemoved(t('{name} was disconnected and its conversations deleted.', { name: page.pageName }));
+            toast.success(t('Account disconnected'), { body: t('{name} and its conversations were removed.', { name: page.pageName }) });
             onChanged?.();
         } catch (err) {
-            setError(api.errorMessage(err, 'That account could not be disconnected.'));
+            setError(api.errorMessage(err, t('That account could not be disconnected.')));
         }
     };
 
     return (
         <div className="page settings">
-            <div className="page__head">
-                <div>
-                    <h1 className="page__title">Channels</h1>
-                    <p className="page__sub">Where your customers message you from. Every conversation arrives in the one inbox.</p>
-                </div>
-            </div>
+            <div className="sp sp--plain">
+                <header className="ch-intro">
+                    <h1 className="sp__title">{t('Channels')}</h1>
+                    <p className="sp-row__hint">{t('Where your customers message you from. Every conversation arrives in the one inbox.')}</p>
+                </header>
 
-            {error && <p className="auth__error" role="alert">{error}</p>}
-            {removed && <p className="notice notice--ok" role="status">{removed}</p>}
+                {error && <p className="auth__error" role="alert">{error}</p>}
+                {removed && <p className="notice notice--ok" role="status">{removed}</p>}
 
-            {loading ? <ChannelsSkeleton /> : (
-                <div className="settings__main channels-page">
-                    {PLATFORMS.map(({ id, name, Icon, sub, connect: connectLabel, another }) => {
-                        const accounts = pages.filter(p => p.platform === id);
-                        return (
-                            <section key={id} className="card settings__card" aria-labelledby={`channel-${id}`}>
-                                <header className="settings__cardhead channel__head">
-                                    <span className="channel__logo"><Icon size={22} /></span>
-                                    <div className="channel__headtext">
-                                        <h2 id={`channel-${id}`}>{name}</h2>
-                                        <p>{sub}</p>
-                                    </div>
-                                    <span className={`tag ${accounts.length ? 'tag--ai' : 'channel__tag--off'}`}>
-                                        {accounts.length ? `${accounts.length} connected` : 'Not connected'}
-                                    </span>
-                                </header>
+                {loading ? <ChannelsSkeleton /> : (
+                    <>
+                        {PLATFORMS.map(({ id, name, Icon, sub, connect: connectLabel, another }) => {
+                            const accounts = pages.filter(p => p.platform === id);
+                            return (
+                                <section key={id} className="sp-section ch-section" aria-labelledby={`channel-${id}`}>
+                                    <header className="sp-section__head ch-head">
+                                        <span className="ch-logo"><Icon size={24} /></span>
+                                        <div className="ch-head__text">
+                                            <h2 id={`channel-${id}`}>{name}</h2>
+                                            <p>{t(sub)}</p>
+                                        </div>
+                                        <span className={`ch-status${accounts.length ? ' ch-status--on' : ''}`}>
+                                            <i aria-hidden="true" />
+                                            {accounts.length ? t('{n} connected', { n: accounts.length }) : t('Not connected')}
+                                        </span>
+                                    </header>
 
-                                <div className="settings__rows">
                                     {accounts.length === 0 ? (
-                                        <div className="setting">
-                                            <div className="setting__text">
-                                                <span className="setting__title">Nothing connected yet</span>
-                                                <p className="setting__hint">
-                                                    Connect it and its messages arrive in your inbox, where the AI answers them and hands the rest to your team.
+                                        <div className="sp-row">
+                                            <div className="sp-row__text">
+                                                <span className="sp-row__title">{t('Nothing connected yet')}</span>
+                                                <p className="sp-row__hint">
+                                                    {t('Connect it and its messages arrive in your inbox, where the AI answers them and hands the rest to your team.')}
                                                 </p>
                                             </div>
                                             {canManage && (
-                                                <div className="setting__control">
-                                                    <button type="button" className={btn('btn btn--primary btn--sm', busy === id)}
+                                                <div className="sp-row__control">
+                                                    <button type="button" className={btn('btn btn--primary', busy === id)}
                                                             onClick={() => connect(id)} disabled={Boolean(busy)} aria-busy={busy === id}>
-                                                        {connectLabel}
+                                                        {t(connectLabel)}
                                                     </button>
                                                 </div>
                                             )}
@@ -187,45 +185,47 @@ export default function ChannelsPage({ user, pages = [], statusLoaded = true, on
                                                     onReconnect={() => connect(id, page.id)}
                                                     onDisconnect={() => setRemoving(page)} />
                                     ))}
+
+                                    {canManage && accounts.length > 0 && (
+                                        <footer className="ch-foot">
+                                            <button type="button" className={btn('btn btn--secondary', busy === `${id}:another`)}
+                                                    onClick={() => connect(id, `${id}:another`)} disabled={Boolean(busy)}
+                                                    aria-busy={busy === `${id}:another`}>
+                                                <IconPlus size={14} /> {t(another)}
+                                            </button>
+                                        </footer>
+                                    )}
+                                </section>
+                            );
+                        })}
+
+                        <section className="sp-section ch-section" aria-labelledby="channel-widget">
+                            <header className="sp-section__head ch-head">
+                                <span className="ch-logo"><IconWidget size={24} /></span>
+                                <div className="ch-head__text">
+                                    <h2 id="channel-widget">{t('Website chat')}</h2>
+                                    <p>{t('A chat box on your own website, answered in the same inbox.')}</p>
                                 </div>
+                                <span className="ch-status">{t('Not available yet')}</span>
+                            </header>
+                        </section>
 
-                                {canManage && accounts.length > 0 && (
-                                    <footer className="settings__foot">
-                                        <button type="button" className={btn('btn btn--secondary btn--sm', busy === `${id}:another`)}
-                                                onClick={() => connect(id, `${id}:another`)} disabled={Boolean(busy)}
-                                                aria-busy={busy === `${id}:another`}>
-                                            <IconPlus size={14} /> {another}
-                                        </button>
-                                    </footer>
-                                )}
-                            </section>
-                        );
-                    })}
-
-                    <section className="card settings__card" aria-labelledby="channel-widget">
-                        <header className="settings__cardhead channel__head">
-                            <span className="channel__logo"><IconWidget size={22} /></span>
-                            <div className="channel__headtext">
-                                <h2 id="channel-widget">Website chat</h2>
-                                <p>A chat box on your own website, answered in the same inbox.</p>
-                            </div>
-                            <span className="tag channel__tag--off">Not available yet</span>
-                        </header>
-                    </section>
-
-                    {!canManage && (
-                        <p className="setting__hint">Only the tenant or an admin can connect or reconnect a channel.</p>
-                    )}
-                </div>
-            )}
+                        {!canManage && (
+                            <p className="sp-row__hint ch-note">{t('Only the tenant or an admin can connect or reconnect a channel.')}</p>
+                        )}
+                    </>
+                )}
+            </div>
 
             <ConfirmDialog
                 open={Boolean(removing)}
-                title={removing ? `Disconnect ${removing.pageName}?` : ''}
+                title={removing ? t('Disconnect {name}?', { name: removing.pageName }) : ''}
                 message={removing
-                    ? `Its ${removing.conversations ?? 0} conversations and all their messages are deleted from EkSamadhan AI. The messages stay in Meta, but this app loses its copy. This cannot be undone.`
+                    ? (removing.conversations === 1
+                        ? t('Its 1 conversation and all its messages are deleted from EkSamadhan AI. The messages stay in Meta, but this app loses its copy. This cannot be undone.')
+                        : t('Its {n} conversations and all their messages are deleted from EkSamadhan AI. The messages stay in Meta, but this app loses its copy. This cannot be undone.', { n: removing.conversations ?? 0 }))
                     : ''}
-                confirmLabel="Disconnect"
+                confirmLabel={t('Disconnect')}
                 danger
                 onConfirm={disconnect}
                 onCancel={() => setRemoving(null)}

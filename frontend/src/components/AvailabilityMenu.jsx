@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { IconCheck } from './icons.jsx';
 import { formatBackAt } from '../lib/format.js';
+import { t } from '../lib/i18n.js';
 
 /**
  * Available or Busy, in the top bar (PRD FR-05).
@@ -9,19 +10,27 @@ import { formatBackAt } from '../lib/format.js';
  * reported in for a few minutes as offline, so closing the laptop is enough, and a toggle left
  * on "Available" overnight cannot keep sending customers to someone who has gone home.
  */
+// label and note are getters, so they read in the language chosen now, not at import time.
+const presence = (label, dot, note) => ({
+    get label() { return t(label); },
+    dot,
+    get note() { return note ? t(note) : ''; },
+});
 export const PRESENCE = {
-    AVAILABLE: { label: 'Available', dot: 'dot--online', note: 'New conversations can come to you' },
-    BUSY: { label: 'Busy', dot: 'dot--busy', note: 'You keep your conversations; new ones go to others' },
+    AVAILABLE: presence('Available', 'dot--online', 'New conversations can come to you'),
+    BUSY: presence('Busy', 'dot--busy', 'You keep your conversations; new ones go to others'),
     // Available, but outside the working hours on the Hours page: new ones go to others.
-    OUTSIDE_HOURS: { label: 'Outside hours', dot: 'dot--away', note: '' },
-    OFFLINE: { label: 'Offline', dot: 'dot--offline', note: '' },
+    OUTSIDE_HOURS: presence('Outside hours', 'dot--away', ''),
+    OFFLINE: presence('Offline', 'dot--offline', ''),
 };
 
 /** Why Available is not bringing conversations right now, from the server's hours status. */
 export function hoursNote(hours) {
     if (!hours || hours.withinHours) return '';
-    if (!hours.hasAvailability) return 'No working hours set, so no new conversations come to you';
-    return `Outside your hours${hours.nextAvailableAt ? ` · back ${formatBackAt(hours.nextAvailableAt)}` : ''}`;
+    if (!hours.hasAvailability) return t('No working hours set, so no new conversations come to you');
+    return hours.nextAvailableAt
+        ? t('Outside your hours · back {when}', { when: formatBackAt(hours.nextAvailableAt) })
+        : t('Outside your hours');
 }
 
 export default function AvailabilityMenu({ value = 'AVAILABLE', onChange, hours, onSetHours }) {
@@ -57,7 +66,7 @@ export default function AvailabilityMenu({ value = 'AVAILABLE', onChange, hours,
                 onClick={() => setOpen(o => !o)}
                 aria-haspopup="menu"
                 aria-expanded={open}
-                aria-label={`Your status: ${current.label}${why ? `. ${why}` : ''}. Change it`}
+                aria-label={why ? t('Your status: {status}. {why}. Change it', { status: current.label, why }) : t('Your status: {status}. Change it', { status: current.label })}
                 title={why || undefined}
                 disabled={saving}
             >
@@ -67,7 +76,7 @@ export default function AvailabilityMenu({ value = 'AVAILABLE', onChange, hours,
             </button>
 
             {open && (
-                <div className="availability__menu" role="menu" aria-label="Your status">
+                <div className="availability__menu" role="menu" aria-label={t('Your status')}>
                     {['AVAILABLE', 'BUSY'].map(key => (
                         <button key={key} type="button" role="menuitemradio" aria-checked={value === key}
                                 className="availability__option" onClick={() => choose(key)}>
@@ -80,12 +89,12 @@ export default function AvailabilityMenu({ value = 'AVAILABLE', onChange, hours,
                         </button>
                     ))}
                     <p className="availability__foot">
-                        You show as offline a few minutes after you close EkSamadhan AI.
+                        {t('You show as offline a few minutes after you close EkSamadhan AI.')}
                     </p>
                     {onSetHours && (
                         <button type="button" className="availability__hours"
                                 onClick={() => { setOpen(false); onSetHours(); }}>
-                            {hours && !hours.hasAvailability ? 'Set your working hours' : 'Your working hours'}
+                            {hours && !hours.hasAvailability ? t('Set your working hours') : t('Your working hours')}
                         </button>
                     )}
                 </div>

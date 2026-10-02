@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { IconClose } from './icons.jsx';
 import * as push from '../lib/push.js';
+import { t } from '../lib/i18n.js';
 
 /**
  * Asks, once after signing in, whether this device should be notified (FR-06).
@@ -27,7 +28,7 @@ export default function NotificationPrompt({ open, onClose }) {
             onClose(true);
         } catch (err) {
             setBusy(false);
-            setError(err.message || 'Notifications could not be enabled.');
+            setError(err.message || t('Notifications could not be enabled.'));
         }
     };
 
@@ -41,35 +42,33 @@ export default function NotificationPrompt({ open, onClose }) {
             <div className="scrim" onClick={notNow} aria-hidden="true" />
             <div className="confirm" role="alertdialog" aria-modal="true" aria-labelledby="notify-title">
                 <header className="panel__head">
-                    <h2 className="panel__title" id="notify-title">Get notified when a customer needs you</h2>
-                    <button className="icon-btn" onClick={notNow} aria-label="Close">
+                    <h2 className="panel__title" id="notify-title">{t('Get notified when a customer needs you')}</h2>
+                    <button className="icon-btn" onClick={notNow} aria-label={t('Close')}>
                         <IconClose />
                     </button>
                 </header>
 
                 <div className="confirm__body">
                     <p className="confirm__message">
-                        The AI answers what it can and hands the rest to a person. Turn on notifications
-                        and this device will tell you the moment a conversation is yours, even when
-                        the dashboard is closed.
+                        {t('The AI answers what it can and hands the rest to a person. Turn on notifications and this device will tell you the moment a conversation is yours, even when the dashboard is closed.')}
                     </p>
                     <ul className="notify__list">
-                        <li>A conversation is handed to you, or assigned by a colleague</li>
-                        <li>A customer replies in a conversation you are handling</li>
+                        <li>{t('A conversation is handed to you, or assigned by a colleague')}</li>
+                        <li>{t('A customer replies in a conversation you are handling')}</li>
                     </ul>
                     <p className="field__note">
-                        This device only, and you can turn it off any time from your profile.
+                        {t('This device only, and you can turn it off any time from your profile.')}
                     </p>
 
                     {error && <p className="panel__error" role="alert">{error}</p>}
 
                     <div className="panel__actions">
                         <button className="btn btn--secondary" onClick={notNow} disabled={busy}>
-                            Not now
+                            {t('Not now')}
                         </button>
                         <button className={`btn btn--primary${busy ? ' btn--busy' : ''}`} onClick={enable}
                                 disabled={busy} aria-busy={busy} autoFocus>
-                            Enable notifications
+                            {t('Enable notifications')}
                         </button>
                     </div>
                 </div>

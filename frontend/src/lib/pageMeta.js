@@ -9,6 +9,8 @@
  * A canonical link needs the site's real address, which a development tunnel is not. It is set
  * only when VITE_SITE_URL is (the deployed domain), so no page ever claims a tunnel as its home.
  */
+import { t } from './i18n.js';
+
 const SITE = 'EkSamadhan AI';
 const SITE_URL = (import.meta.env.VITE_SITE_URL || '').replace(/\/+$/, '');
 
@@ -46,8 +48,9 @@ export function setPageMeta({ title, description = DEFAULT_DESCRIPTION, index = 
     }
 }
 
-// What each signed-in screen is called in the tab. Private, so none is indexed.
-export const VIEW_TITLES = {
+// What each signed-in screen is called in the tab. Private, so none is indexed. Read through
+// getters so each lookup is in the language chosen now, not the one at import time.
+const VIEW_TITLE_TEXT = {
     home: 'Dashboard',
     inbox: 'Inbox',
     knowledge: 'Knowledge',
@@ -60,6 +63,10 @@ export const VIEW_TITLES = {
     'delete-account': 'Delete account',
     'not-found': 'Page not found',
 };
+
+export const VIEW_TITLES = Object.defineProperties({}, Object.fromEntries(
+    Object.entries(VIEW_TITLE_TEXT).map(([k, v]) => [k, { enumerable: true, get: () => t(v) }]),
+));
 
 // The public pages: the only ones a search engine should list.
 export const PUBLIC_META = {

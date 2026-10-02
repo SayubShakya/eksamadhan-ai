@@ -14,6 +14,7 @@ import useDragDown from '../lib/useDragDown.js';
 import AssigneePicker from '../components/AssigneePicker.jsx';
 import { formatTimestamp, formatTime, formatDay, initials, STATUS_LABEL, ownershipLabel, SENTIMENT, PRIORITY, SPAM_KIND, participantsOf } from '../lib/format.js';
 import { toast } from '../lib/toast.js';
+import { t } from '../lib/i18n.js';
 
 /**
  * Active first, and the default: an agent opens the inbox to work, and a resolved
@@ -36,8 +37,13 @@ const PLATFORMS = [
 
 /** The count has to describe what is actually listed, or "3 active" lies on the Resolved tab. */
 function countLabel(status, platform, n) {
-    const where = platform === 'all' ? '' : ` on ${PLATFORMS.find(p => p.id === platform)?.label ?? platform}`;
-    return `${n} ${status === 'resolved' ? 'resolved' : status === 'spam' ? 'spam' : 'active'}${where}`;
+    if (platform === 'all') {
+        return status === 'resolved' ? t('{n} resolved', { n })
+            : status === 'spam' ? t('{n} spam', { n }) : t('{n} active', { n });
+    }
+    const channel = PLATFORMS.find(p => p.id === platform)?.label ?? platform;
+    return status === 'resolved' ? t('{n} resolved on {channel}', { n, channel })
+        : status === 'spam' ? t('{n} spam on {channel}', { n, channel }) : t('{n} active on {channel}', { n, channel });
 }
 
 /** Tag colour per conversation state. */
@@ -84,12 +90,11 @@ const SLOW_DELIVERY_MS = 3000;
 const formatMillis = (ms) => (ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`);
 
 const aiTimingDetail = (m) =>
-    `The AI took ${formatMillis(m.aiGeneratedMs)} to retrieve, answer and send.`
+    t('The AI took {time} to retrieve, answer and send.', { time: formatMillis(m.aiGeneratedMs) })
     + (m.aiWaitedMs != null
-        ? ` The message waited ${formatMillis(m.aiWaitedMs)} before it reached the AI`
-          + (m.aiWaitedMs > SLOW_DELIVERY_MS
-              ? '. That long a wait means it arrived through the catch-up sync rather than a live webhook.'
-              : '.')
+        ? ' ' + (m.aiWaitedMs > SLOW_DELIVERY_MS
+            ? t('The message waited {time} before it reached the AI. That long a wait means it arrived through the catch-up sync rather than a live webhook.', { time: formatMillis(m.aiWaitedMs) })
+            : t('The message waited {time} before it reached the AI.', { time: formatMillis(m.aiWaitedMs) }))
         : '');
 
 /** Long threads render in pages so the DOM stays small and scrolling stays smooth. */
@@ -110,7 +115,7 @@ const ATTACHMENT_LABEL = {
 function previewOf(message) {
     const text = message.text || message.content;
     if (text) return text;
-    return ATTACHMENT_LABEL[message.attachmentType] || 'Attachment';
+    return ATTACHMENT_LABEL[message.attachmentType] ? t(ATTACHMENT_LABEL[message.attachmentType]) : t('Attachment');
 }
 
 /**
@@ -126,8 +131,8 @@ function Sticker({ url }) {
     const [broken, setBroken] = useState(false);
     useEffect(() => { setBroken(false); }, [url]);
     return broken
-        ? <span className="media--sticker-fallback" role="img" aria-label="Sticker"><IconThumb size={40} /></span>
-        : <img className="media media--sticker" src={url} alt="Sticker" onError={() => setBroken(true)} />;
+        ? <span className="media--sticker-fallback" role="img" aria-label={t('Sticker')}><IconThumb size={40} /></span>
+        : <img className="media media--sticker" src={url} alt={t('Sticker')} onError={() => setBroken(true)} />;
 }
 
 function Attachment({ message, onOpenImage }) {
@@ -143,8 +148,8 @@ function Attachment({ message, onOpenImage }) {
         // the photo belongs to, and the agent has to find their way back to it.
         return (
             <button type="button" className="media__open" onClick={() => onOpenImage(url)}
-                    aria-label="View photo full size">
-                <img className="media media--image" src={url} alt="Photo from customer" loading="lazy" />
+                    aria-label={t('View photo full size')}>
+                <img className="media media--image" src={url} alt={t('Photo from customer')} loading="lazy" />
             </button>
         );
     }
@@ -153,7 +158,7 @@ function Attachment({ message, onOpenImage }) {
     }
     return (
         <a className="media media--file" href={url} target="_blank" rel="noreferrer noopener">
-            Open attachment
+            {t('Open attachment')}
         </a>
     );
 }
@@ -194,7 +199,7 @@ function ConvSkeleton({ row }) {
 /** The reading pane before any conversation has loaded: a header and a few bubbles. */
 function ThreadSkeleton() {
     return (
-        <LoadingRegion label="the conversation" className="thread__skeleton">
+        <LoadingRegion label={t('the conversation')} className="thread__skeleton">
             <div className="thread__head">
                 <Skel circle w={38} h={38} />
                 <div className="thread__who" style={{ flex: 1 }}>
@@ -347,9 +352,9 @@ export default function InboxPage({
         try {
             setRecorder(await startRecording());
         } catch {
-            // Denied permission, or no microphone. Report it where every other send
-            // error appears rather than in a browser dialog.
-            onError?.('Microphone access is needed to record a voice message. Allow it in your browser settings.');
+            // Denied permission, or no microphone: say so in a toast rather than a browser dialog.
+            // (This called an onError that was never passed in, so the message was lost.)
+            toast.error(t('Microphone not available'), { body: t('Microphone access is needed to record a voice message. Allow it in your browser settings.') });
         }
     };
 
@@ -358,10 +363,10 @@ export default function InboxPage({
         const blob = await recorder.stop();
         setRecorder(null);
         setBusy(true);
-        setSending({ label: 'Sending voice message', fraction: null });
+        setSending({ label: t('Sending voice message'), fraction: null });
         try {
             await onSendVoice(activeThread, blob,
-                (fraction) => setSending({ label: 'Sending voice message', fraction }));
+                (fraction) => setSending({ label: t('Sending voice message'), fraction }));
         } finally {
             setBusy(false);
             setSending(null);
@@ -392,7 +397,7 @@ export default function InboxPage({
     const listHead = (
             <div className="convlist__head">
                 <div className="convlist__title">
-                    <h2>Conversations</h2>
+                    <h2>{t('Conversations')}</h2>
                     {!pending && <span className="count">{countLabel(filter, platformFilter, threads.length)}</span>}
                 </div>
                 <div className="chips">
@@ -402,11 +407,11 @@ export default function InboxPage({
                             aria-pressed={filter === f.id}
                             onClick={() => onFilterChange(f.id)}
                         >
-                            {f.label}
+                            {t(f.label)}
                             {/* Never a silent bin: a real customer Jev misjudged must be
                                 noticed, so the tab says how much is waiting in it. */}
                             {f.id === 'spam' && spamCount > 0 && (
-                                <span className="chip__count" aria-label={`${spamCount} in spam`}>{spamCount}</span>
+                                <span className="chip__count" aria-label={t('{n} in spam', { n: spamCount })}>{spamCount}</span>
                             )}
                         </button>
                     ))}
@@ -418,10 +423,10 @@ export default function InboxPage({
                         className="chips__select"
                         value={platformFilter}
                         onChange={(e) => onPlatformChange?.(e.target.value)}
-                        aria-label="Filter by channel"
+                        aria-label={t('Filter by channel')}
                     >
                         {PLATFORMS.map(pf => (
-                            <option key={pf.id} value={pf.id}>{pf.label}</option>
+                            <option key={pf.id} value={pf.id}>{t(pf.label)}</option>
                         ))}
                     </select>
 </div>
@@ -431,18 +436,18 @@ export default function InboxPage({
     if (pending || failed) {
         return (
             <div className="inbox">
-                <h1 className="sr-only">Inbox</h1>
-                <aside className="convlist" aria-label="Conversations">
+                <h1 className="sr-only">{t('Inbox')}</h1>
+                <aside className="convlist" aria-label={t('Conversations')}>
                     {listHead}
                     {failed ? (
                         <LoadError message={loadError} onRetry={onRetry} />
                     ) : (
-                        <LoadingRegion label="conversations" className="convlist__items">
+                        <LoadingRegion label={t('conversations')} className="convlist__items">
                             {SKELETON_ROWS.map((row, i) => <ConvSkeleton key={i} row={row} />)}
                         </LoadingRegion>
                     )}
                 </aside>
-                <section className="thread" aria-label="Conversation">
+                <section className="thread" aria-label={t('Conversation')}>
                     {!failed && <ThreadSkeleton />}
                 </section>
                 {!failed && (
@@ -467,28 +472,27 @@ export default function InboxPage({
     if (nothingAtAll) {
         return (
             <div className="inbox">
-                <h1 className="sr-only">Inbox</h1>
+                <h1 className="sr-only">{t('Inbox')}</h1>
                 <div className="convlist">
                     <div className="convlist__head">
-                        <div className="convlist__title"><h2>Conversations</h2></div>
+                        <div className="convlist__title"><h2>{t('Conversations')}</h2></div>
                     </div>
                     <div className="empty" style={{ paddingTop: 64 }}>
-                        <p className="empty__title" style={{ fontSize: 15 }}>No messages yet</p>
+                        <p className="empty__title" style={{ fontSize: 15 }}>{t('No messages yet')}</p>
                         <p className="empty__text" style={{ fontSize: 13 }}>
-                            Connect a channel to start receiving messages.
+                            {t('Connect a channel to start receiving messages.')}
                         </p>
                     </div>
                 </div>
                 <div className="thread">
                     <div className="empty" style={{ height: '100%', alignContent: 'center' }}>
                         <div className="empty__icon"><IconInbox size={28} /></div>
-                        <p className="empty__title">Your inbox is ready and waiting</p>
+                        <p className="empty__title">{t('Your inbox is ready and waiting')}</p>
                         <p className="empty__text">
-                            Once you connect your Facebook Page or Instagram account, customer
-                            messages arrive here for you or your AI agent to handle.
+                            {t('Once you connect your Facebook Page or Instagram account, customer messages arrive here for you or your AI agent to handle.')}
                         </p>
                         <button className="btn btn--primary" onClick={() => onConnect('facebook')}>
-                            <IconPlus /> Connect a channel
+                            <IconPlus /> {t('Connect a channel')}
                         </button>
                     </div>
                 </div>
@@ -499,41 +503,41 @@ export default function InboxPage({
     return (
         <div className={`inbox ${activeThread ? 'inbox--has-active' : ''}`}>
             {/* The page's one heading, for screen readers and search: the layout has no room for a visible title. */}
-            <h1 className="sr-only">Inbox</h1>
-            <aside className="convlist" aria-label="Conversations">
+            <h1 className="sr-only">{t('Inbox')}</h1>
+            <aside className="convlist" aria-label={t('Conversations')}>
                 {listHead}
 
                 <div className="convlist__items">
-                    {visible.map(t => {
-                        const platform = platformOf(t.pageId);
-                        const awaitingReply = t.status === 'OPEN_FOR_AGENT' || t.unanswered > 0;
+                    {visible.map(th => {
+                        const platform = platformOf(th.pageId);
+                        const awaitingReply = th.status === 'OPEN_FOR_AGENT' || th.unanswered > 0;
                         return (
-                            <div key={t.id || t.customerId} className={`conv-row${t.pinned ? ' is-pinned' : ''}`}>
+                            <div key={th.id || th.customerId} className={`conv-row${th.pinned ? ' is-pinned' : ''}`}>
                             <button
                                 className={`conv ${awaitingReply ? 'conv--attention' : ''}`}
-                                aria-current={active?.id === t.id}
-                                onClick={() => onSelect(t)}
+                                aria-current={active?.id === th.id}
+                                onClick={() => onSelect(th)}
                             >
-                                <PersonAvatar name={t.name} url={t.avatarUrl} size={36} />
+                                <PersonAvatar name={th.name} url={th.avatarUrl} size={36} />
                                 <div className="conv__body">
                                     <div className="conv__top">
-                                        <span className="conv__name">{t.name}</span>
-                                        <span className="conv__time">{formatTimestamp(t.last.timestamp)}</span>
+                                        <span className="conv__name">{th.name}</span>
+                                        <span className="conv__time">{formatTimestamp(th.last.timestamp)}</span>
                                     </div>
                                     {/* The unread count sits at the end of the preview line, where
                                         messaging apps put it — in the footer it competed with the
                                         state pill for space and ended up alone on a line. */}
                                     <div className="conv__mid">
                                         <div className="conv__preview">
-                                            {(aiTyping[t.id] || t.aiTyping) && t.status === 'AI_HANDLING'
-                                                ? <span className="conv__typing">AI is typing…</span> : previewOf(t.last)}
+                                            {(aiTyping[th.id] || th.aiTyping) && th.status === 'AI_HANDLING'
+                                                ? <span className="conv__typing">{t('AI is typing…')}</span> : previewOf(th.last)}
                                         </div>
-                                        {t.unanswered > 0 && t.status !== 'RESOLVED' && !t.spam && (
+                                        {th.unanswered > 0 && th.status !== 'RESOLVED' && !th.spam && (
                                             <span
                                                 className="unread-count"
-                                                aria-label={`${t.unanswered} message${t.unanswered === 1 ? '' : 's'} waiting for a reply`}
+                                                aria-label={th.unanswered === 1 ? t('1 message waiting for a reply') : t('{n} messages waiting for a reply', { n: th.unanswered })}
                                             >
-                                                {t.unanswered > 99 ? '99+' : t.unanswered}
+                                                {th.unanswered > 99 ? '99+' : th.unanswered}
                                             </span>
                                         )}
                                     </div>
@@ -542,26 +546,26 @@ export default function InboxPage({
                                         <ChannelIcon platform={platform} size={13} />
                                         {/* The same customer can have several conversations, so
                                             the row needs the reference that tells them apart. */}
-                                        {t.id && <span className="conv__ref">CONV-{t.id.slice(0, 8)}</span>}
-                                        {PRIORITY[t.priority] && !t.spam && (
-                                            <span className={`pill conv__prio ${PRIORITY[t.priority].tone}`}
-                                                  title={`Priority ${t.priority}: ${PRIORITY[t.priority].label}`}>
-                                                {PRIORITY[t.priority].short}
+                                        {th.id && <span className="conv__ref">CONV-{th.id.slice(0, 8)}</span>}
+                                        {PRIORITY[th.priority] && !th.spam && (
+                                            <span className={`pill conv__prio ${PRIORITY[th.priority].tone}`}
+                                                  title={t('Priority {level}: {label}', { level: th.priority, label: PRIORITY[th.priority].label })}>
+                                                {PRIORITY[th.priority].short}
                                             </span>
                                         )}
-                                        {t.spam && <span className="pill conv__prio pill--negative">Spam</span>}
+                                        {th.spam && <span className="pill conv__prio pill--negative">{t('Spam')}</span>}
                                         {/* A spam conversation has no owner worth naming — the
                                             Spam pill above says everything. */}
-                                        {!t.spam && <span className={`tag conv__tag ${STATUS_TONE[t.status] || 'tag--ai'}`}>
+                                        {!th.spam && <span className={`tag conv__tag ${STATUS_TONE[th.status] || 'tag--ai'}`}>
                                             <span className="conv__tag-text">
-                                                {ownershipLabel(t, me?.id) || STATUS_LABEL[t.status] || t.status}
+                                                {ownershipLabel(t, me?.id) || STATUS_LABEL[th.status] || th.status}
                                             </span>
                                         </span>}
                                         {/* The customer's mood as a word, only when it is worth noticing. */}
-                                        {SENTIMENT[t.sentiment] && t.sentiment !== 'NEUTRAL' && (
-                                            <span className={`tag conv__mood ${SENTIMENT[t.sentiment].tag}`}
-                                                  title={`${SENTIMENT[t.sentiment].label} customer`}>
-                                                {SENTIMENT[t.sentiment].label}
+                                        {SENTIMENT[th.sentiment] && th.sentiment !== 'NEUTRAL' && (
+                                            <span className={`tag conv__mood ${SENTIMENT[th.sentiment].tag}`}
+                                                  title={t('{mood} customer', { mood: SENTIMENT[th.sentiment].label })}>
+                                                {SENTIMENT[th.sentiment].label}
                                             </span>
                                         )}
 
@@ -570,16 +574,16 @@ export default function InboxPage({
                             </button>
                             {/* Beside the row, not inside it: a button cannot hold a button. Always shown:
                                 grey until pinned, then blue. */}
-                            {onPin && t.id && (
+                            {onPin && th.id && (
                                 <button
                                     type="button"
-                                    className={`conv-row__pin${t.pinned ? ' is-on' : ''}`}
-                                    onClick={() => onPin(t)}
-                                    aria-pressed={Boolean(t.pinned)}
-                                    aria-label={t.pinned ? `Unpin ${t.name}` : `Pin ${t.name} to the top`}
-                                    title={t.pinned ? 'Unpin' : 'Pin to the top'}
+                                    className={`conv-row__pin${th.pinned ? ' is-on' : ''}`}
+                                    onClick={() => onPin(th)}
+                                    aria-pressed={Boolean(th.pinned)}
+                                    aria-label={th.pinned ? t('Unpin {name}', { name: th.name }) : t('Pin {name} to the top', { name: th.name })}
+                                    title={th.pinned ? t('Unpin') : t('Pin to the top')}
                                 >
-                                    <IconPin size={15} filled={t.pinned} />
+                                    <IconPin size={15} filled={th.pinned} />
                                 </button>
                             )}
                             </div>
@@ -588,12 +592,12 @@ export default function InboxPage({
                     {!visible.length && (
                         <div className="empty" style={{ padding: '32px 20px' }}>
                             <p className="empty__title" style={{ fontSize: 14 }}>
-                                {search ? 'No matches' : `Nothing on ${FILTERS.find(f => f.id === filter)?.label ?? 'this channel'}`}
+                                {search ? t('No matches') : FILTERS.find(f => f.id === filter) ? t('Nothing on {tab}', { tab: t(FILTERS.find(f => f.id === filter).label) }) : t('Nothing on this channel')}
                             </p>
                             <p className="empty__text" style={{ fontSize: 13, marginBottom: 14 }}>
                                 {search
-                                    ? `Nothing matches “${search}”. Try a name, a reference like CONV-ae19042d, or something that was said.`
-                                    : 'No conversations on this channel yet.'}
+                                    ? t('Nothing matches “{query}”. Try a name, a reference like CONV-ae19042d, or something that was said.', { query: search })
+                                    : t('No conversations on this channel yet.')}
                             </p>
                             <button
                                 className="btn btn--secondary btn--sm"
@@ -605,24 +609,24 @@ export default function InboxPage({
                                     onPlatformChange?.('all');
                                 }}
                             >
-                                Show all conversations
+                                {t('Show all conversations')}
                             </button>
                         </div>
                     )}
                 </div>
             </aside>
 
-            <section className="thread" aria-label="Conversation">
+            <section className="thread" aria-label={t('Conversation')}>
                 {!activeThread ? (
                     <div className="empty" style={{ height: '100%', alignContent: 'center' }}>
                         <div className="empty__icon"><IconInbox size={28} /></div>
                         <p className="empty__title">
-                            {threads.length ? 'Select a conversation' : 'Nothing on this channel'}
+                            {threads.length ? t('Select a conversation') : t('Nothing on this channel')}
                         </p>
                         <p className="empty__text">
                             {threads.length
-                                ? 'Choose a chat from the list to read it and reply.'
-                                : 'Switch to another channel, or choose “All” to see every conversation.'}
+                                ? t('Choose a chat from the list to read it and reply.')
+                                : t('Switch to another channel, or choose “All” to see every conversation.')}
                         </p>
                     </div>
                 ) : (
@@ -633,7 +637,7 @@ export default function InboxPage({
                             <button
                                 className="icon-btn thread__back"
                                 onClick={() => onSelect(null)}
-                                aria-label="Back to conversations"
+                                aria-label={t('Back to conversations')}
                             >
                                 <IconBack />
                             </button>
@@ -649,7 +653,7 @@ export default function InboxPage({
                                     </span>
                                 </div>
                                 <div className="thread__meta">
-                                    Last active {formatTimestamp(activeThread.last.timestamp)}
+                                    {t('Last active {time}', { time: formatTimestamp(activeThread.last.timestamp) })}
                                 </div>
                             </div>
 
@@ -660,8 +664,8 @@ export default function InboxPage({
                                         className={`icon-btn thread__pin${activeThread.pinned ? ' is-on' : ''}`}
                                         onClick={() => onPin(activeThread)}
                                         aria-pressed={Boolean(activeThread.pinned)}
-                                        aria-label={activeThread.pinned ? 'Unpin conversation' : 'Pin conversation to the top'}
-                                        title={activeThread.pinned ? 'Unpin' : 'Pin to the top'}
+                                        aria-label={activeThread.pinned ? t('Unpin conversation') : t('Pin conversation to the top')}
+                                        title={activeThread.pinned ? t('Unpin') : t('Pin to the top')}
                                     >
                                         <IconPin filled={activeThread.pinned} />
                                     </button>
@@ -670,29 +674,29 @@ export default function InboxPage({
                                     type="button"
                                     className="icon-btn thread__info"
                                     onClick={() => setDetailsOpen(true)}
-                                    aria-label="Customer details"
+                                    aria-label={t('Customer details')}
                                     aria-expanded={detailsOpen}
-                                    title="Customer details"
+                                    title={t('Customer details')}
                                 >
                                     <IconInfo />
                                 </button>
                                 {/* Phone: one "More" button in place of pin and the text buttons. */}
                                 <div className="thread__more-wrap">
                                     <button type="button" className="icon-btn thread__more-btn" aria-haspopup="menu"
-                                            aria-expanded={moreOpen} aria-label="More actions" onClick={() => setMoreOpen(o => !o)}>
+                                            aria-expanded={moreOpen} aria-label={t('More actions')} onClick={() => setMoreOpen(o => !o)}>
                                         <IconDots />
                                     </button>
                                     {moreOpen && (
                                         <>
                                             <div className="actsheet__backdrop" onClick={() => setMoreOpen(false)} aria-hidden="true" />
-                                            <div className="actsheet" role="menu" aria-label="Conversation actions"
+                                            <div className="actsheet" role="menu" aria-label={t('Conversation actions')}
                                                  ref={sheetDrag.ref} style={sheetDrag.style}>
                                                 <span className="actsheet__handle" aria-hidden="true" />
                                                 <div className="actsheet__who">
                                                     <PersonAvatar name={activeThread.name} url={activeThread.avatarUrl} size={40} />
                                                     <span>
                                                         <strong>{activeThread.name}</strong>
-                                                        <small>{activeThread.spam ? 'In the Spam tab'
+                                                        <small>{activeThread.spam ? t('In the Spam tab')
                                                             : ownershipLabel(activeThread, me?.id) || STATUS_LABEL[activeThread.status]}</small>
                                                     </span>
                                                 </div>
@@ -700,37 +704,37 @@ export default function InboxPage({
                                                     {activeThread.spam && (
                                                         <button role="menuitem" onClick={() => { setMoreOpen(false); act(activeThread, 'not-spam'); }}>
                                                             <span className="actsheet__icon"><IconCheck size={18} /></span>
-                                                            <span className="actsheet__text">Not spam<small>Back to Active, and the AI answers again</small></span>
+                                                            <span className="actsheet__text">{t('Not spam')}<small>{t('Back to Active, and the AI answers again')}</small></span>
                                                         </button>
                                                     )}
                                                     {activeThread.status === 'AI_HANDLING' && !activeThread.spam && (
                                                         <button role="menuitem" onClick={() => { setMoreOpen(false); act(activeThread, 'take-over'); }}>
                                                             <span className="actsheet__icon"><IconUser size={18} /></span>
-                                                            <span className="actsheet__text">Take over<small>You reply; the AI stops answering here</small></span>
+                                                            <span className="actsheet__text">{t('Take over')}<small>{t('You reply; the AI stops answering here')}</small></span>
                                                         </button>
                                                     )}
                                                     {activeThread.status === 'RESOLVED' && (
                                                         <button role="menuitem" onClick={() => { setMoreOpen(false); act(activeThread, 'return-to-ai'); }}>
                                                             <span className="actsheet__icon"><IconAi size={18} /></span>
-                                                            <span className="actsheet__text">Reopen<small>Back to Active, with the AI answering</small></span>
+                                                            <span className="actsheet__text">{t('Reopen')}<small>{t('Back to Active, with the AI answering')}</small></span>
                                                         </button>
                                                     )}
                                                     {onPin && (
                                                         <button role="menuitem" onClick={() => { setMoreOpen(false); onPin(activeThread); }}>
                                                             <span className="actsheet__icon"><IconPin size={18} filled={activeThread.pinned} /></span>
-                                                            <span className="actsheet__text">{activeThread.pinned ? 'Unpin' : 'Pin to the top'}
-                                                                <small>{activeThread.pinned ? 'Back into the list by time' : 'Keep it first in your list'}</small></span>
+                                                            <span className="actsheet__text">{activeThread.pinned ? t('Unpin') : t('Pin to the top')}
+                                                                <small>{activeThread.pinned ? t('Back into the list by time') : t('Keep it first in your list')}</small></span>
                                                         </button>
                                                     )}
                                                     <button role="menuitem" onClick={() => { setMoreOpen(false); setDetailsOpen(true); }}>
                                                         <span className="actsheet__icon"><IconInfo size={18} /></span>
-                                                        <span className="actsheet__text">Customer details<small>Sentiment, priority, who replied, the summary</small></span>
+                                                        <span className="actsheet__text">{t('Customer details')}<small>{t('Sentiment, priority, who replied, the summary')}</small></span>
                                                     </button>
                                                 </div>
                                                 {activeThread.status !== 'RESOLVED' && (
                                                     <button type="button" className="btn btn--primary actsheet__main"
                                                             onClick={() => { setMoreOpen(false); act(activeThread, 'resolve'); }}>
-                                                        <IconCheck size={16} /> Resolve conversation
+                                                        <IconCheck size={16} /> {t('Resolve conversation')}
                                                     </button>
                                                 )}
                                             </div>
@@ -741,27 +745,27 @@ export default function InboxPage({
                                     <button className={`btn btn--sm btn--secondary${acting === 'not-spam' ? ' btn--busy' : ''}`}
                                             disabled={Boolean(acting)} aria-busy={acting === 'not-spam'}
                                             onClick={() => act(activeThread, 'not-spam')}>
-                                        Not spam
+                                        {t('Not spam')}
                                     </button>
                                 )}
                                 {activeThread.status === 'AI_HANDLING' && !activeThread.spam && (
                                     <button className={`btn btn--sm btn--secondary${acting === 'take-over' ? ' btn--busy' : ''}`}
                                             disabled={Boolean(acting)} aria-busy={acting === 'take-over'}
                                             onClick={() => act(activeThread, 'take-over')}>
-                                        Take over
+                                        {t('Take over')}
                                     </button>
                                 )}
                                 {activeThread.status === 'RESOLVED' ? (
                                     <button className={`btn btn--sm btn--secondary${acting === 'return-to-ai' ? ' btn--busy' : ''}`}
                                             disabled={Boolean(acting)} aria-busy={acting === 'return-to-ai'}
                                             onClick={() => act(activeThread, 'return-to-ai')}>
-                                        Reopen
+                                        {t('Reopen')}
                                     </button>
                                 ) : (
                                     <button className={`btn btn--sm btn--primary${acting === 'resolve' ? ' btn--busy' : ''}`}
                                             disabled={Boolean(acting)} aria-busy={acting === 'resolve'}
                                             onClick={() => act(activeThread, 'resolve')}>
-                                        Resolve
+                                        {t('Resolve')}
                                     </button>
                                 )}
                             </div>
@@ -773,10 +777,10 @@ export default function InboxPage({
                             {activeThread.messages.length > shown && (
                                 <div className="thread__more">
                                     <button className="btn btn--secondary btn--sm" onClick={loadEarlier}>
-                                        Load earlier messages
+                                        {t('Load earlier messages')}
                                     </button>
                                     <span className="thread__moreCount">
-                                        {activeThread.messages.length - shown} older
+                                        {t('{n} older', { n: activeThread.messages.length - shown })}
                                     </span>
                                 </div>
                             )}
@@ -814,12 +818,12 @@ export default function InboxPage({
                                             {!mine && (isAi ? (
                                                 <span className="avatar msg__avatar msg__avatar--ai"
                                                       style={{ width: 28, height: 28 }}
-                                                      title="Answered by the AI" aria-label="AI">
+                                                      title={t('Answered by the AI')} aria-label="AI">
                                                     <IconSparkle />
                                                 </span>
                                             ) : (
                                                 <PersonAvatar
-                                                    name={outbound ? (m.authorName || 'Staff') : activeThread.name}
+                                                    name={outbound ? (m.authorName || t('Staff')) : activeThread.name}
                                                     url={outbound ? m.authorAvatar : activeThread.avatarUrl}
                                                     size={28}
                                                     className="msg__avatar"
@@ -840,10 +844,10 @@ export default function InboxPage({
                                                         <span className="quote__label">
                                                             <IconReply size={12} />
                                                             {mine
-                                                                ? `You replied to ${activeThread.name}`
+                                                                ? t('You replied to {name}', { name: activeThread.name })
                                                                 : outbound
-                                                                    ? `${isAi ? 'AI' : m.authorName || 'A colleague'} replied to ${activeThread.name}`
-                                                                    : `${activeThread.name} replied to you`}
+                                                                    ? t('{who} replied to {name}', { who: isAi ? 'AI' : m.authorName || t('A colleague'), name: activeThread.name })
+                                                                    : t('{name} replied to you', { name: activeThread.name })}
                                                         </span>
                                                         <span className="quote__text">{quoted.text || quoted.content}</span>
                                                     </div>
@@ -863,7 +867,7 @@ export default function InboxPage({
                                                         {m.transcript && (
                                                             <span className="transcript">
                                                                 “{m.transcript}”
-                                                                <small>transcribed</small>
+                                                                <small>{t('transcribed')}</small>
                                                             </span>
                                                         )}
                                                         {(m.text || m.content) ? (
@@ -873,7 +877,7 @@ export default function InboxPage({
                                                             // attachment: say so rather than
                                                             // rendering an empty bubble.
                                                             <span className="bubble__empty">
-                                                                Attachment could not be loaded
+                                                                {t('Attachment could not be loaded')}
                                                             </span>
                                                         )}
                                                     </div>
@@ -882,21 +886,21 @@ export default function InboxPage({
                                                         message={m}
                                                         onReact={onReact}
                                                         onReply={setReplyTo}
-                                                        onCopy={(msg) => navigator.clipboard?.writeText(msg.text || msg.content || '').then(() => toast.success('Message copied'), () => toast.error('Could not copy', { body: 'Your browser blocked it. Select the text and copy it.' }))}
+                                                        onCopy={(msg) => navigator.clipboard?.writeText(msg.text || msg.content || '').then(() => toast.success(t('Message copied')), () => toast.error(t('Could not copy'), { body: t('Your browser blocked it. Select the text and copy it.') }))}
                                                         onHide={onHideMessage}
                                                     />
                                                 </div>
                                                 {m.reaction && (
-                                                    <span className="reaction" title="Your reaction">{m.reaction}</span>
+                                                    <span className="reaction" title={t('Your reaction')}>{m.reaction}</span>
                                                 )}
                                                 <div className="msg__meta">
-                                                    {m.status === 'sending' ? 'Sending…' : formatTime(m.timestamp)}
+                                                    {m.status === 'sending' ? t('Sending…') : formatTime(m.timestamp)}
                                                     {isAi && m.aiGeneratedMs != null && (
                                                         <span className="msg__timing" title={aiTimingDetail(m)}>
                                                             {formatMillis(m.aiGeneratedMs)}
                                                             {m.aiWaitedMs > SLOW_DELIVERY_MS && (
                                                                 <span className="msg__timing--warn">
-                                                                    {' '}· waited {formatMillis(m.aiWaitedMs)}
+                                                                    {' '}· {t('waited {time}', { time: formatMillis(m.aiWaitedMs) })}
                                                                 </span>
                                                             )}
                                                         </span>
@@ -915,7 +919,7 @@ export default function InboxPage({
                             {(aiTyping[activeThread.id] || activeThread.aiTyping) && activeThread.status === 'AI_HANDLING' ? (
                             <div className="composer__status composer__status--typing" role="status" aria-live="polite">
                                 <span className="dot dot--online dot--pulse" aria-hidden="true" />
-                                <span className="composer__owner">AI is typing</span>
+                                <span className="composer__owner">{t('AI is typing')}</span>
                                 <span className="typing-dots" aria-hidden="true"><i /><i /><i /></span>
                             </div>
                             ) : (
@@ -925,7 +929,7 @@ export default function InboxPage({
                                     "mine" to register before the words are read. */}
                                 <span className={activeThread.assignedAgentId === me?.id
                                     ? 'composer__owner composer__owner--me' : 'composer__owner'}>
-                                    {activeThread.spam ? 'Spam: the AI does not answer it' : ownershipLabel(activeThread, me?.id)
+                                    {activeThread.spam ? t('Spam: the AI does not answer it') : ownershipLabel(activeThread, me?.id)
                                         || STATUS_LABEL[activeThread.status] || activeThread.status}
                                 </span>
 
@@ -939,7 +943,7 @@ export default function InboxPage({
                                         type="button"
                                         className="icon-btn"
                                         onClick={onDismissError}
-                                        aria-label="Dismiss"
+                                        aria-label={t('Dismiss')}
                                     >
                                         <IconClose size={16} />
                                     </button>
@@ -950,7 +954,7 @@ export default function InboxPage({
                                 <div className="quote quote--composer">
                                     <div className="quote__body">
                                         <span className="quote__who">
-                                            Replying to {replyTo.direction === 'outbound' ? 'yourself' : activeThread.name}
+                                            {replyTo.direction === 'outbound' ? t('Replying to yourself') : t('Replying to {name}', { name: activeThread.name })}
                                         </span>
                                         <span className="quote__text">{replyTo.text || replyTo.content}</span>
                                     </div>
@@ -958,7 +962,7 @@ export default function InboxPage({
                                         type="button"
                                         className="icon-btn"
                                         onClick={() => setReplyTo(null)}
-                                        aria-label="Cancel reply"
+                                        aria-label={t('Cancel reply')}
                                     >
                                         <IconClose size={16} />
                                     </button>
@@ -973,12 +977,12 @@ export default function InboxPage({
                                 <div className="composer__form composer__recording">
                                     <span className="recdot" aria-hidden="true" />
                                     <span className="rectime">{formatDuration(seconds)}</span>
-                                    <span className="recnote">Recording…</span>
+                                    <span className="recnote">{t('Recording…')}</span>
                                     <button type="button" className="btn btn--secondary" onClick={discardRecording}>
-                                        Cancel
+                                        {t('Cancel')}
                                     </button>
                                     <button type="button" className="btn btn--primary" onClick={finishRecording}>
-                                        <IconStop size={14} /> Send
+                                        <IconStop size={14} /> {t('Send')}
                                     </button>
                                 </div>
                             ) : (
@@ -989,8 +993,8 @@ export default function InboxPage({
                                             className="icon-btn composer__mic"
                                             onClick={beginRecording}
                                             disabled={busy}
-                                            aria-label="Record a voice message"
-                                            title="Record a voice message"
+                                            aria-label={t('Record a voice message')}
+                                            title={t('Record a voice message')}
                                         >
                                             <IconMic />
                                         </button>
@@ -1005,10 +1009,10 @@ export default function InboxPage({
                                             e.target.value = '';
                                             if (!file || !activeThread) return;
                                             setBusy(true);
-                                            setSending({ label: 'Sending photo', fraction: null });
+                                            setSending({ label: t('Sending photo'), fraction: null });
                                             try {
                                                 await onSendImage(activeThread, file,
-                                                    (fraction) => setSending({ label: 'Sending photo', fraction }));
+                                                    (fraction) => setSending({ label: t('Sending photo'), fraction }));
                                             } finally { setBusy(false); setSending(null); }
                                         }}
                                     />
@@ -1017,8 +1021,8 @@ export default function InboxPage({
                                         className="icon-btn composer__mic"
                                         onClick={() => imageRef.current?.click()}
                                         disabled={busy}
-                                        aria-label="Send a photo"
-                                        title="Send a photo"
+                                        aria-label={t('Send a photo')}
+                                        title={t('Send a photo')}
                                     >
                                         <IconImage />
                                     </button>
@@ -1026,16 +1030,16 @@ export default function InboxPage({
                                         <input
                                             value={draft}
                                             onChange={e => setDraft(e.target.value)}
-                                            placeholder={sending ? `${sending.label}…` : 'Message'}
-                                            aria-label="Your reply"
+                                            placeholder={sending ? `${sending.label}…` : t('Message')}
+                                            aria-label={t('Your reply')}
                                             disabled={busy}
                                         />
                                         <button
                                             type="button"
                                             className="composer__emoji"
                                             onClick={() => setEmojiOpen(o => !o)}
-                                            aria-label="Insert emoji"
-                                            title="Emoji"
+                                            aria-label={t('Insert emoji')}
+                                            title={t('Emoji')}
                                         >
                                             <IconSmile size={19} />
                                         </button>
@@ -1062,8 +1066,8 @@ export default function InboxPage({
                                             className="icon-btn composer__send"
                                             type="submit"
                                             disabled={busy}
-                                            aria-label="Send"
-                                            title="Send"
+                                            aria-label={t('Send')}
+                                            title={t('Send')}
                                         >
                                             <IconSend size={20} />
                                         </button>
@@ -1073,8 +1077,8 @@ export default function InboxPage({
                                             type="button"
                                             disabled={busy || !activeThread}
                                             onClick={() => onSend(activeThread, '👍', replyTo?.metaMessageId || null)}
-                                            aria-label="Send a thumbs up"
-                                            title="Thumbs up"
+                                            aria-label={t('Send a thumbs up')}
+                                            title={t('Thumbs up')}
                                         >
                                             <IconThumb size={21} />
                                         </button>
@@ -1090,11 +1094,11 @@ export default function InboxPage({
                 <div className="scrim context__scrim" onClick={() => setDetailsOpen(false)} aria-hidden="true" />
             )}
             {activeThread && (
-                <aside className={`context${detailsOpen ? ' context--open' : ''}`} aria-label="Customer details">
+                <aside className={`context${detailsOpen ? ' context--open' : ''}`} aria-label={t('Customer details')}>
                     <div className="context__label context__labelrow">
-                        Customer info
+                        {t('Customer info')}
                         <button type="button" className="icon-btn context__close"
-                                onClick={() => setDetailsOpen(false)} aria-label="Close customer details">
+                                onClick={() => setDetailsOpen(false)} aria-label={t('Close customer details')}>
                             <IconClose />
                         </button>
                     </div>
@@ -1113,19 +1117,19 @@ export default function InboxPage({
                         id is enough to tell them apart, and the whole thing is a click away
                         for anyone querying the database. */}
                     <div className="context__row">
-                        <div className="context__key">Conversation</div>
+                        <div className="context__key">{t('Conversation')}</div>
                         <button
                             className="convid"
-                            title={`${activeThread.id} (click to copy)`}
+                            title={t('{id} (click to copy)', { id: activeThread.id })}
                             onClick={() => {
-                                navigator.clipboard?.writeText(activeThread.id)?.then(() => toast.success('Conversation ID copied'))
+                                navigator.clipboard?.writeText(activeThread.id)?.then(() => toast.success(t('Conversation ID copied')))
                                     .then(() => setCopiedId(true))
                                     .catch(() => {});
                                 setTimeout(() => setCopiedId(false), 1500);
                             }}
                         >
                             CONV-{activeThread.id.slice(0, 8)}
-                            <span className="convid__hint">{copiedId ? 'copied' : 'copy'}</span>
+                            <span className="convid__hint">{copiedId ? t('copied') : t('copy')}</span>
                         </button>
                     </div>
 
@@ -1133,7 +1137,7 @@ export default function InboxPage({
                         internally it passes between the AI and named agents, so an admin
                         looking at any conversation needs to know who has it right now. */}
                     <div className="context__row">
-                        <div className="context__key">Handled by</div>
+                        <div className="context__key">{t('Handled by')}</div>
                         <AssigneePicker
                             thread={activeThread}
                             team={team}
@@ -1145,7 +1149,7 @@ export default function InboxPage({
                     </div>
 
                     <div className="context__row">
-                        <div className="context__key">Sentiment</div>
+                        <div className="context__key">{t('Sentiment')}</div>
                         {/* Colour is always paired with a word, so it does not rely on
                             colour vision alone. */}
                         {SENTIMENT[activeThread.sentiment] ? (
@@ -1153,32 +1157,32 @@ export default function InboxPage({
                                 {SENTIMENT[activeThread.sentiment].label}
                             </span>
                         ) : (
-                            <span className="pill pill--neutral">Not analysed yet</span>
+                            <span className="pill pill--neutral">{t('Not analysed yet')}</span>
                         )}
                     </div>
 
                     {/* Read by Jev from the customer's most urgent message, so a "thanks"
                         after "my order never came" does not lower it. */}
                     <div className="context__row">
-                        <div className="context__key">Priority</div>
+                        <div className="context__key">{t('Priority')}</div>
                         {PRIORITY[activeThread.priority] ? (
                             <span className={`pill ${PRIORITY[activeThread.priority].tone}`}>
                                 {PRIORITY[activeThread.priority].short} · {PRIORITY[activeThread.priority].label}
                             </span>
                         ) : (
-                            <span className="pill pill--neutral">Not judged yet</span>
+                            <span className="pill pill--neutral">{t('Not judged yet')}</span>
                         )}
                     </div>
 
                     <div className="context__row">
-                        <div className="context__key">Spam</div>
+                        <div className="context__key">{t('Spam')}</div>
                         {activeThread.spam ? (
                             <div className="spam">
-                                <span className="pill pill--negative">Marked as spam</span>
+                                <span className="pill pill--negative">{t('Marked as spam')}</span>
                                 <p className="spam__why">
                                     {SPAM_KIND[activeThread.spamKind] || SPAM_KIND.spam}
                                     {activeThread.spamScore != null && (
-                                        <>. Jev was {Math.round(activeThread.spamScore * 100)}% sure.</>
+                                        <>{'. '}{t('Jev was {pct}% sure.', { pct: Math.round(activeThread.spamScore * 100) })}</>
                                     )}
                                 </p>
                                 {activeThread.spamMessage && (
@@ -1187,34 +1191,34 @@ export default function InboxPage({
                                         <span className="spam__at">{formatTimestamp(activeThread.spamMessage.timestamp)}</span>
                                     </blockquote>
                                 )}
-                                <p className="spam__note">The AI does not answer it and nobody is alerted.</p>
+                                <p className="spam__note">{t('The AI does not answer it and nobody is alerted.')}</p>
                                 <button className={`btn btn--sm btn--secondary${acting === 'not-spam' ? ' btn--busy' : ''}`}
                                         disabled={Boolean(acting)} aria-busy={acting === 'not-spam'}
                                         onClick={() => act(activeThread, 'not-spam')}>
-                                    Not spam, move to Active
+                                    {t('Not spam, move to Active')}
                                 </button>
                             </div>
                         ) : activeThread.spamCleared ? (
                             <div className="spam">
-                                <span className="pill pill--neutral">No, a person decided</span>
+                                <span className="pill pill--neutral">{t('No, a person decided')}</span>
                                 {activeThread.spamKind && (
                                     <p className="spam__why">
-                                        Jev had judged it: {(SPAM_KIND[activeThread.spamKind] || SPAM_KIND.spam).toLowerCase()}
+                                        {t('Jev had judged it: {kind}', { kind: (SPAM_KIND[activeThread.spamKind] || SPAM_KIND.spam).toLowerCase() })}
                                     </p>
                                 )}
                             </div>
                         ) : (
-                            <span className="pill pill--positive">No</span>
+                            <span className="pill pill--positive">{t('No')}</span>
                         )}
                     </div>
 
                     <div className="context__row">
-                        <div className="context__key">First seen</div>
+                        <div className="context__key">{t('First seen')}</div>
                         <div>{formatTimestamp(activeThread.messages[0]?.timestamp)}</div>
                     </div>
 
                     <div className="context__row">
-                        <div className="context__key">Messages</div>
+                        <div className="context__key">{t('Messages')}</div>
                         <div>{activeThread.messages.length}</div>
                     </div>
 
@@ -1223,7 +1227,7 @@ export default function InboxPage({
                         makes that hard to see. */}
                     {participants.length > 0 && (
                         <div className="context__row">
-                            <div className="context__key">Who replied</div>
+                            <div className="context__key">{t('Who replied')}</div>
                             <ul className="participants">
                                 {participants.map(p => (
                                     <li className="participants__row" key={p.key}>
@@ -1235,7 +1239,7 @@ export default function InboxPage({
                                             <PersonAvatar name={p.name} url={p.avatar} size={22} />
                                         )}
                                         <span className="participants__name">
-                                            {p.id && p.id === me?.id ? 'You' : p.name}
+                                            {p.id && p.id === me?.id ? t('You') : p.name}
                                         </span>
                                         <span className="participants__count">
                                             {p.count}
@@ -1247,7 +1251,7 @@ export default function InboxPage({
                     )}
 
                     <div className="context__label" style={{ marginTop: 26 }}>
-                        {activeThread.status === 'RESOLVED' ? 'What happened' : 'Summary'}
+                        {activeThread.status === 'RESOLVED' ? t('What happened') : t('Summary')}
                     </div>
                     {activeThread.summary ? (
                         <>
@@ -1266,24 +1270,24 @@ export default function InboxPage({
                             })}
                             {activeThread.summaryStale && (
                                 <p className="summary__stale">
-                                    New messages have arrived since this was written.
+                                    {t('New messages have arrived since this was written.')}
                                 </p>
                             )}
                             <button className={`btn btn--secondary btn--sm${summarising ? ' btn--busy' : ''}`} disabled={summarising} aria-busy={summarising}
                                     onClick={() => onSummarise?.(activeThread)}>
-                                Refresh summary
+                                {t('Refresh summary')}
                             </button>
                         </>
                     ) : (
                         <>
                             <p className="kb__text">
                                 {activeThread.status === 'RESOLVED'
-                                    ? 'A record of what was asked and how it ended is written when a conversation is resolved.'
-                                    : 'A short brief is written automatically when a conversation is handed to a person, so whoever picks it up need not read the whole thread.'}
+                                    ? t('A record of what was asked and how it ended is written when a conversation is resolved.')
+                                    : t('A short brief is written automatically when a conversation is handed to a person, so whoever picks it up need not read the whole thread.')}
                             </p>
                             <button className={`btn btn--secondary btn--sm${summarising ? ' btn--busy' : ''}`} disabled={summarising} aria-busy={summarising}
                                     onClick={() => onSummarise?.(activeThread)}>
-                                Write one now
+                                {t('Write one now')}
                             </button>
                         </>
                     )}
@@ -1291,11 +1295,11 @@ export default function InboxPage({
             )}
 
             {lightbox && (
-                <div className="lightbox" role="dialog" aria-modal="true" aria-label="Photo"
+                <div className="lightbox" role="dialog" aria-modal="true" aria-label={t('Photo')}
                      onClick={() => setLightbox(null)}>
                     <button type="button" className="lightbox__close"
-                            onClick={() => setLightbox(null)} aria-label="Close photo">×</button>
-                    <img className="lightbox__img" src={lightbox} alt="Photo from customer"
+                            onClick={() => setLightbox(null)} aria-label={t('Close photo')}>×</button>
+                    <img className="lightbox__img" src={lightbox} alt={t('Photo from customer')}
                          onClick={(e) => e.stopPropagation()} />
                 </div>
             )}

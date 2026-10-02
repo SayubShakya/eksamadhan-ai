@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { subscribe } from '../lib/toast.js';
 import { IconClose } from './icons.jsx';
+import { t } from '../lib/i18n.js';
 
 const line = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
     strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
@@ -31,24 +32,24 @@ export default function Toaster() {
     }), []);
     return (
         <div className="toaster" aria-live="polite">
-            {items.map(t => (
-                <div key={t.id} className={`toast toast--${t.kind}`}
-                     role={t.kind === 'error' || t.kind === 'warning' ? 'alert' : 'status'}
-                     onMouseEnter={() => clearTimeout(timers.current.get(t.id))}
-                     onMouseLeave={() => arm(t)}>
-                    <span className="toast__icon">{ICONS[t.kind]}</span>
+            {items.map(item => (
+                <div key={item.id} className={`toast toast--${item.kind}`}
+                     role={item.kind === 'error' || item.kind === 'warning' ? 'alert' : 'status'}
+                     onMouseEnter={() => clearTimeout(timers.current.get(item.id))}
+                     onMouseLeave={() => arm(item)}>
+                    <span className="toast__icon">{ICONS[item.kind]}</span>
                     <span className="toast__content">
-                        <span className="toast__title">{t.title}</span>
-                        {t.body && <span className="toast__body">{t.body}</span>}
-                        {t.actions.length > 0 && (
+                        <span className="toast__title">{item.title}</span>
+                        {item.body && <span className="toast__body">{item.body}</span>}
+                        {item.actions.length > 0 && (
                             <span className="toast__actions">
-                                {t.actions.map(a => (
-                                    <button key={a.label} type="button" onClick={() => { a.onClick?.(); close(t.id); }}>{a.label}</button>
+                                {item.actions.map(a => (
+                                    <button key={a.label} type="button" onClick={() => { a.onClick?.(); close(item.id); }}>{a.label}</button>
                                 ))}
                             </span>
                         )}
                     </span>
-                    <button type="button" className="toast__close" onClick={() => close(t.id)} aria-label="Dismiss"><IconClose size={16} /></button>
+                    <button type="button" className="toast__close" onClick={() => close(item.id)} aria-label={t('Dismiss')}><IconClose size={16} /></button>
                 </div>
             ))}
         </div>

@@ -3,6 +3,7 @@ import { PRESENCE } from './AvailabilityMenu.jsx';
 import { IconSearch, IconSparkle, IconCheck } from './icons.jsx';
 import Avatar from './Avatar.jsx';
 import { formatBackAt } from '../lib/format.js';
+import { t } from '../lib/i18n.js';
 
 /**
  * Who owns this conversation, and a way to hand it to someone else.
@@ -19,12 +20,14 @@ import { formatBackAt } from '../lib/format.js';
  */
 function cannotTake(member) {
     if (member.isYou || member.presence === 'AVAILABLE') return '';
-    if (member.presence === 'BUSY') return 'Busy';
+    if (member.presence === 'BUSY') return t('Busy');
     if (member.presence === 'OUTSIDE_HOURS') {
-        if (member.hours && !member.hours.hasAvailability) return 'No working hours set';
-        return `Outside hours${member.hours?.nextAvailableAt ? ` · back ${formatBackAt(member.hours.nextAvailableAt)}` : ''}`;
+        if (member.hours && !member.hours.hasAvailability) return t('No working hours set');
+        return member.hours?.nextAvailableAt
+            ? t('Outside hours · back {time}', { time: formatBackAt(member.hours.nextAvailableAt) })
+            : t('Outside hours');
     }
-    return 'Offline';
+    return t('Offline');
 }
 
 export default function AssigneePicker({ thread, team = [], me, onAssign, onReturnToAi, disabled }) {
@@ -61,9 +64,9 @@ export default function AssigneePicker({ thread, team = [], me, onAssign, onRetu
     };
 
     const label = aiHandling ? 'AI'
-        : current ? (current.isYou ? `${[current.firstName, current.lastName].filter(Boolean).join(' ')} (you)`
+        : current ? (current.isYou ? t('{name} (you)', { name: [current.firstName, current.lastName].filter(Boolean).join(' ') })
                                    : [current.firstName, current.lastName].filter(Boolean).join(' '))
-        : thread.assignedAgentName || 'Unassigned';
+        : thread.assignedAgentName || t('Unassigned');
 
     return (
         <div className="assignee" ref={boxRef}>
@@ -81,14 +84,14 @@ export default function AssigneePicker({ thread, team = [], me, onAssign, onRetu
                     <div className="assignee__search">
                         <IconSearch size={14} />
                         <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)}
-                               placeholder="Search people…" aria-label="Search people" />
+                               placeholder={t('Search people…')} aria-label={t('Search people')} />
                     </div>
 
                     {/* Handing it back to the AI is the same act as handing it to a person. */}
                     <button className="assignee__option" onClick={() => choose('AI')} role="option"
                             aria-selected={aiHandling}>
                         <span className="avatar assignee__ai" style={{ width: 24, height: 24 }}><IconSparkle /></span>
-                        <span className="assignee__who">AI<small>answers from your knowledge base</small></span>
+                        <span className="assignee__who">AI<small>{t('answers from your knowledge base')}</small></span>
                         {aiHandling && <IconCheck />}
                     </button>
 
@@ -100,12 +103,12 @@ export default function AssigneePicker({ thread, team = [], me, onAssign, onRetu
                                     key={member.id} role="option"
                                     aria-selected={member.id === thread.assignedAgentId}
                                     aria-disabled={why ? true : undefined}
-                                    title={why ? `${why}: new conversations do not go to them` : undefined}
+                                    title={why ? t('{reason}: new conversations do not go to them', { reason: why }) : undefined}
                                     onClick={() => { if (!why) choose(member); }}>
                                 <Avatar user={member} size={24} />
                                 <span className="assignee__who">
                                     {[member.firstName, member.lastName].filter(Boolean).join(' ')}
-                                    {member.isYou && ' (you)'}
+                                    {member.isYou && ` ${t('(you)')}`}
                                     <small>
                                         <span className={`dot ${presence.dot}`} aria-hidden="true" />
                                         {' '}{why || presence.label}{why ? '' : ` · ${member.email}`}
@@ -116,7 +119,7 @@ export default function AssigneePicker({ thread, team = [], me, onAssign, onRetu
                         );
                     })}
 
-                    {matches.length === 0 && <p className="assignee__empty">Nobody matches “{query}”.</p>}
+                    {matches.length === 0 && <p className="assignee__empty">{t('Nobody matches “{query}”.', { query })}</p>}
                 </div>
             )}
         </div>

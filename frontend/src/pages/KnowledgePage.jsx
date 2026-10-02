@@ -1,10 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { IconUpload, IconSearch, IconTrash, IconImage, IconClose } from '../components/icons.jsx';
 import * as api from '../lib/api.js';
 import { CenteredSpinner, LoadError, LoadingRegion, Skel, UploadProgress } from '../components/Loading.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
 import { toast } from '../lib/toast.js';
+import { t } from '../lib/i18n.js';
+
+/** A translated sentence with {name} slots filled by elements, so word order stays the translator's. */
+function rich(text, parts) {
+    return text.split(/(\{\w+\})/).map((s, i) => {
+        const m = s.match(/^\{(\w+)\}$/);
+        return m && parts[m[1]] !== undefined ? <Fragment key={i}>{parts[m[1]]}</Fragment> : s;
+    });
+}
 
 const STATUS_TONE = {
     READY: 'tag--ai',
@@ -98,12 +107,12 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
         setBusy(true);
         try {
             await api.addKnowledgeText({ title, text });
-            toast.success('Knowledge added', { body: 'The AI can answer from it once it is indexed.' });
+            toast.success(t('Knowledge added'), { body: t('The AI can answer from it once it is indexed.') });
             setTitle('');
             setText('');
             await load();
         } catch (err) {
-            setError(api.errorMessage(err, 'That could not be added.'));
+            setError(api.errorMessage(err, t('That could not be added.')));
         } finally {
             setBusy(false);
         }
@@ -115,14 +124,14 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
         if (!file) return;
         setError('');
         setBusy(true);
-        const label = `Uploading ${file.name}`;
+        const label = t('Uploading {name}', { name: file.name });
         setSent({ label, fraction: null });
         try {
             await api.uploadKnowledge({ file, onProgress: (fraction) => setSent({ label, fraction }) });
-            toast.success('File added', { body: `${file.name} is being read and indexed.` });
+            toast.success(t('File added'), { body: t('{name} is being read and indexed.', { name: file.name }) });
             await load();
         } catch (err) {
-            setError(api.errorMessage(err, 'That file could not be added.'));
+            setError(api.errorMessage(err, t('That file could not be added.')));
         } finally {
             setBusy(false);
             setSent(null);
@@ -136,7 +145,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
         setCrawling(true);
         try {
             await api.crawlWebsite(site.trim());
-            toast.info('Reading the website', { body: 'Pages appear in the list as they are added.' });
+            toast.info(t('Reading the website'), { body: t('Pages appear in the list as they are added.') });
             setSite('');
             // Pages appear as they are indexed, so keep refreshing for a while.
             for (let i = 0; i < 20; i++) {
@@ -144,7 +153,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                 await load();
             }
         } catch (err) {
-            setError(api.errorMessage(err, 'That website could not be read.'));
+            setError(api.errorMessage(err, t('That website could not be read.')));
         } finally {
             setCrawling(false);
         }
@@ -164,7 +173,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
         e.preventDefault();
         if (!pendingImage || !imageTitle.trim()) return;
         setBusy(true);
-        const label = `Uploading ${pendingImage.name}`;
+        const label = t('Uploading {name}', { name: pendingImage.name });
         setSent({ label, fraction: null });
         try {
             await api.uploadKnowledgeImage({
@@ -174,10 +183,10 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
             setPendingImage(null);
             setImageTitle('');
             setImageCaption('');
-            toast.success('Image added', { body: 'It is being read and indexed.' });
+            toast.success(t('Image added'), { body: t('It is being read and indexed.') });
             await load();
         } catch (err) {
-            setError(api.errorMessage(err, 'That image could not be added.'));
+            setError(api.errorMessage(err, t('That image could not be added.')));
         } finally {
             setBusy(false);
             setSent(null);
@@ -189,15 +198,15 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
         try { setViewing(await api.getKnowledgeContent(source.id)); }
         catch (err) {
             setViewing(null);
-            setError(api.errorMessage(err, 'Could not read that source.'));
+            setError(api.errorMessage(err, t('Could not read that source.')));
         }
     };
 
     const confirmRemove = async () => {
         const source = removing;
         setRemoving(null);
-        try { await api.deleteKnowledge(source.id); await load(); toast.success('Source removed', { body: 'The AI no longer answers from it.' }); }
-        catch (err) { setError(api.errorMessage(err, 'That could not be removed.')); }
+        try { await api.deleteKnowledge(source.id); await load(); toast.success(t('Source removed'), { body: t('The AI no longer answers from it.') }); }
+        catch (err) { setError(api.errorMessage(err, t('That could not be removed.'))); }
     };
 
     const search = async (e) => {
@@ -209,7 +218,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
             setResults(await api.searchKnowledge(query.trim()));
         } catch (err) {
             setResults(null);
-            setError(api.errorMessage(err, 'The search could not be run.'));
+            setError(api.errorMessage(err, t('The search could not be run.')));
         } finally {
             setSearching(false);
         }
@@ -224,18 +233,17 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
         <div className="page">
             <div className="page__head">
                 <div>
-                    <h1 className="page__title">Knowledge</h1>
+                    <h1 className="page__title">{t('Knowledge')}</h1>
                     <p className="page__sub">
-                        What the AI is allowed to answer from. Each source is split into passages and
-                        indexed by meaning, so a question finds the right passage even in other words.
+                        {t('What the AI is allowed to answer from. Each source is split into passages and indexed by meaning, so a question finds the right passage even in other words.')}
                     </p>
                 </div>
             </div>
 
             {!loading && !library.aiConfigured && (
                 <p className="auth__error" role="alert">
-                    No OpenRouter API key is configured, so nothing can be indexed or searched.
-                    Add <code>OPEN_ROUTER_KEY</code> to <code>backend/.env</code> and restart the server.
+                    {t('No OpenRouter API key is configured, so nothing can be indexed or searched.')}{' '}
+                    {rich(t('Add {key} to {file} and restart the server.'), { key: <code>OPEN_ROUTER_KEY</code>, file: <code>backend/.env</code> })}
                 </p>
             )}
 
@@ -244,13 +252,13 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
             {canManage && (
                 <section className="card settings__card knowledge__add" aria-labelledby="add-h">
                     <header className="settings__cardhead knowledge__addhead">
-                        <h2 id="add-h">Add knowledge</h2>
-                        <div className="chips" role="tablist" aria-label="How to add">
-                            {ADD_TABS.map(t => (
-                                <button key={t.id} type="button" role="tab" className="chip"
-                                        aria-selected={addTab === t.id} aria-pressed={addTab === t.id}
-                                        onClick={() => setAddTab(t.id)}>
-                                    {t.label}
+                        <h2 id="add-h">{t('Add knowledge')}</h2>
+                        <div className="chips" role="tablist" aria-label={t('How to add')}>
+                            {ADD_TABS.map(tab => (
+                                <button key={tab.id} type="button" role="tab" className="chip"
+                                        aria-selected={addTab === tab.id} aria-pressed={addTab === tab.id}
+                                        onClick={() => setAddTab(tab.id)}>
+                                    {t(tab.label)}
                                 </button>
                             ))}
                         </div>
@@ -260,24 +268,23 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                         {addTab === 'text' && (
                             <form onSubmit={addText}>
                                 <label className="field">
-                                    <span>Title</span>
+                                    <span>{t('Title')}</span>
                                     <input value={title} onChange={e => setTitle(e.target.value)}
-                                           placeholder="Shipping and returns" maxLength={120} />
+                                           placeholder={t('Shipping and returns')} maxLength={120} />
                                 </label>
                                 <label className="field" style={{ marginTop: 10 }}>
-                                    <span>Text</span>
+                                    <span>{t('Text')}</span>
                                     <textarea className="knowledge__text" value={text} rows={6}
                                               onChange={e => setText(e.target.value)}
-                                              placeholder="Paste your policies, FAQs or product details here…" />
+                                              placeholder={t('Paste your policies, FAQs or product details here…')} />
                                     <small className="field__hint">
-                                        Headings help. A short line like “Returns” starts a new passage, which
-                                        keeps each answer on one topic.
+                                        {t('Headings help. A short line like “Returns” starts a new passage, which keeps each answer on one topic.')}
                                     </small>
                                 </label>
                                 <div className="knowledge__actions">
                                     <button className={btn('btn btn--primary', busy && !sent)} type="submit"
                                             disabled={busy || !text.trim()} aria-busy={busy && !sent}>
-                                        Add to knowledge base
+                                        {t('Add to knowledge base')}
                                     </button>
                                 </div>
                             </form>
@@ -286,13 +293,12 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                         {addTab === 'file' && (
                             <div>
                                 <p className="field__hint knowledge__lead">
-                                    A PDF, or a plain text or Markdown file. Its text is read, split into
-                                    passages and indexed; scanned PDFs with no text layer cannot be read.
+                                    {t('A PDF, or a plain text or Markdown file. Its text is read, split into passages and indexed; scanned PDFs with no text layer cannot be read.')}
                                 </p>
                                 <div className="knowledge__actions">
                                     <button className="btn btn--primary" type="button"
                                             onClick={() => fileRef.current?.click()} disabled={busy}>
-                                        <IconUpload /> Choose a file
+                                        <IconUpload /> {t('Choose a file')}
                                     </button>
                                 </div>
                                 {sent && !pendingImage && <UploadProgress label={sent.label} fraction={sent.fraction} />}
@@ -308,40 +314,38 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                                     <img className="imgform__preview" src={URL.createObjectURL(pendingImage)} alt="" />
                                     <div className="imgform__fields">
                                         <label className="field">
-                                            <span>What does this show?</span>
+                                            <span>{t('What does this show?')}</span>
                                             <input value={imageTitle} onChange={e => setImageTitle(e.target.value)}
-                                                   placeholder="Acme Buds Pro in black" maxLength={120} required autoFocus />
+                                                   placeholder={t('Acme Buds Pro in black')} maxLength={120} required autoFocus />
                                         </label>
                                         <label className="field">
-                                            <span>Anything else worth knowing <small>(optional)</small></span>
+                                            <span>{t('Anything else worth knowing')} <small>{t('(optional)')}</small></span>
                                             <input value={imageCaption} onChange={e => setImageCaption(e.target.value)}
-                                                   placeholder="Shows the charging case open, with the LED" maxLength={300} />
+                                                   placeholder={t('Shows the charging case open, with the LED')} maxLength={300} />
                                         </label>
                                         <small className="field__hint">
-                                            The AI also writes its own description of the picture, so customers can
-                                            find it with words you did not think to type.
+                                            {t('The AI also writes its own description of the picture, so customers can find it with words you did not think to type.')}
                                         </small>
                                         {sent && <UploadProgress label={sent.label} fraction={sent.fraction} />}
                                         <div className="knowledge__actions">
                                             <button className="btn btn--primary" type="submit"
                                                     disabled={busy || !imageTitle.trim()}>
-                                                Add picture
+                                                {t('Add picture')}
                                             </button>
                                             <button className="btn btn--secondary" type="button"
-                                                    onClick={() => setPendingImage(null)}>Cancel</button>
+                                                    onClick={() => setPendingImage(null)}>{t('Cancel')}</button>
                                         </div>
                                     </div>
                                 </form>
                             ) : (
                                 <div>
                                     <p className="field__hint knowledge__lead">
-                                        A product photo, a size chart or a menu. You give it a title, and the AI
-                                        sends it to a customer when their question is about it.
+                                        {t('A product photo, a size chart or a menu. You give it a title, and the AI sends it to a customer when their question is about it.')}
                                     </p>
                                     <div className="knowledge__actions">
                                         <button className="btn btn--primary" type="button"
                                                 onClick={() => imageRef.current?.click()} disabled={busy}>
-                                            <IconImage /> Choose a picture
+                                            <IconImage /> {t('Choose a picture')}
                                         </button>
                                     </div>
                                 </div>
@@ -351,24 +355,23 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                         {addTab === 'website' && (
                             <form onSubmit={crawl}>
                                 <label className="field">
-                                    <span>Website address</span>
+                                    <span>{t('Website address')}</span>
                                     <input value={site} onChange={e => setSite(e.target.value)}
                                            placeholder="acme.com.np" disabled={crawling} />
                                     <small className="field__hint">
-                                        Follows links within the site only, obeys robots.txt, and stops after
-                                        25 pages. Each page becomes its own source you can remove.
+                                        {t('Follows links within the site only, obeys robots.txt, and stops after 25 pages. Each page becomes its own source you can remove.')}
                                     </small>
                                 </label>
                                 <div className="knowledge__actions">
                                     <button className={btn('btn btn--primary', crawling)} type="submit"
                                             disabled={crawling || !site.trim()} aria-busy={crawling}>
-                                        Read website
+                                        {t('Read website')}
                                     </button>
                                 </div>
                                 {/* A crawl runs for up to a minute, so say what is happening while it does. */}
                                 {crawling && (
                                     <p className="field__hint" role="status" style={{ marginTop: 10 }}>
-                                        Reading the site. Pages appear under Sources as each one is indexed.
+                                        {t('Reading the site. Pages appear under Sources as each one is indexed.')}
                                     </p>
                                 )}
                             </form>
@@ -384,16 +387,16 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
             {error && <p className="auth__error" role="alert">{error}</p>}
 
             <h2 className="section-title">
-                Sources
-                {totalChunks > 0 && <span className="count"> · {totalChunks} passages indexed</span>}
+                {t('Sources')}
+                {totalChunks > 0 && <span className="count"> · {t('{n} passages indexed', { n: totalChunks })}</span>}
             </h2>
 
             {loading && (loadError && !firstLoad ? (
                 <LoadError className="empty--panel"
-                           message={api.errorMessage(loadError, 'Could not load the knowledge base.')}
+                           message={api.errorMessage(loadError, t('Could not load the knowledge base.'))}
                            onRetry={load} />
             ) : (
-                <LoadingRegion label="the knowledge sources">
+                <LoadingRegion label={t('the knowledge sources')}>
                     <SourceSkeleton title={180} meta={130} />
                     <SourceSkeleton title={140} meta={170} />
                     <SourceSkeleton title={200} meta={110} />
@@ -403,9 +406,9 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
             {!loading && library.sources.length === 0 && (
                 <div className="empty empty--panel">
                     <p className="muted">
-                        Nothing here yet. {canManage
-                            ? 'Add your policies or FAQs above and the AI can start answering from them.'
-                            : 'The tenant or an admin can add your policies and FAQs here.'}
+                        {canManage
+                            ? t('Nothing here yet. Add your policies or FAQs above and the AI can start answering from them.')
+                            : t('Nothing here yet. The tenant or an admin can add your policies and FAQs here.')}
                     </p>
                 </div>
             )}
@@ -419,51 +422,50 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                         <div className="member__name">{source.title}</div>
                         <div className="member__email">
                             {source.sourceType === 'PDF' ? 'PDF'
-                                : source.sourceType === 'IMAGE' ? 'Picture'
-                                : source.sourceType === 'URL' ? 'Web page' : 'Text'}
+                                : source.sourceType === 'IMAGE' ? t('Picture')
+                                : source.sourceType === 'URL' ? t('Web page') : t('Text')}
                             {source.sourceUrl && ` · ${source.sourceUrl.replace(/^https?:\/\//, '').slice(0, 44)}`}
-                            {source.status === 'READY' && ` · ${source.chunkCount} passages`}
+                            {source.status === 'READY' && ` · ${t('{n} passages', { n: source.chunkCount })}`}
                             {source.status === 'FAILED' && source.error && ` · ${source.error}`}
                         </div>
                     </div>
                     <div className="member__actions">
                         <span className={`tag ${STATUS_TONE[source.status] || 'tag--ai'}`}>
-                            {STATUS_LABEL[source.status] || source.status}
+                            {STATUS_LABEL[source.status] ? t(STATUS_LABEL[source.status]) : source.status}
                         </span>
                         {source.chunkCount > 0 && (
                             <button className="btn btn--secondary btn--sm" onClick={() => view(source)}>
-                                View text
+                                {t('View text')}
                             </button>
                         )}
                         {canManage && (
                             <button className="btn btn--danger btn--sm" onClick={() => setRemoving(source)}
-                                    aria-label={`Remove ${source.title}`}>
-                                <IconTrash /> Remove
+                                    aria-label={t('Remove {title}', { title: source.title })}>
+                                <IconTrash /> {t('Remove')}
                             </button>
                         )}
                     </div>
                 </div>
             ))}
 
-            <h2 className="section-title">Test what the AI would find</h2>
+            <h2 className="section-title">{t('Test what the AI would find')}</h2>
             <p className="muted" style={{ marginTop: -4 }}>
-                Ask something a customer might ask. These are the passages the AI would be given
-                to answer from, closest first.
+                {t('Ask something a customer might ask. These are the passages the AI would be given to answer from, closest first.')}
             </p>
 
             <form className="knowledge__search" onSubmit={search}>
                 <IconSearch />
                 <input value={query} onChange={e => setQuery(e.target.value)}
-                       placeholder="How long do I have to return something?"
-                       aria-label="Test the knowledge base" />
+                       placeholder={t('How long do I have to return something?')}
+                       aria-label={t('Test the knowledge base')} />
                 <button className={btn('btn btn--primary', searching)} type="submit"
                         disabled={searching || !query.trim()} aria-busy={searching}>
-                    Search
+                    {t('Search')}
                 </button>
             </form>
 
             {results && results.results.length === 0 && (
-                <p className="muted">Nothing matched. Add a source covering that topic.</p>
+                <p className="muted">{t('Nothing matched. Add a source covering that topic.')}</p>
             )}
 
             <div className={searching && results ? 'is-refreshing' : ''} aria-busy={searching}>
@@ -471,9 +473,9 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                 <div className="card knowledge__hit" key={hit.id}>
                     <div className="knowledge__hitmeta">
                         <strong>{hit.sourceTitle}</strong>
-                        <span className="muted">passage {hit.ordinal + 1}</span>
+                        <span className="muted">{t('passage {n}', { n: hit.ordinal + 1 })}</span>
                         <span className={`tag ${hit.similarity < WEAK_MATCH ? 'tag--agent' : 'tag--ai'}`}>
-                            {(hit.similarity * 100).toFixed(0)}% match
+                            {t('{n}% match', { n: (hit.similarity * 100).toFixed(0) })}
                         </span>
                     </div>
                     <p className="knowledge__hittext">{hit.content}</p>
@@ -482,8 +484,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
 
             {results?.results.length > 0 && results.results.every(h => h.similarity < WEAK_MATCH) && (
                 <p className="muted">
-                    Every match here is weak, which usually means the knowledge base does not cover
-                    this question. The AI should decline rather than guess.
+                    {t('Every match here is weak, which usually means the knowledge base does not cover this question. The AI should decline rather than guess.')}
                 </p>
             )}
             </div>
@@ -492,28 +493,29 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                 <>
                     <div className="scrim" onClick={() => setViewing(null)} aria-hidden="true" />
                     <div className="confirm confirm--wide" role="dialog" aria-modal="true"
-                         aria-label="Extracted text">
+                         aria-label={t('Extracted text')}>
                         <header className="panel__head">
                             <h2 className="panel__title">{viewing.title}</h2>
-                            <button className="icon-btn" onClick={() => setViewing(null)} aria-label="Close">
+                            <button className="icon-btn" onClick={() => setViewing(null)} aria-label={t('Close')}>
                                 <IconClose />
                             </button>
                         </header>
                         <div className="confirm__body">
                             {viewing.sourceUrl && <p className="muted" style={{ margin: '0 0 8px' }}>{viewing.sourceUrl}</p>}
                             {viewing.content === null ? (
-                                <CenteredSpinner label="Reading the extracted text" />
+                                <CenteredSpinner label={t('Reading the extracted text')} />
                             ) : (
                                 <>
                                     <p className="muted" style={{ margin: '0 0 10px' }}>
-                                        {viewing.content.length.toLocaleString()} characters, indexed as
-                                        {' '}{viewing.chunkCount} passage{viewing.chunkCount === 1 ? '' : 's'}.
+                                        {viewing.chunkCount === 1
+                                            ? t('{chars} characters, indexed as 1 passage.', { chars: viewing.content.length.toLocaleString() })
+                                            : t('{chars} characters, indexed as {n} passages.', { chars: viewing.content.length.toLocaleString(), n: viewing.chunkCount })}
                                     </p>
                                     <pre className="sourcetext">{viewing.content}</pre>
                                 </>
                             )}
                             <div className="panel__actions">
-                                <button className="btn btn--secondary" onClick={() => setViewing(null)}>Close</button>
+                                <button className="btn btn--secondary" onClick={() => setViewing(null)}>{t('Close')}</button>
                             </div>
                         </div>
                     </div>
@@ -522,9 +524,9 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
 
             <ConfirmDialog
                 open={Boolean(removing)}
-                title={removing ? `Remove “${removing.title}”?` : ''}
-                message="Its indexed passages are deleted with it, and the AI stops answering from this source."
-                confirmLabel="Remove"
+                title={removing ? t('Remove “{title}”?', { title: removing.title }) : ''}
+                message={t('Its indexed passages are deleted with it, and the AI stops answering from this source.')}
+                confirmLabel={t('Remove')}
                 danger
                 onConfirm={confirmRemove}
                 onCancel={() => setRemoving(null)}
