@@ -13,6 +13,7 @@ import useBackToClose from '../lib/useBackToClose.js';
 import useDragDown from '../lib/useDragDown.js';
 import AssigneePicker from '../components/AssigneePicker.jsx';
 import { formatTimestamp, formatTime, formatDay, initials, STATUS_LABEL, ownershipLabel, SENTIMENT, PRIORITY, SPAM_KIND, participantsOf } from '../lib/format.js';
+import { toast } from '../lib/toast.js';
 
 /**
  * Active first, and the default: an agent opens the inbox to work, and a resolved
@@ -881,7 +882,7 @@ export default function InboxPage({
                                                         message={m}
                                                         onReact={onReact}
                                                         onReply={setReplyTo}
-                                                        onCopy={(msg) => navigator.clipboard?.writeText(msg.text || msg.content || '')}
+                                                        onCopy={(msg) => navigator.clipboard?.writeText(msg.text || msg.content || '').then(() => toast.success('Message copied'), () => toast.error('Could not copy', { body: 'Your browser blocked it. Select the text and copy it.' }))}
                                                         onHide={onHideMessage}
                                                     />
                                                 </div>
@@ -1117,7 +1118,7 @@ export default function InboxPage({
                             className="convid"
                             title={`${activeThread.id} (click to copy)`}
                             onClick={() => {
-                                navigator.clipboard?.writeText(activeThread.id)
+                                navigator.clipboard?.writeText(activeThread.id)?.then(() => toast.success('Conversation ID copied'))
                                     .then(() => setCopiedId(true))
                                     .catch(() => {});
                                 setTimeout(() => setCopiedId(false), 1500);

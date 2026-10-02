@@ -11,6 +11,8 @@ import * as push from './lib/push.js';
 import { hideSplash } from './lib/splash.js';
 import usePwa from './lib/usePwa.js';
 import InstallProblem from './components/InstallProblem.jsx';
+import Toaster from './components/Toaster.jsx';
+import { toast } from './lib/toast.js';
 import { LogoMark } from './components/Logo.jsx';
 import StatusPage, { IconCloudOff } from './components/StatusPage.jsx';
 import { IconHome, IconWarning } from './components/icons.jsx';
@@ -36,7 +38,9 @@ const TeamPage = lazyPage('team');
 const KnowledgePage = lazyPage('knowledge');
 const AnalyticsPage = lazyPage('analytics');
 const LegalPage = lazyPage('legal');
+const AccountLinkPage = lazyPage('account-link');
 const SystemConsole = lazyPage('system');
+const LandingPage = lazyPage('landing');
 
 const VIEWS = ['home', 'inbox', 'knowledge', 'channels', 'team', 'hours', 'analytics', 'settings', 'notifications', 'delete-account'];
 const BASE = '/dashboard';
@@ -55,7 +59,21 @@ const viewFromPath = () => {
 function isKnownPath() {
     const path = window.location.pathname.replace(/\/+$/, '') || '/';
     return path === '/' || path === BASE || path.startsWith(`${BASE}/`)
-        || ['/login', '/signup', '/privacy', '/terms'].includes(path) || /^\/invite\/.+/.test(path);
+        || ['/login', '/signup', '/privacy', '/terms', '/forgot-password', '/reset-password', '/verify-email'].includes(path)
+        || /^\/invite\/.+/.test(path);
+}
+
+/**
+ * Forgot password, and the two links sent by email (choose a new password, confirm the address).
+ * They work signed in or not: the confirmation link is often opened in the browser already signed in.
+ */
+function linkRouteFromPath() {
+    const path = window.location.pathname.replace(/\/+$/, '');
+    const token = new URLSearchParams(window.location.search).get('token') || '';
+    if (path === '/forgot-password') return { mode: 'forgot' };
+    if (path === '/reset-password') return { mode: 'reset', token };
+    if (path === '/verify-email') return { mode: 'verify', token };
+    return null;
 }
 
 const pathForView = (view) => (view === 'home' ? BASE : `${BASE}/${view}`);
@@ -73,6 +91,9 @@ function authRouteFromPath() {
     return null;
 }
 /** The public legal pages: open to everyone, signed in or not. */
+/** The product page: the site root, for everyone (the installed app starts at /dashboard). */
+const isLandingPath = () => window.location.pathname === '/';
+
 function legalFromPath() {
     const path = window.location.pathname.replace(/\/+$/, '');
     return path === '/privacy' ? 'privacy' : path === '/terms' ? 'terms' : null;
@@ -137,8 +158,10 @@ export default function App() {
     // the installed app opened without a signal.
     const [unreachable, setUnreachable] = useState(false);
     const [authRoute, setAuthRoute] = useState(authRouteFromPath);
+    const [linkRoute, setLinkRoute] = useState(linkRouteFromPath);
     const [legal, setLegal] = useState(legalFromPath);
     const [knownPath, setKnownPath] = useState(isKnownPath);
+    const [landing] = useState(isLandingPath);
     const app = usePwa();
 
     // The section lives in the path, so URLs are shareable and a refresh keeps you
@@ -170,7 +193,7 @@ export default function App() {
     }, []);
 
     useEffect(() => {
-        const onPop = () => { setAuthRoute(authRouteFromPath()); setLegal(legalFromPath()); setKnownPath(isKnownPath()); setViewState(viewFromPath()); };
+        const onPop = () => { setAuthRoute(authRouteFromPath()); setLinkRoute(linkRouteFromPath()); setLegal(legalFromPath()); setKnownPath(isKnownPath()); setViewState(viewFromPath()); };
         window.addEventListener('popstate', onPop);
         return () => window.removeEventListener('popstate', onPop);
     }, []);
@@ -250,6 +273,7 @@ export default function App() {
             });
             api.setToken(updated.token);
             setSession(updated);
+            toast.success('Profile saved', { body: 'Your team sees your new name and photo.' });
             return null;
         } catch (err) {
             return api.errorMessage(err, 'Your profile could not be saved.');
@@ -287,7 +311,7 @@ export default function App() {
     // The inline splash in index.html stays up until there is a real screen to show: the
     // sign-in page, the reconnecting screen, or the app. Not at mount — while the session is
     // being checked this renders nothing, which is the blank gap the splash exists to cover.
-    const firstScreen = session !== undefined || unreachable || Boolean(legal) || !knownPath;
+    const firstScreen = session !== undefined || unreachable || Boolean(legal) || landing || !knownPath;
     useEffect(() => { if (firstScreen) hideSplash(); }, [firstScreen]);
 
     // Notifications, once the session is real. `state()` re-registers this browser against
@@ -396,8 +420,9 @@ export default function App() {
             const result = await api.setAvailability(next);
             if (result?.hours) setMyHours(result.hours);
             setSession(s => (s ? { ...s, user: { ...s.user, availability: result.availability } } : s));
+            toast.success(result.availability === 'BUSY' ? 'You are now Busy' : 'You are now Available', { body: result.availability === 'BUSY' ? 'You keep your conversations; new ones go to others.' : 'New conversations can come to you.' });
         } catch (err) {
-            setSendError(api.errorMessage(err, 'Your status could not be changed.'));
+            toast.error('Status not changed', { body: api.errorMessage(err, 'Your status could not be changed.') });
         }
     }, []);
 
@@ -406,23 +431,28 @@ export default function App() {
     // The manual button ignores the cooldown: a person asking for it now has better judgement
     // about whether the conversation has settled than a timer does.
     // Pin or unpin for yourself. Shown at once; put back if the server says no.
+    const handlePinRef = useRef(null);
     const handlePin = useCallback(async (thread) => {
         const next = !thread.pinned;
         const set = (value) => setServerThreads(list => list.map(t => (t.id === thread.id ? { ...t, pinned: value } : t)));
         set(next);
         try {
             await api.pinThread(thread.id, next);
+            toast.success(next ? 'Conversation pinned' : 'Conversation unpinned', { body: next ? 'It stays at the top of your inbox.' : undefined, actions: [{ label: 'Undo', onClick: () => handlePinRef.current?.({ ...thread, pinned: next }) }] });
         } catch (err) {
             set(!next);
             setSendError(api.errorMessage(err, next ? 'Could not pin the conversation.' : 'Could not unpin the conversation.'));
         }
     }, []);
 
+    handlePinRef.current = handlePin;
+
     const handleSummarise = useCallback(async (thread) => {
         setSummarising(true);
         try {
             await api.summariseThread(thread.id);
             await refreshThreadsRef.current?.();
+            toast.success('Summary written', { body: 'It is in the conversation details.' });
         } catch (err) {
             setSendError(api.errorMessage(err, 'Could not write a summary for that conversation.'));
         } finally {
@@ -435,6 +465,7 @@ export default function App() {
         try {
             await api.assignThread(thread.id, userId);
             await refreshThreadsRef.current?.();
+            toast.success('Conversation reassigned', { body: 'The new owner has been alerted.' });
         } catch (err) {
             setSendError(api.errorMessage(err, 'Could not reassign that conversation.'));
         }
@@ -719,6 +750,11 @@ export default function App() {
         try {
             await api.setThreadState(thread.id, action);
             await refreshThreads();
+            const done = { 'take-over': ['You took over', 'The AI stops replying in this conversation.'],
+                'return-to-ai': ['Handed back to the AI', 'It answers the customer again.'],
+                resolve: ['Conversation resolved', 'It moves to Resolved. A new message opens it again.'],
+                'not-spam': ['Moved out of Spam', 'The AI answers this customer again.'] }[action] || ['Conversation updated', ''];
+            toast.success(done[0], { body: done[1] });
         } catch (err) {
             console.error(`Thread action ${action} failed`, err);
             setSendError('Could not update the conversation state.');
@@ -737,6 +773,7 @@ export default function App() {
         setConfirmDisconnect(false);
         try {
             await api.disconnectChannels();
+            toast.success('Channels disconnected', { body: 'Every page was removed and its conversations deleted.' });
         } catch (err) {
             console.error('Disconnect failed', err);
             setSendError(api.errorMessage(err, 'Could not disconnect the channels.'));
@@ -783,7 +820,9 @@ export default function App() {
 
     // The tab title, description and robots tag for what is on screen (lib/pageMeta.js).
     useEffect(() => {
+        if (landing) { setPageMeta(PUBLIC_META.landing); return; }
         if (legal) { setPageMeta(PUBLIC_META[legal]); return; }
+        if (linkRoute) { setPageMeta(PUBLIC_META[linkRoute.mode]); return; }
         if (!knownPath) { setPageMeta({ title: 'Page not found' }); return; }
         if (session === undefined) { if (unreachable) setPageMeta({ title: 'Offline' }); return; }
         if (!session) {
@@ -794,16 +833,46 @@ export default function App() {
             return;
         }
         if (session.user?.systemAdmin) { setPageMeta({ title: 'System console' }); return; }
-        setPageMeta({ title: VIEW_TITLES[view] || 'Home' });
-    }, [legal, knownPath, session, unreachable, authRoute, view]);
+        setPageMeta({ title: VIEW_TITLES[view] || 'Dashboard' });
+    }, [landing, legal, linkRoute, knownPath, session, unreachable, authRoute, view]);
 
     // Signed in: fetch the other pages' files while the browser is idle (lib/pages.js).
     useEffect(() => {
         if (session && !session.user?.systemAdmin) prefetchPages();
     }, [session]);
 
-    // Legal pages first: they are for anyone, and must not wait on the session check.
+    // The product page and the legal pages are for anyone, and must not wait on the session check.
+    if (landing) return <Suspense fallback={null}><LandingPage signedIn={Boolean(api.getToken())} /></Suspense>;
     if (legal) return <Suspense fallback={null}><LegalPage page={legal} /></Suspense>;
+    if (linkRoute) {
+        return (
+            <Suspense fallback={null}>
+                <AccountLinkPage
+                    mode={linkRoute.mode}
+                    token={linkRoute.token}
+                    onSession={(next, message) => {
+                        api.setToken(next.token);
+                        setSession(next);
+                        setLinkRoute(null);
+                        setAuthRoute(null);
+                        setViewState('home');
+                        window.history.pushState({}, '', BASE);
+                        toast.success(message);
+                    }}
+                    onNavigate={(mode) => {
+                        if (mode === 'forgot') {
+                            setLinkRoute({ mode: 'forgot' });
+                            window.history.pushState({}, '', '/forgot-password');
+                            return;
+                        }
+                        setLinkRoute(null);
+                        setAuthRoute({ mode });
+                        window.history.pushState({}, '', `/${mode}`);
+                    }}
+                />
+            </Suspense>
+        );
+    }
     if (!knownPath) return <NotFound signedIn={Boolean(api.getToken())} />;
 
     // Still asking the server. Rendering nothing beats flashing the sign-in screen at
@@ -838,6 +907,11 @@ export default function App() {
                     window.history.pushState({}, '', BASE);
                 }}
                 onNavigate={(mode) => {
+                    if (mode === 'forgot') {
+                        setLinkRoute({ mode: 'forgot' });
+                        window.history.pushState({}, '', '/forgot-password');
+                        return;
+                    }
                     setAuthRoute({ mode });
                     window.history.pushState({}, '', `/${mode}`);
                 }}
@@ -869,6 +943,7 @@ export default function App() {
                 </div>
             )}
             <InstallProblem />
+            <Toaster />
             {/* The first thing a keyboard or screen reader reaches: past the menu and the top bar,
                 straight to the page. Focus is moved by hand, since the address carries the route. */}
             <a className="skip-link" href="#main-content"
@@ -913,7 +988,9 @@ export default function App() {
                         pages={pages}
                         threadCount={allThreads.length}
                         todayCount={todayCount}
-                        recent={allThreads.slice(0, 5)}
+                        recent={allThreads.slice(0, 6)}
+                        threads={allThreads}
+                        messages={messages}
                         statusLoaded={loaded.status}
                         threadsLoaded={inboxLoaded}
                         loadError={loadError}

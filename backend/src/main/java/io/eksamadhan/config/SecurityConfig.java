@@ -52,6 +52,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/me/events/close").permitAll()
                         .requestMatchers("/api/auth/privacy", "/api/auth/terms", "/api/auth/data-deletion").permitAll()
                         .requestMatchers("/api/auth/signup", "/api/auth/login").permitAll()
+                        // Forgot password, reset and email confirmation: the person is not signed in.
+                        .requestMatchers("/api/auth/password/**", "/api/auth/email/verify").permitAll()
                         .requestMatchers("/api/auth/google", "/api/auth/signup/google").permitAll()
                         .requestMatchers("/api/auth/invitations/**").permitAll()
                         // Meta redirects the browser here with no token of ours; the state is

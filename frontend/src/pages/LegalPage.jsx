@@ -1,4 +1,5 @@
 import { LogoMark } from '../components/Logo.jsx';
+import { IconArrowLeft } from '../components/icons.jsx';
 
 /**
  * The Privacy Policy and the Terms, public whether or not someone is signed in.
@@ -101,7 +102,7 @@ function Privacy() {
                     coming to you. Signing in again turns your account back on.</li>
             </ul>
 
-            <h2>Your rights</h2>
+            <h2 id="rights">Your rights</h2>
             <p>
                 You can ask to see the data we hold about you, to correct it, to delete it, to limit how
                 it is used, to object to its use, or to receive a copy. Most of this you can do yourself
@@ -214,6 +215,19 @@ function Terms() {
     );
 }
 
+/**
+ * Back to wherever the visitor came from on this site (the product page, sign-in, Settings);
+ * opened on its own (a link from Meta, a new tab), back to the product page.
+ */
+function goBack(e) {
+    let sameSite = false;
+    try { sameSite = Boolean(document.referrer) && new URL(document.referrer).origin === window.location.origin; } catch { /* no referrer */ }
+    if (sameSite && window.history.length > 1) {
+        e.preventDefault();
+        window.history.back();
+    }
+}
+
 export default function LegalPage({ page }) {
     return (
         <div className="legal">
@@ -224,6 +238,9 @@ export default function LegalPage({ page }) {
                 </a>
             </header>
             <main className="legal__body">
+                <a href="/" className="auth__back legal__back" onClick={goBack}>
+                    <span className="auth__back-ico"><IconArrowLeft size={15} /></span> Back
+                </a>
                 {page === 'privacy' ? <Privacy /> : <Terms />}
             </main>
             <footer className="legal__foot">

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { IconBell, IconCheck } from './icons.jsx';
+import { IconBell, IconCheck, IconTeam, IconWarning } from './icons.jsx';
 import { timeAgo } from '../lib/format.js';
 import * as api from '../lib/api.js';
 import { LoadingRegion, Skel } from './Loading.jsx';
+import { KINDS, NoteAvatar, NoteTag, kindOf } from './NoteParts.jsx';
+import { toast } from '../lib/toast.js';
 
 /**
  * The bell in the header, and its panel: an inbox of what is still unread.
@@ -40,6 +42,7 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
     const [state, setState] = useState('loading');   // 'loading' | 'ready' | 'failed'
     const [open, setOpen] = useState(false);
     const [clearing, setClearing] = useState(false);
+    const [tab, setTab] = useState('all');
     const [, setTick] = useState(0);                   // re-renders "4 min ago" while open
 
     const buttonRef = useRef(null);
@@ -157,7 +160,7 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
         clearingRef.current = true;
         setClearing(true);
 
-        const request = api.markNotificationsRead().catch(() => { /* next poll tells the truth */ });
+        const request = api.markNotificationsRead().then(() => toast.success('All caught up', { body: 'Every notification is marked as read.' }), () => { /* next poll tells the truth */ });
 
         const cards = items;
         const total = unread;
@@ -218,8 +221,22 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
                     <div className="bell__panel" role="menu" aria-label="Unread notifications" ref={panelRef}>
                         <header className="bell__head">
                             <h2 className="panel__title">Notifications</h2>
-                            {unread > 0 && <span className="count">{unread} unread</span>}
+                            {items.length > 0 && (
+                                <button type="button" role="menuitem" className="bell__markall" onClick={clearAll} disabled={clearing}>
+                                    {clearing ? 'Clearing…' : 'Mark all as read'}
+                                </button>
+                            )}
                         </header>
+                        {items.length > 0 && (
+                            <div className="bell__tabs" role="tablist" aria-label="Filter notifications">
+                                {[['all', `Unread (${unread})`], ...Object.entries(
+                                    items.reduce((acc, n) => { const l = kindOf(n.kind).label; acc[l] = (acc[l] || 0) + 1; return acc; }, {}),
+                                ).map(([l, c]) => [l, `${l} (${c})`])].map(([key, text]) => (
+                                    <button key={key} type="button" role="tab" aria-selected={tab === key}
+                                            className={`bell__tab${tab === key ? ' is-on' : ''}`} onClick={() => setTab(key)}>{text}</button>
+                                ))}
+                            </div>
+                        )}
 
                         <div className="bell__scroll">
                             {state === 'loading' ? (
@@ -252,7 +269,7 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
                                 </div>
                             ) : (
                                 <ul className="bell__list" role="none">
-                                    {items.map(item => (
+                                    {items.filter(n => tab === 'all' || kindOf(n.kind).label === tab).map(item => (
                                         <li
                                             key={item.id}
                                             role="none"
@@ -267,13 +284,15 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
                                                 onClick={() => openItem(item)}
                                                 disabled={clearing}
                                             >
-                                                <span className="bell__dot" aria-hidden="true" />
+                                                <span className="note__unread" aria-hidden="true" />
+                                                <NoteAvatar item={item} />
                                                 <span className="bell__text">
-                                                    <span className={`bell__title${URGENT.has(item.kind) ? ' bell__title--urgent' : ''}`}>
-                                                        {item.title}
-                                                    </span>
+                                                    <span className="bell__title">{item.title}</span>
                                                     {item.body && <span className="bell__body">{item.body}</span>}
-                                                    <time className="bell__time" dateTime={item.createdAt}>{timeAgo(item.createdAt)}</time>
+                                                    <span className="note__meta">
+                                                        <NoteTag kind={item.kind} />
+                                                        <time className="bell__time" dateTime={item.createdAt}>{timeAgo(item.createdAt)}</time>
+                                                    </span>
                                                 </span>
                                             </button>
                                         </li>
@@ -284,12 +303,8 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
 
                         {(items.length > 0 || clearing) && (
                             <footer className="bell__foot">
-                                <button type="button" role="menuitem" className="bell__markall"
-                                        onClick={clearAll} disabled={clearing}>
-                                    {clearing ? 'Clearing…' : 'Mark all read'}
-                                </button>
-                                <button type="button" role="menuitem" className="bell__link" onClick={seeAll}>
-                                    {more > 0 && !clearing ? `See ${more} more` : 'See all'}
+                                <button type="button" role="menuitem" className="bell__viewall" onClick={seeAll}>
+                                    {more > 0 && !clearing ? `View all notifications (${more} more)` : 'View all notifications'}
                                 </button>
                             </footer>
                         )}

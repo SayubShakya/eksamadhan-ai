@@ -3,9 +3,10 @@ import * as api from '../lib/api.js';
 import { LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
 import useDeviceAlerts from '../lib/useDeviceAlerts.js';
-import { IconBell, IconLock, IconSettings, IconSparkle, IconTrash, IconUser } from '../components/icons.jsx';
+import { IconBell, IconLock, IconSettings, IconSparkle, IconTrash, IconUser, IconInbox, IconReply, IconClose, IconEye, IconChannels, IconDownload, IconWarning, IconCheck } from '../components/icons.jsx';
 import DataPrivacyCard from '../components/DataPrivacyCard.jsx';
 import PasswordInput from '../components/PasswordInput.jsx';
+import { toast } from '../lib/toast.js';
 
 /**
  * Settings: only what the system acts on.
@@ -22,12 +23,12 @@ import PasswordInput from '../components/PasswordInput.jsx';
 const btn = (base, busy) => `${base}${busy ? ' btn--busy' : ''}`;
 
 const SECTIONS = [
-    { id: 'workspace', label: 'Workspace', Icon: IconSettings },
-    { id: 'ai', label: 'AI replies', Icon: IconSparkle },
-    { id: 'notifications', label: 'Notifications', Icon: IconBell },
-    { id: 'security', label: 'Sign-in and security', Icon: IconUser },
-    { id: 'privacy', label: 'Data and privacy', Icon: IconLock },
-    { id: 'danger', label: 'Danger zone', Icon: IconTrash, tenantOnly: true },
+    { id: 'workspace', label: 'Workspace', Icon: IconSettings, tone: 'blue', note: 'Name and identity' },
+    { id: 'ai', label: 'AI replies', Icon: IconSparkle, tone: 'teal', note: 'How the AI talks to customers' },
+    { id: 'notifications', label: 'Notifications', Icon: IconBell, tone: 'amber', note: 'Push, email and the bell' },
+    { id: 'security', label: 'Sign-in and security', Icon: IconLock, tone: 'sky', note: 'Password and Google' },
+    { id: 'privacy', label: 'Data and privacy', Icon: IconUser, tone: 'green', note: 'Export, deactivate, delete' },
+    { id: 'danger', label: 'Danger zone', Icon: IconTrash, tone: 'red', note: 'Disconnect everything', tenantOnly: true },
 ];
 
 /** "Saved." for a few seconds beside a button, then gone. */
@@ -60,9 +61,20 @@ function Switch({ checked, onChange, disabled, label, busy = false }) {
 }
 
 /** One setting: what it is and does on the left, its control on the right. */
+// A small icon for each row, by its title, so the page scans by picture as well as by word.
+const ROW_ICONS = {
+    'Workspace name': IconSettings, 'The AI answers customers': IconSparkle, 'Handover message': IconReply,
+    'Closing message': IconClose, 'On this device': IconBell, 'Email when a conversation is handed to me': IconInbox,
+    'Signed in as': IconUser, 'Password': IconLock, 'Current password': IconLock, 'New password': IconEye,
+    'New password again': IconCheck, 'Disconnect everything': IconChannels, 'Download my data': IconDownload,
+    'Deactivate account': IconUser, 'Delete my account': IconWarning,
+};
+
 function Row({ title, hint, children, htmlFor, stack = false }) {
+    const RowIcon = ROW_ICONS[title];
     return (
         <div className={`setting${stack ? ' setting--stack' : ''}`}>
+            {RowIcon && <span className="setting__icon" aria-hidden="true"><RowIcon size={17} /></span>}
             <div className="setting__text">
                 {htmlFor ? <label className="setting__title" htmlFor={htmlFor}>{title}</label>
                     : <span className="setting__title">{title}</span>}
@@ -74,12 +86,17 @@ function Row({ title, hint, children, htmlFor, stack = false }) {
 }
 
 function Card({ id, title, sub, children, footer, danger = false }) {
+    const meta = SECTIONS.find(x => x.id === id);
+    const Icon = meta?.Icon;
     return (
-        <section id={`settings-${id}`} className={`card settings__card${danger ? ' settings__card--danger' : ''}`}
+        <section id={`settings-${id}`} className={`card settings__card tone--${meta?.tone || 'blue'}${danger ? ' settings__card--danger' : ''}`}
                  aria-labelledby={`settings-${id}-h`}>
             <header className="settings__cardhead">
-                <h2 id={`settings-${id}-h`}>{title}</h2>
-                {sub && <p>{sub}</p>}
+                {Icon && <span className="settings__cardicon" aria-hidden="true"><Icon size={20} /></span>}
+                <span>
+                    <h2 id={`settings-${id}-h`}>{title}</h2>
+                    {sub && <p>{sub}</p>}
+                </span>
             </header>
             <div className="settings__rows">{children}</div>
             {footer && <footer className="settings__foot">{footer}</footer>}
@@ -170,6 +187,7 @@ function WorkspaceCards({ settings, onSaved }) {
                 ? { ...d, name: kept.name }
                 : { ...d, aiRepliesEnabled: kept.aiRepliesEnabled, handoverMessage: kept.handoverMessage, closingMessage: kept.closingMessage }));
             setSavedCard(card);
+            toast.success(card === 'workspace' ? 'Workspace name saved' : 'AI reply settings saved', { body: card === 'workspace' ? 'Invites and the join page use the new name.' : 'They apply to the next customer message.' });
         } catch (err) {
             setError({ [card]: api.errorMessage(err, 'Your changes could not be saved.') });
         } finally {
@@ -238,6 +256,7 @@ function NotificationsCard({ settings, onSaved }) {
         setEmailBusy(true);
         try {
             onSaved(await api.saveMySettings({ emailAlerts: next }));
+            toast.success(next ? 'Email alerts on' : 'Email alerts off', { body: next ? 'You get an email when a conversation is handed to you.' : 'Push and the bell still alert you.' });
         } catch (err) {
             setError(api.errorMessage(err, 'That could not be changed.'));
         } finally {
@@ -299,6 +318,7 @@ function SecurityCard({ settings, email }) {
             await api.changePassword({ currentPassword: form.current, newPassword: form.next });
             setForm({ current: '', next: '', again: '' });
             markSaved();
+            toast.success('Password changed', { body: 'Use the new one next time you sign in.' });
         } catch (err) {
             setError(api.errorMessage(err, 'Your password could not be changed.'));
         } finally {
@@ -358,32 +378,9 @@ export default function SettingsPage({ user, onDisconnect, onStartDeletion, onSi
     const jump = (id) => {
         jumpedAt.current = Date.now();
         setCurrent(id);
-        document.getElementById(`settings-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        pageRef.current?.scrollTo?.({ top: 0 });
     };
 
-    // The menu follows the scroll: the section whose top has passed the top of the page is the
-    // current one, and at the very bottom it is the last, which may never reach the top.
-    const ids = sections.map(s => s.id).join(',');
-    useEffect(() => {
-        const page = pageRef.current;
-        if (!page || !data) return undefined;
-        const list = ids.split(',');
-        const onScroll = () => {
-            // A click in the menu already chose; the scroll it starts must not overrule it (a
-            // section near the end cannot reach the top, so the end-of-page rule would win).
-            if (Date.now() - jumpedAt.current < 1000) return;
-            const top = page.getBoundingClientRect().top + 120;
-            let at = list[0];
-            if (page.scrollTop + page.clientHeight >= page.scrollHeight - 4) at = list[list.length - 1];
-            else for (const id of list) {
-                const el = document.getElementById(`settings-${id}`);
-                if (el && el.getBoundingClientRect().top <= top) at = id;
-            }
-            setCurrent(at);
-        };
-        page.addEventListener('scroll', onScroll, { passive: true });
-        return () => page.removeEventListener('scroll', onScroll);
-    }, [ids, data]);
 
     return (
         <div ref={pageRef} className="page settings">
@@ -396,10 +393,11 @@ export default function SettingsPage({ user, onDisconnect, onStartDeletion, onSi
 
             <div className="settings__layout">
                 <nav className="settings__nav" aria-label="Settings sections">
-                    {sections.map(({ id, label, Icon }) => (
-                        <button key={id} type="button" className="settings__navitem"
+                    {sections.map(({ id, label, Icon, tone, note }) => (
+                        <button key={id} type="button" className={`settings__navitem tone--${tone}${id === 'danger' ? ' settings__navitem--danger' : ''}`}
                                 aria-current={current === id ? 'true' : undefined} onClick={() => jump(id)}>
-                            <Icon size={16} /> {label}
+                            <span className="settings__navicon"><Icon size={16} /></span>
+                            <span className="settings__navtext"><strong>{label}</strong><small>{note}</small></span>
                         </button>
                     ))}
                 </nav>
@@ -409,7 +407,7 @@ export default function SettingsPage({ user, onDisconnect, onStartDeletion, onSi
                         <LoadError className="empty--panel" message={api.errorMessage(error, 'Could not load your settings.')} onRetry={reload} />
                     </div>
                 ) : (
-                    <div className="settings__main">
+                    <div className="settings__main" data-show={current}>
                         <WorkspaceCards settings={data} onSaved={(next) => mutate(() => next)} />
                         <NotificationsCard settings={data} onSaved={(next) => mutate(() => next)} />
                         <SecurityCard settings={data} email={user?.email} />

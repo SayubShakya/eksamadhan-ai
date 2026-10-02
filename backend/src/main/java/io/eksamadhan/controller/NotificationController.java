@@ -28,15 +28,18 @@ public class NotificationController {
 
     private final NotificationRepository notifications;
     private final CurrentUser currentUser;
+    private final io.eksamadhan.repository.ConversationThreadRepository threads;
 
-    public NotificationController(NotificationRepository notifications, CurrentUser currentUser) {
+    public NotificationController(NotificationRepository notifications, CurrentUser currentUser,
+                                  io.eksamadhan.repository.ConversationThreadRepository threads) {
         this.notifications = notifications;
         this.currentUser = currentUser;
+        this.threads = threads;
     }
 
     public record NotificationResponse(String id, String title, String body, String url,
                                        String threadId, String kind, String createdAt,
-                                       boolean read) {}
+                                       boolean read, String customerName, String customerAvatarUrl) {}
 
     /**
      * The recent history, or with {@code unread=true} only what is still unread (the bell's
@@ -50,7 +53,7 @@ public class NotificationController {
         PageRequest page = PageRequest.of(0, Math.clamp(limit, 1, RECENT));
         List<NotificationResponse> recent = (unread ? notifications.findUnread(me, page)
                                                     : notifications.findRecent(me, page))
-                .stream().map(NotificationController::toDto).toList();
+                .stream().map(this::toDto).toList();
 
         return Map.of("notifications", recent, "unread", notifications.countByUserAndReadAtIsNull(me));
     }
@@ -76,7 +79,13 @@ public class NotificationController {
         return Map.of("marked", marked, "unread", notifications.countByUserAndReadAtIsNull(me));
     }
 
-    private static NotificationResponse toDto(Notification n) {
+    /**
+     * With the customer's name and photo from the conversation it is about, so the list shows
+     * who it is rather than initials. Only the caller's own workspace, which the alert already is.
+     */
+    private NotificationResponse toDto(Notification n) {
+        io.eksamadhan.model.ConversationThread t = n.getThreadId() == null ? null
+                : threads.findById(n.getThreadId()).orElse(null);
         return new NotificationResponse(
                 n.getId().toString(),
                 n.getTitle(),
@@ -85,6 +94,8 @@ public class NotificationController {
                 n.getThreadId() == null ? null : n.getThreadId().toString(),
                 n.getKind().name(),
                 n.getCreatedAt().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-                n.getReadAt() != null);
+                n.getReadAt() != null,
+                t == null ? null : t.getCustomerName(),
+                t == null ? null : t.getCustomerAvatarUrl());
     }
 }

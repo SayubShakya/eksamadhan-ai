@@ -1,12 +1,20 @@
 import { useEffect, useState } from 'react';
 import { ROLE_IN_SENTENCE } from '../lib/format.js';
 import { LogoMark } from '../components/Logo.jsx';
-import { IconDownload, IconEye, IconEyeOff } from '../components/icons.jsx';
+import { IconArrowLeft, IconDownload, IconEye, IconEyeOff, IconLock } from '../components/icons.jsx';
+import AuthArt from '../components/AuthArt.jsx';
 import usePwa from '../lib/usePwa.js';
 import InstallProblem from '../components/InstallProblem.jsx';
 import * as api from '../lib/api.js';
 import { CenteredSpinner } from '../components/Loading.jsx';
 import { googleSignInAvailable, googleIdToken, isCancelled, googleErrorMessage } from '../lib/firebase.js';
+
+export const IconMail = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+         strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m4 7 8 6 8-6" />
+    </svg>
+);
 
 /** Google's own mark, as its sign-in branding asks for: the four-colour G, unaltered. */
 function GoogleMark() {
@@ -123,6 +131,9 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
         : mode === 'signup' ? 'Create your workspace'
         : invite?.organizationName ? `Join ${invite.organizationName}` : 'Join the team';
 
+    // The last word in the product page's italic serif, so the two pages read as one site.
+    const titleAccent = mode === 'login' ? 'back' : mode === 'signup' ? 'workspace' : '';
+
     const subtitle = mode === 'login' ? 'Sign in to your support inbox.'
         : mode === 'signup' ? 'One inbox for your Facebook and Instagram messages.'
         : invite ? `You were invited as ${ROLE_IN_SENTENCE[invite.role] || 'staff'}, using ${invite.email}.` : '';
@@ -146,11 +157,23 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
     }
 
     return (
-        <div className="auth">
+        <div className="auth auth--split">
+            <div className="auth__main">
             <form className="auth__card" onSubmit={submit}>
-                <LogoMark size={40} color="#2563eb" />
-                <h1 className="auth__title">{title}</h1>
+                <a className="auth__back" href="/"><span className="auth__back-ico"><IconArrowLeft size={15} /></span> Back to home</a>
+                <a className="auth__logo" href="/" aria-label="EkSamadhan AI home"><LogoMark size={40} color="#2563eb" /></a>
+                <h1 className="auth__title">{titleAccent ? <>{title.slice(0, -titleAccent.length)}<em>{titleAccent}</em></> : title}</h1>
                 <p className="auth__sub">{subtitle}</p>
+                {mode === 'login' && (
+                    <p className="auth__switch">
+                        New here? <button type="button" className="linkish" onClick={() => onNavigate('signup')}>Create a workspace</button>
+                    </p>
+                )}
+                {mode === 'signup' && (
+                    <p className="auth__switch">
+                        Already have an account? <button type="button" className="linkish" onClick={() => onNavigate('login')}>Sign in</button>
+                    </p>
+                )}
                 {notice && mode === 'login' && <p className="notice notice--ok" role="status">{notice}</p>}
 
                 {mode !== 'signup' && googleBlock}
@@ -183,14 +206,18 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                 {mode !== 'invite' && (
                     <label className="field">
                         <span>Email</span>
-                        <input type="email" value={form.email} onChange={set('email')}
-                               autoComplete="email" required autoFocus={mode === 'login'} />
+                        <span className="field__iconed">
+                            <IconMail />
+                            <input type="email" value={form.email} onChange={set('email')} placeholder="you@business.com"
+                                   autoComplete="email" required autoFocus={mode === 'login'} />
+                        </span>
                     </label>
                 )}
 
                 <label className="field">
                     <span>Password</span>
-                    <span className="field__password">
+                    <span className="field__password field__iconed">
+                        <IconLock size={18} />
                         <input type={showPassword ? 'text' : 'password'} value={form.password}
                                onChange={set('password')}
                                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
@@ -207,6 +234,9 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                     </span>
                     {mode !== 'login' && <small className="field__hint">At least 8 characters.</small>}
                 </label>
+                {mode === 'login' && (
+                    <button type="button" className="auth__forgot" onClick={() => onNavigate('forgot')}>Forgot password?</button>
+                )}
 
                 {error && <p className="auth__error" role="alert">{error}</p>}
 
@@ -225,17 +255,6 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                         <a href="/terms" target="_blank" rel="noopener">Terms &amp; Conditions</a> and
                         confirm you have read the{' '}
                         <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.
-                    </p>
-                )}
-
-                {mode === 'login' && (
-                    <p className="auth__switch">
-                        New here? <button type="button" className="linkish" onClick={() => onNavigate('signup')}>Create a workspace</button>
-                    </p>
-                )}
-                {mode === 'signup' && (
-                    <p className="auth__switch">
-                        Already have an account? <button type="button" className="linkish" onClick={() => onNavigate('login')}>Sign in</button>
                     </p>
                 )}
 
@@ -264,6 +283,8 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                     )}
                 </div>
             )}
+            </div>
+            <AuthArt />
         </div>
     );
 }

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { IconBell } from '../components/icons.jsx';
+import { IconBell, IconTeam, IconWarning } from '../components/icons.jsx';
 import { LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
 import { timeAgo } from '../lib/format.js';
 import { useHeldLoading, useResource } from '../lib/loading.js';
 import * as api from '../lib/api.js';
+import { NoteAvatar, NoteTag, kindOf } from '../components/NoteParts.jsx';
+import { toast } from '../lib/toast.js';
 
 const URGENT = new Set(['ESCALATED']);
 const announce = () => window.dispatchEvent(new Event('notifications:changed'));
@@ -41,7 +43,7 @@ export default function NotificationsPage({ onOpen }) {
 
     const markAll = () => {
         setAllRead(true);
-        api.markNotificationsRead().then(announce, () => setAllRead(false));
+        api.markNotificationsRead().then(() => { announce(); toast.success('All caught up', { body: 'Every notification is marked as read.' }); }, () => setAllRead(false));
     };
 
     return (
@@ -92,14 +94,18 @@ export default function NotificationsPage({ onOpen }) {
                                 className={`bell__item${item.read ? '' : ' bell__item--unread'}`}
                                 onClick={() => open(item)}
                             >
-                                <span className={`bell__dot${item.read ? ' bell__dot--read' : ''}`} aria-hidden="true" />
+                                {!item.read ? <span className="note__unread" aria-hidden="true" /> : <span className="note__unread note__unread--read" aria-hidden="true" />}
+                                <NoteAvatar item={item} />
                                 <span className="bell__text">
-                                    <span className={`bell__title${URGENT.has(item.kind) ? ' bell__title--urgent' : ''}`}>
+                                    <span className="bell__title">
                                         {item.title}
                                         {!item.read && <span className="sr-only"> (unread)</span>}
                                     </span>
                                     {item.body && <span className="bell__body">{item.body}</span>}
-                                    <time className="bell__time" dateTime={item.createdAt}>{timeAgo(item.createdAt)}</time>
+                                    <span className="note__meta">
+                                        <NoteTag kind={item.kind} />
+                                        <time className="bell__time" dateTime={item.createdAt}>{timeAgo(item.createdAt)}</time>
+                                    </span>
                                 </span>
                             </button>
                         </li>

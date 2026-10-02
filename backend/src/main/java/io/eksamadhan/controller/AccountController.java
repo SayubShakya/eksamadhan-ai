@@ -28,6 +28,8 @@ public class AccountController {
     private final InvitationRepository invitationRepository;
     private final io.eksamadhan.service.FirebaseTokenVerifier firebase;
     private final io.eksamadhan.service.AuthRateLimiter rateLimiter;
+    @org.springframework.beans.factory.annotation.Autowired
+    private io.eksamadhan.service.EmailLinkService emailLinks;
 
     public AccountController(AccountService accountService,
                              JwtService jwtService,
@@ -50,7 +52,45 @@ public class AccountController {
         User user = accountService.signUp(
                 request.organizationName(), request.firstName(), request.lastName(),
                 request.email(), request.password());
+        emailLinks.sendVerification(user);
         return session(user);
+    }
+
+    public record EmailRequest(String email) {}
+    public record TokenRequest(String token) {}
+    public record ResetRequest(String token, String newPassword) {}
+
+    /** "Forgot password?": always the same answer, whether or not the address has an account. */
+    @PostMapping("/auth/password/forgot")
+    public java.util.Map<String, Object> forgotPassword(@RequestBody EmailRequest request) {
+        emailLinks.requestReset(request.email());
+        return java.util.Map.of("sent", true);
+    }
+
+    /** Whether a reset link still works, before the page asks for a new password. */
+    @GetMapping("/auth/password/reset/{token}")
+    public java.util.Map<String, Object> checkResetLink(@PathVariable String token) {
+        return java.util.Map.of("usable", emailLinks.resetLinkUsable(token));
+    }
+
+    @PostMapping("/auth/password/reset")
+    public Session resetPassword(@RequestBody ResetRequest request) {
+        User user = emailLinks.resetPassword(request.token(), request.newPassword());
+        rateLimiter.recordSuccess(user.getEmail());           // a new password ends any pause
+        return session(userRepository.findWithOrganizationById(user.getId()).orElseThrow());
+    }
+
+    @PostMapping("/auth/email/verify")
+    public java.util.Map<String, Object> verifyEmail(@RequestBody TokenRequest request) {
+        emailLinks.verify(request.token());
+        return java.util.Map.of("verified", true);
+    }
+
+    /** Signed in but not yet confirmed: send the link again. */
+    @PostMapping("/me/email/resend")
+    public java.util.Map<String, Object> resendVerification() {
+        emailLinks.sendVerification(currentUser.require());
+        return java.util.Map.of("sent", true);
     }
 
     @PostMapping("/auth/login")

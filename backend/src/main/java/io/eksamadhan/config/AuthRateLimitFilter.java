@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     private static final Pattern GUARDED = Pattern.compile(
-            "/api/auth/(login|signup|google|signup/google|invitations/[^/]+/accept(/google)?)");
+            "/api/auth/(login|signup|google|signup/google|invitations/[^/]+/accept(/google)?|password/forgot|password/reset|email/verify)");
 
     private final AuthRateLimiter limiter;
 

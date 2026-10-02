@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ROLE_LABEL } from '../lib/format.js';
-import { IconArrowRight, IconClose, IconPlus } from './icons.jsx';
+import { IconArrowRight, IconClose, IconPlus, IconSettings, IconCheck } from './icons.jsx';
 import Avatar from './Avatar.jsx';
 import { fileToAvatar } from '../lib/avatar.js';
 import usePwa from '../lib/usePwa.js';
@@ -99,58 +99,69 @@ export default function ProfilePanel({ open, user, onSave, onClose, onOpenSettin
         <>
             {/* Transparent catcher: closes on an outside click without dimming the page,
                 which would be heavy-handed for a menu hanging off the avatar. */}
-            <div className="popover__catcher" onClick={onClose} aria-hidden="true" />
+            <div className="popover__catcher profile-drawer__scrim" onClick={onClose} aria-hidden="true" />
 
-            <div className="popover" role="dialog" aria-label="Edit profile" ref={sheetRef}
+            <div className="popover profile-drawer" role="dialog" aria-label="Edit profile" ref={sheetRef}
                  style={dragY ? { transform: `translateY(${dragY}px)`, transition: 'none' } : undefined}
                  onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
                 <div className="popover__grab" aria-hidden="true"><span /></div>
-                <header className="panel__head">
-                    <h2 className="panel__title">Edit profile</h2>
-                    <button className="icon-btn" onClick={onClose} aria-label="Close">
-                        <IconClose />
-                    </button>
-                </header>
+                <form className="panel__body pd" onSubmit={submit}>
+                    <div className="pd__cover" aria-hidden="true">
+                        <svg viewBox="0 0 400 120" preserveAspectRatio="xMidYMid slice" width="100%" height="100%">
+                            <rect width="400" height="120" fill="#dbe7ff" />
+                            <circle cx="70" cy="110" r="70" fill="#c6d8ff" />
+                            <circle cx="320" cy="20" r="80" fill="#e8f0ff" />
+                            <circle cx="230" cy="130" r="60" fill="#b8cff9" opacity=".7" />
+                            <path d="M0 90 C 90 60, 160 110, 250 80 S 380 60, 400 70 V120 H0 Z" fill="#a9c4f5" opacity=".55" />
+                        </svg>
+                    </div>
+                    <button type="button" className="pd__close" onClick={onClose} aria-label="Close"><IconClose size={18} /></button>
 
-                <form className="panel__body" onSubmit={submit}>
-                    <div className="panel__identity panel__identity--solo">
-                        <input
-                            ref={fileRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={pickFile}
-                            hidden
-                        />
+                    <div className="pd__top">
+                        <input ref={fileRef} type="file" accept="image/*" onChange={pickFile} hidden />
+                        <button type="button" className="pd__avatar" onClick={() => fileRef.current?.click()}
+                                aria-label={draft.avatar ? 'Change photo' : 'Upload photo'}>
+                            <Avatar user={draft} size={88} />
+                            <span className="pd__badge" aria-hidden="true"><IconPlus size={14} /></span>
+                        </button>
+                    </div>
 
-                        {/* The whole avatar is the upload target, with a + badge to make
-                            that discoverable — the same pattern people know from social apps. */}
-                        <div className="avatarEdit">
-                            <button
-                                type="button"
-                                className="avatarEdit__hit"
-                                onClick={() => fileRef.current?.click()}
-                                aria-label={draft.avatar ? 'Change photo' : 'Upload photo'}
-                            >
-                                <Avatar user={draft} size={68} />
-                                <span className="avatarEdit__badge" aria-hidden="true">
-                                    <IconPlus size={13} />
-                                </span>
-                            </button>
+                    <div className="pd__who">
+                        <h2 className="pd__name">{[draft.firstName, draft.lastName].filter(Boolean).join(' ') || 'Your name'}
+                            <span className="pd__role">{ROLE_LABEL[draft.role] || draft.role}</span>
+                        </h2>
+                        <p className="pd__email">{draft.email}</p>
+                        <p className="pd__meta">
+                            <span className={`pd__status${draft.availability === 'BUSY' ? ' pd__status--busy' : ''}`} />
+                            {draft.availability === 'BUSY' ? 'Busy' : 'Available'}
+                            <span aria-hidden="true">·</span>
+                            {draft.role === 'OWNER' ? 'You created this workspace' : 'Role set by the tenant or an admin'}
+                        </p>
+                    </div>
+
+                    <div className="pd__section pd__photo">
+                        <span className="pd__label">Photo</span>
+                        <div className="pd__photorow">
+                            <span className="pd__hint">Shown to your team beside your name.</span>
+                            <span className="pd__photobtns">
+                                <button type="button" className="btn btn--secondary btn--sm" onClick={() => fileRef.current?.click()}>
+                                    {draft.avatar ? 'Change' : 'Upload'}
+                                </button>
+                                {draft.avatar && (
+                                    <button type="button" className="btn btn--ghost btn--sm pd__remove"
+                                            onClick={() => setDraft(d => ({ ...d, avatar: null }))}>Remove</button>
+                                )}
+                            </span>
                         </div>
                     </div>
 
-                    {draft.avatar && (
-                        <button type="button" className="profile__remove"
-                                onClick={() => setDraft(d => ({ ...d, avatar: null }))}>
-                            Remove photo
-                        </button>
-                    )}
-
                     {error && <p className="panel__error" role="alert">{error}</p>}
 
+                    <div className="pd__section">
+                    <span className="pd__label">Name</span>
                     <div className="field-row">
                         <label className="field">
-                            <span className="field__label">First name</span>
+                            <span className="sr-only">First name</span>
                             <input
                                 value={draft.firstName}
                                 onChange={(e) => setDraft({ ...draft, firstName: e.target.value })}
@@ -161,7 +172,7 @@ export default function ProfilePanel({ open, user, onSave, onClose, onOpenSettin
                         </label>
 
                         <label className="field">
-                            <span className="field__label">Last name</span>
+                            <span className="sr-only">Last name</span>
                             <input
                                 value={draft.lastName || ''}
                                 onChange={(e) => setDraft({ ...draft, lastName: e.target.value })}
@@ -171,25 +182,24 @@ export default function ProfilePanel({ open, user, onSave, onClose, onOpenSettin
                         </label>
                     </div>
 
-                    {/* Read-only: letting people set their own role would let any staff member
-                        promote themselves, and the email is how the account signs in. */}
-                    <dl className="profile__facts">
-                        <div>
-                            <dt>Email</dt>
-                            <dd>{draft.email}<small>Used to sign in</small></dd>
-                        </div>
-                        <div>
-                            <dt>Role</dt>
-                            <dd>
-                                {ROLE_LABEL[draft.role] || draft.role}
-                                <small>{draft.role === 'OWNER' ? 'You created this workspace' : 'Set by the tenant or an admin'}</small>
-                            </dd>
-                        </div>
-                    </dl>
+                    </div>
+
+                    {/* Read-only: the email is how the account signs in, and the role is set by
+                        the tenant or an admin (letting people set their own would let anyone
+                        promote themselves). */}
+                    <div className="pd__section">
+                        <span className="pd__label">Email address</span>
+                        <span className="pd__readonly">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m4 7 8 6 8-6" /></svg>
+                            {draft.email}
+                        </span>
+                        <span className="pd__hint"><IconCheck size={13} /> Used to sign in. It cannot be changed here.</span>
+                    </div>
+
 
                     {/* Only when this browser can install now; a row saying it cannot is noise. */}
                     {!app.installed && (app.canPrompt || app.iosHint) && (
-                        <div className="profile__install">
+                        <div className="profile__install pd__section">
                             {app.canPrompt ? (
                                 <>
                                     <span>Install EkSamadhan AI on this device, in its own window with its own icon.</span>
@@ -201,14 +211,12 @@ export default function ProfilePanel({ open, user, onSave, onClose, onOpenSettin
                         </div>
                     )}
 
-                    {/* Notifications and the password live in Settings, in one place. */}
-                    {onOpenSettings && (
-                        <button type="button" className="profile__link" onClick={onOpenSettings}>
-                            Notifications, password and more in Settings <IconArrowRight size={14} />
-                        </button>
-                    )}
-
-                    <div className="panel__actions">
+                    <div className="panel__actions pd__foot">
+                        {onOpenSettings && (
+                            <button type="button" className="pd__settings" onClick={onOpenSettings}>
+                                <IconSettings size={15} /> Settings
+                            </button>
+                        )}
                         <button type="button" className="btn btn--secondary" onClick={onClose}>
                             Cancel
                         </button>

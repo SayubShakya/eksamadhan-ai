@@ -4,7 +4,7 @@ import { appendFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 // The public pages, the only ones listed for search engines (see src/lib/pageMeta.js).
-const PUBLIC_PATHS = ['/login', '/signup', '/privacy', '/terms']
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/privacy', '/terms']
 
 /**
  * Only once the app has a real address (VITE_SITE_URL, e.g. https://eksamadhan.com): the share

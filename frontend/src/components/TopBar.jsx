@@ -7,6 +7,7 @@ import AvailabilityMenu from './AvailabilityMenu.jsx';
 import { fullName } from '../lib/avatar.js';
 
 import { ROLE_LABEL } from '../lib/format.js';
+import { VIEW_TITLES } from '../lib/pageMeta.js';
 
 
 /**
@@ -36,6 +37,14 @@ export default function TopBar({
                         <span className="brand__name">EkSamadhan AI</span>
                     </button>
                 </>
+            )}
+
+            {/* Where you are, as the menu's current item says; the page's own heading still leads. */}
+            {VIEW_TITLES[view] && (
+                <span className="topbar__where" aria-hidden="true">
+                    <span className="topbar__title">{VIEW_TITLES[view]}</span>
+                    <span className="topbar__date">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                </span>
             )}
 
             {showSearch && (
@@ -72,14 +81,15 @@ export default function TopBar({
                                   hours={hours} onSetHours={onSetHours} />
             )}
 
+            <span className="topbar__sep" aria-hidden="true" />
             <NotificationBell onOpen={onOpenNotification} onSeeAll={onSeeAllNotifications} onPage={view === 'notifications'} />
 
             <button className="user" onClick={onEditProfile} aria-label="Edit profile">
+                <Avatar user={user} size={34} />
                 <span className="user__text">
                     <span className="user__name">{fullName(user) || 'Set up profile'}</span>
                     <span className="user__role">{role}</span>
                 </span>
-                <Avatar user={user} size={32} />
             </button>
 
             </div>

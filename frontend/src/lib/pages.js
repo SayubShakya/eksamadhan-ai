@@ -22,6 +22,8 @@ export const PAGES = {
     knowledge: () => import('../pages/KnowledgePage.jsx'),
     analytics: () => import('../pages/AnalyticsPage.jsx'),
     legal: () => import('../pages/LegalPage.jsx'),
+    'account-link': () => import('../pages/AccountLinkPage.jsx'),
+    landing: () => import('../pages/LandingPage.jsx'),
     system: () => import('../pages/SystemConsole.jsx'),
 };
 
@@ -49,7 +51,8 @@ export function prefetchPages() {
     if (prefetched) return;
     prefetched = true;
     const run = () => Object.entries(PAGES)
-        .filter(([name]) => name !== 'system')           // only a system admin ever opens it
+        // Not the system console (only a system admin opens it) or the public product page.
+        .filter(([name]) => name !== 'system' && name !== 'landing')
         .forEach(([, load]) => load().catch(() => { /* fetched again when opened */ }));
     if ('requestIdleCallback' in window) window.requestIdleCallback(run, { timeout: 4000 });
     else setTimeout(run, 1500);

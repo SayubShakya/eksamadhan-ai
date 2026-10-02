@@ -87,7 +87,9 @@ class GoogleSignInTest {
     @Test
     void aPasswordMemberCanStartUsingGoogleAndIsThenPinnedToThatAccount() {
         String email = "owner-" + suffix + "@example.com";
-        accounts.signUp("ZZ Google Owner " + suffix, "Sayub", "Shakya", email, "a-long-password");
+        User owner = accounts.signUp("ZZ Google Owner " + suffix, "Sayub", "Shakya", email, "a-long-password");
+        owner.setEmailVerified(true);            // they opened the confirmation link
+        users.save(owner);
 
         User first = accounts.signInWithGoogle(google(email, "uid-owner-" + suffix));
         assertEquals("uid-owner-" + suffix, first.getFirebaseUid(), "linked on first use");
@@ -97,6 +99,18 @@ class GoogleSignInTest {
         ResponseStatusException e = assertThrows(ResponseStatusException.class,
                 () -> accounts.signInWithGoogle(google(email, "uid-impostor")));
         assertEquals(HttpStatus.FORBIDDEN, e.getStatusCode());
+    }
+
+    @Test
+    void googleTakesOverAnAddressNobodyConfirmedAndDropsThatPassword() {
+        // Someone signed up with this address but never proved it is theirs. Its real owner,
+        // arriving through Google, must not share the account with whoever chose that password.
+        String email = "squat-" + suffix + "@example.com";
+        accounts.signUp("ZZ Google Squat " + suffix, "Not", "Them", email, "a-long-password");
+
+        User linked = accounts.signInWithGoogle(google(email, "uid-real-" + suffix));
+        assertNull(linked.getPasswordHash(), "the unconfirmed password no longer works");
+        assertTrue(linked.isEmailVerified(), "Google proved the address");
     }
 
     @Test

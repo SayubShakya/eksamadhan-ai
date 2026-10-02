@@ -8,6 +8,7 @@ import { PRESENCE } from '../components/AvailabilityMenu.jsx';
 import { timeAgo, formatBackAt } from '../lib/format.js';
 
 import { ROLE_LABEL } from '../lib/format.js';
+import { toast } from '../lib/toast.js';
 
 /**
  * The workspace team (PRD FR-04).
@@ -100,6 +101,12 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
         try {
             const created = await api.createInvite({ email, role });
             setLastInvite(created);
+            const copyLink = created?.inviteUrl ? [{ label: 'Copy link', onClick: () => navigator.clipboard?.writeText(created.inviteUrl) }] : [];
+            if (created?.emailed === false) {
+                toast.warning('Invite created, email not sent', { body: 'Copy the link and send it to them yourself.', actions: copyLink });
+            } else {
+                toast.success('Invitation sent', { body: `An email with the link went to ${email}.`, actions: copyLink });
+            }
             setEmail('');
             await load();
         } catch (err) {
@@ -113,6 +120,7 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
         try {
             await navigator.clipboard.writeText(url);
             setCopied(id);
+            toast.success('Invite link copied', { body: 'Paste it in a message to the person you invited.' });
             setTimeout(() => setCopied(''), 2000);
         } catch {
             // Clipboard access needs a secure context; the field is selectable either way.
@@ -121,14 +129,14 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
     };
 
     const revoke = async (id) => {
-        try { await api.revokeInvite(id); await load(); }
+        try { await api.revokeInvite(id); await load(); toast.success('Invite revoked', { body: 'The link no longer works.' }); }
         catch (err) { setError(api.errorMessage(err, 'Could not revoke that invite.')); }
     };
 
     const confirmRemove = async () => {
         const member = removing;
         setRemoving(null);
-        try { await api.removeMember(member.id); await load(); }
+        try { await api.removeMember(member.id); await load(); toast.success('Removed from the team', { body: `${[member.firstName, member.lastName].filter(Boolean).join(' ') || 'That person'} can no longer sign in to this workspace.` }); }
         catch (err) { setError(api.errorMessage(err, 'Could not remove that person.')); }
     };
 

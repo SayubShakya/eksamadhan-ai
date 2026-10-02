@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import {
     IconHome, IconInbox, IconKnowledge,
-    IconChannels, IconTeam, IconClock, IconAnalytics, IconSettings, IconChevronLeft, IconSignOut,
+    IconChannels, IconTeam, IconClock, IconAnalytics, IconSettings, IconChevronLeft, IconSignOut, IconPlus, IconGrid, IconMoon,
 } from './icons.jsx';
+import Avatar from './Avatar.jsx';
+import { fullName } from '../lib/avatar.js';
+import * as theme from '../lib/theme.js';
 import { LogoMark } from './Logo.jsx';
 
 const ITEMS = [
-    { id: 'home', label: 'Home', Icon: IconHome },
+    { id: 'home', label: 'Dashboard', Icon: IconGrid },
     { id: 'inbox', label: 'Inbox', Icon: IconInbox },
     { id: 'knowledge', label: 'Knowledge', Icon: IconKnowledge },
     { id: 'channels', label: 'Channels', Icon: IconChannels },
@@ -29,7 +32,10 @@ const DOCKED = '(min-width: 1024px)';
  * `showSettings={false}` because workspace settings have no meaning outside a workspace.
  */
 export default function NavRail({ view, onNavigate, unread = 0, open, onClose, onToggle, onHome,
-                                  items = ITEMS, showSettings = true, onSignOut }) {
+                                  items = ITEMS, showSettings = true, onSignOut, user, onProfile, action }) {
+    const [mode, setMode] = useState(theme.current);
+    useEffect(() => theme.subscribe(setMode), []);
+
     useEffect(() => {
         if (!open) return;
         const onKey = (e) => {
@@ -117,14 +123,28 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                     </button>
                 </div>
 
+                {/* The one thing to do first, as the reference's "Create new": adding what the
+                    business knows. Only for those who may (the Tenant and Admins). */}
+                {action && (
+                    <button className="rail__action" onClick={() => { action.onClick(); if (!window.matchMedia(DOCKED).matches) onClose(); }}
+                            aria-label={action.label} title={action.label}>
+                        <IconPlus size={18} />
+                        <span>{action.label}</span>
+                    </button>
+                )}
+
                 {items.map(({ id, label, Icon }) => (
                     <button
                         key={id}
                         className="rail__item"
                         aria-current={view === id ? 'page' : undefined}
+                        title={open ? undefined : label}
                         onClick={() => go(id)}
                     >
-                        <Icon />
+                        <span className="rail__icon">
+                            <Icon />
+                            {id === 'inbox' && unread > 0 && <i className="rail__dot" aria-hidden="true" />}
+                        </span>
                         <span>{label}</span>
                         {id === 'inbox' && unread > 0 && (
                             <span className="rail__badge" aria-label={`${unread} awaiting reply`}>{unread}</span>
@@ -133,7 +153,15 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                 ))}
 
                 <div className="rail__spacer" />
+                <hr className="rail__rule" />
 
+                <button className="rail__item rail__theme" role="switch" aria-checked={mode === 'dark'}
+                        title={open ? undefined : 'Dark mode'}
+                        onClick={() => theme.set(mode === 'dark' ? 'light' : 'dark')}>
+                    <span className="rail__icon"><IconMoon /></span>
+                    <span>Dark mode</span>
+                    <span className={`switch switch--sm${mode === 'dark' ? ' switch--on' : ''}`} aria-hidden="true"><span className="switch__knob" /></span>
+                </button>
                 {showSettings && (
                     <button
                         className="rail__item"
@@ -149,6 +177,16 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                     <button className="rail__item rail__item--signout" onClick={onSignOut}>
                         <IconSignOut />
                         <span>Sign out</span>
+                    </button>
+                )}
+                {user && onProfile && (
+                    <button className="rail__me" onClick={() => { onProfile(); if (!window.matchMedia(DOCKED).matches) onClose(); }}
+                            aria-label="Your profile" title="Your profile">
+                        <Avatar user={user} size={40} />
+                        <span className="rail__me-text">
+                            <strong>{fullName(user) || 'Your profile'}</strong>
+                            <small>{user.email}</small>
+                        </span>
                     </button>
                 )}
             </nav>

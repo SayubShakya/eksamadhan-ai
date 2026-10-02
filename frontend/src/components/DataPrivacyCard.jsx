@@ -3,6 +3,7 @@ import * as api from '../lib/api.js';
 import BottomSheet from './BottomSheet.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import { IconDownload, IconWarning } from './icons.jsx';
+import { toast } from '../lib/toast.js';
 
 /**
  * Settings, Data and privacy: three rows like the rest of Settings, the reversible ones first,
@@ -40,6 +41,7 @@ export default function DataPrivacyCard({ user, settings, onStartDeletion, onSig
             a.download = 'eksamadhan-my-data.json';
             a.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
+            toast.success('Your data was downloaded', { body: 'Saved as eksamadhan-my-data.json.' });
         } catch (err) {
             setError(api.errorMessage(err, 'Your data could not be downloaded.'));
         } finally {

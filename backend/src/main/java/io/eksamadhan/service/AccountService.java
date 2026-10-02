@@ -57,6 +57,8 @@ public class AccountService {
                 .organization(organization)
                 .email(normalisedEmail)
                 .passwordHash(passwordEncoder.encode(password))
+                // Unproved until they open the link emailed to them (EmailLinkService).
+                .emailVerified(false)
                 .firstName(firstName.trim())
                 .lastName(lastName == null ? null : lastName.trim())
                 .role(UserRole.OWNER)
@@ -251,6 +253,13 @@ public class AccountService {
      * is a different person as far as Google is concerned, and is refused.
      */
     private void link(User user, FirebaseTokenVerifier.GoogleIdentity google) {
+        // Google has proved the address. If it was never confirmed, the password on it may not
+        // be theirs: anyone could sign up with someone else's email before they did. So that
+        // password goes, and the owner can set their own with "Forgot password?".
+        if (!user.isEmailVerified()) {
+            user.setPasswordHash(null);
+            user.setEmailVerified(true);
+        }
         if (user.getFirebaseUid() == null) {
             user.setFirebaseUid(google.uid());
             if (user.getAvatar() == null) user.setAvatar(google.picture());

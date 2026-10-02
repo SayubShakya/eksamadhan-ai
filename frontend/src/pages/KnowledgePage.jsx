@@ -4,6 +4,7 @@ import { IconUpload, IconSearch, IconTrash, IconImage, IconClose } from '../comp
 import * as api from '../lib/api.js';
 import { CenteredSpinner, LoadError, LoadingRegion, Skel, UploadProgress } from '../components/Loading.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
+import { toast } from '../lib/toast.js';
 
 const STATUS_TONE = {
     READY: 'tag--ai',
@@ -97,6 +98,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
         setBusy(true);
         try {
             await api.addKnowledgeText({ title, text });
+            toast.success('Knowledge added', { body: 'The AI can answer from it once it is indexed.' });
             setTitle('');
             setText('');
             await load();
@@ -117,6 +119,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
         setSent({ label, fraction: null });
         try {
             await api.uploadKnowledge({ file, onProgress: (fraction) => setSent({ label, fraction }) });
+            toast.success('File added', { body: `${file.name} is being read and indexed.` });
             await load();
         } catch (err) {
             setError(api.errorMessage(err, 'That file could not be added.'));
@@ -133,6 +136,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
         setCrawling(true);
         try {
             await api.crawlWebsite(site.trim());
+            toast.info('Reading the website', { body: 'Pages appear in the list as they are added.' });
             setSite('');
             // Pages appear as they are indexed, so keep refreshing for a while.
             for (let i = 0; i < 20; i++) {
@@ -170,6 +174,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
             setPendingImage(null);
             setImageTitle('');
             setImageCaption('');
+            toast.success('Image added', { body: 'It is being read and indexed.' });
             await load();
         } catch (err) {
             setError(api.errorMessage(err, 'That image could not be added.'));
@@ -191,7 +196,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
     const confirmRemove = async () => {
         const source = removing;
         setRemoving(null);
-        try { await api.deleteKnowledge(source.id); await load(); }
+        try { await api.deleteKnowledge(source.id); await load(); toast.success('Source removed', { body: 'The AI no longer answers from it.' }); }
         catch (err) { setError(api.errorMessage(err, 'That could not be removed.')); }
     };
 

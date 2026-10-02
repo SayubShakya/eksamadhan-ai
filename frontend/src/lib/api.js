@@ -46,6 +46,13 @@ export function errorMessage(err, fallback = 'Something went wrong. Please try a
 }
 
 // ── Accounts ────────────────────────────────────────────────────────────────
+// Forgot password, reset and email confirmation (EmailLinkService on the server).
+export const forgotPassword = (email) => axios.post('/api/auth/password/forgot', { email }).then(r => r.data);
+export const checkResetLink = (token) => axios.get(`/api/auth/password/reset/${encodeURIComponent(token)}`).then(r => r.data);
+export const resetPassword = (token, newPassword) => axios.post('/api/auth/password/reset', { token, newPassword }).then(r => r.data);
+export const verifyEmail = (token) => axios.post('/api/auth/email/verify', { token }).then(r => r.data);
+export const resendVerification = () => axios.post('/api/me/email/resend').then(r => r.data);
+
 export const signUp = (payload) => axios.post('/api/auth/signup', payload).then(r => r.data);
 export const logIn = (payload) => axios.post('/api/auth/login', payload).then(r => r.data);
 export const getMe = () => axios.get('/api/me').then(r => r.data);

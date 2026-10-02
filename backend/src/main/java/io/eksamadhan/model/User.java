@@ -92,6 +92,11 @@ public class User {
     @Column(name = "email_alerts", nullable = false)
     private boolean emailAlerts = true;
 
+    /** Whether they have proved they own the address (a link they were emailed, Google, an invite). */
+    @Builder.Default
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = true;
+
     /** Refreshed every minute by an open dashboard; online means seen recently. */
     @Column(name = "last_seen_at")
     private OffsetDateTime lastSeenAt;

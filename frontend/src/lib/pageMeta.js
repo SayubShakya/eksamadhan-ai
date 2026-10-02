@@ -48,7 +48,7 @@ export function setPageMeta({ title, description = DEFAULT_DESCRIPTION, index = 
 
 // What each signed-in screen is called in the tab. Private, so none is indexed.
 export const VIEW_TITLES = {
-    home: 'Home',
+    home: 'Dashboard',
     inbox: 'Inbox',
     knowledge: 'Knowledge',
     channels: 'Channels',
@@ -63,6 +63,10 @@ export const VIEW_TITLES = {
 
 // The public pages: the only ones a search engine should list.
 export const PUBLIC_META = {
+    landing: {
+        title: '', index: true, path: '/',
+        description: 'EkSamadhan AI answers your customers on Facebook Messenger and Instagram from your own business knowledge, and hands the rest to an available person on your team.',
+    },
     login: {
         title: 'Sign in', index: true, path: '/login',
         description: 'Sign in to EkSamadhan AI, the support inbox for Facebook Messenger and Instagram.',
@@ -72,6 +76,9 @@ export const PUBLIC_META = {
         description: 'Create an EkSamadhan AI workspace: one inbox for Messenger and Instagram, with replies drafted from your own business knowledge.',
     },
     invite: { title: 'Join your team', index: false },
+    forgot: { title: 'Forgot password', index: false },
+    reset: { title: 'Choose a new password', index: false },
+    verify: { title: 'Confirm your email', index: false },
     privacy: {
         title: 'Privacy Policy', index: true, path: '/privacy',
         description: 'What EkSamadhan AI collects, why, who it is shared with, and how to export or delete your data.',

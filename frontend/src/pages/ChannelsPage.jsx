@@ -5,6 +5,7 @@ import { LoadingRegion, Skel } from '../components/Loading.jsx';
 import { useHeldLoading } from '../lib/loading.js';
 import { timeAgo } from '../lib/format.js';
 import { IconFacebook, IconInstagram, IconPlus, IconWidget } from '../components/icons.jsx';
+import { toast } from '../lib/toast.js';
 
 /**
  * Channels: where customers message the workspace from, and each connected account on its own.
@@ -126,6 +127,7 @@ export default function ChannelsPage({ user, pages = [], statusLoaded = true, on
         try {
             await api.disconnectPage(page.id);
             setRemoved(`${page.pageName} was disconnected and its conversations deleted.`);
+            toast.success('Account disconnected', { body: `${page.pageName} and its conversations were removed.` });
             onChanged?.();
         } catch (err) {
             setError(api.errorMessage(err, 'That account could not be disconnected.'));

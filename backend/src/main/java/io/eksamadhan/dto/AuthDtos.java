@@ -38,7 +38,8 @@ public final class AuthDtos {
             UserRole role,
             String avatar,
             boolean systemAdmin,
-            io.eksamadhan.model.Availability availability) {
+            io.eksamadhan.model.Availability availability,
+            boolean emailVerified) {
 
         public static Profile of(User user) {
             return new Profile(
@@ -49,7 +50,8 @@ public final class AuthDtos {
                     user.getRole(),
                     user.getAvatar(),
                     user.isSystemAdmin(),
-                    user.getAvailability());
+                    user.getAvailability(),
+                    user.isEmailVerified());
         }
     }
 
