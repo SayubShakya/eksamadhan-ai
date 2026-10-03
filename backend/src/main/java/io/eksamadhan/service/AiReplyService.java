@@ -117,7 +117,7 @@ public class AiReplyService {
     private final String unrelatedMessage;
     private final int offTopicLimit;
     private final int maxContextChars;
-    private final String frontendUrl;
+    private final PublicUrl publicUrl;
     private final String greetingReply;
     private final String thanksReply;
 
@@ -146,7 +146,7 @@ public class AiReplyService {
                           @Value("${app.ai.unrelated-message:}") String unrelatedMessage,
                           @Value("${app.ai.off-topic-limit:3}") int offTopicLimit,
                           @Value("${app.ai.max-context-chars:6000}") int maxContextChars,
-                          @Value("${app.frontend-url}") String frontendUrl,
+                          PublicUrl publicUrl,
                           @Value("${app.triage.greeting-reply:Hi! How can I help you today?}") String greetingReply,
                           @Value("${app.triage.thanks-reply:You're welcome!}") String thanksReply) {
         this.messageRepository = messageRepository;
@@ -174,7 +174,7 @@ public class AiReplyService {
         this.unrelatedMessage = unrelatedMessage;
         this.offTopicLimit = offTopicLimit;
         this.maxContextChars = maxContextChars;
-        this.frontendUrl = frontendUrl;
+        this.publicUrl = publicUrl;
         this.greetingReply = greetingReply;
         this.thanksReply = thanksReply;
     }
@@ -835,7 +835,7 @@ public class AiReplyService {
         if (!agent.isEmailAlerts()) return;
         try {
             String customer = thread.getCustomerName() == null ? "A customer" : thread.getCustomerName();
-            String link = frontendUrl + "/dashboard/inbox";
+            String link = publicUrl.get() + "/dashboard/inbox";
             String body = """
                     <p style="font-size:15px;line-height:1.6;">
                       <strong>%s</strong> is waiting for a reply on %s, because %s.

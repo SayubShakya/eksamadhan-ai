@@ -46,15 +46,15 @@ public class EmailLinkService {
     private final UserRepository users;
     private final EmailService email;
     private final PasswordEncoder passwordEncoder;
-    private final String frontendUrl;
+    private final PublicUrl publicUrl;
 
     public EmailLinkService(JdbcTemplate jdbc, UserRepository users, EmailService email,
-                            PasswordEncoder passwordEncoder, @Value("${app.frontend-url}") String frontendUrl) {
+                            PasswordEncoder passwordEncoder, PublicUrl publicUrl) {
         this.jdbc = jdbc;
         this.users = users;
         this.email = email;
         this.passwordEncoder = passwordEncoder;
-        this.frontendUrl = frontendUrl.replaceAll("/+$", "");
+        this.publicUrl = publicUrl;
     }
 
     // ── confirming an address ───────────────────────────────────────────────────
@@ -64,7 +64,7 @@ public class EmailLinkService {
     public void sendVerification(User user) {
         if (user.isEmailVerified() || recentlySent(user.getId(), VERIFY)) return;
         String token = issue(user.getId(), VERIFY, VERIFY_TTL);
-        String link = frontendUrl + "/verify-email?token=" + token;
+        String link = publicUrl.get() + "/verify-email?token=" + token;
         String html = email.layout("Confirm your email address", """
                 <p style="font-size:15px;line-height:1.5;">Hi %s, confirm that this is your address to finish
                 setting up EkSamadhan AI. The link works once and for 24 hours.</p>
@@ -96,7 +96,7 @@ public class EmailLinkService {
         if (user.isSystemAdmin() || user.getStatus() == UserStatus.DISABLED || user.getStatus() == UserStatus.DELETED) return;
         if (recentlySent(user.getId(), RESET)) return;
         String token = issue(user.getId(), RESET, RESET_TTL);
-        String link = frontendUrl + "/reset-password?token=" + token;
+        String link = publicUrl.get() + "/reset-password?token=" + token;
         String html = email.layout("Choose a new password", """
                 <p style="font-size:15px;line-height:1.5;">Someone asked to reset the password for %s. If it
                 was you, choose a new one here. The link works once and for 30 minutes.</p>

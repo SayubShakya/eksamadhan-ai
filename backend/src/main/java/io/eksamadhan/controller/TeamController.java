@@ -37,7 +37,7 @@ public class TeamController {
     private final InvitationRepository invitationRepository;
     private final CurrentUser currentUser;
     private final EmailService emailService;
-    private final String frontendUrl;
+    private final io.eksamadhan.service.PublicUrl publicUrl;
     private final io.eksamadhan.service.AvailabilityService availability;
 
     public TeamController(UserRepository userRepository,
@@ -45,13 +45,13 @@ public class TeamController {
                           CurrentUser currentUser,
                           EmailService emailService,
                           io.eksamadhan.service.AvailabilityService availability,
-                          @Value("${app.frontend-url}") String frontendUrl) {
+                          io.eksamadhan.service.PublicUrl publicUrl) {
         this.availability = availability;
         this.userRepository = userRepository;
         this.invitationRepository = invitationRepository;
         this.currentUser = currentUser;
         this.emailService = emailService;
-        this.frontendUrl = frontendUrl;
+        this.publicUrl = publicUrl;
     }
 
     /**
@@ -74,7 +74,8 @@ public class TeamController {
                                 String inviteUrl, OffsetDateTime expiresAt,
                                 boolean emailed, String emailError) {}
 
-    public record Team(List<Member> members, List<PendingInvite> invites, boolean canManage) {}
+    /** @param appUrl the dashboard's public address (app.frontend-url), the one invites link to */
+    public record Team(List<Member> members, List<PendingInvite> invites, boolean canManage, String appUrl) {}
 
     @GetMapping
     public Team team() {
@@ -99,7 +100,7 @@ public class TeamController {
                     .toList()
                 : List.of();
 
-        return new Team(members, invites, me.getRole().canManageTeam());
+        return new Team(members, invites, me.getRole().canManageTeam(), publicUrl.get());
     }
 
     public record InviteRequest(String email, UserRole role) {}
@@ -155,6 +156,39 @@ public class TeamController {
         return Map.of("success", true);
     }
 
+    public record RoleRequest(UserRole role) {}
+
+    /**
+     * Makes a member staff or admin. Only the tenant may: an admin choosing who else is an admin
+     * would let two admins promote and demote each other. The tenant's own role, and moving
+     * anyone to or from tenant, are not changed here (handing the workspace over is part of
+     * deleting the tenant's account).
+     */
+    @PatchMapping("/members/{id}/role")
+    public Map<String, Object> changeRole(@PathVariable UUID id, @RequestBody RoleRequest request) {
+        User me = currentUser.require();
+        if (me.getRole() != UserRole.OWNER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the tenant can change someone's role");
+        }
+        UserRole role = request == null ? null : request.role();
+        if (role != UserRole.ADMIN && role != UserRole.AGENT) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A member can be made staff or admin");
+        }
+        User member = userRepository.findWithOrganizationById(id)
+                .filter(u -> u.getOrganization().getId().equals(me.getOrganization().getId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member not found"));
+        if (member.getId().equals(me.getId()) || member.getRole() == UserRole.OWNER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The tenant's role cannot be changed here");
+        }
+        if (member.getStatus() == UserStatus.DISABLED || member.getStatus() == UserStatus.DELETED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "That person is no longer on the team");
+        }
+        member.setRole(role);
+        userRepository.save(member);
+        log.info("{} made {} {}", me.getEmail(), member.getEmail(), role);
+        return Map.of("id", member.getId().toString(), "role", role);
+    }
+
     @DeleteMapping("/members/{id}")
     public Map<String, Boolean> removeMember(@PathVariable UUID id) {
         User me = currentUser.requireTeamManager();
@@ -181,7 +215,7 @@ public class TeamController {
                 invitation.getId().toString(),
                 invitation.getEmail(),
                 invitation.getRole(),
-                frontendUrl + "/invite/" + invitation.getToken(),
+                publicUrl.get() + "/invite/" + invitation.getToken(),
                 invitation.getExpiresAt(),
                 false, null);
     }

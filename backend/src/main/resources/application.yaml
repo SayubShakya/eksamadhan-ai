@@ -201,6 +201,11 @@ app:
     max-depth: ${CRAWLER_MAX_DEPTH:2}
     delay-ms: ${CRAWLER_DELAY_MS:400}
   frontend-url: ${FRONTEND_URL:http://localhost:5174}
+  # Where a Cloudflare quick tunnel on this machine reports its current address. When one is
+  # running, links in emails and on the Team page follow it (see PublicUrl); otherwise they use
+  # frontend-url. cloudflared uses the first free port from 20241 to 20245, so all are asked.
+  # Set TUNNEL_STATUS_URL empty to turn the lookup off.
+  tunnel-status-url: ${TUNNEL_STATUS_URL:http://localhost:20241/quicktunnel,http://localhost:20242/quicktunnel,http://localhost:20243/quicktunnel,http://localhost:20244/quicktunnel,http://localhost:20245/quicktunnel}
   # Voice notes recorded in the dashboard are transcoded and kept here so agents can
   # replay what they sent. Meta's own copy is not fetchable after the fact.
   media-dir: ${MEDIA_DIR:media}

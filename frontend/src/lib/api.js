@@ -82,6 +82,7 @@ export const getTeam = () => axios.get('/api/team').then(r => r.data);
 export const createInvite = (payload) => axios.post('/api/team/invites', payload).then(r => r.data);
 export const revokeInvite = (id) => axios.delete(`/api/team/invites/${id}`);
 export const removeMember = (id) => axios.delete(`/api/team/members/${id}`);
+export const changeRole = (id, role) => axios.patch(`/api/team/members/${id}/role`, { role }).then(r => r.data);
 
 // ── Knowledge base ──────────────────────────────────────────────────────────
 export const getKnowledge = () => axios.get('/api/knowledge').then(r => r.data);

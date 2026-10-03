@@ -10,6 +10,9 @@ import { timeAgo, formatBackAt } from '../lib/format.js';
 import { ROLE_LABEL } from '../lib/format.js';
 import { toast } from '../lib/toast.js';
 import { t } from '../lib/i18n.js';
+import { IconCopy, IconTrash, IconSend } from '../components/icons.jsx';
+import { IconMail } from './AuthPage.jsx';
+import QrCode from '../components/QrCode.jsx';
 
 /** A translated sentence with {name} slots filled by elements, so word order stays the translator's. */
 function rich(text, parts) {
@@ -54,27 +57,90 @@ function Presence({ member }) {
  * manager without handing over what cannot be undone.
  */
 const ROLE_MEANING = {
+    OWNER: 'The tenant created the workspace. They do everything admins do, and alone can change roles, disconnect a channel or delete conversation history.',
     AGENT: 'Staff answer the conversations handed to them, and see only their own.',
     ADMIN: 'Admins do everything staff do, and can also see every conversation, invite and remove '
         + 'people, edit knowledge, connect channels and change settings. Only the tenant can '
         + 'disconnect a channel or delete conversation history.',
 };
 
-/** A member row with the same classes as the real one, so it is the same height. */
+/** A team row while the team loads, the same shape as a real one. */
 function MemberSkeleton({ name, email }) {
     return (
-        <div className="member">
-            <Skel circle w={32} h={32} />
-            <div style={{ flex: 1 }}>
-                <div className="member__name"><Skel line w={name} /></div>
-                <div className="member__email"><Skel line w={email} /></div>
-            </div>
-            <div className="member__actions">
-                <span className="tag"><Skel line w={36} /></span>
-            </div>
-        </div>
+        <li className="tm-row" aria-hidden="true">
+            <Skel circle w={40} h={40} />
+            <div className="tm-row__who"><Skel line w={name} /><Skel line w={email} /><Skel line w={110} /></div>
+            <Skel w={90} h={32} style={{ borderRadius: 8 }} />
+        </li>
     );
 }
+
+/** Whether a phone elsewhere could open this address: not this computer, not a home network. */
+export function isReachable(url) {
+    try {
+        const h = new URL(url).hostname.replace(/^\[|\]$/g, '');
+        if (h === 'localhost' || h === '::1' || h === '0.0.0.0' || h.endsWith('.local')) return false;
+        if (/^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h)) return false;
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * The dashboard's address to share with the team, and a QR to open it on a phone (where it can
+ * be installed as an app). The public address the server is configured with comes first; failing
+ * that, the address this page was opened on, if a phone could reach it (a tunnel, a deployment).
+ * When neither could be reached from outside, there is nothing worth scanning, so the card says
+ * what to change instead of showing a code that cannot open.
+ */
+function ShareCard({ appUrl, loading }) {
+    const base = [appUrl, window.location.origin].find(u => u && isReachable(u));
+    const url = base ? `${base.replace(/\/+$/, '')}/login` : null;
+    const shown = url ? url.replace(/^https?:\/\//, '') : '';
+    const copy = async () => {
+        try { await navigator.clipboard.writeText(url); toast.success(t('Link copied'), { body: t('Your team signs in there, with the account their invite created.') }); }
+        catch { toast.error(t('Could not copy'), { body: t('Your browser blocked it. Select the link and copy it.') }); }
+    };
+    return (
+        <section className="card tm-share" aria-labelledby="tm-share-h">
+            <h2 id="tm-share-h">{t('Open it on your phone')}</h2>
+            <p className="tm-share__sub">{t('The same dashboard, with alerts on the go. Install it from the browser menu once it opens.')}</p>
+            {loading ? (
+                <>
+                    <Skel line w={80} /><Skel h={42} style={{ borderRadius: 10 }} />
+                    <div className="tm-share__qr tm-share__qr--skel"><Skel w={150} h={150} /></div>
+                </>
+            ) : url ? (
+                <>
+                    <span className="tm-share__label">{t('Share link')}</span>
+                    <div className="tm-share__link">
+                        <input readOnly value={shown} aria-label={t('Share link')} onFocus={e => e.target.select()} />
+                        <button type="button" className="tm-icon tm-icon--plain" onClick={copy} aria-label={t('Copy link')} title={t('Copy link')}><IconCopy size={16} /></button>
+                    </div>
+                    <div className="tm-share__or"><span>{t('or scan to open')}</span></div>
+                    <div className="tm-share__qr"><QrCode value={url} size={150} label={t('QR code for the dashboard')} /></div>
+                </>
+            ) : (
+                <div className="tm-share__local" role="note">
+                    <strong>{t('Not shareable yet')}</strong>
+                    <p>{t('This dashboard runs at {address}, which only opens on this computer. Phones and colleagues cannot reach it.', { address: (appUrl || window.location.origin).replace(/^https?:\/\//, '') })}</p>
+                    <p>{t('Put it on a public address (a domain, or a tunnel such as Cloudflare) and set FRONTEND_URL to it. The link and QR code appear here, and invite emails use it too.')}</p>
+                </div>
+            )}
+        </section>
+    );
+}
+
+/** The word after a count: "tenant", "admins", "staff". */
+function roleNoun(role, n) {
+    if (role === 'OWNER') return n === 1 ? t('tenant') : t('tenants');
+    if (role === 'ADMIN') return n === 1 ? t('admin') : t('admins');
+    return t('staff');
+}
+
+/** Days until an invite link stops working. */
+const daysLeft = (iso) => Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000));
 
 /**
  * `canManage` comes from the signed-in role and only decides whether the invite form is drawn
@@ -108,6 +174,37 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
     // the link by hand.
     const [lastInvite, setLastInvite] = useState(null);
     const [removing, setRemoving] = useState(null);
+    const [changingRole, setChangingRole] = useState('');
+    const [qrFor, setQrFor] = useState('');      // the pending invite whose QR is showing
+
+    /** Staff or admin, tenant only; the list updates at once and puts it back if the server says no. */
+    const changeRole = async (member, next) => {
+        if (next === member.role) return;
+        setChangingRole(member.id);
+        mutate(prev => ({ ...prev, members: prev.members.map(m => (m.id === member.id ? { ...m, role: next } : m)) }));
+        try {
+            await api.changeRole(member.id, next);
+            toast.success(next === 'ADMIN' ? t('{name} is now an admin', { name: member.firstName }) : t('{name} is now staff', { name: member.firstName }),
+                { body: t(ROLE_MEANING[next]) });
+        } catch (err) {
+            mutate(prev => ({ ...prev, members: prev.members.map(m => (m.id === member.id ? { ...m, role: member.role } : m)) }));
+            toast.error(t('Role not changed'), { body: api.errorMessage(err, t('That could not be changed.')) });
+        } finally {
+            setChangingRole('');
+        }
+    };
+
+    /** A fresh link and email for someone who has not joined yet (the old link stops working). */
+    const resend = async (pending) => {
+        try {
+            const created = await api.createInvite({ email: pending.email, role: pending.role });
+            await load();
+            if (created?.emailed === false) toast.warning(t('New link made, email not sent'), { body: t('Copy the link and send it to them yourself.') });
+            else toast.success(t('Invitation sent again'), { body: t('A new link went to {email}. The old one no longer works.', { email: pending.email }) });
+        } catch (err) {
+            toast.error(t('Not sent'), { body: api.errorMessage(err, t('Could not create that invite.')) });
+        }
+    };
 
     const invite = async (e) => {
         e.preventDefault();
@@ -158,133 +255,184 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
     const canManage = team ? team.canManage : roleCanManage;
     const loading = firstLoad || !team;
 
+    const amTenant = team?.members?.some(m => m.isYou && m.role === 'OWNER');
+    const active = loading ? [] : team.members.filter(m => m.status === 'ACTIVE');
+    const here = active.filter(m => m.presence === 'AVAILABLE').length;
+    const invites = loading || !team.canManage ? [] : team.invites;
+    const name = (m) => [m.firstName, m.lastName].filter(Boolean).join(' ') || m.email;
+    const roleCount = (r) => active.filter(m => m.role === r).length;
+
     return (
-        <div className="page">
+        <div className="page tm">
             <div className="page__head">
                 <div>
                     <h1 className="page__title">{t('Team')}</h1>
-                    <p className="page__sub">
-                        {t('The tenant created this workspace. Admins help run it: they can invite people and change knowledge, channels and settings. Staff answer the conversations handed to them.')}
-                    </p>
+                    <p className="page__sub">{t('The people who answer your customers when the AI hands a conversation over.')}</p>
                 </div>
             </div>
 
+            <div className={`tm-top${canManage ? '' : ' tm-top--solo'}`}>
             {canManage && (
-                <form className="invite-form" onSubmit={invite}>
-                    <label className="field">
-                        <span>{t('Invite by email')}</span>
-                        <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                               placeholder="colleague@example.com" required />
-                    </label>
-                    <label className="field">
-                        <span>{t('Role')}</span>
-                        <select className="invite-form__role" value={role} onChange={e => setRole(e.target.value)}
-                                aria-describedby="role-meaning">
-                            <option value="AGENT">{t('Staff')}</option>
-                            <option value="ADMIN">{t('Admin')}</option>
-                        </select>
-                    </label>
-                    <button className={`btn btn--primary${busy ? ' btn--busy' : ''}`} type="submit"
-                            disabled={busy} aria-busy={busy}>
-                        {t('Create invite link')}
-                    </button>
-                    {/* What the chosen role can do, in the form itself: a bare "Admin" left the
-                        difference from the tenant and from staff to guesswork. */}
-                    <p id="role-meaning" className="invite-form__meaning">
-                        {t(ROLE_MEANING[role])}
-                    </p>
-                </form>
+                <section className="card tm-invite" aria-labelledby="tm-invite-h">
+                    {/* Who is already here, then room for more, as in the reference. */}
+                    <div className="tm-faces" aria-hidden="true">
+                        {loading && [0, 1, 2].map(i => <span key={i} className="tm-faces__one"><Skel circle w={36} h={36} /></span>)}
+                        {active.slice(0, 4).map(m => <span key={m.id} className="tm-faces__one"><Avatar user={m} size={36} /></span>)}
+                        {active.length > 4 && <span className="tm-faces__more">+{active.length - 4}</span>}
+                        <span className="tm-faces__plus">+</span>
+                        <span className="tm-faces__empty" /><span className="tm-faces__empty" />
+                    </div>
+                    <h2 id="tm-invite-h">{t('Invite your team')}</h2>
+                    <p className="tm-invite__sub">{t('They get an email with a link to join. Conversations the AI hands over go to whoever is available.')}</p>
+                    <form className="tm-invite__form" onSubmit={invite}>
+                        <label className="tm-field">
+                            <IconMail />
+                            <span className="sr-only">{t('Invite by email')}</span>
+                            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                                   placeholder="name@business.com" required />
+                            <select value={role} onChange={e => setRole(e.target.value)} aria-label={t('Role')} aria-describedby="role-meaning">
+                                <option value="AGENT">{t('Staff')}</option>
+                                <option value="ADMIN">{t('Admin')}</option>
+                            </select>
+                        </label>
+                        <button className={`btn btn--primary${busy ? ' btn--busy' : ''}`} type="submit" disabled={busy} aria-busy={busy}>
+                            <IconSend size={15} /> {t('Invite')}
+                        </button>
+                    </form>
+                    <p id="role-meaning" className="tm-invite__meaning">{t(ROLE_MEANING[role])}</p>
+                    {lastInvite && !lastInvite.emailed && (
+                        <p className="notice notice--warn">
+                            <strong>{t('The invitation was created, but the email could not be sent.')}</strong>
+                            {lastInvite.emailError ? ` ${lastInvite.emailError}` : ''}
+                            {' '}{t('Copy the link below and send it to them yourself.')}
+                        </p>
+                    )}
+                </section>
             )}
+
+            <ShareCard appUrl={team?.appUrl} loading={loading} />
+            </div>
 
             {error && <p className="auth__error" role="alert">{error}</p>}
 
-            {lastInvite && (lastInvite.emailed ? (
-                <p className="notice notice--ok">
-                    {rich(t('Invitation emailed to {email}.'), { email: <strong>{lastInvite.email}</strong> })}
-                </p>
-            ) : (
-                <p className="notice notice--warn">
-                    <strong>{t('The invitation was created, but the email could not be sent.')}</strong>
-                    {lastInvite.emailError ? ` ${lastInvite.emailError}` : ''}
-                    {' '}{t('Copy the link below and send it to them yourself.')}
-                </p>
-            ))}
-
-            <h2 className="section-title">
-                {t('Members')}
-                {!loading && (() => {
-                    const active = team.members.filter(m => m.status === 'ACTIVE');
-                    const here = active.filter(m => m.presence === 'AVAILABLE').length;
-                    return <span className="count"> · {t('{here} of {total} available now', { here, total: active.length })}</span>;
-                })()}
-            </h2>
-            {!loading && !team.members.some(m => m.status === 'ACTIVE' && m.presence === 'AVAILABLE') && (
-                <p className="notice notice--warn">
-                    {t('Nobody is available right now. Conversations the AI hands over will wait, and go to the first person who becomes available. The tenant and admins are alerted meanwhile.')}
-                </p>
-            )}
-            {loading && (loadError && !firstLoad ? (
-                <LoadError className="empty--panel"
-                           message={api.errorMessage(loadError, t('Could not load the team.'))}
-                           onRetry={load} />
-            ) : (
-                <LoadingRegion label={t('the team')}>
-                    <MemberSkeleton name={140} email={190} />
-                    <MemberSkeleton name={110} email={160} />
-                </LoadingRegion>
-            ))}
-            {!loading && team.members.map(member => (
-                <div className="member" key={member.id}>
-                    <Avatar user={member} />
+            <section className="card tm-list" aria-labelledby="tm-list-h">
+                <header className="tm-list__head">
                     <div>
-                        <div className="member__name">
-                            {[member.firstName, member.lastName].filter(Boolean).join(' ')}
-                            {member.isYou && <span className="tag tag--ai" style={{ marginLeft: 8 }}>{t('You')}</span>}
-                        </div>
-                        {/* A colleague's address opens a new email to them; your own is just shown. */}
-                        <div className="member__email">
-                            {member.isYou ? member.email : <a href={`mailto:${member.email}`}>{member.email}</a>}
-                        </div>
-                        {member.status === 'ACTIVE' && <Presence member={member} />}
-                    </div>
-                    <div className="member__actions">
-                        <span className={`tag role-tag role-tag--${member.role.toLowerCase()}`}>{t(ROLE_LABEL[member.role])}</span>
-                        {member.status === 'DISABLED' && <span className="muted">{t('Removed')}</span>}
-                        {member.status === 'DEACTIVATED' && <span className="muted">{t('Deactivated')}</span>}
-                        {team.canManage && !member.isYou && member.role !== 'OWNER' && member.status !== 'DISABLED' && (
-                            <button className="btn btn--danger btn--sm" onClick={() => setRemoving(member)}>
-                                {t('Remove')}
-                            </button>
+                        <h2 id="tm-list-h">{t('Your team')} {!loading && <span className="tm-count">{active.length}</span>}</h2>
+                        {/* How many of each role, overall; what a role may do is in the role menu's hint. */}
+                        {!loading && (
+<div className="tm-counts">
+                                {['OWNER', 'ADMIN', 'AGENT'].map(r => (
+                                    <span key={r} className={`tm-countchip${roleCount(r) ? '' : ' is-zero'}`} title={t(ROLE_MEANING[r])}>
+                                        <b>{roleCount(r)}</b>{roleNoun(r, roleCount(r))}
+                                    </span>
+                                ))}
+                                <span className={`tm-countchip${invites.length ? ' is-invited' : ' is-zero'}`}>
+                                    <b>{invites.length}</b>{t('invited')}
+                                </span>
+                            </div>
                         )}
                     </div>
-                </div>
-            ))}
-
-            {!loading && team.canManage && (
-                <>
-                    <h2 className="section-title">{t('Pending invites')}</h2>
-                    {team.invites.length === 0 && <p className="muted">{t('No invites waiting to be accepted.')}</p>}
-                    {team.invites.map(pending => (
-                        <div className="card" key={pending.id} style={{ marginBottom: 10 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <strong style={{ fontSize: 14 }}>{pending.email}</strong>
-                                <span className={`tag role-tag role-tag--${pending.role.toLowerCase()}`}>{t(ROLE_LABEL[pending.role])}</span>
-                                <button className="btn btn--secondary btn--sm" style={{ marginLeft: 'auto' }}
-                                        onClick={() => revoke(pending.id)}>
-                                    {t('Revoke')}
-                                </button>
-                            </div>
-                            <div className="invite-link">
-                                <input readOnly value={pending.inviteUrl} onFocus={e => e.target.select()} />
-                                <button className="btn btn--primary btn--sm" onClick={() => copy(pending.inviteUrl, pending.id)}>
-                                    {copied === pending.id ? t('Copied') : t('Copy link')}
-                                </button>
-                            </div>
-                            <small className="muted">{t('Send this link yourself. It works once and expires in seven days.')}</small>
-                        </div>
-                    ))}
-                </>
-            )}
+                    {!loading && (
+                        <span className={`tm-avail${here ? '' : ' is-none'}`}>
+                            <i aria-hidden="true" />{t('{here} of {total} available now', { here, total: active.length })}
+                        </span>
+                    )}
+                </header>
+                {!loading && !here && (
+                    <p className="notice notice--warn tm-list__warn">
+                        {t('Nobody is available right now. Conversations the AI hands over will wait, and go to the first person who becomes available. The tenant and admins are alerted meanwhile.')}
+                    </p>
+                )}
+                {loading && (loadError && !firstLoad ? (
+                    <LoadError className="empty--panel" message={api.errorMessage(loadError, t('Could not load the team.'))} onRetry={load} />
+                ) : (
+                    <LoadingRegion label={t('the team')}>
+                        <ul className="tm-rows"><MemberSkeleton name={140} email={190} /><MemberSkeleton name={110} email={160} /><MemberSkeleton name={150} email={170} /></ul>
+                    </LoadingRegion>
+                ))}
+                {!loading && (
+                    <ul className="tm-rows">
+                        {team.members.map(member => {
+                            const gone = member.status === 'DISABLED' || member.status === 'DEACTIVATED';
+                            const canSetRole = amTenant && !member.isYou && member.role !== 'OWNER' && member.status === 'ACTIVE';
+                            return (
+                                <li className={`tm-row${gone ? ' is-gone' : ''}`} key={member.id}>
+                                    <span className="tm-row__face">
+                                        <Avatar user={member} size={40} />
+                                        {member.status === 'ACTIVE' && <i className={`tm-row__dot ${(PRESENCE[member.presence] || PRESENCE.OFFLINE).dot}`} aria-hidden="true" />}
+                                    </span>
+                                    <div className="tm-row__who">
+                                        <span className="tm-row__name">
+                                            {name(member)}
+                                            {member.isYou && <span className="tm-you">{t('You')}</span>}
+                                            {member.status === 'DISABLED' && <span className="tm-tag">{t('Removed')}</span>}
+                                            {member.status === 'DEACTIVATED' && <span className="tm-tag">{t('Deactivated')}</span>}
+                                        </span>
+                                        <span className="tm-row__email">
+                                            {member.isYou ? member.email : <a href={`mailto:${member.email}`}>{member.email}</a>}
+                                        </span>
+                                        {member.status === 'ACTIVE' && <Presence member={member} />}
+                                    </div>
+                                    <div className="tm-row__end">
+                                        {canSetRole ? (
+                                            <select className="tm-role" value={member.role} disabled={changingRole === member.id}
+                                                    onChange={(e) => changeRole(member, e.target.value)}
+                                                    aria-label={t('Role for {name}', { name: name(member) })}>
+                                                <option value="AGENT">{t('Staff')}</option>
+                                                <option value="ADMIN">{t('Admin')}</option>
+                                            </select>
+                                        ) : (
+                                            <span className={`tm-role is-fixed role-tag--${member.role.toLowerCase()}`}>{t(ROLE_LABEL[member.role])}</span>
+                                        )}
+                                        {team.canManage && !member.isYou && member.role !== 'OWNER' && member.status !== 'DISABLED' && (
+                                            <button type="button" className="tm-icon" onClick={() => setRemoving(member)}
+                                                    aria-label={t('Remove {name}', { name: name(member) })} title={t('Remove from the team')}>
+                                                <IconTrash size={15} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </li>
+                            );
+                        })}
+                        {/* People invited but not joined yet, in the same list, marked Invited. */}
+                        {invites.map(pending => {
+                            const left = daysLeft(pending.expiresAt);
+                            return (
+                                <li className="tm-row tm-row--invite" key={pending.id}>
+                                    <span className="tm-row__face"><span className="tm-pending"><IconMail /></span></span>
+                                    <div className="tm-row__who">
+                                        <span className="tm-row__name">{pending.email}<span className="tm-tag tm-tag--invited">{t('Invited')}</span></span>
+                                        <span className="tm-row__email">
+                                            {t(ROLE_LABEL[pending.role])} · {left === 0 ? t('link expires today') : left === 1 ? t('link expires tomorrow') : t('link expires in {n} days', { n: left })}
+                                        </span>
+                                    </div>
+                                    <div className="tm-row__end">
+                                        <button type="button" className="btn btn--secondary btn--sm" onClick={() => copy(pending.inviteUrl, pending.id)}>
+                                            <IconCopy size={14} /> {copied === pending.id ? t('Copied') : t('Copy link')}
+                                        </button>
+                                        {isReachable(pending.inviteUrl) && (
+                                            <button type="button" className="btn btn--secondary btn--sm" onClick={() => setQrFor(q => (q === pending.id ? '' : pending.id))}
+                                                    aria-expanded={qrFor === pending.id}>{t('QR')}</button>
+                                        )}
+                                        <button type="button" className="btn btn--secondary btn--sm" onClick={() => resend(pending)}>{t('Resend')}</button>
+                                        <button type="button" className="tm-icon" onClick={() => revoke(pending.id)}
+                                                aria-label={t('Revoke the invite for {email}', { email: pending.email })} title={t('Revoke')}>
+                                            <IconTrash size={15} />
+                                        </button>
+                                    </div>
+                                    {qrFor === pending.id && (
+                                        <div className="tm-invqr">
+                                            <QrCode value={pending.inviteUrl} size={132} label={t('QR code for the invite to {email}', { email: pending.email })} />
+                                            <p>{t('{email} can scan this with a phone camera to open the invite.', { email: pending.email })}</p>
+                                        </div>
+                                    )}
+                                </li>
+                            );
+                        })}
+                    </ul>
+                )}
+            </section>
 
             <ConfirmDialog
                 open={Boolean(removing)}

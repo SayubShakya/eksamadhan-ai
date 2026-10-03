@@ -19,10 +19,10 @@ public class PrivacyController {
 
     private static final String CONTACT = "shakya.sayub123@gmail.com";
 
-    private final String frontendUrl;
+    private final io.eksamadhan.service.PublicUrl publicUrl;
 
-    public PrivacyController(@Value("${app.frontend-url}") String frontendUrl) {
-        this.frontendUrl = frontendUrl.replaceAll("/+$", "");
+    public PrivacyController(io.eksamadhan.service.PublicUrl publicUrl) {
+        this.publicUrl = publicUrl;
     }
 
     @GetMapping(value = "/api/auth/privacy", produces = "text/html")
@@ -38,7 +38,7 @@ public class PrivacyController {
                 <p>Read the <a href="%1$s/privacy">full Privacy Policy</a>, including who else handles
                    the data and your rights, or the <a href="/api/auth/data-deletion">data deletion
                    instructions</a>. Contact: <a href="mailto:%2$s">%2$s</a>.</p>
-                """.formatted(frontendUrl, CONTACT));
+                """.formatted(publicUrl.get(), CONTACT));
     }
 
     @GetMapping(value = "/api/auth/terms", produces = "text/html")
@@ -51,7 +51,7 @@ public class PrivacyController {
                    is a project under development, offered with no guarantee of availability.</p>
                 <p>Read the <a href="%1$s/terms">full Terms &amp; Conditions</a>. Contact:
                    <a href="mailto:%2$s">%2$s</a>.</p>
-                """.formatted(frontendUrl, CONTACT));
+                """.formatted(publicUrl.get(), CONTACT));
     }
 
     /**

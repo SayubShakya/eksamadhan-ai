@@ -42,6 +42,7 @@ public class AuthController {
     private final ConversationThreadRepository threadRepository;
     private final CurrentUser currentUser;
     private final JwtService jwtService;
+    private final io.eksamadhan.service.PublicUrl publicUrl;
 
     /**
      * The Meta consent URL for the caller's workspace.
@@ -104,7 +105,8 @@ public class AuthController {
     private RedirectView handleMetaCallback(String code, String state, String error, String error_description) {
         log.info("🔗 OAuth Callback received");
         
-        String frontendUrl = dotenv.get("FRONTEND_URL");
+        // Back to wherever the dashboard is open now (a tunnel's address changes; see PublicUrl).
+        String frontendUrl = publicUrl.get();
         
         // The state is a token we signed in /connect-url. Anything else is discarded.
         String tenantApiKey;
