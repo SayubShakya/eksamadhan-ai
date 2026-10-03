@@ -34,6 +34,17 @@ const DOCKED = '(min-width: 1024px)';
 export default function NavRail({ view, onNavigate, unread = 0, open, onClose, onToggle, onHome,
                                   items = ITEMS, showSettings = true, onSignOut, user, onProfile, action }) {
 
+    // Docked (desktop), the collapsed rail is still the menu: only off-screen on a phone is it
+    // hidden from clicks and screen readers.
+    const [docked, setDocked] = useState(() => window.matchMedia(DOCKED).matches);
+    useEffect(() => {
+        const mq = window.matchMedia(DOCKED);
+        const on = () => setDocked(mq.matches);
+        mq.addEventListener('change', on);
+        return () => mq.removeEventListener('change', on);
+    }, []);
+    const hidden = !open && !docked;
+
     useEffect(() => {
         if (!open) return;
         const onKey = (e) => {
@@ -99,8 +110,8 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                 style={drag ? { transform: `translateX(${drag}px)`, transition: 'none' } : undefined}
                 className={`rail ${open ? 'rail--open' : 'rail--closed'}`}
                 aria-label={t('Main')}
-                aria-hidden={!open}
-                inert={!open}
+                aria-hidden={hidden || undefined}
+                inert={hidden}
             >
                 <div className="rail__head">
                     <button

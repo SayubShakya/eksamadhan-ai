@@ -4142,3 +4142,27 @@ a.chn-act { color: var(--accent); }
 .knowledge__addbody { display: grid; }
 .kq-panel { grid-area: 1 / 1; min-width: 0; }
 .kq-panel[data-on="false"] { visibility: hidden; pointer-events: none; }
+/* Settings on a phone: one grouped picker instead of a row that runs off the screen. */
+.sp-mobile { display: none; }
+@media (max-width: 900px) {
+    .sp-nav__list { display: none !important; }
+    .sp-mobile { display: block; }
+    .sp-mobile select {
+        width: 100%; height: 46px; padding: 0 40px 0 14px; font: inherit; font-size: 15px; font-weight: 600; color: var(--text);
+        border: 1px solid var(--border-strong); border-radius: 10px; appearance: none; cursor: pointer;
+        background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;
+    }
+}
+
+/* Phone: chart card headers stack instead of squeezing the legend and total into word-wide
+   columns beside the title. */
+@media (max-width: 560px) {
+    .dash__chart .dash__cardhead { flex-direction: column; align-items: stretch; gap: 10px; }
+    .dash__legend { flex-wrap: wrap; gap: 6px 14px; }
+    .dash__chartside { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .dash__total { text-align: left; display: flex; align-items: baseline; gap: 6px; }
+    .dash__total small { display: inline; }
+    .an2-card__head > div:first-child { flex-basis: 100%; }
+    .an2-card__head .an2-switch { width: 100%; }
+    .wk__stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+}

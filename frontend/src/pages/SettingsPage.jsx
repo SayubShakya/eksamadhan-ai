@@ -417,6 +417,17 @@ export default function SettingsPage({ user, onDisconnect, onStartDeletion, onSi
             <div className="sp">
                 <nav className="sp-nav" aria-label={t('Settings sections')}>
                     <h1 className="sp__title">{t('Settings')}</h1>
+                    {/* Phones: every section in one grouped picker, so none is out of reach. */}
+                    <label className="sp-mobile">
+                        <span className="sr-only">{t('Settings sections')}</span>
+                        <select value={current} onChange={(e) => { jump(e.target.value); setOpen(new Set([groupOf(e.target.value)])); }}>
+                            {groups.map(g => (
+                                <optgroup key={g.id} label={t(g.label)}>
+                                    {g.items.map(item => <option key={item.id} value={item.id}>{t(item.label)}</option>)}
+                                </optgroup>
+                            ))}
+                        </select>
+                    </label>
                     <div className="sp-nav__list">
                     {groups.map(g => {
                         const isOpen = open.has(g.id);
