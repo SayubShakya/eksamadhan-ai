@@ -3,7 +3,7 @@ import * as api from '../lib/api.js';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { LoadingRegion, Skel } from '../components/Loading.jsx';
 import { useHeldLoading } from '../lib/loading.js';
-import { timeAgo } from '../lib/format.js';
+import { formatDate } from '../lib/format.js';
 import { IconFacebook, IconInstagram, IconPlus, IconWidget, IconTrash, IconCheck, IconRefresh, IconLink } from '../components/icons.jsx';
 import { toast } from '../lib/toast.js';
 import { t } from '../lib/i18n.js';
@@ -36,14 +36,8 @@ const PLATFORMS = [
 
 const btn = (base, busy) => `${base}${busy ? ' btn--busy' : ''}`;
 
-const connectedOn = (value) => {
-    if (!value) return null;
-    const date = new Date(value);
-    if (isNaN(date)) return null;
-    // "12 Sep 2026", spelled out rather than left to the locale ("12 Sept" in en-GB).
-    const month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()];
-    return `${date.getDate()} ${month} ${date.getFullYear()}`;
-};
+// The app's own date format, so it reads in Nepali too (English month names were written out here).
+const connectedOn = (value) => (value ? formatDate(value) || null : null);
 
 /** The Page's own profile photo (Facebook serves a Page's picture publicly by its id), or its
  *  initial when there is none or it will not load. */

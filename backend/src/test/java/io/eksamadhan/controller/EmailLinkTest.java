@@ -50,6 +50,8 @@ class EmailLinkTest {
     private void signUp(String address) throws Exception {
         when(email.button(anyString(), anyString())).thenReturn("<a>link</a>");
         when(email.layout(anyString(), anyString())).thenReturn("<p>mail</p>");
+        // A link whose email failed is withdrawn, so the provider has to accept this one.
+        when(email.send(anyString(), anyString(), anyString(), anyString())).thenReturn(EmailService.Result.ok());
         mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"organizationName\":\"Links Ltd\",\"firstName\":\"Lina\",\"email\":\"" + address + "\",\"password\":\"first-password\"}"))
                 .andExpect(status().isOk())

@@ -49,13 +49,13 @@ public class CurrentUser {
 
         // A token outlives a disabled account by up to its 24h lifetime, so check on every
         // request rather than trusting what the token said when it was issued.
-        // Deactivated or deleted: every session this person has ends here, on its next request,
-        // as a 401 so each browser signs itself out rather than showing errors.
-        if (user.getStatus() == UserStatus.DEACTIVATED || user.getStatus() == UserStatus.DELETED) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Signed out");
-        }
+        // Deactivated, deleted, or removed from the team (disabled): every session this person has
+        // ends here, on its next request, as a 401 so each browser signs itself out rather than
+        // polling into errors. Removed used to be a 403, which the dashboard does not treat as
+        // signed out, so a removed member's open tab kept running and failing. Signing in again
+        // is where a disabled account hears why (AccountService.signIn).
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account is not active");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Signed out");
         }
         return user;
     }
@@ -90,7 +90,7 @@ public class CurrentUser {
     public User requireTeamManager() {
         User user = require();
         if (!user.getRole().canManageTeam()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the tenant and admins can manage the team");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the tenant and admins can do this");
         }
         return user;
     }

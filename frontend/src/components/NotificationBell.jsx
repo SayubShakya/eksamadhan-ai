@@ -194,6 +194,9 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
         });
     };
 
+    // A kind tab whose last item was just opened is gone; fall back to all rather than leave an
+    // empty list under no selected tab.
+    const shownTab = tab === 'all' || items.some(n => kindOf(n.kind).label === tab) ? tab : 'all';
     const more = Math.max(0, unread - items.length);
     const badge = unread > 9 ? '9+' : String(unread);
 
@@ -233,8 +236,8 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
                                 {[['all', t('Unread ({n})', { n: unread })], ...Object.entries(
                                     items.reduce((acc, n) => { const l = kindOf(n.kind).label; acc[l] = (acc[l] || 0) + 1; return acc; }, {}),
                                 ).map(([l, c]) => [l, `${l} (${c})`])].map(([key, text]) => (
-                                    <button key={key} type="button" role="tab" aria-selected={tab === key}
-                                            className={`bell__tab${tab === key ? ' is-on' : ''}`} onClick={() => setTab(key)}>{text}</button>
+                                    <button key={key} type="button" role="tab" aria-selected={shownTab === key}
+                                            className={`bell__tab${shownTab === key ? ' is-on' : ''}`} onClick={() => setTab(key)}>{text}</button>
                                 ))}
                             </div>
                         )}
@@ -269,7 +272,7 @@ export default function NotificationBell({ onOpen, onSeeAll, color, onPage = fal
                                 </div>
                             ) : (
                                 <ul className="bell__list" role="none">
-                                    {items.filter(n => tab === 'all' || kindOf(n.kind).label === tab).map(item => (
+                                    {items.filter(n => shownTab === 'all' || kindOf(n.kind).label === shownTab).map(item => (
                                         <li
                                             key={item.id}
                                             role="none"

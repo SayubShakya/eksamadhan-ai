@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import * as push from './push.js';
 import * as api from './api.js';
+import { t } from './i18n.js';
 
 /**
  * Notifications on this device: whether they are on, turning them on or off, and a test.
@@ -39,13 +40,13 @@ export default function useDeviceAlerts() {
         try {
             if (wasOn) {
                 await push.disable();
-                setAlerts({ supported: true, on: false, busy: false, note: 'Notifications are off on this device.' });
+                setAlerts({ supported: true, on: false, busy: false, note: t('Notifications are off on this device.') });
             } else {
                 await push.enable();
-                setAlerts({ supported: true, on: true, busy: false, note: 'This device will be notified.' });
+                setAlerts({ supported: true, on: true, busy: false, note: t('This device will be notified.') });
             }
         } catch (err) {
-            setAlerts(a => ({ ...a, busy: false, note: err.message || 'Could not change notifications.' }));
+            setAlerts(a => ({ ...a, busy: false, note: err.message ? t(err.message) : t('Could not change notifications.') }));
         }
     }, [setAlerts]);
 
@@ -53,9 +54,9 @@ export default function useDeviceAlerts() {
         setAlerts(a => ({ ...a, busy: 'test', note: '' }));
         try {
             await api.sendTestPush();
-            setAlerts(a => ({ ...a, busy: false, note: 'Sent. It should appear in a moment.' }));
+            setAlerts(a => ({ ...a, busy: false, note: t('Sent. It should appear in a moment.') }));
         } catch (err) {
-            setAlerts(a => ({ ...a, busy: false, note: api.errorMessage(err, 'Could not send a test notification.') }));
+            setAlerts(a => ({ ...a, busy: false, note: api.errorMessage(err, t('Could not send a test notification.')) }));
         }
     }, [setAlerts]);
 

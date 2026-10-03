@@ -100,6 +100,9 @@ const aiTimingDetail = (m) =>
 /** Long threads render in pages so the DOM stays small and scrolling stays smooth. */
 const PAGE_SIZE = 30;
 
+/** Meta's limit on the text of one Messenger message (MessageController.MAX_REPLY_LENGTH). */
+const MAX_REPLY_LENGTH = 2000;
+
 /** A small set for the composer — a full picker is a dependency we do not need. */
 const QUICK_EMOJI = ['😊', '😂', '👍', '🙏', '❤️', '😅', '🎉', '😢', '😮', '🔥', '✅', '👋'];
 
@@ -293,6 +296,17 @@ export default function InboxPage({
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [lightbox]);
+    // The composer's emoji menu closes on a click elsewhere or Escape, as the message menus do;
+    // otherwise it stayed open over the conversation until the button was found again.
+    const emojiRef = useRef(null);
+    useEffect(() => {
+        if (!emojiOpen) return undefined;
+        const away = (e) => { if (!emojiRef.current?.contains(e.target)) setEmojiOpen(false); };
+        const esc = (e) => { if (e.key === 'Escape') setEmojiOpen(false); };
+        document.addEventListener('mousedown', away);
+        document.addEventListener('keydown', esc);
+        return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc); };
+    }, [emojiOpen]);
     const endRef = useRef(null);
     const imageRef = useRef(null);
     const fieldRef = useRef(null);
@@ -334,6 +348,12 @@ export default function InboxPage({
 
     // On new messages, only follow if the agent is already near the bottom —
     // otherwise reading older history would keep getting yanked away.
+    // A conversation opened while the inbox was still loading (from a notification link, say)
+    // starts at the newest message once the pane appears, not at the top of the history.
+    useEffect(() => {
+        if (!pending) endRef.current?.scrollIntoView();
+    }, [pending]);
+
     useEffect(() => {
         const box = bodyRef.current;
         if (!box) return;
@@ -420,9 +440,20 @@ export default function InboxPage({
         e.preventDefault();
         const text = draft.trim();
         if (!text || !activeThread) return;
+        // Meta refuses a longer message outright; say so before the draft is cleared.
+        if (text.length > MAX_REPLY_LENGTH) {
+            toast.error(t('Too long for one message'), { body: t('Messenger takes up to {n} characters in one message. Split it into two.', { n: MAX_REPLY_LENGTH }) });
+            return;
+        }
         setDraft('');
-        onSend(activeThread, text, replyTo?.metaMessageId || null);
+        const quoted = replyTo;
         setReplyTo(null);
+        // A failed send puts the words (and the quote) back, unless something new was typed.
+        Promise.resolve(onSend(activeThread, text, quoted?.metaMessageId || null)).then((ok) => {
+            if (ok !== false) return;
+            setDraft(d => d || text);
+            setReplyTo(r => r || quoted);
+        });
     };
 
     // Only take over the whole screen when there is genuinely nothing anywhere.
@@ -436,7 +467,7 @@ export default function InboxPage({
             <div className="convlist__head">
                 <div className="convlist__title">
                     <h2>{t('Conversations')}</h2>
-                    {!pending && <span className="count convlist__count">{countLabel(filter, platformFilter, threads.length)}</span>}
+                    {!pending && <span className="count convlist__count">{countLabel(filter, platformFilter, visible.length)}</span>}
                 </div>
                 {/* One segmented switch for the three lists, after the references: which list
                     you are in reads at a glance, and the spam count is never hidden. */}
@@ -645,33 +676,46 @@ export default function InboxPage({
                     {pinnedRows.map(renderRow)}
                     {pinnedRows.length > 0 && otherRows.length > 0 && <div className="convlist__group">{t('All conversations')}</div>}
                     {otherRows.map(renderRow)}
-                    {!visible.length && (
+                    {!visible.length && (() => {
+                        const narrowed = mineOnly || Boolean(search) || platformFilter !== 'all';
+                        const tab = FILTERS.find(f => f.id === filter);
+                        return (
                         <div className="empty" style={{ padding: '32px 20px' }}>
                             <p className="empty__title" style={{ fontSize: 14 }}>
-                                {mineOnly && !search ? t('Nothing assigned to you') : search ? t('No matches') : FILTERS.find(f => f.id === filter) ? t('Nothing on {tab}', { tab: t(FILTERS.find(f => f.id === filter).label) }) : t('Nothing on this channel')}
+                                {mineOnly && !search ? t('Nothing assigned to you') : search ? t('No matches') : platformFilter !== 'all' || !tab ? t('Nothing on this channel') : t('Nothing on {tab}', { tab: t(tab.label) })}
                             </p>
                             <p className="empty__text" style={{ fontSize: 13, marginBottom: 14 }}>
                                 {mineOnly && !search
                                     ? t('Conversations handed to you appear here.')
                                     : search
                                     ? t('Nothing matches “{query}”. Try a name, a reference like CONV-ae19042d, or something that was said.', { query: search })
-                                    : t('No conversations on this channel yet.')}
+                                    : platformFilter !== 'all'
+                                    ? t('No conversations on this channel yet.')
+                                    : filter === 'spam'
+                                    ? t('Nothing has been marked as spam.')
+                                    : filter === 'resolved'
+                                    ? t('Conversations move here when they are resolved.')
+                                    : t('No conversation is open right now.')}
                             </p>
-                            <button
-                                className="btn btn--secondary btn--sm"
-                                /* Clears every filter, not just the one the agent last touched
-                                   — the point is to get out of an empty list. */
-                                onClick={() => {
-                                    setMineOnly(false);
-                                    onSearchChange('');
-                                    onFilterChange('all');
-                                    onPlatformChange?.('all');
-                                }}
-                            >
-                                {t('Show all conversations')}
-                            </button>
+                            {/* Clears every filter, not just the one the agent last touched (the
+                                point is to get out of an empty list), and lands on a real tab:
+                                there is no "all" tab, so none would show as selected. */}
+                            {(narrowed || filter !== 'active') && (
+                                <button
+                                    className="btn btn--secondary btn--sm"
+                                    onClick={() => {
+                                        setMineOnly(false);
+                                        onSearchChange('');
+                                        onPlatformChange?.('all');
+                                        if (!narrowed) onFilterChange('active');
+                                    }}
+                                >
+                                    {narrowed ? t('Show all conversations') : t('Go to Active')}
+                                </button>
+                            )}
                         </div>
-                    )}
+                        );
+                    })()}
                 </div>
             </aside>
 
@@ -679,13 +723,20 @@ export default function InboxPage({
                 {!activeThread ? (
                     <div className="empty" style={{ height: '100%', alignContent: 'center' }}>
                         <div className="empty__icon"><IconInbox size={28} /></div>
+                        {/* Empty for the same reason the list is: the channel, or just this tab. */}
                         <p className="empty__title">
-                            {threads.length ? t('Select a conversation') : t('Nothing on this channel')}
+                            {threads.length ? t('Select a conversation')
+                                : platformFilter !== 'all' || !FILTERS.some(f => f.id === filter) ? t('Nothing on this channel')
+                                : t('Nothing on {tab}', { tab: t(FILTERS.find(f => f.id === filter).label) })}
                         </p>
                         <p className="empty__text">
                             {threads.length
                                 ? t('Choose a chat from the list to read it and reply.')
-                                : t('Switch to another channel, or choose “All” to see every conversation.')}
+                                : platformFilter !== 'all'
+                                ? t('Switch to another channel, or choose “All channels” to see every conversation.')
+                                : filter === 'spam' ? t('Nothing has been marked as spam.')
+                                : filter === 'resolved' ? t('Conversations move here when they are resolved.')
+                                : t('No conversation is open right now.')}
                         </p>
                     </div>
                 ) : (
@@ -1088,7 +1139,7 @@ export default function InboxPage({
                                                 aria-label={t('Send a photo')} title={t('Send a photo')}>
                                             <IconImage size={18} />
                                         </button>
-                                        <span className="composer__emojiWrap">
+                                        <span className="composer__emojiWrap" ref={emojiRef}>
                                             <button type="button" className="tool-btn" onClick={() => setEmojiOpen(o => !o)}
                                                     aria-label={t('Insert emoji')} aria-expanded={emojiOpen} title={t('Emoji')}>
                                                 <IconSmile size={18} />

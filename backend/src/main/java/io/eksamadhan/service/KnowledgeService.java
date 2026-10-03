@@ -162,7 +162,8 @@ public class KnowledgeService {
             index(sourceId, text);
         } catch (Exception e) {
             log.error("Indexing knowledge source {} failed", sourceId, e);
-            markFailed(sourceId, e.getMessage());
+            // The cause is in the log; the source row is read by the person who added it.
+            markFailed(sourceId, "This could not be indexed. Remove it and add it again.");
         }
         return CompletableFuture.completedFuture(null);
     }

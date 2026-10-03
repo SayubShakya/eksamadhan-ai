@@ -1,5 +1,6 @@
 import { createElement, lazy } from 'react';
 import StatusPage, { IconCloudOff } from '../components/StatusPage.jsx';
+import { t } from './i18n.js';
 
 /**
  * Every page as its own file, loaded the first time it is shown.
@@ -35,9 +36,9 @@ function PageUnavailable() {
     return createElement(StatusPage, {
         inShell: true,
         icon: createElement(IconCloudOff),
-        title: 'This page could not be loaded',
-        actions: createElement('button', { className: 'btn btn--primary', onClick: () => window.location.reload() }, 'Reload'),
-    }, createElement('p', null, 'Check your connection, then reload. Nothing you were doing is lost.'));
+        title: t('This page could not be loaded'),
+        actions: createElement('button', { className: 'btn btn--primary', onClick: () => window.location.reload() }, t('Reload')),
+    }, createElement('p', null, t('Check your connection, then reload. Nothing you were doing is lost.')));
 }
 
 export function lazyPage(name) {

@@ -89,7 +89,15 @@ public class AccountController {
     /** Signed in but not yet confirmed: send the link again. */
     @PostMapping("/me/email/resend")
     public java.util.Map<String, Object> resendVerification() {
-        emailLinks.sendVerification(currentUser.require());
+        // It always answered "sent", so the banner said an email was on its way when the
+        // provider had refused it, or when one had gone out seconds before and none was sent.
+        switch (emailLinks.sendVerification(currentUser.require())) {
+            case TOO_SOON -> throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "A link was sent less than a minute ago. Check your inbox, or try again in a minute.");
+            case FAILED -> throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "The email could not be sent just now. Please try again later.");
+            default -> { }
+        }
         return java.util.Map.of("sent", true);
     }
 
@@ -170,7 +178,8 @@ public class AccountController {
         String firstName = request.firstName() != null && !request.firstName().isBlank()
                 ? request.firstName().trim() : user.getFirstName();
         String lastName = request.lastName() == null || request.lastName().isBlank() ? null : request.lastName().trim();
-        userRepository.updateProfile(user.getId(), firstName, lastName, request.avatar());
+        AccountService.checkNames(firstName, lastName);
+        userRepository.updateProfile(user.getId(), firstName, lastName, AccountService.checkAvatar(request.avatar()));
         return session(userRepository.findWithOrganizationById(user.getId()).orElseThrow());
     }
 

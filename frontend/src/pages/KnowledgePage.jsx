@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { IconUpload, IconSearch, IconTrash, IconImage, IconClose, IconDoc, IconGlobe, IconKnowledge } from '../components/icons.jsx';
 import * as api from '../lib/api.js';
@@ -100,6 +100,18 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
     const [crawling, setCrawling] = useState(false);
     const [imageTitle, setImageTitle] = useState('');
     const [imageCaption, setImageCaption] = useState('');
+    // One preview address per chosen picture, released when it changes; made in render it was a
+    // new blob URL (and a leaked one) on every keystroke in the title.
+    const preview = useMemo(() => (pendingImage ? URL.createObjectURL(pendingImage) : null), [pendingImage]);
+    useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
+    // Escape closes the extracted-text view, as it does the confirm dialog.
+    useEffect(() => {
+        if (!viewing) return undefined;
+        const onKey = (e) => { if (e.key === 'Escape') setViewing(null); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [viewing]);
 
     // Indexing happens in the background, so poll only while something is still running.
     const indexing = library?.sources?.some(s => s.status === 'PENDING' || s.status === 'INDEXING');
@@ -171,6 +183,11 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
         const file = e.target.files?.[0];
         e.target.value = '';
         if (!file) return;
+        // The picker can be switched to "All files"; say so now, not after a title is typed.
+        if (!file.type.startsWith('image/')) {
+            setError(t('That is not a picture. Choose a photo or image file, such as a JPG or PNG.'));
+            return;
+        }
         setPendingImage(file);
         setImageTitle(file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '));
         setImageCaption('');
@@ -268,7 +285,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                             {ADD_TABS.map(tab => (
                                 <button key={tab.id} type="button" role="tab" className={`kq-tab tone-${tab.tone}`}
                                         aria-selected={addTab === tab.id}
-                                        onClick={() => setAddTab(tab.id)}>
+                                        onClick={() => { setAddTab(tab.id); setError(''); }}>
                                     <span className="kq-tab__icon"><tab.Icon size={15} /></span>
                                     {t(tab.label)}
                                 </button>
@@ -325,7 +342,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                                    with no words cannot be retrieved, so saving first would create
                                    something unreachable. */
                                 <form className="imgform" onSubmit={saveImage}>
-                                    <img className="imgform__preview" src={URL.createObjectURL(pendingImage)} alt="" />
+                                    <img className="imgform__preview" src={preview} alt="" />
                                     <div className="imgform__fields">
                                         <label className="field">
                                             <span>{t('What does this show?')}</span>
@@ -442,7 +459,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                                 : source.sourceType === 'IMAGE' ? t('Picture')
                                 : source.sourceType === 'URL' ? t('Web page') : t('Text')}
                             {source.sourceUrl && ` · ${source.sourceUrl.replace(/^https?:\/\//, '').slice(0, 44)}`}
-                            {source.status === 'READY' && ` · ${t('{n} passages', { n: source.chunkCount })}`}
+                            {source.status === 'READY' && ` · ${source.chunkCount === 1 ? t('1 passage') : t('{n} passages', { n: source.chunkCount })}`}
                             {source.status === 'FAILED' && source.error && ` · ${source.error}`}
                         </div>
                     </div>

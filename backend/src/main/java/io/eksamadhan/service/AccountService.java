@@ -23,6 +23,12 @@ import java.util.Locale;
 public class AccountService {
 
     private static final int MIN_PASSWORD_LENGTH = 8;
+    /** The columns' own limits (users.first_name / last_name are 60); the workspace name as in Settings. */
+    public static final int PERSON_NAME_MAX = 60;
+    public static final int WORKSPACE_NAME_MAX = 80;
+    /** A profile photo is a small data URL made by the browser (128px), or Google's photo URL. */
+    static final int AVATAR_DATA_MAX = 300_000;
+    static final int AVATAR_URL_MAX = 2048;
 
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
@@ -47,6 +53,11 @@ public class AccountService {
         String normalisedEmail = normaliseEmail(email);
         validatePassword(password);
         require(firstName, "First name is required");
+        checkNames(firstName, lastName);
+        if (organizationName != null && organizationName.trim().length() > WORKSPACE_NAME_MAX) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "A workspace name can be at most " + WORKSPACE_NAME_MAX + " characters");
+        }
         if (userRepository.existsByEmailIgnoreCase(normalisedEmail)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "That email already has an account");
         }
@@ -105,6 +116,7 @@ public class AccountService {
         }
         validatePassword(password);
         require(firstName, "First name is required");
+        checkNames(firstName, lastName);
 
         String email = normaliseEmail(invitation.getEmail());
         if (userRepository.existsByEmailIgnoreCase(email)) {
@@ -293,10 +305,35 @@ public class AccountService {
     private String normaliseEmail(String email) {
         require(email, "Email is required");
         String trimmed = email.trim().toLowerCase(Locale.ROOT);
-        if (!trimmed.matches("[^@\\s]+@[^@\\s]+\\.[^@\\s]+")) {
+        if (trimmed.length() > 254 || !trimmed.matches("[^@\\s]+@[^@\\s]+\\.[^@\\s]+")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That does not look like an email address");
         }
         return trimmed;
+    }
+
+    /** Longer than the column holds used to reach the database and come back as a 500. */
+    public static void checkNames(String firstName, String lastName) {
+        if ((firstName != null && firstName.trim().length() > PERSON_NAME_MAX)
+                || (lastName != null && lastName.trim().length() > PERSON_NAME_MAX)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "A name can be at most " + PERSON_NAME_MAX + " characters");
+        }
+    }
+
+    /**
+     * A photo is either the small image the browser made (a data URL) or a web address such as
+     * Google's. Anything else, or anything large, is refused: it is sent to every teammate's
+     * screen with the team list, so a multi-megabyte string would slow everyone down.
+     */
+    public static String checkAvatar(String avatar) {
+        if (avatar == null || avatar.isBlank()) return null;
+        String a = avatar.trim();
+        boolean image = a.startsWith("data:image/") && a.length() <= AVATAR_DATA_MAX;
+        boolean web = a.startsWith("https://") && a.length() <= AVATAR_URL_MAX;
+        if (!image && !web) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That photo could not be used. Choose a smaller image.");
+        }
+        return a;
     }
 
     private void validatePassword(String password) {

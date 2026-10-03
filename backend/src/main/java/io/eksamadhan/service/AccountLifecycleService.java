@@ -434,10 +434,15 @@ public class AccountLifecycleService {
                 <p style="font-size:13px;color:#667085;">It works for 10 minutes. If you did not ask for this, ignore
                 this email and your account stays as it is.</p>
                 """.formatted(code);
-        email.send(me.getEmail(), "Your code to delete your EkSamadhan AI account",
+        EmailService.Result sent = email.send(me.getEmail(), "Your code to delete your EkSamadhan AI account",
                 email.layout("Confirm deleting your account", html),
                 "Your code to delete your EkSamadhan AI account: " + code
                         + "\n\nIt works for 10 minutes. If you did not ask for this, ignore this email.");
+        // The page would otherwise move on to "We sent a code" with nothing sent. Thrown, so the
+        // step and the send count roll back and the person can simply try again.
+        if (sent != null && !sent.sent()) {
+            throw bad(HttpStatus.SERVICE_UNAVAILABLE, "The code could not be emailed just now. Please try again later");
+        }
     }
 
     private void sendReceipt(User me) {

@@ -30,7 +30,9 @@ export default function MessageActions({ message, onReact, onReply, onCopy, onHi
     const run = (fn) => { setOpen(null); fn(); };
 
     return (
-        <div className={`msgacts ${open ? 'msgacts--open' : ''}`} ref={wrapRef}>
+        // A tap here stays here: the row it sits in toggles these buttons on a phone, so a tap
+        // that bubbled up hid them, and the reaction picker with them, as it opened.
+        <div className={`msgacts ${open ? 'msgacts--open' : ''}`} ref={wrapRef} onClick={(e) => e.stopPropagation()}>
             <button
                 className="msgacts__btn"
                 onClick={() => setOpen(o => (o === 'emoji' ? null : 'emoji'))}

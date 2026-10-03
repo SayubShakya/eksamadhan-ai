@@ -70,7 +70,13 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
         setLoadingInvite(true);
         api.previewInvite(inviteToken)
             .then(data => { if (!cancelled) { setInvite(data); setError(''); } })
-            .catch(err => { if (!cancelled) setError(api.errorMessage(err, t('This invite link is not valid.'))); })
+                        // A dead link (404, 410) gets the page's own explanation below, in the reader's
+            // language; the server's sentence only repeated the title. Anything else, say what.
+            .catch(err => {
+                if (cancelled) return;
+                const status = err?.response?.status;
+                setError(status === 404 || status === 410 ? '' : api.errorMessage(err, t('This invite link is not valid.')));
+            })
             .finally(() => { if (!cancelled) setLoadingInvite(false); });
         return () => { cancelled = true; };
     }, [mode, inviteToken]);

@@ -72,6 +72,9 @@ public class PushController {
                 || request.p256dh() == null || request.auth() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Incomplete push subscription");
         }
+        if (!isPushServiceUrl(request.endpoint())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That is not a push service address");
+        }
 
         PushSubscription device = subscriptions.findByEndpoint(request.endpoint())
                 .orElseGet(() -> PushSubscription.builder().endpoint(request.endpoint()).build());
@@ -120,5 +123,30 @@ public class PushController {
         }
         agentNotifications.test(me);
         return Map.of("sent", true, "devices", devices);
+    }
+
+    /**
+     * The server later POSTs to this address on its own, so it must be a push service on the
+     * public internet: https, and not this machine or a private network (anyone signed in could
+     * otherwise point the server at an internal address).
+     */
+    static boolean isPushServiceUrl(String endpoint) {
+        if (endpoint.length() > 2048) return false;
+        try {
+            java.net.URI uri = new java.net.URI(endpoint.trim());
+            String host = uri.getHost();
+            if (!"https".equalsIgnoreCase(uri.getScheme()) || host == null) return false;
+            String h = host.toLowerCase(java.util.Locale.ROOT);
+            if (h.equals("localhost") || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal")) return false;
+            // Only an address written as numbers is checked here; names are not resolved.
+            if (h.matches("[0-9.]+") || h.startsWith("[")) {
+                java.net.InetAddress ip = java.net.InetAddress.getByName(h.replaceAll("^\\[|\\]$", ""));
+                return !(ip.isLoopbackAddress() || ip.isSiteLocalAddress() || ip.isLinkLocalAddress()
+                        || ip.isAnyLocalAddress() || ip.isMulticastAddress());
+            }
+            return true;
+        } catch (java.net.URISyntaxException | java.net.UnknownHostException e) {
+            return false;
+        }
     }
 }

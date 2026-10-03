@@ -42,7 +42,11 @@ public class DocumentTextExtractor {
             throw e;
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "That file could not be read: " + e.getMessage());
+                    // PDFBox's own wording ("End-of-File, expected line at offset 9") means nothing
+                    // to the person uploading, so say what they can do instead.
+                    typeOf(file) == KnowledgeSourceType.PDF
+                            ? "That PDF could not be read. It may be damaged, or not really a PDF."
+                            : "That file could not be read.");
         }
     }
 }

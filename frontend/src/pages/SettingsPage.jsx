@@ -130,7 +130,7 @@ function SaveBar({ busy, disabled, saved, error, label = t('Save changes'), save
 
 function SettingsSkeleton() {
     return (
-        <LoadingRegion label="settings" className="sp-body">
+        <LoadingRegion label={t('your settings')} className="sp-body">
             <div className="sp-section">
                 <header className="sp-section__head"><Skel line w={150} /><Skel line w={280} /></header>
                 {[0, 1, 2].map(r => (
@@ -317,7 +317,8 @@ function SecurityCard({ settings, email }) {
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
     const [saved, markSaved] = useSaved();
-    const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
+    // Editing a field clears the last error, so "do not match" never sits under fields that now do.
+    const set = (key) => (e) => { setForm(f => ({ ...f, [key]: e.target.value })); setError(''); };
     const filled = form.current && form.next && form.again;
 
     const change = async (e) => {

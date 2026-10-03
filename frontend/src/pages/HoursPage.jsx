@@ -21,10 +21,12 @@ import { t, lang, zoneName } from '../lib/i18n.js';
  */
 
 // Sunday first, as the working week runs in Nepal. dayOfWeek matches JavaScript's getDay().
+// `short` is its own word, not the name cut to three letters: cutting Nepali splits a letter
+// from its vowel sign ("बिहीबार" became "बिह").
 const DAYS = [
-    { day: 0, name: 'Sunday' }, { day: 1, name: 'Monday' }, { day: 2, name: 'Tuesday' },
-    { day: 3, name: 'Wednesday' }, { day: 4, name: 'Thursday' }, { day: 5, name: 'Friday' },
-    { day: 6, name: 'Saturday' },
+    { day: 0, name: 'Sunday', short: 'Sun' }, { day: 1, name: 'Monday', short: 'Mon' }, { day: 2, name: 'Tuesday', short: 'Tue' },
+    { day: 3, name: 'Wednesday', short: 'Wed' }, { day: 4, name: 'Thursday', short: 'Thu' }, { day: 5, name: 'Friday', short: 'Fri' },
+    { day: 6, name: 'Saturday', short: 'Sat' },
 ];
 const DEFAULT_START = '09:00';
 const DEFAULT_END = '18:00';
@@ -144,7 +146,7 @@ function WeekOverview({ days, today, status, presence }) {
                     <div><dt>{t('Working days')}</dt><dd>{working.length}</dd></div>
                     {sameEveryDay
                         ? <div><dt>{t('Each day')}</dt><dd>{dayMinutes(working[0]) === 1440 ? t('All day') : hoursText(dayMinutes(working[0]))}</dd></div>
-                        : longest && <div><dt>{t('Longest day')}</dt><dd>{t(DAYS.find(x => x.day === longest.day).name).slice(0, 3)} · {hoursText(dayMinutes(longest))}</dd></div>}
+                        : longest && <div><dt>{t('Longest day')}</dt><dd>{t(DAYS.find(x => x.day === longest.day).short)} · {hoursText(dayMinutes(longest))}</dd></div>}
                 </dl>
             </header>
             <div className="wk__cal" aria-hidden="true">
@@ -157,7 +159,7 @@ function WeekOverview({ days, today, status, presence }) {
                     const isToday = d.day === today;
                     return (
                         <div key={d.day} className={`wk__day${isToday ? ' is-today' : ''}${d.on ? '' : ' is-off'}`}>
-                            <span className="wk__name">{t(DAYS.find(x => x.day === d.day).name).slice(0, 3)}</span>
+                            <span className="wk__name">{t(DAYS.find(x => x.day === d.day).short)}</span>
                             <div className="wk__col">
                                 {ticks.map(m => <i key={m} className="wk__line" style={{ top: pos(m) }} />)}
                                 {d.on ? d.ranges.map((r, i) => {

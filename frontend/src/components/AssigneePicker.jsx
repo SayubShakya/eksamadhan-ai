@@ -59,7 +59,8 @@ export default function AssigneePicker({ thread, team = [], me, onAssign, onRetu
     const choose = (member) => {
         setOpen(false);
         setQuery('');
-        if (member === 'AI') onReturnToAi?.(thread);
+        // Choosing whoever already has it changes nothing, so nothing is sent or announced.
+        if (member === 'AI') { if (!aiHandling) onReturnToAi?.(thread); }
         else if (member.id !== thread.assignedAgentId) onAssign?.(thread, member.id);
     };
 

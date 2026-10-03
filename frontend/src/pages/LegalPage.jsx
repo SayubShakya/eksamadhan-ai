@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { LogoMark } from '../components/Logo.jsx';
 import { IconArrowLeft } from '../components/icons.jsx';
 
@@ -229,6 +230,13 @@ function goBack(e) {
 }
 
 export default function LegalPage({ page }) {
+    // The page is loaded on demand, so the browser looks for #rights before it exists and stays
+    // at the top: the product page's "Read your rights" link landed on "Who we are".
+    useEffect(() => {
+        const id = decodeURIComponent(window.location.hash.slice(1));
+        if (id) document.getElementById(id)?.scrollIntoView();
+    }, [page]);
+
     return (
         <div className="legal">
             <header className="legal__head">

@@ -2,10 +2,12 @@ package io.eksamadhan.controller;
 
 import io.eksamadhan.service.AnalyticsService;
 import io.eksamadhan.service.CurrentUser;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 /** The graded figures, scoped to the caller's workspace. */
 @RestController
@@ -21,10 +23,17 @@ public class AnalyticsController {
     }
 
     @GetMapping
-    public AnalyticsService.Overview overview(@RequestParam(defaultValue = "30") int days,
+    public AnalyticsService.Overview overview(@RequestParam(defaultValue = "30") String days,
                                               @RequestParam(required = false) String tz) {
+        // Read by hand: as an int parameter, ?days=abc failed type conversion and answered 500.
+        int asked;
+        try {
+            asked = Integer.parseInt(days.trim());
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "days must be a whole number");
+        }
         // Bounded: an unbounded window is a full table scan a client could ask for at will.
-        int window = Math.min(Math.max(days, 1), 365);
+        int window = Math.min(Math.max(asked, 1), 365);
         // The viewer's own time zone, so days and the busiest hour match their clock.
         return analytics.overview(currentUser.organization(), window, tz);
     }

@@ -4166,3 +4166,51 @@ a.chn-act { color: var(--accent); }
     .an2-card__head .an2-switch { width: 100%; }
     .wk__stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
 }
+
+/* QA inbox: on a phone the react buttons sit at the left of a customer's message, so their
+   menus open rightwards from there instead of off the left edge of the screen. */
+@media (max-width: 760px) {
+    .msg--in.msg--picked .popmenu { right: auto; left: 0; }
+}
+
+/* QA kct: the invite QR panel took 100% plus its 54px indent, so on a phone it pushed the
+   team card sideways and cut the email off. */
+.tm-invqr { flex-basis: calc(100% - 54px); min-width: 0; }
+.tm-invqr p { min-width: 0; overflow-wrap: anywhere; }
+.tm-invqr .qr { flex-shrink: 0; }
+@media (max-width: 560px) {
+    .tm-invqr { flex-basis: 100%; margin-left: 0; }
+}
+
+/* QA inbox: the status control is a button, so it takes the button radius, not a pill. */
+.availability__button { border-radius: var(--r-sm); }
+/* QA inbox: on a narrow phone "Outside hours" pushed the account button off the right edge;
+   the caret goes there (the whole control still opens the menu) to keep the bar on screen. */
+@media (max-width: 420px) {
+    .availability__button { padding: 0 10px; }
+    .availability__button .assignee__caret { display: none; }
+}
+
+/* QA shell: on a phone a longer status ("Outside hours", or the Nepali words) pushed the
+   avatar past the right edge. The status gives way first, its label ending in an ellipsis. */
+@media (max-width: 760px) {
+    .topbar__actions { flex-shrink: 1; min-width: 0; }
+    .topbar__actions > * { flex-shrink: 0; }
+    .topbar__actions > .availability { flex-shrink: 1; min-width: 0; }
+    .topbar__actions .availability__button { max-width: 100%; min-width: 0; }
+    .topbar__actions .availability__label { min-width: 0; }
+}
+
+/* QA auth: the profile panel's column scrolls, so its parts must keep their height: on a phone the
+   cover shrank to a strip and the photo hung over the top edge. The install row sits in a
+   .pd__section, whose padding: 16px 0 put its text against its own border. */
+.pd > * { flex-shrink: 0; }
+.pd .profile__install { padding: 12px; margin-top: 16px; }
+/* QA auth: the phone sheet's drag handle sat at the left edge (display: flex, nothing centring it). */
+.profile-drawer .popover__grab { justify-content: center; }
+
+/* Off-canvas menu (phones and tablets): it floats 8px in from the edge, so sliding it back by
+   only its own width left an 8px strip showing on every page. */
+@media (max-width: 1023px) {
+    .rail:not(.rail--open) { transform: translateX(calc(-100% - 24px)); }
+}

@@ -173,6 +173,7 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                     <button
                         className="rail__item"
                         aria-current={view === 'settings' ? 'page' : undefined}
+                        title={open ? undefined : t('Settings')}
                         onClick={() => go('settings')}
                     >
                         <IconSettings />
@@ -181,7 +182,8 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                 )}
                 {/* Last in the menu, under Settings, where people look for it. It asks first. */}
                 {onSignOut && (
-                    <button className="rail__item rail__item--signout" onClick={onSignOut}>
+                    <button className="rail__item rail__item--signout" onClick={onSignOut}
+                            title={open ? undefined : t('Sign out')}>
                         <IconSignOut />
                         <span>{t('Sign out')}</span>
                     </button>

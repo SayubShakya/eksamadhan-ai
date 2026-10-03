@@ -41,7 +41,11 @@ public class HoursController {
     @PutMapping
     @Transactional
     public Map<String, Object> save(@RequestBody HoursRequest request) {
-        if (request == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Send the week's hours");
+        // A missing list is not an empty week: without this, a request that only sends a time
+        // zone would quietly wipe every working hour. An empty week must be sent as [].
+        if (request == null || request.windows() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Send the week's hours");
+        }
         User me = currentUser.require();
         List<WorkingHours.Window> windows;
         String zone;

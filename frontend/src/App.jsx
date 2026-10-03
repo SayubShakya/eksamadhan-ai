@@ -48,6 +48,9 @@ const VIEWS = ['home', 'inbox', 'knowledge', 'channels', 'team', 'hours', 'analy
 const BASE = '/dashboard';
 
 const viewFromPath = () => {
+    // Signed in at a signed-out address (/login, /signup, an invite link: the Back button after
+    // signing in lands there): Home, not the 404 an unknown /dashboard screen gets.
+    if (!window.location.pathname.startsWith(BASE)) return 'home';
     const seg = window.location.pathname.replace(BASE, '').replace(/^\/+|\/+$/g, '');
     if (!seg) return 'home';
     // An address under /dashboard that is not a screen: say so, rather than quietly showing Home.
@@ -147,6 +150,9 @@ function friendlySendError(err) {
     if (!err?.response) {
         return t('Could not reach the server. Check that the backend is running.');
     }
+    // A refusal of ours (too long, not a photo, too large, not your conversation) already says
+    // why in words meant for the agent; only Meta's own failures need the generic line.
+    if (err.response.status >= 400 && err.response.status < 500 && raw) return raw;
     return t('The message could not be sent. See the server log for details.');
 }
 
@@ -369,7 +375,11 @@ export default function App() {
     // Any 401 anywhere clears the token and raises this, so the dashboard stops polling
     // into a wall of failures and shows the sign-in screen instead.
     useEffect(() => {
-        const onExpired = () => { forgetWorkspace(); setSession(null); setAuthRoute({ mode: 'login' }); };
+        // Say why the sign-in page appeared: otherwise it looks like the app lost its place.
+        const onExpired = () => {
+            forgetWorkspace(); setSession(null);
+            setAuthRoute({ mode: 'login', notice: t('You were signed out. Sign in again to carry on.') });
+        };
         window.addEventListener('auth:expired', onExpired);
         return () => window.removeEventListener('auth:expired', onExpired);
     }, []);
@@ -579,7 +589,7 @@ export default function App() {
         refreshMessages();
         refreshThreads();
         const m = setInterval(refreshMessages, MESSAGE_POLL_MS);
-        const t = setInterval(refreshThreads, MESSAGE_POLL_MS);
+        const th = setInterval(refreshThreads, MESSAGE_POLL_MS);   // not `t`: that is the translator
         const s = setInterval(refreshStatus, STATUS_POLL_MS);
 
         // After the OAuth callback the backend redirects with ?platform=…&status=…
@@ -592,7 +602,8 @@ export default function App() {
             refreshStatus();
         }
         if (params.get('status') === 'error') {
-            console.warn('OAuth callback reported an error:', params.get('message'));
+            // QA kct: a cancelled or failed connection used to land here with nothing on screen.
+            toast.error(t('The channel was not connected'), { body: params.get('message') || t('Please try again from Channels.') });
         }
         // Drop only what the callback added; ?section= (Settings) and ?thread= (Inbox) stay.
         if (['platform', 'status', 'message'].some(k => params.has(k))) {
@@ -601,7 +612,7 @@ export default function App() {
             window.history.replaceState({}, '', window.location.pathname + (rest ? `?${rest}` : ''));
         }
 
-        return () => { clearInterval(m); clearInterval(t); clearInterval(s); };
+        return () => { clearInterval(m); clearInterval(th); clearInterval(s); };
     }, [workspaceSession, refreshStatus, refreshMessages, refreshThreads]);
 
     // Meta only pushes webhooks for live events, so poll the Graph API as well to
@@ -643,20 +654,30 @@ export default function App() {
         () => new URLSearchParams(window.location.search).get('thread'));
 
     useEffect(() => {
-        if (!wanted || !threads.length) return;
+        // Every conversation, not the filtered list: the one wanted may be resolved or in Spam,
+        // and the filter is moved to show it, or the effect above would close it at once.
+        if (!wanted || !allThreads.length) return;
         const match = allThreads.find(t => t.id === wanted);
-        if (match) { setActive(match); setViewState('inbox'); }
+        if (match) {
+            setFilter(match.spam ? 'spam' : match.status === 'RESOLVED' ? 'resolved' : 'active');
+            setPlatform('all');
+            setQuery('');
+            setActive(match);
+            setViewState('inbox');
+        }
         setWanted(null);
         window.history.replaceState({}, '', pathForView('inbox'));
-    }, [wanted, threads, allThreads]);
+    }, [wanted, allThreads]);
 
     // Open the newest conversation automatically on a wide screen — an empty reading
     // pane beside a list of one is a pointless click. On narrow screens the list is
     // the whole screen, so opening one would hide it.
     useEffect(() => {
-        if (view !== 'inbox' || active || !threads.length) return;
+        // Not while a linked conversation is on its way: its effect above opens that one, and
+        // this one, running in the same pass, would otherwise open the newest over it.
+        if (view !== 'inbox' || active || wanted || !threads.length) return;
         if (window.matchMedia('(min-width: 760px)').matches) setActive(threads[0]);
-    }, [view, active, threads]);
+    }, [view, active, wanted, threads]);
 
     const todayCount = useMemo(() => {
         const today = new Date().toDateString();
@@ -728,12 +749,14 @@ export default function App() {
                 text,
                 replyToId,
             });
+            return true;
         } catch (err) {
             console.error('Send failed', err);
             setMessages(prev => prev.filter(m => m.id !== tempId));
             // Inline, not alert(): a modal browser dialog blocks the page and loses the
             // draft, and Meta's raw error text is meaningless to an agent.
             setSendError(friendlySendError(err));
+            return false;   // the composer puts the words back, so nothing typed is lost
         }
     };
 
@@ -788,7 +811,14 @@ export default function App() {
     /** Take over, hand back, or close a conversation. */
     const handleThreadAction = useCallback(async (thread, action) => {
         try {
-            await api.setThreadState(thread.id, action);
+            const { data: updated } = await api.setThreadState(thread.id, action);
+            // Reopening or rescuing from Spam moves the conversation to Active. Follow it there
+            // in the same render as its new state, or the filter hides it and the pane jumps
+            // to some other conversation.
+            if ((action === 'return-to-ai' || action === 'not-spam') && updated?.id) {
+                setServerThreads(list => list.map(x => (x.id === updated.id ? { ...x, ...updated } : x)));
+                setFilter('active');
+            }
             await refreshThreads();
             const done = { 'take-over': [t('You took over'), t('The AI stops replying in this conversation.')],
                 'return-to-ai': [t('Handed back to the AI'), t('It answers the customer again.')],
@@ -797,7 +827,8 @@ export default function App() {
             toast.success(done[0], { body: done[1] || undefined });
         } catch (err) {
             console.error(`Thread action ${action} failed`, err);
-            setSendError(t('Could not update the conversation state.'));
+            // The server's reason when it gives one ("already has a newer conversation open").
+            setSendError(api.errorMessage(err, t('Could not update the conversation state.')));
         }
     }, [refreshThreads]);
 
@@ -806,6 +837,16 @@ export default function App() {
             const next = new Set(prev).add(message.id);
             try { localStorage.setItem('hiddenMessages', JSON.stringify([...next])); } catch { /* private mode */ }
             return next;
+        });
+        // Nothing else in the app brings a hidden message back, so a mis-tap needs a way out.
+        toast.success(t('Message deleted for you'), {
+            body: t('The customer still has it.'),
+            actions: [{ label: t('Undo'), onClick: () => setHiddenIds(prev => {
+                const next = new Set(prev);
+                next.delete(message.id);
+                try { localStorage.setItem('hiddenMessages', JSON.stringify([...next])); } catch { /* private mode */ }
+                return next;
+            }) }],
         });
     }, []);
 
@@ -875,6 +916,13 @@ export default function App() {
         if (session.user?.systemAdmin) { setPageMeta({ title: 'System console' }); return; }
         setPageMeta({ title: VIEW_TITLES[view] || t('Dashboard') });
     }, [landing, legal, linkRoute, knownPath, session, unreachable, authRoute, view]);
+
+    // Signed in at /login or /signup: the address says Dashboard, as the screen does.
+    useEffect(() => {
+        if (session && ['/login', '/signup'].includes(window.location.pathname.replace(/\/+$/, ''))) {
+            window.history.replaceState({}, '', BASE);
+        }
+    }, [session, authRoute]);
 
     // Signed in: fetch the other pages' files while the browser is idle (lib/pages.js).
     useEffect(() => {

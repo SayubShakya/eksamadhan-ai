@@ -26,6 +26,10 @@ import java.util.UUID;
 public class KnowledgeController {
 
     private static final int MAX_TEXT_LENGTH = 500_000;
+    /** The title column's width; past it the insert failed as a 500. */
+    private static final int MAX_TITLE_LENGTH = 255;
+    /** What the upload button offers. Anything else used to be read as UTF-8 and indexed as junk. */
+    private static final java.util.Set<String> TEXT_EXTENSIONS = java.util.Set.of(".txt", ".md", ".markdown");
 
     private final KnowledgeService knowledgeService;
     private final RetrievalService retrievalService;
@@ -81,7 +85,7 @@ public class KnowledgeController {
     public SourceView addText(@RequestBody TextRequest request) {
         Organization organization = currentUser.requireTeamManager().getOrganization();
 
-        String text = request.text() == null ? "" : request.text().strip();
+        String text = request.text() == null ? "" : withoutNul(request.text()).strip();
         if (text.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "There is no text to add");
         }
@@ -90,7 +94,7 @@ public class KnowledgeController {
                     "That is too long to add at once. Please split it or upload it as a file.");
         }
 
-        String title = title(request.title(), text);
+        String title = title(checkTitle(request.title()), text);
         KnowledgeSource source = knowledgeService.create(
                 organization, title, KnowledgeSourceType.TEXT, null, text);
         knowledgeService.indexAsync(source.getId(), text);
@@ -105,21 +109,35 @@ public class KnowledgeController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That file is empty");
         }
 
+        String name = file.getOriginalFilename();
+        String lower = name == null ? "" : name.toLowerCase(java.util.Locale.ROOT);
+        boolean pdf = lower.endsWith(".pdf");
+        if (!pdf && TEXT_EXTENSIONS.stream().noneMatch(lower::endsWith)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Only a PDF, or a .txt or .md file, can be added. Save other documents as PDF first.");
+        }
+
         // Extraction is synchronous so a password-protected or unreadable file is reported
         // straight away, rather than as a FAILED source a minute later.
         String text = extractor.extract(file);
+        // A NUL byte means binary, not text, and PostgreSQL refuses it: the passages were
+        // embedded (and paid for) and then the insert failed with SQL shown as the error.
+        if (!pdf && text.indexOf('\0') >= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "That file is not plain text, so it cannot be read. Save it as PDF or .txt first.");
+        }
+        text = withoutNul(text);
         // The same limit as pasted text: without it one large file became thousands of passages,
         // each embedded (and paid for) and stored.
         if (text.length() > MAX_TEXT_LENGTH) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "This file has more text than one source can hold (500,000 characters). Split it into smaller files.");
         }
-        String name = file.getOriginalFilename();
-        String resolvedTitle = (title != null && !title.isBlank()) ? title.strip()
-                : (name != null && !name.isBlank()) ? name : title(null, text);
+        String resolvedTitle = (title != null && !title.isBlank()) ? checkTitle(title).strip()
+                : (name != null && !name.isBlank()) ? clip(name) : title(null, text);
 
         KnowledgeSource source = knowledgeService.create(
-                organization, resolvedTitle, extractor.typeOf(file), name, text);
+                organization, resolvedTitle, extractor.typeOf(file), name == null ? null : clip(name), text);
         knowledgeService.indexAsync(source.getId(), text);
         return SourceView.of(source);
     }
@@ -144,6 +162,7 @@ public class KnowledgeController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Give the image a title, so the AI knows what it shows");
         }
+        checkTitle(title);
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That is not an image");
@@ -166,7 +185,8 @@ public class KnowledgeController {
         }
 
         KnowledgeSource source = knowledgeService.createImage(
-                organization, title.strip(), caption, stored, file.getOriginalFilename(), described);
+                organization, title.strip(), caption, stored,
+                file.getOriginalFilename() == null ? null : clip(file.getOriginalFilename()), described);
 
         StringBuilder text = new StringBuilder(title.strip());
         if (caption != null && !caption.isBlank()) text.append("\n\n").append(caption.strip());
@@ -271,6 +291,23 @@ public class KnowledgeController {
 
     private boolean aiConfigured() {
         return retrievalService.isConfigured();
+    }
+
+    private static String checkTitle(String title) {
+        if (title != null && title.strip().length() > MAX_TITLE_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "That title is too long. Keep it under " + MAX_TITLE_LENGTH + " characters.");
+        }
+        return title;
+    }
+
+    /** A file name is not typed by the person adding it, so a long one is shortened, not refused. */
+    private static String clip(String value) {
+        return value.length() > MAX_TITLE_LENGTH ? value.substring(0, MAX_TITLE_LENGTH - 1).strip() + "…" : value;
+    }
+
+    private static String withoutNul(String text) {
+        return text.indexOf('\0') < 0 ? text : text.replace("\0", "");
     }
 
     /** Falls back to the opening words, so a pasted note is still recognisable in the list. */

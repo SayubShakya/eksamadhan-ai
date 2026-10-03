@@ -57,7 +57,7 @@ export default function NotificationPrompt({ open, onClose }) {
                         <li>{t('A customer replies in a conversation you are handling')}</li>
                     </ul>
                     <p className="field__note">
-                        {t('This device only, and you can turn it off any time from your profile.')}
+                        {t('This device only, and you can turn it off any time in Settings, under Notifications.')}
                     </p>
 
                     {error && <p className="panel__error" role="alert">{error}</p>}

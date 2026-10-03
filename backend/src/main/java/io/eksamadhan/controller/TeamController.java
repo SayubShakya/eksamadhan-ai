@@ -110,12 +110,24 @@ public class TeamController {
         User me = currentUser.requireTeamManager();
         Organization organization = me.getOrganization();
 
-        if (request.email() == null || !request.email().contains("@")) {
+        // The same rule signup uses: "@" alone, "a b@" or a 300-character address used to make
+        // an invite nobody could accept (or a 500 at the database's 255-character column).
+        String email = request.email() == null ? "" : request.email().trim().toLowerCase(Locale.ROOT);
+        if (email.length() > 254 || !email.matches("[^@\\s]+@[^@\\s]+\\.[^@\\s]+")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A valid email address is required");
         }
-        String email = request.email().trim().toLowerCase(Locale.ROOT);
 
         if (userRepository.existsByEmailIgnoreCase(email)) {
+            // Say which case it is, so the admin is not left guessing whether they are already here.
+            User existing = userRepository.findByOrganization(organization).stream()
+                    .filter(u -> email.equalsIgnoreCase(u.getEmail())).findFirst().orElse(null);
+            if (existing != null && existing.getStatus() == UserStatus.DISABLED) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "That person was removed from this team, and a removed account cannot be invited back");
+            }
+            if (existing != null) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "That person is already on your team");
+            }
             throw new ResponseStatusException(HttpStatus.CONFLICT, "That person already has an account");
         }
         // Only an owner can create another owner, so an admin cannot promote themselves.

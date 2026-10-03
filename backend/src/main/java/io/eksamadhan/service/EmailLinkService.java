@@ -59,10 +59,18 @@ public class EmailLinkService {
 
     // ── confirming an address ───────────────────────────────────────────────────
 
-    /** Emails a confirmation link, unless one went out a moment ago. */
+    /** What happened to a request for a confirmation link. */
+    public enum Sent { SENT, ALREADY_VERIFIED, TOO_SOON, FAILED }
+
+    /**
+     * Emails a confirmation link, unless one went out a moment ago. Says what happened, so
+     * "Send it again" no longer reports an email sent when the provider refused it. A link whose
+     * email failed is withdrawn, so it does not hold up the next try for a minute.
+     */
     @Transactional
-    public void sendVerification(User user) {
-        if (user.isEmailVerified() || recentlySent(user.getId(), VERIFY)) return;
+    public Sent sendVerification(User user) {
+        if (user.isEmailVerified()) return Sent.ALREADY_VERIFIED;
+        if (recentlySent(user.getId(), VERIFY)) return Sent.TOO_SOON;
         String token = issue(user.getId(), VERIFY, VERIFY_TTL);
         String link = publicUrl.get() + "/verify-email?token=" + token;
         String html = email.layout("Confirm your email address", """
@@ -71,8 +79,13 @@ public class EmailLinkService {
                 %s
                 <p style="font-size:13px;color:#667085;">If you did not create an account, you can ignore this email.</p>
                 """.formatted(html(user.getFirstName()), email.button(link, "Confirm my email")));
-        email.send(user.getEmail(), "Confirm your email for EkSamadhan AI", html,
+        EmailService.Result result = email.send(user.getEmail(), "Confirm your email for EkSamadhan AI", html,
                 "Confirm your email address for EkSamadhan AI: " + link + "\n\nThe link works once and for 24 hours.");
+        if (result == null || !result.sent()) {
+            jdbc.update("DELETE FROM email_links WHERE token_hash = ?", hash(token));
+            return Sent.FAILED;
+        }
+        return Sent.SENT;
     }
 
     /** The account the link belongs to, now verified. */

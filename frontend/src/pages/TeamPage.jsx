@@ -213,7 +213,7 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
         try {
             const created = await api.createInvite({ email, role });
             setLastInvite(created);
-            const copyLink = created?.inviteUrl ? [{ label: t('Copy link'), onClick: () => navigator.clipboard?.writeText(created.inviteUrl) }] : [];
+            const copyLink = created?.inviteUrl ? [{ label: t('Copy link'), onClick: () => copy(created.inviteUrl, created.id) }] : [];
             if (created?.emailed === false) {
                 toast.warning(t('Invite created, email not sent'), { body: t('Copy the link and send it to them yourself.'), actions: copyLink });
             } else {
@@ -241,7 +241,7 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
     };
 
     const revoke = async (id) => {
-        try { await api.revokeInvite(id); await load(); toast.success(t('Invite revoked'), { body: t('The link no longer works.') }); }
+        try { await api.revokeInvite(id); setLastInvite(li => (li?.id === id ? null : li)); await load(); toast.success(t('Invite revoked'), { body: t('The link no longer works.') }); }
         catch (err) { setError(api.errorMessage(err, t('Could not revoke that invite.'))); }
     };
 
@@ -303,7 +303,6 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                     {lastInvite && !lastInvite.emailed && (
                         <p className="notice notice--warn">
                             <strong>{t('The invitation was created, but the email could not be sent.')}</strong>
-                            {lastInvite.emailError ? ` ${lastInvite.emailError}` : ''}
                             {' '}{t('Copy the link below and send it to them yourself.')}
                         </p>
                     )}
@@ -327,9 +326,12 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                                         <b>{roleCount(r)}</b>{roleNoun(r, roleCount(r))}
                                     </span>
                                 ))}
-                                <span className={`tm-countchip${invites.length ? ' is-invited' : ' is-zero'}`}>
-                                    <b>{invites.length}</b>{t('invited')}
-                                </span>
+                                {/* Staff are not shown invites, so a count of them would always read 0. */}
+                                {canManage && (
+                                    <span className={`tm-countchip${invites.length ? ' is-invited' : ' is-zero'}`}>
+                                        <b>{invites.length}</b>{t('invited')}
+                                    </span>
+                                )}
                             </div>
                         )}
                     </div>

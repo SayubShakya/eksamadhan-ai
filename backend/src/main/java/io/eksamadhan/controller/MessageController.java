@@ -46,6 +46,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MessageController {
 
+    /** Meta's limit on the text of one Messenger message. */
+    private static final int MAX_REPLY_LENGTH = 2000;
+
     private final SocialMessageRepository messageRepository;
     private final SocialPageRepository socialPageRepository;
     private final MetaService metaService;
@@ -80,6 +83,18 @@ public class MessageController {
     @Transactional
     public ResponseEntity<?> reply(@RequestBody ReplyRequest request) {
         Organization organization = currentUser.organization();
+        // Checked here rather than left to Meta: its refusal comes back as a raw Graph error,
+        // which reaches the agent only as "could not be sent", with no hint of why.
+        if (request.getRecipientId() == null || request.getRecipientId().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a conversation to reply in");
+        }
+        if (request.getText() == null || request.getText().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Write a message first");
+        }
+        if (request.getText().length() > MAX_REPLY_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Messenger takes up to " + MAX_REPLY_LENGTH + " characters in one message. Split it into two.");
+        }
         SocialPage page = requirePage(organization, request.getPageId());
         requireMayAnswer(page, request.getRecipientId());
 

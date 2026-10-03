@@ -80,7 +80,8 @@ export default function ProfilePanel({ open, user, onSave, onClose, onOpenSettin
             setDraft(d => ({ ...d, avatar }));
             setError('');
         } catch (err) {
-            setError(err.message);
+            // avatar.js words its refusals in English; the translation is keyed on that text.
+            setError(t(err.message));
         }
     };
 

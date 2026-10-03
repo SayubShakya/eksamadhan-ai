@@ -10,9 +10,12 @@ import { LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
 import { toast } from '../lib/toast.js';
 import { usePrefs } from '../lib/prefs.js';
-import { t } from '../lib/i18n.js';
+import { t, lang, NE_MONTHS } from '../lib/i18n.js';
 
-/** Shown until the address is confirmed: a reset link or an alert can only reach a real inbox. */
+/**
+ * Shown until the address is confirmed. It used to say a password reset could not reach an
+ * unconfirmed address, which was untrue: a reset is sent either way, and confirms it.
+ */
 function VerifyEmailBanner({ email }) {
     const [busy, setBusy] = useState(false);
     const resend = async () => {
@@ -29,7 +32,7 @@ function VerifyEmailBanner({ email }) {
     return (
         <div className="verify-banner" role="status">
             <IconWarning size={18} />
-            <span><strong>{t('Confirm your email.')}</strong> {t('We sent a link to {email}. Until then, password reset cannot reach you.', { email })}</span>
+            <span><strong>{t('Confirm your email.')}</strong> {t('We sent a link to {email}, so we know the address is yours.', { email })}</span>
             <button type="button" className={`btn btn--secondary btn--sm${busy ? ' btn--busy' : ''}`} onClick={resend} disabled={busy}>{t('Send it again')}</button>
         </div>
     );
@@ -197,11 +200,16 @@ export default function HomePage({
                                     {step.done && (
                                         <span className="step__done"><IconCheck /> {t('Completed')}</span>
                                     )}
-                                    {i === nextStep && (
+                                    {/* Staff cannot connect, add knowledge or invite (the server refuses
+                                        them), so they are told who can rather than given a button
+                                        that does nothing. */}
+                                    {i === nextStep && (canManage ? (
                                         <button className="btn btn--primary btn--sm step__cta" onClick={step.action}>
                                             {step.cta} <IconArrowRight />
                                         </button>
-                                    )}
+                                    ) : (
+                                        <p className="step__desc">{t('Set by the tenant or an admin.')}</p>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -269,12 +277,12 @@ export default function HomePage({
                     <div className="empty__icon"><IconInbox size={28} /></div>
                     <p className="empty__title">{t('No conversations yet')}</p>
                     <p className="empty__text">{t('Messages from your connected channels will appear here.')}</p>
-                    <button
+                    {canManage && <button
                         className="btn btn--primary"
                         onClick={() => onNavigate('channels')}
                     >
                         <IconPlus /> {t('Connect a channel')}
-                    </button>
+                    </button>}
                 </div>
             )}
         </div>
@@ -354,7 +362,13 @@ function ActivityChart({ messages, pending, onMore }) {
     const draw = style === 'lines' || style === 'points' ? lines : style === 'steps' ? steps : path;
     const filled = style === 'smooth' || style === 'area';
     const [hover, setHover] = useState(null);
-    const fmt = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    // Day and month as Analytics writes them: "2 Oct", or "अक्टोबर 2" in Nepali (Chrome has no
+    // Nepali month names, hence NE_MONTHS).
+    const fmt = (d) => {
+        const at = new Date(d);
+        if (lang() === 'ne') return `${NE_MONTHS[at.getMonth()]} ${at.getDate()}`;
+        return at.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    };
     return (
         <section className="card dash__chart" aria-labelledby="activity-h">
             <div className="dash__cardhead">
