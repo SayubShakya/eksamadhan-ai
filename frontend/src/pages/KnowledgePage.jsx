@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
-import { IconUpload, IconSearch, IconTrash, IconImage, IconClose } from '../components/icons.jsx';
+import { IconUpload, IconSearch, IconTrash, IconImage, IconClose, IconDoc, IconGlobe, IconKnowledge } from '../components/icons.jsx';
 import * as api from '../lib/api.js';
 import { CenteredSpinner, LoadError, LoadingRegion, Skel, UploadProgress } from '../components/Loading.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
@@ -20,6 +20,14 @@ const STATUS_TONE = {
     INDEXING: 'tag--agent',
     PENDING: 'tag--agent',
     FAILED: 'tag--danger',
+};
+
+/** The colour and icon each kind of source is drawn with in the list. */
+const KIND_LOOK = {
+    TEXT: { Icon: IconDoc, tone: 'blue' },
+    PDF: { Icon: IconUpload, tone: 'red' },
+    IMAGE: { Icon: IconImage, tone: 'amber' },
+    URL: { Icon: IconGlobe, tone: 'teal' },
 };
 
 const STATUS_LABEL = {
@@ -58,10 +66,10 @@ function SourceSkeleton({ title, meta }) {
 const btn = (base, busy) => `${base}${busy ? ' btn--busy' : ''}`;
 
 const ADD_TABS = [
-    { id: 'text', label: 'Write text' },
-    { id: 'file', label: 'Upload a file' },
-    { id: 'picture', label: 'Add a picture' },
-    { id: 'website', label: 'Read a website' },
+    { id: 'text', label: 'Write text', Icon: IconDoc, tone: 'blue' },
+    { id: 'file', label: 'Upload a file', Icon: IconUpload, tone: 'red' },
+    { id: 'picture', label: 'Add a picture', Icon: IconImage, tone: 'amber' },
+    { id: 'website', label: 'Read a website', Icon: IconGlobe, tone: 'teal' },
 ];
 
 /**
@@ -252,12 +260,16 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
             {canManage && (
                 <section className="card settings__card knowledge__add" aria-labelledby="add-h">
                     <header className="settings__cardhead knowledge__addhead">
-                        <h2 id="add-h">{t('Add knowledge')}</h2>
-                        <div className="chips" role="tablist" aria-label={t('How to add')}>
+                        <span className="kq-title">
+                            <span className="kq-badge tone-blue"><IconKnowledge size={18} /></span>
+                            <h2 id="add-h">{t('Add knowledge')}</h2>
+                        </span>
+                        <div className="kq-tabs" role="tablist" aria-label={t('How to add')}>
                             {ADD_TABS.map(tab => (
-                                <button key={tab.id} type="button" role="tab" className="chip"
-                                        aria-selected={addTab === tab.id} aria-pressed={addTab === tab.id}
+                                <button key={tab.id} type="button" role="tab" className={`kq-tab tone-${tab.tone}`}
+                                        aria-selected={addTab === tab.id}
                                         onClick={() => setAddTab(tab.id)}>
+                                    <span className="kq-tab__icon"><tab.Icon size={15} /></span>
                                     {t(tab.label)}
                                 </button>
                             ))}
@@ -265,7 +277,9 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                     </header>
 
                     <div className="knowledge__addbody" role="tabpanel">
-                        {addTab === 'text' && (
+                        {/* All four forms share one spot; the hidden ones keep the card at the
+                            tallest form's height, so switching never moves the page. */}
+                        <div className="kq-panel" data-on={addTab === 'text'} inert={addTab !== 'text'} aria-hidden={addTab !== 'text'}>
                             <form onSubmit={addText}>
                                 <label className="field">
                                     <span>{t('Title')}</span>
@@ -288,9 +302,9 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                                     </button>
                                 </div>
                             </form>
-                        )}
+                        </div>
 
-                        {addTab === 'file' && (
+                        <div className="kq-panel" data-on={addTab === 'file'} inert={addTab !== 'file'} aria-hidden={addTab !== 'file'}>
                             <div>
                                 <p className="field__hint knowledge__lead">
                                     {t('A PDF, or a plain text or Markdown file. Its text is read, split into passages and indexed; scanned PDFs with no text layer cannot be read.')}
@@ -303,9 +317,9 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                                 </div>
                                 {sent && !pendingImage && <UploadProgress label={sent.label} fraction={sent.fraction} />}
                             </div>
-                        )}
+                        </div>
 
-                        {addTab === 'picture' && (
+                        <div className="kq-panel" data-on={addTab === 'picture'} inert={addTab !== 'picture'} aria-hidden={addTab !== 'picture'}>{
                             pendingImage ? (
                                 /* The title is asked for before the image is saved, not after: an image
                                    with no words cannot be retrieved, so saving first would create
@@ -349,10 +363,10 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                                         </button>
                                     </div>
                                 </div>
-                            )
-                        )}
+                            )}
+                        </div>
 
-                        {addTab === 'website' && (
+                        <div className="kq-panel" data-on={addTab === 'website'} inert={addTab !== 'website'} aria-hidden={addTab !== 'website'}>
                             <form onSubmit={crawl}>
                                 <label className="field">
                                     <span>{t('Website address')}</span>
@@ -375,7 +389,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                                     </p>
                                 )}
                             </form>
-                        )}
+                        </div>
 
                         <input ref={fileRef} type="file" accept=".pdf,.txt,.md,text/plain,application/pdf"
                                hidden onChange={upload} />
@@ -415,9 +429,12 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
 
             {!loading && library.sources.map(source => (
                 <div className="member" key={source.id}>
-                    {source.imageUrl && (
+                    {source.imageUrl ? (
                         <img className="source__thumb" src={source.imageUrl} alt="" />
-                    )}
+                    ) : (() => {
+                        const look = KIND_LOOK[source.sourceType] || KIND_LOOK.TEXT;
+                        return <span className={`kq-badge tone-${look.tone}`} aria-hidden="true"><look.Icon size={18} /></span>;
+                    })()}
                     <div style={{ minWidth: 0 }}>
                         <div className="member__name">{source.title}</div>
                         <div className="member__email">
@@ -448,16 +465,26 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                 </div>
             ))}
 
-            <h2 className="section-title">{t('Test what the AI would find')}</h2>
-            <p className="muted" style={{ marginTop: -4 }}>
-                {t('Ask something a customer might ask. These are the passages the AI would be given to answer from, closest first.')}
-            </p>
+            <section className="card kq-test" aria-labelledby="kq-test-h">
+            <header className="kq-test__head">
+                <span className="kq-badge tone-teal"><IconSearch size={18} /></span>
+                <div>
+                    <h2 id="kq-test-h">{t('Test what the AI would find')}</h2>
+                    <p>{t('Ask something a customer might ask. These are the passages the AI would be given to answer from, closest first.')}</p>
+                </div>
+            </header>
 
             <form className="knowledge__search" onSubmit={search}>
                 <IconSearch />
                 <input value={query} onChange={e => setQuery(e.target.value)}
                        placeholder={t('How long do I have to return something?')}
                        aria-label={t('Test the knowledge base')} />
+                {(query || results) && (
+                    <button type="button" className="kq-clear" onClick={() => { setQuery(''); setResults(null); }}
+                            aria-label={t('Clear the search')} title={t('Clear')}>
+                        <IconClose size={15} />
+                    </button>
+                )}
                 <button className={btn('btn btn--primary', searching)} type="submit"
                         disabled={searching || !query.trim()} aria-busy={searching}>
                     {t('Search')}
@@ -488,6 +515,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                 </p>
             )}
             </div>
+            </section>
 
             {viewing && (
                 <>

@@ -100,7 +100,7 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                 className={`rail ${open ? 'rail--open' : 'rail--closed'}`}
                 aria-label={t('Main')}
                 aria-hidden={!open}
-                inert={!open ? '' : undefined}
+                inert={!open}
             >
                 <div className="rail__head">
                     <button

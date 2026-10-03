@@ -85,4 +85,6 @@ export default {
     'Outside your hours.': 'तपाईंको समयबाहिर।',
     'Each day': 'हरेक दिन',
     '24 hours': '24 घण्टा',
+    'Clear the search': 'खोज हटाउनुहोस्',
+    'Clear': 'हटाउनुहोस्',
 };
