@@ -231,7 +231,7 @@ export default function HomePage({
             </div>
 
             <div className="dash__row">
-                <ActivityChart messages={messages} pending={recentPending} />
+                <ActivityChart messages={messages} pending={recentPending} onMore={() => onNavigate('analytics')} />
                 <ChannelSplit analytics={a} pending={figuresPending} pages={pages} canManage={canManage}
                               onManage={() => onNavigate('channels')} />
             </div>
@@ -319,7 +319,7 @@ const dayKey = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.
  * Messages per day over the last 14 days: what customers sent, and how many the AI answered.
  * Counted from the messages already loaded for the inbox, so the chart is the real traffic.
  */
-function ActivityChart({ messages, pending }) {
+function ActivityChart({ messages, pending, onMore }) {
     const today = dayKey(Date.now());
     const days = Array.from({ length: 14 }, (_, i) => today - (13 - i) * DAY);
     const index = new Map(days.map((d, i) => [d, i]));
@@ -339,8 +339,11 @@ function ActivityChart({ messages, pending }) {
     const path = (vals) => vals.map((v, i) => {
         if (i === 0) return `M${x(0)},${y(v)}`;
         const p0 = vals[Math.max(0, i - 2)], p1 = vals[i - 1], p2 = v, p3 = vals[Math.min(vals.length - 1, i + 1)];
-        const c1x = x(i - 1) + (x(i) - x(Math.max(0, i - 2))) / 6, c1y = y(p1) + (y(p2) - y(p0)) / 6;
-        const c2x = x(i) - (x(Math.min(13, i + 1)) - x(i - 1)) / 6, c2y = y(p2) - (y(p3) - y(p1)) / 6;
+        // Control points are kept between the top and the zero line: a smooth curve through two
+        // quiet days must not dip below zero, which would draw a negative count.
+        const keep = (v) => Math.min(H - B, Math.max(T, v));
+        const c1x = x(i - 1) + (x(i) - x(Math.max(0, i - 2))) / 6, c1y = keep(y(p1) + (y(p2) - y(p0)) / 6);
+        const c2x = x(i) - (x(Math.min(13, i + 1)) - x(i - 1)) / 6, c2y = keep(y(p2) - (y(p3) - y(p1)) / 6);
         return `C${c1x},${c1y} ${c2x},${c2y} ${x(i)},${y(p2)}`;
     }).join(' ');
     // Straight segments for the simple style (Settings > Appearance > Dashboard charts).
@@ -362,7 +365,14 @@ function ActivityChart({ messages, pending }) {
                         <span><i className="dash__key dash__key--ai" /> {t('Answered by AI')}</span>
                     </div>
                 </div>
-                <span className="dash__total">{pending ? <Skel line w={40} /> : total}<small>{t('messages from customers')}</small></span>
+                <div className="dash__chartside">
+                    <span className="dash__total">{pending ? <Skel line w={40} /> : total}<small>{t('messages from customers')}</small></span>
+                    {onMore && (
+                        <button type="button" className="dash__more" onClick={onMore}>
+                            {t('View more')} <IconArrowRight size={14} />
+                        </button>
+                    )}
+                </div>
             </div>
             {pending ? <Skel w="100%" h={200} /> : (
                 <div className="dash__plot" onMouseLeave={() => setHover(null)}>

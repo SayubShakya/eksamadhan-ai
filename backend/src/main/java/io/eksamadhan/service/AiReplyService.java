@@ -308,7 +308,7 @@ public class AiReplyService {
         }
         if (repeat.outcome() == RepeatDetector.Outcome.KEEPS_REPEATING) {
             escalate(thread, page, message.getSenderId(),
-                    "The customer has sent the same message " + repeat.copies()
+                    EscalationReasons.REPEATED_PREFIX + repeat.copies()
                             + " times, so the AI's answer did not help");
             return;
         }
@@ -329,7 +329,7 @@ public class AiReplyService {
         // AI replies switched off (by the workspace, or on the whole server), or no model to
         // answer with: the customer goes to a person. This used to return without a word, and
         // nobody was told a customer had written.
-        String offReason = !organization.isAiRepliesEnabled() ? "AI replies are switched off for this workspace"
+        String offReason = !organization.isAiRepliesEnabled() ? EscalationReasons.AI_OFF
                 : !enabled ? "AI replies are switched off on this server"
                 : !llmClient.isConfigured() ? "no AI model is configured" : null;
         trace.here(TraceRecorder.Kind.DECISION, "Are AI replies switched on?", offReason == null ? "yes" : "no",
@@ -413,7 +413,7 @@ public class AiReplyService {
             // placed to report it.
             log.warn("The model's answer was cut off: {}", e.getMessage());
             escalate(thread, page, message.getSenderId(),
-                    "the AI's answer was cut off before it finished");
+                    EscalationReasons.CUT_OFF);
             return;
         }
 
@@ -446,10 +446,10 @@ public class AiReplyService {
             // A real question the AI cannot answer: a person takes it.
             resetOffTopic(thread);
             escalate(thread, page, message.getSenderId(), verdict.answered()
-                    ? "the AI was not confident enough to answer"
+                    ? EscalationReasons.NOT_CONFIDENT
                     : passages.isEmpty()
-                        ? "there is nothing in the knowledge base yet"
-                        : "the question is not covered by the knowledge base");
+                        ? EscalationReasons.KNOWLEDGE_EMPTY
+                        : EscalationReasons.NOT_COVERED);
             return;
         }
 
@@ -990,9 +990,9 @@ public class AiReplyService {
         String customerId = message.getSenderId();
         switch (action) {
             case ESCALATE_INJECTION -> escalate(thread, page, customerId,
-                    "the message tried to change the AI's instructions");
+                    EscalationReasons.INJECTION);
             case ESCALATE_HUMAN -> escalate(thread, page, customerId,
-                    "the customer asked to speak to a person");
+                    EscalationReasons.ASKED_FOR_PERSON);
             case GREET -> {
                 sendNotice(page, customerId, greetingReply);
                 resetOffTopic(thread);
@@ -1045,7 +1045,7 @@ public class AiReplyService {
      * phrasing things oddly.
      */
     private void escalateQuietlyOrWait(ConversationThread thread, SocialPage page, String customerId) {
-        escalate(thread, page, customerId, "the question is not about this business");
+        escalate(thread, page, customerId, EscalationReasons.OFF_TOPIC);
     }
 
     private void resetOffTopic(ConversationThread thread) {

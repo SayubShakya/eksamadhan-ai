@@ -23,8 +23,13 @@ public class AnalyticsService {
 
     private final JdbcTemplate jdbc;
 
-    public AnalyticsService(JdbcTemplate jdbc) {
+    /** The deflection rate the project is measured against (report §1.4), app.analytics.deflection-target. */
+    private final double deflectionTarget;
+
+    public AnalyticsService(JdbcTemplate jdbc,
+                            @org.springframework.beans.factory.annotation.Value("${app.analytics.deflection-target:0.60}") double deflectionTarget) {
         this.jdbc = jdbc;
+        this.deflectionTarget = deflectionTarget;
     }
 
     public record Deflection(long total, long handledByAi, long escalated, long unrelated,
@@ -36,13 +41,154 @@ public class AnalyticsService {
     public record ChannelRow(String platform, long conversations, long escalated,
                              double escalationRate) {}
 
+    /** One day of the window, in Nepal time: conversations started, how many never reached a
+     *  person, the AI's median reply time that day (null when it sent none), messages customers
+ *  sent, and replies the AI sent. */
+    public record Day(String date, long conversations, long handledByAi, Double aiMedianSeconds,
+                      long messagesIn, long aiReplies) {}
+
+    /** A reason a conversation was handed to a person, how often, and what fixes it (null when
+     *  the reason is not one {@link EscalationReasons} knows). */
+    public record Reason(String reason, long count, EscalationReasons.Fix fix) {}
+
+    /** How customers felt, by the latest reading of each conversation. */
+    public record Moods(long positive, long neutral, long negative, long angry, long unread) {}
+
+    /** When customers write: the busiest weekday (1 Monday to 7 Sunday) and hour, Nepal time. */
+    public record Busiest(Integer weekday, Long weekdayCount, Integer hour, Long hourCount) {}
+
     public record Overview(Deflection deflection, ReplyTimes replyTimes,
-                           List<ChannelRow> channels, long spamClosed) {}
+                           List<ChannelRow> channels, long spamClosed,
+                           List<Day> daily, List<Reason> reasons, Moods moods, Busiest busiest,
+                           long urgent) {}
+
+    /** Used when the viewer's time zone is missing or not a real one. */
+    public static final String DEFAULT_ZONE = "Asia/Kathmandu";
+
+    /** The time zone to count days and hours in: the viewer's, if it is a real zone. */
+    public static String zoneOrDefault(String zone) {
+        if (zone == null || zone.isBlank()) return DEFAULT_ZONE;
+        try {
+            return java.time.ZoneId.of(zone.trim()).getId();
+        } catch (java.time.DateTimeException e) {
+            return DEFAULT_ZONE;
+        }
+    }
 
     public Overview overview(Organization organization, int days) {
+        return overview(organization, days, DEFAULT_ZONE);
+    }
+
+    /** {@code zone} decides where a day starts and what "4 PM" means; validate it first. */
+    public Overview overview(Organization organization, int days, String zone) {
         String tenant = organization.getApiKey();
+        String z = zoneOrDefault(zone);
         return new Overview(deflection(tenant, days), replyTimes(tenant, days),
-                channels(tenant, days), spamClosed(tenant, days));
+                channels(tenant, days), spamClosed(tenant, days),
+                daily(tenant, days, z), reasons(tenant, days), moods(tenant, days), busiest(tenant, days, z),
+                urgent(tenant, days));
+    }
+
+    /**
+     * Every day of the window, including days with nothing, so a chart's gaps are real quiet
+     * days rather than missing points. Unrelated conversations are left out, as in the rate.
+     */
+    private List<Day> daily(String tenant, int days, String zone) {
+        return jdbc.query("""
+                WITH d AS (
+                    SELECT generate_series((now() AT TIME ZONE ?)::date - (? - 1), (now() AT TIME ZONE ?)::date, interval '1 day')::date AS day
+                ), conv AS (
+                    SELECT (created_at AT TIME ZONE ?)::date AS day,
+                           count(*) AS total,
+                           count(*) FILTER (WHERE escalated_at IS NULL) AS ai
+                      FROM conversation_threads
+                     WHERE tenant_id = ? AND NOT unrelated
+                       AND created_at >= now() - make_interval(days => ?)
+                     GROUP BY 1
+                ), pairs AS (
+                    SELECT (m."timestamp" AT TIME ZONE ?)::date AS day,
+                           EXTRACT(EPOCH FROM (m."timestamp" - prev.asked)) AS seconds
+                      FROM social_messages m
+                      JOIN LATERAL (
+                           SELECT max(i."timestamp") AS asked FROM social_messages i
+                            WHERE i.thread_id = m.thread_id AND i.direction = 'inbound' AND i."timestamp" < m."timestamp"
+                      ) prev ON prev.asked IS NOT NULL
+                     WHERE m.tenant_id = ? AND m.direction = 'outbound' AND m.ai_generated
+                       AND m.thread_id IS NOT NULL AND m."timestamp" >= now() - make_interval(days => ?)
+                ), speed AS (
+                    SELECT day, percentile_cont(0.5) WITHIN GROUP (ORDER BY seconds) AS median FROM pairs GROUP BY day
+                ), msgs AS (
+                    SELECT ("timestamp" AT TIME ZONE ?)::date AS day,
+                           count(*) FILTER (WHERE direction = 'inbound') AS msg_in,
+                           count(*) FILTER (WHERE direction = 'outbound' AND ai_generated) AS msg_ai
+                      FROM social_messages
+                     WHERE tenant_id = ? AND "timestamp" >= now() - make_interval(days => ?)
+                     GROUP BY 1
+                )
+                SELECT d.day, coalesce(conv.total, 0) AS total, coalesce(conv.ai, 0) AS ai, speed.median,
+                       coalesce(msgs.msg_in, 0) AS msg_in, coalesce(msgs.msg_ai, 0) AS msg_ai
+                  FROM d LEFT JOIN conv ON conv.day = d.day LEFT JOIN speed ON speed.day = d.day
+                         LEFT JOIN msgs ON msgs.day = d.day
+                 ORDER BY d.day
+                """, (rs, i) -> new Day(rs.getString("day"), rs.getLong("total"), rs.getLong("ai"),
+                        dbl(rs.getObject("median")), rs.getLong("msg_in"), rs.getLong("msg_ai")),
+                zone, days, zone, zone, tenant, days, zone, tenant, days, zone, tenant, days);
+    }
+
+    /** The reasons recorded when conversations were handed to a person, most common first. */
+    private List<Reason> reasons(String tenant, int days) {
+        return jdbc.query("""
+                SELECT escalation_reason AS reason, count(*) AS n
+                  FROM conversation_threads
+                 WHERE tenant_id = ? AND escalated_at IS NOT NULL AND NOT unrelated
+                   AND escalation_reason IS NOT NULL AND escalation_reason <> ''
+                   AND created_at >= now() - make_interval(days => ?)
+                 GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 5
+                """, (rs, i) -> new Reason(rs.getString("reason"), rs.getLong("n"),
+                        EscalationReasons.fixFor(rs.getString("reason"))), tenant, days);
+    }
+
+    private Moods moods(String tenant, int days) {
+        Map<String, Object> row = jdbc.queryForMap("""
+                SELECT count(*) FILTER (WHERE sentiment = 'POSITIVE') AS positive,
+                       count(*) FILTER (WHERE sentiment = 'NEUTRAL')  AS neutral,
+                       count(*) FILTER (WHERE sentiment = 'NEGATIVE') AS negative,
+                       count(*) FILTER (WHERE sentiment = 'ANGRY')    AS angry,
+                       count(*) FILTER (WHERE sentiment IS NULL)      AS unread
+                  FROM conversation_threads
+                 WHERE tenant_id = ? AND NOT unrelated AND NOT spam
+                   AND created_at >= now() - make_interval(days => ?)
+                """, tenant, days);
+        return new Moods(num(row.get("positive")), num(row.get("neutral")), num(row.get("negative")),
+                num(row.get("angry")), num(row.get("unread")));
+    }
+
+    /** From customers' own messages, not ours: when they write is when someone should be free. */
+    private Busiest busiest(String tenant, int days, String zone) {
+        List<long[]> wd = jdbc.query("""
+                SELECT extract(isodow FROM "timestamp" AT TIME ZONE ?)::int AS k, count(*) AS n
+                  FROM social_messages WHERE tenant_id = ? AND direction = 'inbound'
+                   AND "timestamp" >= now() - make_interval(days => ?)
+                 GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 1
+                """, (rs, i) -> new long[] { rs.getLong("k"), rs.getLong("n") }, zone, tenant, days);
+        List<long[]> hr = jdbc.query("""
+                SELECT extract(hour FROM "timestamp" AT TIME ZONE ?)::int AS k, count(*) AS n
+                  FROM social_messages WHERE tenant_id = ? AND direction = 'inbound'
+                   AND "timestamp" >= now() - make_interval(days => ?)
+                 GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 1
+                """, (rs, i) -> new long[] { rs.getLong("k"), rs.getLong("n") }, zone, tenant, days);
+        return new Busiest(wd.isEmpty() ? null : (int) wd.get(0)[0], wd.isEmpty() ? null : wd.get(0)[1],
+                hr.isEmpty() ? null : (int) hr.get(0)[0], hr.isEmpty() ? null : hr.get(0)[1]);
+    }
+
+    /** Conversations Jev judged urgent (priority 1) in the window. */
+    private long urgent(String tenant, int days) {
+        Long n = jdbc.queryForObject("""
+                SELECT count(*) FROM conversation_threads
+                 WHERE tenant_id = ? AND priority = 1 AND NOT unrelated AND NOT spam
+                   AND created_at >= now() - make_interval(days => ?)
+                """, Long.class, tenant, days);
+        return n == null ? 0 : n;
     }
 
     /**
@@ -65,7 +211,7 @@ public class AnalyticsService {
         long total = num(row.get("total"));
         long ai = num(row.get("handled_by_ai"));
         return new Deflection(total, ai, num(row.get("escalated")), num(row.get("unrelated")),
-                total == 0 ? 0 : (double) ai / total, 0.60);
+                total == 0 ? 0 : (double) ai / total, deflectionTarget);
     }
 
     /**

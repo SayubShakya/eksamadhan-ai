@@ -72,7 +72,7 @@ public class MessageIngestedListener {
                 aiReplyService.reply(event.messageId(), event.pageId());
             } catch (Exception e) {
                 log.error("AI reply failed for message {}", event.messageId(), e);
-                aiReplyService.escalateAfterFailure(event.messageId(), "the AI could not produce a reply");
+                aiReplyService.escalateAfterFailure(event.messageId(), EscalationReasons.NO_REPLY);
             }
         }
 

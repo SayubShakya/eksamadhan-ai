@@ -81,16 +81,19 @@ function AccountRow({ page, isTenant, canManage, onReconnect, onDisconnect, reco
 function ChannelsSkeleton() {
     return (
         <LoadingRegion label={t('channels')}>
-            {[0, 1].map(i => (
+            {[1, 1, 0].map((rows, i) => (
                 <section className="sp-section ch-section" key={i}>
                     <header className="sp-section__head ch-head">
                         <Skel w={44} h={44} style={{ borderRadius: 12 }} />
-                        <div style={{ flex: 1 }}><Skel line w={160} /><Skel line w={260} /></div>
+                        <div className="ch-head__text"><Skel line w={160} /><Skel line w={260} /></div>
+                        <Skel w={96} h={28} style={{ borderRadius: 8 }} />
                     </header>
-                    <div className="sp-row">
-                        <div className="sp-row__text"><Skel line w="45%" /><Skel line w="75%" /></div>
-                        <div className="sp-row__control"><Skel w={180} h={40} style={{ borderRadius: 8 }} /></div>
-                    </div>
+                    {rows > 0 && (
+                        <div className="sp-row">
+                            <div className="sp-row__text"><Skel line w="45%" /><Skel line w="75%" /></div>
+                            <div className="sp-row__control"><Skel w={180} h={40} style={{ borderRadius: 8 }} /></div>
+                        </div>
+                    )}
                 </section>
             ))}
         </LoadingRegion>

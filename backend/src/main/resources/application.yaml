@@ -37,6 +37,10 @@ server:
     include-exception: false
 
 app:
+  analytics:
+    # The share of conversations the AI should resolve without a person, the graded target
+    # (report §1.4). Shown on the Analytics page against the measured rate.
+    deflection-target: ${DEFLECTION_TARGET:0.60}
   # HS256 signing key for session tokens. At least 32 characters. If unset, a random key is
   # generated at startup, which signs everyone out on every restart.
   jwt:

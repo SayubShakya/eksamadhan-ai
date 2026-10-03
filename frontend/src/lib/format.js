@@ -25,7 +25,9 @@ function translated(map, keys = null) {
     return out;
 }
 
-const TZ = 'Asia/Kathmandu';
+// Times are shown in the device's own time zone, so they match the clock beside them;
+// Kathmandu only if the browser cannot say.
+const TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kathmandu'; } catch { return 'Asia/Kathmandu'; } })();
 
 /** Times read on a 12-hour clock, "2:30 PM" (the 12/24-hour choice was dropped, 2026-10-02). */
 const hour12 = () => true;

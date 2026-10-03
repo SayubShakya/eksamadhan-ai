@@ -499,17 +499,21 @@ export default function InboxPage({
                 </section>
                 {!failed && (
                     <aside className="context" aria-hidden="true">
-                        <div className="context__label"><Skel line w={100} /></div>
-                        <div className="context__who">
-                            <Skel circle w={44} h={44} />
-                            <div style={{ flex: 1 }}><div><Skel line w={120} /></div><div><Skel line w={80} /></div></div>
+                        <div className="context__labelrow context__toprow"><Skel line w={110} /></div>
+                        <div className="profile-card">
+                            <Skel circle w={64} h={64} />
+                            <Skel line w={120} />
+                            <Skel w={90} h={22} style={{ borderRadius: 6 }} />
                         </div>
-                        {[90, 60, 110, 70].map((w, i) => (
+                        <div className="context__section"><Skel line w={80} /></div>
+                        {[90, 140, 60, 70, 80].map((w, i) => (
                             <div className="context__row" key={i}>
                                 <div className="context__key"><Skel line w={70} /></div>
                                 <div><Skel line w={w} /></div>
                             </div>
                         ))}
+                        <div className="context__section"><Skel line w={70} /></div>
+                        <div className="summary-card"><Skel line w="90%" /><Skel line w="70%" /><Skel w={100} h={30} style={{ borderRadius: 8 }} /></div>
                     </aside>
                 )}
             </div>

@@ -64,6 +64,7 @@ export default function NotificationsPage({ onOpen }) {
                     {[['40%', '70%'], ['55%', '60%'], ['35%', '75%']].map(([tw, bw], i) => (
                         <div className="notes__row" key={i}>
                             <div className="bell__item">
+                                <span className="note__avatar" aria-hidden="true"><Skel circle w={38} h={38} /></span>
                                 <span className="bell__text">
                                     <span className="bell__title"><Skel line w={tw} /></span>
                                     <span className="bell__body"><Skel line w={bw} /></span>

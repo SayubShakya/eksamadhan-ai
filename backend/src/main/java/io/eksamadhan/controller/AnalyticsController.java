@@ -21,9 +21,11 @@ public class AnalyticsController {
     }
 
     @GetMapping
-    public AnalyticsService.Overview overview(@RequestParam(defaultValue = "30") int days) {
+    public AnalyticsService.Overview overview(@RequestParam(defaultValue = "30") int days,
+                                              @RequestParam(required = false) String tz) {
         // Bounded: an unbounded window is a full table scan a client could ask for at will.
         int window = Math.min(Math.max(days, 1), 365);
-        return analytics.overview(currentUser.organization(), window);
+        // The viewer's own time zone, so days and the busiest hour match their clock.
+        return analytics.overview(currentUser.organization(), window, tz);
     }
 }

@@ -121,8 +121,10 @@ export function uploadKnowledge({ file, title, onProgress }) {
 }
 
 // ── Analytics ───────────────────────────────────────────────────────────────
+// The viewer's own time zone, so the daily figures and the busiest hour match their clock.
+const viewerZone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return undefined; } };
 export const getAnalytics = (days = 30) =>
-    axios.get('/api/analytics', { params: { days } }).then(r => r.data);
+    axios.get('/api/analytics', { params: { days, tz: viewerZone() } }).then(r => r.data);
 
 // ── Inbox ───────────────────────────────────────────────────────────────────
 export const getStatus = () => axios.get('/api/auth/status').then(r => r.data);

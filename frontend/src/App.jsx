@@ -1083,7 +1083,7 @@ export default function App() {
 
                 {view === 'knowledge' && <KnowledgePage canManage={canManage} />}
 
-                {view === 'analytics' && <AnalyticsPage />}
+                {view === 'analytics' && <AnalyticsPage onNavigate={setView} />}
 
                 {view === 'notifications' && <NotificationsPage onOpen={openNotification} />}
 
