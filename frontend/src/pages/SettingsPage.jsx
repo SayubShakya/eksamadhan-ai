@@ -156,7 +156,7 @@ const fromSettings = (s) => ({
  * only its own fields (the other card's are sent as last saved), so saving the name never
  * quietly saves a half-edited message too.
  */
-function WorkspaceCards({ settings, onSaved }) {
+function WorkspaceCards({ settings, onSaved, onRenamed }) {
     const saved = fromSettings(settings);
     const [draft, setDraft] = useState(saved);
     const [busy, setBusy] = useState('');
@@ -186,6 +186,7 @@ function WorkspaceCards({ settings, onSaved }) {
         try {
             const next = await api.saveWorkspaceSettings(payload);
             onSaved(next);
+            if (card === 'workspace') onRenamed?.(next.workspace.name);   // the top bar shows it
             // What the server kept (a trimmed name, a blank message back to the default), without
             // losing edits still open in the other card.
             const kept = fromSettings(next);
@@ -377,7 +378,7 @@ function SecurityCard({ settings, email }) {
     );
 }
 
-export default function SettingsPage({ user, onDisconnect, onStartDeletion, onSignedOut, onNavigate }) {
+export default function SettingsPage({ user, onDisconnect, onStartDeletion, onSignedOut, onNavigate, onWorkspaceRenamed }) {
     const { data, error, reload, mutate } = useResource('settings', api.getSettings);
     const loading = useHeldLoading(!data && !error);
     const [current, setCurrent] = useState(firstSection);
@@ -458,7 +459,7 @@ export default function SettingsPage({ user, onDisconnect, onStartDeletion, onSi
                         <AppearanceSection Card={Card} Row={Row} onOpenDashboard={() => onNavigate?.('home')} />
                         <LanguageSection Card={Card} Row={Row} onOpenHours={() => onNavigate?.('hours')} />
                         <ShortcutsSection Card={Card} Row={Row} />
-                        <WorkspaceCards settings={data} onSaved={(next) => mutate(() => next)} />
+                        <WorkspaceCards settings={data} onSaved={(next) => mutate(() => next)} onRenamed={onWorkspaceRenamed} />
                         <NotificationsCard settings={data} onSaved={(next) => mutate(() => next)} />
                         <SecurityCard settings={data} email={user?.email} />
                         <DataPrivacyCard user={user} settings={data} Card={Card} Row={Row}

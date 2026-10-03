@@ -1017,6 +1017,7 @@ export default function App() {
                     hours={myHours}
                     onSetHours={() => setView('hours')}
                     view={view}
+                    workspace={session?.organization?.name}
                 />
                 <span id="main-content" tabIndex={-1} className="skip-target" />
 
@@ -1088,6 +1089,7 @@ export default function App() {
 
                 {view === 'settings' && (
                     <SettingsPage user={user} onDisconnect={() => setConfirmDisconnect(true)} onNavigate={setView}
+                                  onWorkspaceRenamed={(name) => setSession(s => (s ? { ...s, organization: { ...s.organization, name } } : s))}
                                   onStartDeletion={() => setView('delete-account')}
                                   onSignedOut={() => signedOutWithNotice(
                                       t('Your account is deactivated. Sign in any time to turn it back on.'))} />

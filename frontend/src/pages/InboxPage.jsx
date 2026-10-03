@@ -3,7 +3,7 @@ import {
     IconInfo, IconPin, IconDots, IconUser, IconCheck, IconSparkle as IconAi,
     IconSend, IconInbox, IconPlus, IconBack, IconReply, IconClose, IconMic, IconStop, IconImage,
     IconSmile, IconThumb, IconSparkle,
-    IconFacebook, IconInstagram,
+    IconFacebook, IconInstagram, IconPanelRight,
 } from '../components/icons.jsx';
 import { isRecordingSupported, startRecording, formatDuration } from '../lib/recorder.js';
 import MessageActions from '../components/MessageActions.jsx';
@@ -246,6 +246,24 @@ export default function InboxPage({
     // Below 1100px there is no room for the details column beside the thread, so it opens as a
     // sheet from this button instead of disappearing.
     const [detailsOpen, setDetailsOpen] = useState(false);
+    // On a wide screen the details column can be closed for more room, and stays closed on this
+    // device until reopened from the (i) button in the conversation header.
+    const [panelHidden, setPanelHidden] = useState(() => {
+        try { return localStorage.getItem('inboxDetails') === 'hidden'; } catch { return false; }
+    });
+    const wide = () => window.matchMedia?.('(min-width: 1101px)').matches;
+    const showDetails = () => {
+        if (wide()) {
+            setPanelHidden(false);
+            try { localStorage.removeItem('inboxDetails'); } catch { /* private mode */ }
+        } else setDetailsOpen(true);
+    };
+    const hideDetails = () => {
+        if (wide()) {
+            setPanelHidden(true);
+            try { localStorage.setItem('inboxDetails', 'hidden'); } catch { /* private mode */ }
+        } else setDetailsOpen(false);
+    };
     // Phone only: the conversation's actions sit in a "More" menu, as in Messenger, so the name
     // gets the header; and a tapped message shows its react/reply buttons.
     const [moreOpen, setMoreOpen] = useState(false);
@@ -256,6 +274,8 @@ export default function InboxPage({
     const [sending, setSending] = useState(null);     // { label, fraction } | null
     // The conversation action in flight, so its button can show that it is working.
     const [acting, setActing] = useState(null);
+    // Everyone's conversations, or only the ones assigned to me: the agent's own queue.
+    const [mineOnly, setMineOnly] = useState(false);
     const act = async (thread, action) => {
         setActing(action);
         try { await onThreadAction(thread, action); } finally { setActing(null); }
@@ -275,6 +295,7 @@ export default function InboxPage({
     }, [lightbox]);
     const endRef = useRef(null);
     const imageRef = useRef(null);
+    const fieldRef = useRef(null);
     const bodyRef = useRef(null);
 
     const activeThread = threads.find(t => t.id === active?.id) || null;
@@ -328,15 +349,25 @@ export default function InboxPage({
      */
     const visible = useMemo(() => {
         const q = search.trim().toLowerCase();
-        if (!q) return threads;
+        const pool = mineOnly ? threads.filter(th => th.assignedAgentId && th.assignedAgentId === me?.id) : threads;
+        if (!q) return pool;
         // CONV-ae19042d, conv-ae19042d, #ae19042d and ae19042d all mean the same thing.
         const ref = q.replace(/^#/, '').replace(/^conv-/, '');
-        return threads.filter(t =>
-            (t.name || '').toLowerCase().includes(q)
-            || (ref.length >= 4 && (t.id || '').toLowerCase().startsWith(ref))
-            || (t.last?.text || t.last?.content || '').toLowerCase().includes(q)
-            || t.messages.some(m => (m.text || m.content || '').toLowerCase().includes(q)));
-    }, [threads, search]);
+        return pool.filter(th =>
+            (th.name || '').toLowerCase().includes(q)
+            || (ref.length >= 4 && (th.id || '').toLowerCase().startsWith(ref))
+            || (th.last?.text || th.last?.content || '').toLowerCase().includes(q)
+            || th.messages.some(m => (m.text || m.content || '').toLowerCase().includes(q)));
+    }, [threads, search, mineOnly, me?.id]);
+    const mineCount = useMemo(() => threads.filter(th => th.assignedAgentId && th.assignedAgentId === me?.id).length, [threads, me?.id]);
+    // Pinned ones under their own label, as mail apps do, then the rest by time.
+    const perCustomer = useMemo(() => {
+        const n = new Map();
+        threads.forEach(th => n.set(th.customerId, (n.get(th.customerId) || 0) + 1));
+        return n;
+    }, [threads]);
+    const pinnedRows = visible.filter(th => th.pinned);
+    const otherRows = visible.filter(th => !th.pinned);
 
     const platformOf = (pageId) => pages.find(p => p.pageId === pageId)?.platform || 'facebook';
 
@@ -378,6 +409,13 @@ export default function InboxPage({
         setRecorder(null);
     };
 
+    useEffect(() => {
+        const el = fieldRef.current;
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+    }, [draft]);
+
     const submit = (e) => {
         e.preventDefault();
         const text = draft.trim();
@@ -398,38 +436,47 @@ export default function InboxPage({
             <div className="convlist__head">
                 <div className="convlist__title">
                     <h2>{t('Conversations')}</h2>
-                    {!pending && <span className="count">{countLabel(filter, platformFilter, threads.length)}</span>}
+                    {!pending && <span className="count convlist__count">{countLabel(filter, platformFilter, threads.length)}</span>}
                 </div>
-                <div className="chips">
+                {/* One segmented switch for the three lists, after the references: which list
+                    you are in reads at a glance, and the spam count is never hidden. */}
+                <div className="segtabs" role="tablist" aria-label={t('Conversations')}
+                     style={{ '--n': FILTERS.length, '--i': Math.max(0, FILTERS.findIndex(f => f.id === filter)) }}>
                     {FILTERS.map(f => (
                         <button
-                            key={f.id} className="chip"
-                            aria-pressed={filter === f.id}
+                            key={f.id} type="button" role="tab" className="segtabs__tab"
+                            aria-selected={filter === f.id}
                             onClick={() => onFilterChange(f.id)}
                         >
                             {t(f.label)}
                             {/* Never a silent bin: a real customer Jev misjudged must be
                                 noticed, so the tab says how much is waiting in it. */}
                             {f.id === 'spam' && spamCount > 0 && (
-                                <span className="chip__count" aria-label={t('{n} in spam', { n: spamCount })}>{spamCount}</span>
+                                <span className="segtabs__count" aria-label={t('{n} in spam', { n: spamCount })}>{spamCount}</span>
                             )}
                         </button>
                     ))}
-                
+                </div>
+                <div className="convlist__filters">
+                    {/* Everyone's conversations, or only those assigned to you. */}
+                    <div className="mini-toggle" role="group" aria-label={t('Whose conversations')} style={{ '--i': mineOnly ? 1 : 0 }}>
+                        <button type="button" aria-pressed={!mineOnly} onClick={() => setMineOnly(false)}>{t('Everyone')}</button>
+                        <button type="button" aria-pressed={mineOnly} onClick={() => setMineOnly(true)}>
+                            {t('Mine')}
+                            {mineCount > 0 && <span className="mini-toggle__count">{mineCount}</span>}
+                        </button>
+                    </div>
                     {/* A separate control, because a channel is not a state: this way you
-                        can ask for active Facebook conversations, which one row of
-                        mutually exclusive chips could never express. */}
-                    <select
-                        className="chips__select"
-                        value={platformFilter}
-                        onChange={(e) => onPlatformChange?.(e.target.value)}
-                        aria-label={t('Filter by channel')}
-                    >
-                        {PLATFORMS.map(pf => (
-                            <option key={pf.id} value={pf.id}>{t(pf.label)}</option>
-                        ))}
-                    </select>
-</div>
+                        can ask for active Facebook conversations. */}
+                    <label className="channel-filter">
+                        <span className="sr-only">{t('Filter by channel')}</span>
+                        <select value={platformFilter} onChange={(e) => onPlatformChange?.(e.target.value)}>
+                            {PLATFORMS.map(pf => (
+                                <option key={pf.id} value={pf.id}>{t(pf.label)}</option>
+                            ))}
+                        </select>
+                    </label>
+                </div>
             </div>
     );
 
@@ -500,102 +547,109 @@ export default function InboxPage({
         );
     }
 
+    /** One row of the list: face with its channel, name and time, the last message, then only
+     *  what needs noticing (who has it, an urgent priority, an upset customer). */
+    const renderRow = (th) => {
+        const platform = platformOf(th.pageId);
+        const awaitingReply = th.status === 'OPEN_FOR_AGENT' || th.unanswered > 0;
+        const unread = th.unanswered > 0 && th.status !== 'RESOLVED' && !th.spam;
+        const urgent = th.priority === 1 && !th.spam && PRIORITY[1];
+        const mood = SENTIMENT[th.sentiment] && (th.sentiment === 'NEGATIVE' || th.sentiment === 'ANGRY' || th.sentiment === 'FRUSTRATED');
+        return (
+            <div key={th.id || th.customerId} className={`conv-row${th.pinned ? ' is-pinned' : ''}`}>
+                <button
+                    className={`conv ${awaitingReply ? 'conv--attention' : ''}${unread ? ' conv--unread' : ''}`}
+                    aria-current={active?.id === th.id}
+                    onClick={() => onSelect(th)}
+                >
+                    <span className="conv__face">
+                        <PersonAvatar name={th.name} url={th.avatarUrl} size={40} />
+                        <span className={`conv__channel conv__channel--${platform}`} title={platform === 'instagram' ? 'Instagram' : 'Messenger'}>
+                            <ChannelIcon platform={platform} size={12} />
+                        </span>
+                    </span>
+                    <div className="conv__body">
+                        <div className="conv__top">
+                            <span className="conv__name">{th.name}</span>
+                            <span className="conv__time">{formatTimestamp(th.last.timestamp)}</span>
+                        </div>
+                        <div className="conv__mid">
+                            <div className="conv__preview">
+                                {(aiTyping[th.id] || th.aiTyping) && th.status === 'AI_HANDLING'
+                                    ? <span className="conv__typing">{t('AI is typing…')}</span> : previewOf(th.last)}
+                            </div>
+                            {unread && (
+                                <span
+                                    className="unread-count"
+                                    aria-label={th.unanswered === 1 ? t('1 message waiting for a reply') : t('{n} messages waiting for a reply', { n: th.unanswered })}
+                                >
+                                    {th.unanswered > 99 ? '99+' : th.unanswered}
+                                </span>
+                            )}
+                        </div>
+                        <span className="conv__foot">
+                            {th.spam ? <span className="tag conv__tag pill--negative">{t('Spam')}</span> : (
+                                <span className={`tag conv__tag ${STATUS_TONE[th.status] || 'tag--ai'}`}>
+                                    {th.status === 'AI_HANDLING' && <IconSparkle size={11} />}
+                                    <span className="conv__tag-text">{ownershipLabel(th, me?.id) || STATUS_LABEL[th.status] || th.status}</span>
+                                </span>
+                            )}
+                            {urgent && (
+                                <span className={`tag conv__prio ${PRIORITY[1].tone}`} title={t('Priority {level}: {label}', { level: 1, label: PRIORITY[1].label })}>
+                                    {PRIORITY[1].label}
+                                </span>
+                            )}
+                            {mood && (
+                                <span className={`tag conv__mood ${SENTIMENT[th.sentiment].tag}`}
+                                      title={t('{mood} customer', { mood: SENTIMENT[th.sentiment].label })}>
+                                    {SENTIMENT[th.sentiment].label}
+                                </span>
+                            )}
+                            {/* The reference tells apart two conversations with the same customer,
+                                so it shows only then; it is always in the details and in search. */}
+                            {th.id && perCustomer.get(th.customerId) > 1 && <span className="conv__ref">CONV-{th.id.slice(0, 8)}</span>}
+                        </span>
+                    </div>
+                </button>
+                {/* Beside the row, not inside it: a button cannot hold a button. Shown on hover,
+                    on the open row, and always once pinned. */}
+                {onPin && th.id && (
+                    <button
+                        type="button"
+                        className={`conv-row__pin${th.pinned ? ' is-on' : ''}`}
+                        onClick={() => onPin(th)}
+                        aria-pressed={Boolean(th.pinned)}
+                        aria-label={th.pinned ? t('Unpin {name}', { name: th.name }) : t('Pin {name} to the top', { name: th.name })}
+                        title={th.pinned ? t('Unpin') : t('Pin to the top')}
+                    >
+                        <IconPin size={15} filled={th.pinned} />
+                    </button>
+                )}
+            </div>
+        );
+    };
+
     return (
-        <div className={`inbox ${activeThread ? 'inbox--has-active' : ''}`}>
+        <div className={`inbox ${activeThread ? 'inbox--has-active' : ''}${panelHidden ? ' inbox--details-hidden' : ''}`}>
             {/* The page's one heading, for screen readers and search: the layout has no room for a visible title. */}
             <h1 className="sr-only">{t('Inbox')}</h1>
             <aside className="convlist" aria-label={t('Conversations')}>
                 {listHead}
 
                 <div className="convlist__items">
-                    {visible.map(th => {
-                        const platform = platformOf(th.pageId);
-                        const awaitingReply = th.status === 'OPEN_FOR_AGENT' || th.unanswered > 0;
-                        return (
-                            <div key={th.id || th.customerId} className={`conv-row${th.pinned ? ' is-pinned' : ''}`}>
-                            <button
-                                className={`conv ${awaitingReply ? 'conv--attention' : ''}`}
-                                aria-current={active?.id === th.id}
-                                onClick={() => onSelect(th)}
-                            >
-                                <PersonAvatar name={th.name} url={th.avatarUrl} size={36} />
-                                <div className="conv__body">
-                                    <div className="conv__top">
-                                        <span className="conv__name">{th.name}</span>
-                                        <span className="conv__time">{formatTimestamp(th.last.timestamp)}</span>
-                                    </div>
-                                    {/* The unread count sits at the end of the preview line, where
-                                        messaging apps put it — in the footer it competed with the
-                                        state pill for space and ended up alone on a line. */}
-                                    <div className="conv__mid">
-                                        <div className="conv__preview">
-                                            {(aiTyping[th.id] || th.aiTyping) && th.status === 'AI_HANDLING'
-                                                ? <span className="conv__typing">{t('AI is typing…')}</span> : previewOf(th.last)}
-                                        </div>
-                                        {th.unanswered > 0 && th.status !== 'RESOLVED' && !th.spam && (
-                                            <span
-                                                className="unread-count"
-                                                aria-label={th.unanswered === 1 ? t('1 message waiting for a reply') : t('{n} messages waiting for a reply', { n: th.unanswered })}
-                                            >
-                                                {th.unanswered > 99 ? '99+' : th.unanswered}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <span className="conv__foot">
-                                        {/* Inline with the state tag so the two sit on one line. */}
-                                        <ChannelIcon platform={platform} size={13} />
-                                        {/* The same customer can have several conversations, so
-                                            the row needs the reference that tells them apart. */}
-                                        {th.id && <span className="conv__ref">CONV-{th.id.slice(0, 8)}</span>}
-                                        {PRIORITY[th.priority] && !th.spam && (
-                                            <span className={`pill conv__prio ${PRIORITY[th.priority].tone}`}
-                                                  title={t('Priority {level}: {label}', { level: th.priority, label: PRIORITY[th.priority].label })}>
-                                                {PRIORITY[th.priority].short}
-                                            </span>
-                                        )}
-                                        {th.spam && <span className="pill conv__prio pill--negative">{t('Spam')}</span>}
-                                        {/* A spam conversation has no owner worth naming — the
-                                            Spam pill above says everything. */}
-                                        {!th.spam && <span className={`tag conv__tag ${STATUS_TONE[th.status] || 'tag--ai'}`}>
-                                            <span className="conv__tag-text">
-                                                {ownershipLabel(t, me?.id) || STATUS_LABEL[th.status] || th.status}
-                                            </span>
-                                        </span>}
-                                        {/* The customer's mood as a word, only when it is worth noticing. */}
-                                        {SENTIMENT[th.sentiment] && th.sentiment !== 'NEUTRAL' && (
-                                            <span className={`tag conv__mood ${SENTIMENT[th.sentiment].tag}`}
-                                                  title={t('{mood} customer', { mood: SENTIMENT[th.sentiment].label })}>
-                                                {SENTIMENT[th.sentiment].label}
-                                            </span>
-                                        )}
-
-                                    </span>
-                                </div>
-                            </button>
-                            {/* Beside the row, not inside it: a button cannot hold a button. Always shown:
-                                grey until pinned, then blue. */}
-                            {onPin && th.id && (
-                                <button
-                                    type="button"
-                                    className={`conv-row__pin${th.pinned ? ' is-on' : ''}`}
-                                    onClick={() => onPin(th)}
-                                    aria-pressed={Boolean(th.pinned)}
-                                    aria-label={th.pinned ? t('Unpin {name}', { name: th.name }) : t('Pin {name} to the top', { name: th.name })}
-                                    title={th.pinned ? t('Unpin') : t('Pin to the top')}
-                                >
-                                    <IconPin size={15} filled={th.pinned} />
-                                </button>
-                            )}
-                            </div>
-                        );
-                    })}
+                    {pinnedRows.length > 0 && <div className="convlist__group">{t('Pinned')}</div>}
+                    {pinnedRows.map(renderRow)}
+                    {pinnedRows.length > 0 && otherRows.length > 0 && <div className="convlist__group">{t('All conversations')}</div>}
+                    {otherRows.map(renderRow)}
                     {!visible.length && (
                         <div className="empty" style={{ padding: '32px 20px' }}>
                             <p className="empty__title" style={{ fontSize: 14 }}>
-                                {search ? t('No matches') : FILTERS.find(f => f.id === filter) ? t('Nothing on {tab}', { tab: t(FILTERS.find(f => f.id === filter).label) }) : t('Nothing on this channel')}
+                                {mineOnly && !search ? t('Nothing assigned to you') : search ? t('No matches') : FILTERS.find(f => f.id === filter) ? t('Nothing on {tab}', { tab: t(FILTERS.find(f => f.id === filter).label) }) : t('Nothing on this channel')}
                             </p>
                             <p className="empty__text" style={{ fontSize: 13, marginBottom: 14 }}>
-                                {search
+                                {mineOnly && !search
+                                    ? t('Conversations handed to you appear here.')
+                                    : search
                                     ? t('Nothing matches “{query}”. Try a name, a reference like CONV-ae19042d, or something that was said.', { query: search })
                                     : t('No conversations on this channel yet.')}
                             </p>
@@ -604,6 +658,7 @@ export default function InboxPage({
                                 /* Clears every filter, not just the one the agent last touched
                                    — the point is to get out of an empty list. */
                                 onClick={() => {
+                                    setMineOnly(false);
                                     onSearchChange('');
                                     onFilterChange('all');
                                     onPlatformChange?.('all');
@@ -672,13 +727,12 @@ export default function InboxPage({
                                 )}
                                 <button
                                     type="button"
-                                    className="icon-btn thread__info"
-                                    onClick={() => setDetailsOpen(true)}
-                                    aria-label={t('Customer details')}
-                                    aria-expanded={detailsOpen}
-                                    title={t('Customer details')}
+                                    className="btn btn--secondary btn--sm thread__info"
+                                    onClick={showDetails}
+                                    aria-expanded={detailsOpen || !panelHidden}
+                                    title={t('Show the customer\'s details')}
                                 >
-                                    <IconInfo />
+                                    <IconPanelRight size={16} /> <span className="thread__info-text">{t('Details')}</span>
                                 </button>
                                 {/* Phone: one "More" button in place of pin and the text buttons. */}
                                 <div className="thread__more-wrap">
@@ -748,13 +802,8 @@ export default function InboxPage({
                                         {t('Not spam')}
                                     </button>
                                 )}
-                                {activeThread.status === 'AI_HANDLING' && !activeThread.spam && (
-                                    <button className={`btn btn--sm btn--secondary${acting === 'take-over' ? ' btn--busy' : ''}`}
-                                            disabled={Boolean(acting)} aria-busy={acting === 'take-over'}
-                                            onClick={() => act(activeThread, 'take-over')}>
-                                        {t('Take over')}
-                                    </button>
-                                )}
+                                {/* Take over lives in the bar above the composer, where you are about to type
+                                    (and in the More menu on a phone), not twice on screen. */}
                                 {activeThread.status === 'RESOLVED' ? (
                                     <button className={`btn btn--sm btn--secondary${acting === 'return-to-ai' ? ' btn--busy' : ''}`}
                                             disabled={Boolean(acting)} aria-busy={acting === 'return-to-ai'}
@@ -895,14 +944,12 @@ export default function InboxPage({
                                                 )}
                                                 <div className="msg__meta">
                                                     {m.status === 'sending' ? t('Sending…') : formatTime(m.timestamp)}
-                                                    {isAi && m.aiGeneratedMs != null && (
-                                                        <span className="msg__timing" title={aiTimingDetail(m)}>
-                                                            {formatMillis(m.aiGeneratedMs)}
-                                                            {m.aiWaitedMs > SLOW_DELIVERY_MS && (
-                                                                <span className="msg__timing--warn">
-                                                                    {' '}· {t('waited {time}', { time: formatMillis(m.aiWaitedMs) })}
-                                                                </span>
-                                                            )}
+                                                    {/* Who wrote it, and on hover how long the AI took: the timings
+                                                        matter for checking the AI, not for reading the chat. */}
+                                                    {isAi && (
+                                                        <span className="msg__ai" title={m.aiGeneratedMs != null ? aiTimingDetail(m) : undefined}>
+                                                            AI{m.aiGeneratedMs != null && <span className="msg__ai-time"> · {formatMillis(m.aiGeneratedMs)}</span>}
+                                                            {m.aiWaitedMs > SLOW_DELIVERY_MS && <span className="msg__timing--warn"> · {t('slow to send')}</span>}
                                                         </span>
                                                     )}
                                                 </div>
@@ -932,6 +979,13 @@ export default function InboxPage({
                                     {activeThread.spam ? t('Spam: the AI does not answer it') : ownershipLabel(activeThread, me?.id)
                                         || STATUS_LABEL[activeThread.status] || activeThread.status}
                                 </span>
+                                {/* The step people look for at the moment they want to type. */}
+                                {activeThread.status === 'AI_HANDLING' && !activeThread.spam && (
+                                    <button type="button" className={`composer__take${acting === 'take-over' ? ' btn--busy' : ''}`}
+                                            disabled={Boolean(acting)} onClick={() => act(activeThread, 'take-over')}>
+                                        {t('Take over to reply yourself')}
+                                    </button>
+                                )}
 
                             </div>
                             )}
@@ -986,19 +1040,7 @@ export default function InboxPage({
                                     </button>
                                 </div>
                             ) : (
-                                <form className="composer__form composer__form--chat" onSubmit={submit}>
-                                    {isRecordingSupported() && (
-                                        <button
-                                            type="button"
-                                            className="icon-btn composer__mic"
-                                            onClick={beginRecording}
-                                            disabled={busy}
-                                            aria-label={t('Record a voice message')}
-                                            title={t('Record a voice message')}
-                                        >
-                                            <IconMic />
-                                        </button>
-                                    )}
+                                <form className="composer__box" onSubmit={submit}>
                                     <input
                                         ref={imageRef}
                                         type="file"
@@ -1016,73 +1058,60 @@ export default function InboxPage({
                                             } finally { setBusy(false); setSending(null); }
                                         }}
                                     />
-                                    <button
-                                        type="button"
-                                        className="icon-btn composer__mic"
-                                        onClick={() => imageRef.current?.click()}
+                                    {/* Grows with what is typed. Enter sends, Shift+Enter starts a new
+                                        line, and nothing is sent while an input method is composing. */}
+                                    <textarea
+                                        ref={fieldRef}
+                                        className="composer__text"
+                                        rows={1}
+                                        value={draft}
+                                        onChange={e => setDraft(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) submit(e);
+                                        }}
+                                        placeholder={sending ? `${sending.label}…` : t('Reply to {name}…', { name: activeThread.name })}
+                                        aria-label={t('Your reply')}
                                         disabled={busy}
-                                        aria-label={t('Send a photo')}
-                                        title={t('Send a photo')}
-                                    >
-                                        <IconImage />
-                                    </button>
-                                    <div className="composer__field">
-                                        <input
-                                            value={draft}
-                                            onChange={e => setDraft(e.target.value)}
-                                            placeholder={sending ? `${sending.label}…` : t('Message')}
-                                            aria-label={t('Your reply')}
-                                            disabled={busy}
-                                        />
-                                        <button
-                                            type="button"
-                                            className="composer__emoji"
-                                            onClick={() => setEmojiOpen(o => !o)}
-                                            aria-label={t('Insert emoji')}
-                                            title={t('Emoji')}
-                                        >
-                                            <IconSmile size={19} />
-                                        </button>
-
-                                        {emojiOpen && (
-                                            <div className="popmenu popmenu--emoji composer__emojiMenu">
-                                                {QUICK_EMOJI.map(e => (
-                                                    <button
-                                                        key={e}
-                                                        type="button"
-                                                        className="popmenu__emoji"
-                                                        onClick={() => { setDraft(d => d + e); setEmojiOpen(false); }}
-                                                    >
-                                                        {e}
-                                                    </button>
-                                                ))}
-                                            </div>
+                                    />
+                                    <div className="composer__tools">
+                                        {isRecordingSupported() && (
+                                            <button type="button" className="tool-btn" onClick={beginRecording} disabled={busy}
+                                                    aria-label={t('Record a voice message')} title={t('Record a voice message')}>
+                                                <IconMic size={18} />
+                                            </button>
                                         )}
+                                        <button type="button" className="tool-btn" onClick={() => imageRef.current?.click()} disabled={busy}
+                                                aria-label={t('Send a photo')} title={t('Send a photo')}>
+                                            <IconImage size={18} />
+                                        </button>
+                                        <span className="composer__emojiWrap">
+                                            <button type="button" className="tool-btn" onClick={() => setEmojiOpen(o => !o)}
+                                                    aria-label={t('Insert emoji')} aria-expanded={emojiOpen} title={t('Emoji')}>
+                                                <IconSmile size={18} />
+                                            </button>
+                                            {emojiOpen && (
+                                                <div className="popmenu popmenu--emoji composer__emojiMenu">
+                                                    {QUICK_EMOJI.map(e => (
+                                                        <button key={e} type="button" className="popmenu__emoji"
+                                                                onClick={() => { setDraft(d => d + e); setEmojiOpen(false); fieldRef.current?.focus(); }}>
+                                                            {e}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </span>
+                                        {/* A like, as Messenger sends one. */}
+                                        <button type="button" className="tool-btn" disabled={busy || !activeThread}
+                                                onClick={() => onSend(activeThread, '👍', replyTo?.metaMessageId || null)}
+                                                aria-label={t('Send a thumbs up')} title={t('Thumbs up')}>
+                                            <IconThumb size={18} />
+                                        </button>
+                                        <span className="composer__hint">{t('Enter to send, Shift+Enter for a new line')}</span>
+                                        <button className={`btn btn--primary composer__sendbtn${busy ? ' btn--busy' : ''}`} type="submit"
+                                                disabled={busy || !draft.trim()}>
+                                            {t('Send')} <IconSend size={15} />
+                                        </button>
                                     </div>
-
-                                    {/* Thumbs-up when there is nothing to send, as Messenger does. */}
-                                    {draft.trim() ? (
-                                        <button
-                                            className="icon-btn composer__send"
-                                            type="submit"
-                                            disabled={busy}
-                                            aria-label={t('Send')}
-                                            title={t('Send')}
-                                        >
-                                            <IconSend size={20} />
-                                        </button>
-                                    ) : (
-                                        <button
-                                            className="icon-btn composer__send"
-                                            type="button"
-                                            disabled={busy || !activeThread}
-                                            onClick={() => onSend(activeThread, '👍', replyTo?.metaMessageId || null)}
-                                            aria-label={t('Send a thumbs up')}
-                                            title={t('Thumbs up')}
-                                        >
-                                            <IconThumb size={21} />
-                                        </button>
-                                    )}
                                 </form>
                             )}
                         </div>
@@ -1094,23 +1123,24 @@ export default function InboxPage({
                 <div className="scrim context__scrim" onClick={() => setDetailsOpen(false)} aria-hidden="true" />
             )}
             {activeThread && (
-                <aside className={`context${detailsOpen ? ' context--open' : ''}`} aria-label={t('Customer details')}>
-                    <div className="context__label context__labelrow">
-                        {t('Customer info')}
+                <aside className={`context${detailsOpen ? ' context--open' : ''}${panelHidden ? ' context--hidden' : ''}`} aria-label={t('Customer details')}>
+                    <div className="context__labelrow context__toprow">
+                        <span className="context__title">{t('Customer profile')}</span>
                         <button type="button" className="icon-btn context__close"
-                                onClick={() => setDetailsOpen(false)} aria-label={t('Close customer details')}>
+                                onClick={hideDetails} aria-label={t('Close customer details')} title={t('Close')}>
                             <IconClose />
                         </button>
                     </div>
-                    <div className="context__who">
-                        <PersonAvatar name={activeThread.name} url={activeThread.avatarUrl} size={44} />
-                        <div>
-                            <div style={{ fontWeight: 600 }}>{activeThread.name}</div>
-                            <div className="context__key" style={{ margin: 0 }}>
-                                {platformOf(activeThread.pageId) === 'instagram' ? 'Instagram' : 'Messenger'}
-                            </div>
-                        </div>
+                    {/* The person first, as in the references: face, name, where they wrote from. */}
+                    <div className="profile-card">
+                        <PersonAvatar name={activeThread.name} url={activeThread.avatarUrl} size={64} />
+                        <strong className="profile-card__name">{activeThread.name}</strong>
+                        <span className={`profile-card__channel profile-card__channel--${platformOf(activeThread.pageId)}`}>
+                            <ChannelIcon platform={platformOf(activeThread.pageId)} size={13} />
+                            {platformOf(activeThread.pageId) === 'instagram' ? 'Instagram' : 'Messenger'}
+                        </span>
                     </div>
+                    <div className="context__section">{t('Information')}</div>
 
                     {/* A customer can have several conversations over time, so one needs a
                         reference you can quote. Short like a git hash: the first block of the
@@ -1250,9 +1280,10 @@ export default function InboxPage({
                         </div>
                     )}
 
-                    <div className="context__label" style={{ marginTop: 26 }}>
+                    <div className="context__section">
                         {activeThread.status === 'RESOLVED' ? t('What happened') : t('Summary')}
                     </div>
+                    <div className="summary-card">
                     {activeThread.summary ? (
                         <>
                             {/* Three labelled lines from the model. Split so each reads as its
@@ -1291,6 +1322,7 @@ export default function InboxPage({
                             </button>
                         </>
                     )}
+                    </div>
                 </aside>
             )}
 

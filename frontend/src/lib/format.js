@@ -161,16 +161,18 @@ export function participantsOf(messages = []) {
     const seen = new Map();
     for (const m of messages) {
         if (m.direction !== 'outbound') continue;
-        const key = m.authorType === 'AI' ? 'AI' : (m.authorId || m.authorName || 'unknown');
+        // An AI reply is one whether the server marks it by author type or only as generated.
+        const ai = m.authorType === 'AI' || (!m.authorType && m.aiGenerated);
+        const key = ai ? 'AI' : (m.authorId || m.authorName || 'unknown');
         const existing = seen.get(key);
         if (existing) {
             existing.count += 1;
         } else {
             seen.set(key, {
                 key,
-                type: m.authorType || 'AI',
-                id: m.authorId || null,
-                name: m.authorType === 'AI' ? 'AI' : (m.authorName || t('A colleague')),
+                type: ai ? 'AI' : (m.authorType || 'AGENT'),
+                id: ai ? null : (m.authorId || null),
+                name: ai ? 'AI' : (m.authorName || t('A colleague')),
                 avatar: m.authorAvatar || null,
                 count: 1,
             });

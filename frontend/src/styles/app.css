@@ -3423,3 +3423,208 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 .paged__btn--next svg { transform: rotate(180deg); }
 .ch-foot .btn--secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); box-shadow: 0 1px 2px rgba(16, 24, 40, .05); }
 .ch-foot .btn--secondary:hover:not(:disabled) { background: var(--surface); }
+
+/* The workspace name leads the line under the page title, before the date. */
+.topbar__ws { color: var(--text); font-weight: 500; display: inline-block; max-width: 280px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+@media (max-width: 1100px) { .topbar__ws { max-width: 160px; } }
+.topbar__date { white-space: nowrap; }
+
+/* ── Inbox, after the Dribbble inbox references (Perch, Callour, Apricity; 2026-10-03) ──────────
+   List: a segmented switch, Everyone or Mine, the channel on the face, only what needs noticing.
+   Thread: the bar above the composer offers Take over. Composer: a card that grows, tools under
+   it, a real Send button. Details: the person first, then label and value rows, then the brief. */
+.inbox .convlist__head { padding: 16px 16px 12px; display: grid; gap: 12px; }
+.inbox .convlist__title { margin: 0; }
+.inbox .convlist__title h2 { font-size: 16px; }
+.segtabs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 3px; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.segtabs__tab {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 8px;
+    border: 0; border-radius: 7px; background: none; color: var(--text-muted); font-size: 13px; font-weight: 500;
+    transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.segtabs__tab:hover { color: var(--text); }
+.segtabs__tab[aria-selected="true"] { background: var(--bg); color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgba(16, 24, 40, .1); }
+.segtabs__count { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; display: inline-grid; place-items: center; font-size: 11px; font-weight: 600; background: var(--danger-weak); color: var(--danger); }
+.convlist__filters { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mini-toggle { display: inline-flex; gap: 2px; }
+.mini-toggle button {
+    display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 0; border-radius: var(--r-sm);
+    background: none; color: var(--text-muted); font-size: 13px; font-weight: 500;
+}
+.mini-toggle button:hover { background: var(--surface); color: var(--text); }
+.mini-toggle button[aria-pressed="true"] { background: var(--accent-weak); color: var(--accent); }
+.mini-toggle__count { font-size: 11px; font-weight: 600; padding: 0 6px; border-radius: 9px; background: var(--bg); }
+.channel-filter select {
+    appearance: none; padding: 5px 28px 5px 10px; font: inherit; font-size: 13px; color: var(--text);
+    border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer;
+    background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center;
+}
+.channel-filter select:hover { border-color: var(--border-strong); }
+
+.convlist__group { padding: 12px 16px 6px; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+.inbox .conv { gap: 12px; padding: 12px 16px; border-left-width: 3px; transition: background .12s ease; }
+.inbox .conv[aria-current="true"] { background: var(--accent-weak); }
+.conv__face { position: relative; flex-shrink: 0; width: 40px; height: 40px; }
+.conv__channel {
+    position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--bg); box-shadow: 0 0 0 2px var(--bg);
+}
+.conv--unread .conv__name { font-weight: 700; }
+.conv--unread .conv__preview { color: var(--text); font-weight: 500; }
+.inbox .conv__foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 7px; min-width: 0; }
+.inbox .conv__tag { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; }
+.inbox .conv__ref { margin-left: auto; font-size: 11px; color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; opacity: .8; }
+/* The pin waits until it is wanted: on hover, on the open row, or once pinned. */
+.inbox .conv-row__pin { opacity: 0; transition: opacity .12s ease; top: 10px; }
+.inbox .conv-row:hover .conv-row__pin, .inbox .conv-row:focus-within .conv-row__pin,
+.inbox .conv-row__pin.is-on, .inbox .conv-row:has(.conv[aria-current="true"]) .conv-row__pin { opacity: 1; }
+.inbox .conv-row .conv__top { padding-right: 26px; }
+@media (hover: none) { .inbox .conv-row__pin { opacity: 1; } }
+
+/* The bar above the composer: who has it, and Take over right there. */
+.inbox .composer__status { text-transform: none; letter-spacing: 0; font-size: 12.5px; padding: 9px 20px; }
+.composer__take {
+    margin-left: auto; border: 0; background: none; padding: 2px 4px; border-radius: 6px;
+    color: var(--accent); font-size: 12.5px; font-weight: 600;
+}
+.composer__take:hover { background: var(--accent-weak); }
+
+/* The composer: a card with the text on top and the tools underneath. */
+.composer__box {
+    margin: 12px 20px 16px; border: 1px solid var(--border-strong); border-radius: 14px; background: var(--bg);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .05); transition: border-color .15s ease, box-shadow .15s ease;
+}
+.composer__box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
+.composer__text {
+    display: block; width: 100%; resize: none; border: 0; outline: 0; background: none; color: var(--text);
+    font: inherit; font-size: 14.5px; line-height: 1.5; padding: 12px 14px 4px; max-height: 160px; overflow-y: auto;
+}
+.composer__text::placeholder { color: var(--text-muted); }
+.composer__tools { display: flex; align-items: center; gap: 2px; padding: 6px 8px 8px; }
+.tool-btn {
+    width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: var(--r-sm);
+    background: none; color: var(--text-muted); transition: background .12s ease, color .12s ease;
+}
+.tool-btn:hover:not(:disabled) { background: var(--surface); color: var(--text); }
+.tool-btn:disabled { opacity: .5; }
+.composer__emojiWrap { position: relative; display: inline-flex; }
+.composer__emojiWrap .composer__emojiMenu { bottom: calc(100% + 8px); left: 0; right: auto; }
+.composer__hint { margin-left: auto; margin-right: 10px; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.composer__sendbtn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; }
+.composer__sendbtn:disabled:not(.btn--busy) { opacity: .45; }
+@media (max-width: 1280px) { .composer__hint { display: none; } .composer__sendbtn { margin-left: auto; } }
+@media (max-width: 760px) { .composer__box { margin: 8px 10px 10px; } }
+
+/* Details: the person first, then label and value rows, then the brief in a card. */
+.inbox .context { padding: 16px 20px 24px; }
+.context__toprow { margin-bottom: 8px; }
+.context__title { font-size: 14px; font-weight: 600; color: var(--text); }
+.profile-card { display: grid; justify-items: center; gap: 6px; padding: 14px 0 18px; border-bottom: 1px solid var(--border); text-align: center; }
+.profile-card__name { font-size: 16px; font-weight: 600; color: var(--text); margin-top: 4px; }
+.profile-card__channel { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-muted); padding: 3px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); }
+.context__section { margin: 18px 0 8px; font-size: 13px; font-weight: 600; color: var(--text); }
+.inbox .context__row {
+    display: grid; grid-template-columns: 104px minmax(0, 1fr); align-items: center; gap: 10px;
+    margin: 0; padding: 9px 0; border-bottom: 1px dashed var(--border); font-size: 13.5px;
+}
+.inbox .context__row > .context__key { margin: 0; font-size: 13px; }
+.inbox .context__row:has(.spam), .inbox .context__row:has(.participants) { grid-template-columns: 1fr; align-items: start; }
+.inbox .context__row .pill { justify-self: start; }
+.summary-card { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--surface); display: grid; gap: 8px; }
+.summary-card > :last-child { justify-self: start; }
+.summary-card .summary__line { margin: 0; }
+.inbox .context__row .convid { justify-self: start; white-space: nowrap; }
+.conv__channel { width: 16px; height: 16px; right: -2px; bottom: -2px; }
+.conv__channel svg { width: 11px; height: 11px; }
+
+/* ── Inbox as cards (2026-10-03): the three columns are rounded white cards on the page's grey,
+   with room between them, the same language as the dashboard and Settings. Phones keep the
+   full-screen list and thread. ── */
+@media (min-width: 761px) {
+    .inbox { gap: 12px; padding: 12px; background: var(--surface); }
+    .inbox .convlist, .inbox .thread, .inbox .context {
+        border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+    }
+    .inbox .convlist { background: var(--bg); border-right: 1px solid var(--border); }
+    .inbox .thread { background: var(--bg); }
+    .inbox .thread__head { background: var(--bg); }
+    .inbox .thread__body { background: var(--surface); background: color-mix(in srgb, var(--surface) 70%, var(--bg)); }
+    .inbox .context { background: var(--bg); border-left: 1px solid var(--border); overflow-y: auto; }
+    .inbox .composer { background: var(--bg); }
+    .inbox .convlist__items { scrollbar-width: thin; }
+}
+
+/* The list header: title with its count, the three lists, then whose and which channel. */
+.inbox .convlist__head { border-bottom: 1px solid var(--border); padding: 18px 16px 14px; }
+.inbox .convlist__title h2 { font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+.convlist__count { font-size: 12px; font-weight: 500; color: var(--text-muted); padding: 3px 9px; border-radius: var(--r-sm); background: var(--surface); }
+.inbox .segtabs { background: var(--surface); border-color: transparent; }
+.inbox .mini-toggle { padding: 2px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); }
+.inbox .mini-toggle button { padding: 4px 11px; border-radius: 7px; }
+.inbox .mini-toggle button[aria-pressed="true"] { background: var(--accent-weak); color: var(--accent); font-weight: 600; }
+.inbox .channel-filter select { height: 32px; border-radius: 9px; }
+.inbox .conv { border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent); }
+.inbox .conv[aria-current="true"] { box-shadow: inset 3px 0 0 var(--accent); border-left-color: transparent; }
+.inbox .conv--attention:not([aria-current="true"]) { box-shadow: inset 3px 0 0 var(--warning); border-left-color: transparent; }
+
+/* The details card can be closed on a wide screen and opened again from the (i) button. */
+@media (min-width: 1101px) {
+    .inbox .context__close { display: grid; margin: -6px -6px -6px 0; }
+    .inbox .context--hidden { display: none; }
+    .inbox--details-hidden .thread__info { display: grid; }
+}
+
+/* "Handled by": the menu opens wider than the column, towards the conversation, so names and
+   what each person is doing can be read in full. */
+.inbox .assignee__menu { left: auto; right: -8px; width: 300px; max-height: 380px; padding: 8px; border-radius: 12px; }
+.inbox .assignee__option { padding: 8px 10px; }
+.inbox .assignee__who { white-space: normal; }
+.inbox .assignee__option small { white-space: normal; line-height: 1.4; margin-top: 1px; }
+/* Laptop widths: the install button keeps only its icon and the channel badge only its logo,
+   so the search box and the customer's name keep their room. */
+@media (max-width: 1180px) {
+    .topbar__install-text, .topbar .user__text { display: none; }
+    .topbar__search { min-width: 120px; flex: 1 1 160px; }
+    .inbox .badge__text { display: none; }
+    .inbox .thread__nametext { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .inbox .thread__name { min-width: 0; flex-wrap: nowrap; }
+}
+
+/* Switches with a highlight that slides to the chosen option (2026-10-03). */
+.inbox .segtabs { position: relative; gap: 0; isolation: isolate; }
+.inbox .segtabs::before {
+    content: ''; position: absolute; z-index: -1; top: 3px; bottom: 3px; left: 3px;
+    width: calc((100% - 6px) / var(--n, 3)); border-radius: 7px; background: var(--bg);
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .12);
+    transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .28s cubic-bezier(.3, .7, .2, 1);
+}
+.inbox .segtabs__tab[aria-selected="true"] { background: none; box-shadow: none; }
+.inbox .mini-toggle { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; isolation: isolate; }
+.inbox .mini-toggle::before {
+    content: ''; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px);
+    border-radius: 7px; background: var(--accent-weak);
+    transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .28s cubic-bezier(.3, .7, .2, 1);
+}
+.inbox .mini-toggle button { justify-content: center; }
+.inbox .mini-toggle button[aria-pressed="true"] { background: none; }
+@media (prefers-reduced-motion: reduce) { .inbox .segtabs::before, .inbox .mini-toggle::before { transition: none; } }
+.inbox .channel-filter select:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
+.inbox .channel-filter select:focus:not(:focus-visible) { outline: none; }
+
+/* "Handled by": label above, the picker across the panel, so its menu has the whole width
+   inside the card instead of being cut off at the card's edge. */
+.inbox .context__row:has(.assignee) { grid-template-columns: 1fr; gap: 6px; }
+.inbox .context__row .assignee__current { margin-left: 0; border-color: var(--border); background: var(--bg); padding: 7px 10px; }
+.inbox .context__row .assignee__current:hover:not(:disabled) { border-color: var(--border-strong); }
+.inbox .context__row .assignee__menu { left: 0; right: 0; width: auto; }
+
+/* The way back to the details: a labelled button, not a bare (i). */
+.inbox .thread__info { display: none; align-items: center; gap: 6px; }
+@media (max-width: 1100px) { .inbox .thread__info { display: inline-flex; } }
+@media (min-width: 1101px) { .inbox--details-hidden .thread__info { display: inline-flex; } }
+@media (max-width: 760px) { .inbox .thread__actions > .thread__info { display: none; } }
+
+/* Who wrote an AI reply, quietly; the timings on hover. */
+.msg__ai { margin-left: 6px; font-weight: 600; color: var(--text-muted); cursor: default; }
+.msg__ai-time { font-weight: 400; }

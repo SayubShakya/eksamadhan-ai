@@ -45,6 +45,8 @@ export const IconBack = (p) => <svg {...s(p)}><path d="M19 12H5" /><path d="M11 
 export const IconArrowRight = (p) => <svg {...s({ size: p.size || 14 })}><path d="M5 12h14" /><path d="M13 6l6 6-6 6" /></svg>;
 export const IconArrowLeft = (p) => <svg {...s({ size: p.size || 14 })}><path d="M19 12H5" /><path d="M11 6l-6 6 6 6" /></svg>;
 export const IconPin = (p) => <svg {...s({ size: p.size || 16 })} fill={p.filled ? 'currentColor' : 'none'}><path d="M9 4h6l-1 6 3 3v2H7v-2l3-3z" /><path d="M12 15v5" /></svg>;
+/** A window with its right-hand panel: open or close a side panel. */
+export const IconPanelRight = (p) => <svg {...s(p)}><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="M15 4v16" /></svg>;
 export const IconInfo = (p) => <svg {...s(p)}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>;
 export const IconLock = (p) => <svg {...s(p)}><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>;
 export const IconWarning = (p) => <svg {...s(p)}><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>;

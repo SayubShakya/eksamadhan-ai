@@ -20,7 +20,7 @@ import { t, lang, longDate } from '../lib/i18n.js';
 export default function TopBar({
     query, onQueryChange, user,
     onToggleNav, onHome, unread = 0, navOpen, showSearch, onEditProfile, onSignOut,
-    onOpenNotification, onSeeAllNotifications, onAvailabilityChange, view, hours, onSetHours,
+    onOpenNotification, onSeeAllNotifications, onAvailabilityChange, view, hours, onSetHours, workspace,
 }) {
     const role = ROLE_LABEL[user?.role] ?? user?.role ?? '';
     const app = usePwa();
@@ -44,7 +44,12 @@ export default function TopBar({
             {VIEW_TITLES[view] && (
                 <span className="topbar__where" aria-hidden="true">
                     <span className="topbar__title">{VIEW_TITLES[view]}</span>
-                    <span className="topbar__date">{longDate()}</span>
+                    {/* Which business this is, then the date (Sayub, 2026-10-03): the context line under
+                        the page name, so it never competes with the status and account on the right. */}
+                    <span className="topbar__date">
+                        {workspace && <><span className="topbar__ws" title={t('Workspace: {name}', { name: workspace })}>{workspace}</span><span aria-hidden="true"> · </span></>}
+                        {longDate()}
+                    </span>
                 </span>
             )}
 
