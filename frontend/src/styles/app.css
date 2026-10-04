@@ -4214,3 +4214,33 @@ a.chn-act { color: var(--accent); }
 @media (max-width: 1023px) {
     .rail:not(.rail--open) { transform: translateX(calc(-100% - 24px)); }
 }
+
+/* Knowledge add card: the upload, picture and website tabs fill the height the tallest tab
+   (Write text) keeps for the card, as a drop area instead of a blank space under one button. */
+.kq-panel { display: flex; flex-direction: column; }
+.kq-panel > * { flex: 1; }
+.kq-zone {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    gap: 6px; padding: 28px 24px; min-height: 260px;
+    border: 1.5px dashed var(--border-strong); border-radius: 12px; background: var(--surface);
+    transition: border-color .15s ease, background .15s ease;
+}
+.kq-zone[data-over] { border-color: var(--accent); background: var(--accent-tint); }
+.kq-zone__icon { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; background: var(--bg); border: 1px solid var(--border); color: var(--text-muted); margin-bottom: 6px; }
+.kq-zone[data-over] .kq-zone__icon { color: var(--accent); border-color: var(--accent); }
+.kq-zone__title { margin: 0; font-size: 15px; font-weight: 600; color: var(--text); }
+.kq-zone__hint { margin: 0; max-width: 520px; font-size: 13px; line-height: 1.5; color: var(--text-muted); }
+.kq-zone__actions { margin-top: 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 420px; }
+.kq-zone--form .kq-zone__hint { margin-top: 4px; }
+.kq-site { display: flex; gap: 8px; width: 100%; max-width: 560px; margin-top: 6px; }
+.kq-site input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-size: 14px; }
+.kq-site input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.kq-site .btn { flex-shrink: 0; height: 40px; }
+/* A tab picked with the mouse shows only its selected look; the ring is for the keyboard. */
+.kq-tab:focus:not(:focus-visible) { outline: none; box-shadow: 0 1px 2px rgba(16, 24, 40, .1); }
+.kq-tab:not([aria-selected="true"]):focus:not(:focus-visible) { box-shadow: none; }
+@media (max-width: 560px) {
+    .kq-zone { min-height: 220px; padding: 22px 16px; }
+    .kq-site { flex-direction: column; }
+    .kq-site input { flex: none; }
+}

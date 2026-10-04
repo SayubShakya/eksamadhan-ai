@@ -322,18 +322,15 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                         </div>
 
                         <div className="kq-panel" data-on={addTab === 'file'} inert={addTab !== 'file'} aria-hidden={addTab !== 'file'}>
-                            <div>
-                                <p className="field__hint knowledge__lead">
-                                    {t('A PDF, or a plain text or Markdown file. Its text is read, split into passages and indexed; scanned PDFs with no text layer cannot be read.')}
-                                </p>
-                                <div className="knowledge__actions">
-                                    <button className="btn btn--primary" type="button"
-                                            onClick={() => fileRef.current?.click()} disabled={busy}>
-                                        <IconUpload /> {t('Choose a file')}
-                                    </button>
-                                </div>
+                            <DropZone Icon={IconUpload} disabled={busy} onFile={(file) => upload({ target: { files: [file] } })}
+                                      title={t('Drop a PDF, text or Markdown file here')}
+                                      hint={t('A PDF, or a plain text or Markdown file. Its text is read, split into passages and indexed; scanned PDFs with no text layer cannot be read.')}>
+                                <button className="btn btn--primary" type="button"
+                                        onClick={() => fileRef.current?.click()} disabled={busy}>
+                                    <IconUpload /> {t('Choose a file')}
+                                </button>
                                 {sent && !pendingImage && <UploadProgress label={sent.label} fraction={sent.fraction} />}
-                            </div>
+                            </DropZone>
                         </div>
 
                         <div className="kq-panel" data-on={addTab === 'picture'} inert={addTab !== 'picture'} aria-hidden={addTab !== 'picture'}>{
@@ -369,36 +366,32 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                                     </div>
                                 </form>
                             ) : (
-                                <div>
-                                    <p className="field__hint knowledge__lead">
-                                        {t('A product photo, a size chart or a menu. You give it a title, and the AI sends it to a customer when their question is about it.')}
-                                    </p>
-                                    <div className="knowledge__actions">
-                                        <button className="btn btn--primary" type="button"
-                                                onClick={() => imageRef.current?.click()} disabled={busy}>
-                                            <IconImage /> {t('Choose a picture')}
-                                        </button>
-                                    </div>
-                                </div>
+                                <DropZone Icon={IconImage} disabled={busy} onFile={(file) => chooseImage({ target: { files: [file] } })}
+                                          title={t('Drop a picture here')}
+                                          hint={t('A product photo, a size chart or a menu. You give it a title, and the AI sends it to a customer when their question is about it.')}>
+                                    <button className="btn btn--primary" type="button"
+                                            onClick={() => imageRef.current?.click()} disabled={busy}>
+                                        <IconImage /> {t('Choose a picture')}
+                                    </button>
+                                </DropZone>
                             )}
                         </div>
 
                         <div className="kq-panel" data-on={addTab === 'website'} inert={addTab !== 'website'} aria-hidden={addTab !== 'website'}>
-                            <form onSubmit={crawl}>
-                                <label className="field">
-                                    <span>{t('Website address')}</span>
-                                    <input value={site} onChange={e => setSite(e.target.value)}
+                            <form onSubmit={crawl} className="kq-zone kq-zone--form">
+                                <span className="kq-zone__icon" aria-hidden="true"><IconGlobe size={22} /></span>
+                                <label className="kq-zone__title" htmlFor="kq-site">{t('Website address')}</label>
+                                <div className="kq-site">
+                                    <input id="kq-site" value={site} onChange={e => setSite(e.target.value)}
                                            placeholder="acme.com.np" disabled={crawling} />
-                                    <small className="field__hint">
-                                        {t('Follows links within the site only, obeys robots.txt, and stops after 25 pages. Each page becomes its own source you can remove.')}
-                                    </small>
-                                </label>
-                                <div className="knowledge__actions">
                                     <button className={btn('btn btn--primary', crawling)} type="submit"
                                             disabled={crawling || !site.trim()} aria-busy={crawling}>
                                         {t('Read website')}
                                     </button>
                                 </div>
+                                <small className="kq-zone__hint">
+                                    {t('Follows links within the site only, obeys robots.txt, and stops after 25 pages. Each page becomes its own source you can remove.')}
+                                </small>
                                 {/* A crawl runs for up to a minute, so say what is happening while it does. */}
                                 {crawling && (
                                     <p className="field__hint" role="status" style={{ marginTop: 10 }}>
@@ -576,6 +569,35 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                 onConfirm={confirmRemove}
                 onCancel={() => setRemoving(null)}
             />
+        </div>
+    );
+}
+
+
+/**
+ * The upload and picture tabs: one area that fills the add card (the card keeps the tallest
+ * tab's height so switching never moves the page), accepting a dropped file as well as the
+ * button. A drop goes through the same handler as the picker, so the same checks apply.
+ */
+function DropZone({ Icon, title, hint, onFile, disabled, children }) {
+    const [over, setOver] = useState(false);
+    const drag = (on) => (e) => {
+        e.preventDefault();
+        if (!disabled) setOver(on);
+    };
+    return (
+        <div className="kq-zone" data-over={over || undefined}
+             onDragEnter={drag(true)} onDragOver={drag(true)} onDragLeave={drag(false)}
+             onDrop={(e) => {
+                 e.preventDefault();
+                 setOver(false);
+                 const file = e.dataTransfer?.files?.[0];
+                 if (file && !disabled) onFile(file);
+             }}>
+            <span className="kq-zone__icon" aria-hidden="true"><Icon size={22} /></span>
+            <p className="kq-zone__title">{title}</p>
+            <p className="kq-zone__hint">{hint}</p>
+            <div className="kq-zone__actions">{children}</div>
         </div>
     );
 }
