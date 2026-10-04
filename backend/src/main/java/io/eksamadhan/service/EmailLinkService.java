@@ -130,6 +130,9 @@ public class EmailLinkService {
         User user = users.findById(userId).orElseThrow(EmailLinkService::invalid);
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         user.setEmailVerified(true);
+        // Whoever was signed in with the old password is signed out; the reset signs this
+        // person in afresh.
+        user.endSessions();
         jdbc.update("UPDATE email_links SET used_at = now() WHERE user_id = ? AND purpose = ? AND used_at IS NULL", userId, RESET);
         return users.save(user);
     }

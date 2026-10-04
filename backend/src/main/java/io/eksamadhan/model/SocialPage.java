@@ -23,7 +23,9 @@ public class SocialPage {
     @Column(nullable = false)
     private String pageName;
 
+    /** Encrypted in the column (EncryptedTokenConverter); plain here. */
     @Column(columnDefinition = "TEXT")
+    @Convert(converter = EncryptedTokenConverter.class)
     private String accessToken;
 
     @Column(nullable = false)

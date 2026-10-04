@@ -119,6 +119,22 @@ class AiTraceRecordingTest {
     }
 
     @Test
+    void anAngryCustomerIsHandedToAPersonOnceEvenWhenTheAiCouldAnswer() {
+        UUID angry = customerAsks("This is the third time I am asking. I am very angry.");
+
+        aiReplyService.escalateForMood(angry, page.getId());
+        ConversationThread thread = messages.findWithThreadById(angry).orElseThrow().getThread();
+        ConversationThread after = threads.findById(thread.getId()).orElseThrow();
+        assertEquals(ThreadStatus.OPEN_FOR_AGENT, after.getStatus());
+        assertEquals(EscalationReasons.ANGRY, after.getEscalationReason());
+
+        // A second angry message while it already waits for a person: no second handover.
+        aiReplyService.escalateForMood(customerAsksAgain(angry, "Still waiting!!"), page.getId());
+        org.mockito.Mockito.verify(metaService, org.mockito.Mockito.atMost(1))
+                .sendMessage(anyString(), anyString(), any(), any());
+    }
+
+    @Test
     void aSecondCopySentWhileTheFirstIsAnsweredGetsNoAnswerOfItsOwn() {
         when(llmClient.complete(anyString(), anyString())).thenReturn(
                 "{\"related\": true, \"answered\": true, \"confidence\": 0.9, \"reply\": \"Delivery is NPR 150.\"}");
@@ -284,6 +300,11 @@ class AiTraceRecordingTest {
         users.touchLastSeen(quiet.getId(), now);
         User fresh = users.findById(quiet.getId()).orElseThrow();
         fresh.setEmailAlerts(false);
+        // On shift all week, so the test does not depend on the clock: outside their real
+        // hours (an evening run) routing found nobody and the test failed.
+        fresh.setWorkingHours(WorkingHours.write(java.util.stream.IntStream.range(0, 7)
+                .mapToObj(d -> new WorkingHours.Window(d, 0, 1440)).toList()));
+        fresh.setTimeZone("Asia/Kathmandu");
         users.saveAndFlush(fresh);
 
         when(llmClient.complete(anyString(), anyString())).thenReturn(

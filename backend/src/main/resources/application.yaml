@@ -45,6 +45,10 @@ app:
   # generated at startup, which signs everyone out on every restart.
   jwt:
     secret: ${JWT_SECRET:}
+  # AES-256 key for the stored Meta page access tokens: 32 random bytes, base64
+  # (openssl rand -base64 32). Losing it means reconnecting every Page; unset stores them plain.
+  security:
+    token-key: ${TOKEN_ENCRYPTION_KEY:}
   # The workspace that predates accounts. The first person to sign up adopts it, so the
   # connected Facebook Page and its message history survive the move to real accounts.
   # Clearing this disables adoption; it can only ever fire once in any case.

@@ -19,6 +19,7 @@ class EscalationReasonsTest {
         assertEquals(SERVICE, EscalationReasons.fixFor(EscalationReasons.CUT_OFF));
         assertEquals(NONE, EscalationReasons.fixFor(EscalationReasons.OFF_TOPIC));
         assertEquals(NONE, EscalationReasons.fixFor(EscalationReasons.ASKED_FOR_PERSON));
+        assertEquals(NONE, EscalationReasons.fixFor(EscalationReasons.ANGRY));
         assertEquals(NONE, EscalationReasons.fixFor(EscalationReasons.INJECTION));
         assertEquals(NONE, EscalationReasons.fixFor("the customer sent a voice message, which the AI cannot listen to"));
         assertNull(EscalationReasons.fixFor("something nobody wrote"));

@@ -265,11 +265,14 @@ public class MessageController {
      */
     private void requireMayAnswer(SocialPage page, String customerId) {
         User me = currentUser.require();
-        threadService.find(page, customerId).ifPresent(thread -> {
-            if (!threadService.mayAct(me, thread)) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Conversation not found");
-            }
-        });
+        // No conversation with this customer: only an owner or admin may start one, or an agent
+        // could message any customer id they came across.
+        boolean allowed = threadService.find(page, customerId)
+                .map(thread -> threadService.mayAct(me, thread))
+                .orElse(me.getRole().canManageTeam());
+        if (!allowed) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Conversation not found");
+        }
     }
 
     private SocialPage requirePage(Organization organization, String pageId) {

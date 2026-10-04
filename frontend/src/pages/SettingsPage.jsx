@@ -327,10 +327,13 @@ function SecurityCard({ settings, email }) {
         if (form.next !== form.again) { setError(t('The new passwords do not match.')); return; }
         setBusy(true);
         try {
-            await api.changePassword({ currentPassword: form.current, newPassword: form.next });
+            const result = await api.changePassword({ currentPassword: form.current, newPassword: form.next });
+            // Changing the password signs out every other sign-in, this one included; the server
+            // hands back a new one so this device carries on.
+            if (result?.token) api.setToken(result.token);
             setForm({ current: '', next: '', again: '' });
             markSaved();
-            toast.success(t('Password changed'), { body: t('Use the new one next time you sign in.') });
+            toast.success(t('Password changed'), { body: t('Any other device signed in to your account was signed out.') });
         } catch (err) {
             setError(api.errorMessage(err, t('Your password could not be changed.')));
         } finally {

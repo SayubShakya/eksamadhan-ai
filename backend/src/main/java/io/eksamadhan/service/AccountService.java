@@ -271,6 +271,8 @@ public class AccountService {
         if (!user.isEmailVerified()) {
             user.setPasswordHash(null);
             user.setEmailVerified(true);
+            // And anyone signed in with that password is signed out.
+            user.endSessions();
         }
         if (user.getFirebaseUid() == null) {
             user.setFirebaseUid(google.uid());

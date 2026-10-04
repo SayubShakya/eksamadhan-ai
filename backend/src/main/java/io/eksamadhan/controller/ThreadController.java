@@ -195,10 +195,7 @@ public class ThreadController {
     private ConversationThread requireActionable(UUID threadId, User user) {
         return threadService.forTenant(user.getOrganization().getApiKey()).stream()
                 .filter(t -> t.getId().equals(threadId))
-                .filter(t -> user.getRole().canManageTeam()
-                        || user.getId().toString().equals(t.getAssignedAgentId())
-                        // Nobody owns it yet, so anyone may pick it up.
-                        || t.getAssignedAgentId() == null)
+                .filter(t -> threadService.mayAct(user, t))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Conversation not found"));
     }

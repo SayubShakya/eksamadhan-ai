@@ -9,6 +9,7 @@ import io.eksamadhan.service.AiReplyService;
 import io.eksamadhan.service.AccountLifecycleService;
 import io.eksamadhan.service.AuthRateLimiter;
 import io.eksamadhan.service.CurrentUser;
+import io.eksamadhan.service.JwtService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,11 +40,12 @@ public class SettingsController {
     private final PasswordEncoder passwordEncoder;
     private final AuthRateLimiter rateLimiter;
     private final AccountLifecycleService lifecycle;
+    private final JwtService jwt;
 
     public SettingsController(CurrentUser currentUser, OrganizationRepository organizations,
                               UserRepository users, AiReplyService aiReplies,
                               PasswordEncoder passwordEncoder, AuthRateLimiter rateLimiter,
-                              AccountLifecycleService lifecycle) {
+                              AccountLifecycleService lifecycle, JwtService jwt) {
         this.currentUser = currentUser;
         this.organizations = organizations;
         this.users = users;
@@ -51,6 +53,7 @@ public class SettingsController {
         this.passwordEncoder = passwordEncoder;
         this.rateLimiter = rateLimiter;
         this.lifecycle = lifecycle;
+        this.jwt = jwt;
     }
 
     public record WorkspaceSettings(String name, boolean aiRepliesEnabled,
@@ -138,8 +141,11 @@ public class SettingsController {
         rateLimiter.recordSuccess(me.getEmail());
         User fresh = users.findById(me.getId()).orElseThrow();
         fresh.setPasswordHash(passwordEncoder.encode(next));
+        // Every other device signed in with the old password is signed out. This one carries
+        // on with the new sign-in handed back here.
+        fresh.endSessions();
         users.save(fresh);
-        return Map.of("changed", true);
+        return Map.of("changed", true, "token", jwt.issueSession(fresh));
     }
 
     private static String message(String value, String what) {

@@ -1,6 +1,7 @@
 package io.eksamadhan.service;
 
 import io.eksamadhan.event.MessageIngested;
+import io.eksamadhan.model.Sentiment;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -82,7 +83,10 @@ public class MessageIngestedListener {
         // it; without Jev it is a generative call, so it waits until after the reply.
         if (event.inbound()) {
             try {
-                sentimentService.analyse(event.messageId());
+                Sentiment mood = sentimentService.analyse(event.messageId());
+                if (mood != null && mood.warrantsHuman()) {
+                    aiReplyService.escalateForMood(event.messageId(), event.pageId());
+                }
             } catch (Exception e) {
                 log.debug("Sentiment failed for message {}: {}", event.messageId(), e.getMessage());
             }

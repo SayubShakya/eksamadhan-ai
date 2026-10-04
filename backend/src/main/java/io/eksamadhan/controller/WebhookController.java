@@ -67,7 +67,8 @@ public class WebhookController {
 
         try {
             Map<String, Object> payload = objectMapper.readValue(rawBody, Map.class);
-            log.info("Received Webhook Payload: {}", payload);
+            // Never the payload itself: it carries customers' messages and ids (docs/rules.md).
+            log.debug("Webhook received: object={}, {} bytes", payload.get("object"), rawBody.length);
             messageParser.processWebhookPayload(payload);
         } catch (Exception e) {
             log.error("Failed to parse webhook payload", e);

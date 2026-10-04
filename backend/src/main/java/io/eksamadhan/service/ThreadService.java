@@ -216,10 +216,14 @@ public class ThreadService {
         return findActive(page, customerId);
     }
 
-    /** Whether this person may answer this conversation. Mirrors {@link #visibleTo}. */
+    /**
+     * Whether this person may act on this conversation: exactly what {@link #visibleTo} shows
+     * them. An agent used to be allowed any unassigned conversation too, which their inbox
+     * never lists, so knowing an id was enough to take over, read or answer someone else's
+     * customer. Unassigned conversations reach agents through routing instead.
+     */
     public boolean mayAct(io.eksamadhan.model.User user, ConversationThread thread) {
         return user.getRole().canManageTeam()
-                || thread.getAssignedAgentId() == null
                 || user.getId().toString().equals(thread.getAssignedAgentId());
     }
 

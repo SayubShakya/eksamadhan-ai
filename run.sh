@@ -29,10 +29,24 @@ lsof -ti tcp:8080 2>/dev/null | xargs kill -9 2>/dev/null || true
 lsof -ti tcp:5174 2>/dev/null | xargs kill -9 2>/dev/null || true
 
 # 🐘 DATABASE
-echo "🐘 Starting PostgreSQL (docker compose)..."
-docker compose -f "$ROOT_DIR/docker-compose.yml" up -d >/dev/null 2>&1 || {
-  echo "⚠️  Could not start PostgreSQL. Is Docker running?"; exit 1;
-}
+# Already answering on 5432 (the container is up): skip Docker entirely, so a hung Docker
+# Desktop engine cannot stall the start. Otherwise give compose 60 seconds, not forever.
+if nc -z -w2 127.0.0.1 5432 2>/dev/null; then
+  echo "🐘 PostgreSQL is already running on 5432."
+else
+  echo "🐘 Starting PostgreSQL (docker compose)..."
+  docker compose -f "$ROOT_DIR/docker-compose.yml" up -d >/dev/null 2>&1 &
+  COMPOSE_PID=$!
+  for _ in $(seq 1 60); do
+    nc -z -w1 127.0.0.1 5432 2>/dev/null && break
+    sleep 1
+  done
+  if ! nc -z -w2 127.0.0.1 5432 2>/dev/null; then
+    kill "$COMPOSE_PID" 2>/dev/null
+    echo "⚠️  PostgreSQL did not start within 60s. Is Docker Desktop running? If it is stuck, quit and reopen it."
+    exit 1
+  fi
+fi
 
 # 🌐 2. START TUNNEL (Pinggy)
 # Pull proxy settings from the backend env file if present

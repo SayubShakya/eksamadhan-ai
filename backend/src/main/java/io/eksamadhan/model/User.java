@@ -114,6 +114,19 @@ public class User {
     @Builder.Default
     private String timeZone = "Asia/Kathmandu";
 
+    /** Sign-ins issued before this are refused (see CurrentUser). Null: none are. */
+    @Column(name = "sessions_valid_from")
+    private OffsetDateTime sessionsValidFrom;
+
+    /**
+     * Ends every sign-in this person has, from the next request on. Whole seconds, because a
+     * token's issue time is: a token issued in this same second, such as the one handed back
+     * after a password change, must still pass.
+     */
+    public void endSessions() {
+        sessionsValidFrom = OffsetDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+    }
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) createdAt = OffsetDateTime.now();

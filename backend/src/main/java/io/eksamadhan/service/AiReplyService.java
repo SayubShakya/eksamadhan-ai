@@ -1057,6 +1057,28 @@ public class AiReplyService {
         }
     }
 
+    /**
+     * An angry customer goes to a person (report Table 10, test 4), even when the AI could
+     * answer the words: being upset is what a person is for. Only while the AI still has the
+     * conversation, so one already waiting for or with a person is not alerted again. The mood
+     * is read after the reply, so the AI may have answered this message first; the handover
+     * follows straight after it.
+     */
+    public void escalateForMood(UUID messageId, UUID pageId) {
+        trace.begin(messageId);
+        try {
+            SocialMessage message = messageRepository.findWithThreadById(messageId).orElse(null);
+            if (message == null || message.getThread() == null
+                    || message.getThread().getStatus() != ThreadStatus.AI_HANDLING) return;
+            SocialPage page = pageRepository.findWithOrganizationById(pageId).orElse(null);
+            escalate(message.getThread(), page, message.getSenderId(), EscalationReasons.ANGRY);
+        } catch (Exception e) {
+            log.error("Could not hand an angry customer to a person", e);
+        } finally {
+            trace.end();
+        }
+    }
+
     /** Used when the reply itself blew up: a customer must not be left with silence. */
     public void escalateAfterFailure(UUID messageId, String reason) {
         trace.begin(messageId);
