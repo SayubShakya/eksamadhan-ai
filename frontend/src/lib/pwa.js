@@ -106,6 +106,13 @@ const MIN_FREE_BYTES = 10 * 1024 * 1024;
 const INSTALL_WAIT_MS = 30_000;
 export const NO_SPACE = 'There is not enough free space on this device to install the app. Free some space, then reload this page and try again.';
 export const DID_NOT_FINISH = 'The app did not finish installing. If this device is low on storage, free some space, then reload this page and try again.';
+/**
+ * Brave reports the site as installable, but often shows no install window when asked (seen
+ * 2026-10-04: the button did nothing in Brave, while the same build installed in Chrome). There
+ * is no event when that happens, so in Brave the way round it is said at once, beside the try.
+ */
+export const BRAVE_HINT = 'If no install window opened, Brave may be blocking it. Open the Brave menu and choose Install app (on a phone, Add to Home screen).';
+const isBrave = () => typeof navigator.brave?.isBrave === 'function';
 
 async function freeBytes() {
     try {
@@ -126,7 +133,8 @@ export async function install() {
         return false;
     }
     deferred = null;                            // a prompt can only be shown once
-    problem = null;
+    problem = isBrave() ? BRAVE_HINT : null;    // cleared by appinstalled if it does install
+    notify();                                   // now: Brave may never answer the prompt
     prompt.prompt();
     const { outcome } = await prompt.userChoice;
     if (outcome === 'accepted' && !isInstalled()) {

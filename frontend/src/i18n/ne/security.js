@@ -5,4 +5,5 @@ export default {
     'The customer is angry': 'ग्राहक रिसाउनुभएको छ',
     'Drop a PDF, text or Markdown file here': 'PDF, टेक्स्ट वा Markdown फाइल यहाँ छोड्नुहोस्',
     'Drop a picture here': 'तस्बिर यहाँ छोड्नुहोस्',
+    'If no install window opened, Brave may be blocking it. Open the Brave menu and choose Install app (on a phone, Add to Home screen).': 'इन्स्टल गर्ने झ्याल खुलेन भने Brave ले रोकेको हुन सक्छ। Brave को मेनु खोलेर Install app छान्नुहोस् (फोनमा Add to Home screen)।',
 };
