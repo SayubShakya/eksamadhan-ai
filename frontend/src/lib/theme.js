@@ -1,6 +1,8 @@
 /**
- * Light or dark, per device. The first visit follows the device's own setting; after that the
- * person's choice is remembered here. Applied as <html data-theme="..."> before React renders,
+ * Light or dark, per device. Light until the person chooses otherwise in Settings (Sayub,
+ * 2026-10-04: a link opened from a QR code on a phone in dark mode came up dark, before anyone
+ * had chosen anything). "Automatic" follows the device only once picked. The choice is
+ * remembered here. Applied as <html data-theme="..."> before React renders,
  * so a reload never flashes the other theme.
  */
 const KEY = 'theme';
@@ -12,8 +14,9 @@ function stored() {
 
 export function current() {
     const t = stored();
-    if (t === 'light' || t === 'dark') return t;
-    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    if (t === 'dark') return 'dark';
+    if (t === 'system') return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return 'light';
 }
 
 function apply(theme) {
@@ -26,13 +29,12 @@ export function init() { apply(current()); }
 /** What the person picked: 'light', 'dark', or 'system' (follow the device). */
 export function choice() {
     const t = stored();
-    return t === 'light' || t === 'dark' ? t : 'system';
+    return t === 'dark' || t === 'system' ? t : 'light';
 }
 
 export function set(theme) {
     try {
-        if (theme === 'system') localStorage.removeItem(KEY);
-        else localStorage.setItem(KEY, theme);
+        localStorage.setItem(KEY, theme === 'dark' || theme === 'system' ? theme : 'light');
     } catch { /* private mode: this visit only */ }
     const now = current();
     apply(now);
