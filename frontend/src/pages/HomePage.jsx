@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import {
     IconPlus, IconArrowRight, IconCheck, IconInbox, IconSparkle, IconTeam, IconClock,
     IconFacebook, IconInstagram, IconWidget, IconWarning,
@@ -239,7 +239,7 @@ export default function HomePage({
             </div>
 
             <div className="dash__row">
-                <ActivityChart messages={messages} pending={recentPending} onMore={() => onNavigate('analytics')} />
+                <ActivityChart messages={messages} threads={threads} pending={recentPending} onMore={() => onNavigate('analytics')} />
                 <ChannelSplit analytics={a} pending={figuresPending} pages={pages} canManage={canManage}
                               onManage={() => onNavigate('channels')} />
             </div>
@@ -327,18 +327,24 @@ const dayKey = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.
  * Messages per day over the last 14 days: what customers sent, and how many the AI answered.
  * Counted from the messages already loaded for the inbox, so the chart is the real traffic.
  */
-function ActivityChart({ messages, pending, onMore }) {
+function ActivityChart({ messages, threads = [], pending, onMore }) {
     const today = dayKey(Date.now());
     const days = Array.from({ length: 14 }, (_, i) => today - (13 - i) * DAY);
     const index = new Map(days.map((d, i) => [d, i]));
-    const inbound = days.map(() => 0), ai = days.map(() => 0);
+    // Spam: customer messages in conversations the filter marked as spam. They are still counted
+    // under "From customers"; this third line shows how much of that was spam.
+    const spamThreads = new Set(threads.filter(th => th.spam).map(th => th.id));
+    const inbound = days.map(() => 0), ai = days.map(() => 0), spam = days.map(() => 0);
     for (const m of messages) {
         const i = index.get(dayKey(m.timestamp));
         if (i === undefined) continue;
-        if (m.direction === 'inbound') inbound[i] += 1;
-        else if (m.aiGenerated) ai[i] += 1;
+        if (m.direction === 'inbound') {
+            inbound[i] += 1;
+            if (spamThreads.has(m.threadId)) spam[i] += 1;
+        } else if (m.aiGenerated) ai[i] += 1;
     }
     const total = inbound.reduce((x, y) => x + y, 0);
+    const spamTotal = spam.reduce((x, y) => x + y, 0);
     const max = Math.max(4, ...inbound, ...ai);
     const W = 640, H = 200, L = 28, B = 24, T = 10;
     const x = (i) => L + (i * (W - L - 8)) / 13;
@@ -377,6 +383,7 @@ function ActivityChart({ messages, pending, onMore }) {
                     <div className="dash__legend">
                         <span><i className="dash__key dash__key--in" /> {t('From customers')}</span>
                         <span><i className="dash__key dash__key--ai" /> {t('Answered by AI')}</span>
+                        <span><i className="dash__key dash__key--spam" /> {t('Spam')}{!pending && spamTotal > 0 ? ` (${spamTotal})` : ''}</span>
                     </div>
                 </div>
                 <div className="dash__chartside">
@@ -406,8 +413,9 @@ function ActivityChart({ messages, pending, onMore }) {
                         ))}
                         {style === 'bars' ? days.map((d, i) => (
                             <g key={`b${d}`}>
-                                <rect x={x(i) - 11} y={y(inbound[i])} width={10} height={Math.max(0, H - B - y(inbound[i]))} rx="2" className="dash__col dash__col--in" />
-                                <rect x={x(i) + 1} y={y(ai[i])} width={10} height={Math.max(0, H - B - y(ai[i]))} rx="2" className="dash__col dash__col--ai" />
+                                <rect x={x(i) - 12} y={y(inbound[i])} width={7} height={Math.max(0, H - B - y(inbound[i]))} rx="2" className="dash__col dash__col--in" />
+                                <rect x={x(i) - 3.5} y={y(ai[i])} width={7} height={Math.max(0, H - B - y(ai[i]))} rx="2" className="dash__col dash__col--ai" />
+                                <rect x={x(i) + 5} y={y(spam[i])} width={7} height={Math.max(0, H - B - y(spam[i]))} rx="2" className="dash__col dash__col--spam" />
                             </g>
                         )) : (
                             <>
@@ -415,10 +423,12 @@ function ActivityChart({ messages, pending, onMore }) {
                                 {style === 'area' && <path d={`${path(ai)} L${x(13)},${H - B} L${x(0)},${H - B} Z`} className="dash__fill--ai" />}
                                 <path d={draw(inbound)} className={`dash__line dash__line--in${style === 'lines' ? ' dash__line--thin' : ''}`} />
                                 <path d={draw(ai)} className={`dash__line dash__line--ai${style === 'lines' ? ' dash__line--thin' : ''}`} />
+                                <path d={draw(spam)} className={`dash__line dash__line--spam${style === 'lines' ? ' dash__line--thin' : ''}`} />
                                 {style === 'points' && days.map((d, i) => (
                                     <g key={`p${d}`}>
                                         <circle cx={x(i)} cy={y(inbound[i])} r="3.5" className="dash__pt dash__pt--in" />
                                         <circle cx={x(i)} cy={y(ai[i])} r="3.5" className="dash__pt dash__pt--ai" />
+                                        <circle cx={x(i)} cy={y(spam[i])} r="3.5" className="dash__pt dash__pt--spam" />
                                     </g>
                                 ))}
                             </>
@@ -437,9 +447,11 @@ function ActivityChart({ messages, pending, onMore }) {
                         )}
                     </svg>
                     {hover !== null && (
-                        <div className="dash__tip" style={{ left: `${(x(hover) / W) * 100}%` }}>
+                        <div className="dash__tip" style={{ left: `${(x(hover) / W) * 100}%`,
+                             // Near either edge the box opens inwards, so it is never cut off.
+                             transform: x(hover) / W > 0.8 ? 'translateX(-100%)' : x(hover) / W < 0.2 ? 'none' : undefined }}>
                             <strong>{t('{n} from customers', { n: inbound[hover] })}</strong>
-                            <span>{t('{n} answered by AI', { n: ai[hover] })} · {fmt(days[hover])}</span>
+                            <span>{t('{n} answered by AI', { n: ai[hover] })} · {t('{n} spam', { n: spam[hover] })} · {fmt(days[hover])}</span>
                         </div>
                     )}
                 </div>
@@ -469,18 +481,30 @@ function ChannelSplit({ analytics, pending, pages, canManage, onManage }) {
             ) : (
                 <>
                     <p className="dash__big">{total}<small>{t('conversations, last 30 days')}</small></p>
-                    <div className="dash__bar" aria-hidden="true">
-                        {rows.map(c => <span key={c.platform} className={`dash__seg dash__seg--${c.platform}`} style={{ flex: c.conversations }} />)}
-                    </div>
+                    {/* One row per channel, each with a thin bar for its share; a channel with no
+                        conversations says why (none yet, or not connected) instead of a big
+                        striped bar that only ever showed one colour. */}
+                    {/* A plain list (Sayub, 2026-10-05): each channel, one line about it, and Connect
+                        for one that is not connected. No bars. */}
                     <ul className="dash__channels">
-                        {rows.map(c => (
-                            <li key={c.platform}>
-                                <span className={`dash__chip dash__chip--${c.platform}`}>{ICON[c.platform]}</span>
-                                <span className="dash__chname"><strong>{NAME[c.platform] || c.platform}</strong>
-                                    <small>{c.conversations === 1 ? t('1 conversation') : t('{n} conversations', { n: c.conversations })} · {t('{pct}% handed to staff', { pct: Math.round(c.escalationRate * 100) })}</small></span>
-                                <span className="dash__pct">{Math.round((c.conversations / total) * 100)}%</span>
-                            </li>
-                        ))}
+                        {['facebook', 'instagram'].map(platform => {
+                            const c = rows.find(r => r.platform === platform);
+                            const connected = pages.some(pg => (pg.platform || '').toLowerCase() === platform);
+                            return (
+                                <li key={platform} className={c ? '' : 'is-empty'}>
+                                    <span className={`dash__chip dash__chip--${platform}`}>{ICON[platform]}</span>
+                                    <span className="dash__chname">
+                                        <strong>{NAME[platform]}</strong>
+                                        <small>{c
+                                            ? `${c.conversations === 1 ? t('1 conversation') : t('{n} conversations', { n: c.conversations })} · ${t('{pct}% handed to staff', { pct: Math.round(c.escalationRate * 100) })}`
+                                            : connected ? t('No conversations yet') : t('Not connected')}</small>
+                                    </span>
+                                    {!c && !connected && canManage && (
+                                        <button type="button" className="btn btn--sm btn--secondary" onClick={onManage}>{t('Connect')}</button>
+                                    )}
+                                </li>
+                            );
+                        })}
                     </ul>
                 </>
             )}
@@ -493,14 +517,39 @@ const PRIORITY = { 1: 'Urgent', 2: 'Normal', 3: 'Low' };
 /** The latest conversations as a table, filterable by status, each row opens it. */
 function RecentTable({ threads, onOpen, onAll }) {
     const [status, setStatus] = useState('all');
+    // The white highlight slides to the chosen tab: measured from the tab itself, so it fits any
+    // label length or language, and re-measured when the bar is resized (the tabs wrap on phones).
+    const tabsRef = useRef(null);
+    const [mark, setMark] = useState(null);
+    useLayoutEffect(() => {
+        const bar = tabsRef.current;
+        if (!bar) return undefined;
+        const place = () => {
+            const on = bar.querySelector('[aria-selected="true"]');
+            if (on) setMark({ x: on.offsetLeft, y: on.offsetTop, w: on.offsetWidth, h: on.offsetHeight });
+        };
+        place();
+        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(place) : null;
+        ro?.observe(bar);
+        return () => ro?.disconnect();
+    }, [status]);
     const rows = threads.filter(th => !th.spam && (status === 'all' || th.status === status)).slice(0, 6);
     return (
         <div className="card card--flush dash__table">
             <div className="dash__tablebar">
-                <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label={t('Filter by status')}>
-                    <option value="all">{t('All status')}</option>
-                    {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{t(v)}</option>)}
-                </select>
+                {/* The statuses as tabs with their counts, so what is there shows at a glance. */}
+                <div className="dash__tabs" role="tablist" aria-label={t('Filter by status')} ref={tabsRef}>
+                    {mark && <span className="dash__tabmark" aria-hidden="true"
+                                   style={{ transform: `translate(${mark.x}px, ${mark.y}px)`, width: mark.w, height: mark.h }} />}
+                    {[['all', t('All')], ...Object.entries(STATUS_LABEL).map(([k, v]) => [k, t(v)])].map(([k, label]) => {
+                        const n = threads.filter(th => !th.spam && (k === 'all' || th.status === k)).length;
+                        return (
+                            <button key={k} type="button" role="tab" aria-selected={status === k} onClick={() => setStatus(k)}>
+                                {label} <span className="dash__tabcount">{n}</span>
+                            </button>
+                        );
+                    })}
+                </div>
                 <button type="button" className="btn btn--sm btn--primary" onClick={onAll}>{t('Open inbox')} <IconArrowRight size={14} /></button>
             </div>
             <table>

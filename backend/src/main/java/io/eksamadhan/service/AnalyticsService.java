@@ -44,8 +44,9 @@ public class AnalyticsService {
     /** One day of the window, in Nepal time: conversations started, how many never reached a
      *  person, the AI's median reply time that day (null when it sent none), messages customers
  *  sent, and replies the AI sent. */
+    /** {@code spam}: conversations started that day that Jev marked as spam. */
     public record Day(String date, long conversations, long handledByAi, Double aiMedianSeconds,
-                      long messagesIn, long aiReplies) {}
+                      long messagesIn, long aiReplies, long spam) {}
 
     /** A reason a conversation was handed to a person, how often, and what fixes it (null when
      *  the reason is not one {@link EscalationReasons} knows). */
@@ -57,10 +58,21 @@ public class AnalyticsService {
     /** When customers write: the busiest weekday (1 Monday to 7 Sunday) and hour, Nepal time. */
     public record Busiest(Integer weekday, Long weekdayCount, Integer hour, Long hourCount) {}
 
+    /**
+     * Conversations Jev marked as spam in the period, and of which kind (promotion, scam,
+     * gibberish, spam). They are kept out of every other figure, so without this they were
+     * invisible: nothing told the owner how much the filter was catching, or that the Spam tab
+     * had anything in it to check.
+     */
+    public record Spam(long conversations, List<SpamKind> kinds) {}
+
+    public record SpamKind(String kind, long count) {}
+
+    /** {@code spamClosed} is the number closed as unrelated (off topic), kept under its old name. */
     public record Overview(Deflection deflection, ReplyTimes replyTimes,
                            List<ChannelRow> channels, long spamClosed,
                            List<Day> daily, List<Reason> reasons, Moods moods, Busiest busiest,
-                           long urgent) {}
+                           long urgent, Spam spam) {}
 
     /** Used when the viewer's time zone is missing or not a real one. */
     public static final String DEFAULT_ZONE = "Asia/Kathmandu";
@@ -86,7 +98,7 @@ public class AnalyticsService {
         return new Overview(deflection(tenant, days), replyTimes(tenant, days),
                 channels(tenant, days), spamClosed(tenant, days),
                 daily(tenant, days, z), reasons(tenant, days), moods(tenant, days), busiest(tenant, days, z),
-                urgent(tenant, days));
+                urgent(tenant, days), spam(tenant, days));
     }
 
     /**
@@ -100,7 +112,8 @@ public class AnalyticsService {
                 ), conv AS (
                     SELECT (created_at AT TIME ZONE ?)::date AS day,
                            count(*) AS total,
-                           count(*) FILTER (WHERE escalated_at IS NULL) AS ai
+                           count(*) FILTER (WHERE escalated_at IS NULL) AS ai,
+                           count(*) FILTER (WHERE spam) AS spam
                       FROM conversation_threads
                      WHERE tenant_id = ? AND NOT unrelated
                        AND created_at >= now() - make_interval(days => ?)
@@ -126,12 +139,13 @@ public class AnalyticsService {
                      GROUP BY 1
                 )
                 SELECT d.day, coalesce(conv.total, 0) AS total, coalesce(conv.ai, 0) AS ai, speed.median,
-                       coalesce(msgs.msg_in, 0) AS msg_in, coalesce(msgs.msg_ai, 0) AS msg_ai
+                       coalesce(msgs.msg_in, 0) AS msg_in, coalesce(msgs.msg_ai, 0) AS msg_ai,
+                       coalesce(conv.spam, 0) AS spam
                   FROM d LEFT JOIN conv ON conv.day = d.day LEFT JOIN speed ON speed.day = d.day
                          LEFT JOIN msgs ON msgs.day = d.day
                  ORDER BY d.day
                 """, (rs, i) -> new Day(rs.getString("day"), rs.getLong("total"), rs.getLong("ai"),
-                        dbl(rs.getObject("median")), rs.getLong("msg_in"), rs.getLong("msg_ai")),
+                        dbl(rs.getObject("median")), rs.getLong("msg_in"), rs.getLong("msg_ai"), rs.getLong("spam")),
                 zone, days, zone, zone, tenant, days, zone, tenant, days, zone, tenant, days);
     }
 
@@ -279,6 +293,17 @@ public class AnalyticsService {
                    AND created_at >= now() - make_interval(days => ?)
                 """, Long.class, tenant, days);
         return n == null ? 0 : n;
+    }
+
+    private Spam spam(String tenant, int days) {
+        List<SpamKind> kinds = jdbc.query("""
+                SELECT coalesce(spam_kind, 'spam') AS kind, count(*) AS n
+                  FROM conversation_threads
+                 WHERE tenant_id = ? AND spam
+                   AND created_at >= now() - make_interval(days => ?)
+                 GROUP BY 1 ORDER BY 2 DESC
+                """, (rs, i) -> new SpamKind(rs.getString("kind"), rs.getLong("n")), tenant, days);
+        return new Spam(kinds.stream().mapToLong(SpamKind::count).sum(), kinds);
     }
 
     private static long num(Object value) {

@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as api from '../lib/api.js';
-import { formatSeconds as duration } from '../lib/format.js';
+import { formatSeconds as duration, SPAM_KIND_SHORT } from '../lib/format.js';
 import { LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
 import { t, lang, NE_MONTHS } from '../lib/i18n.js';
-import { IconSparkle, IconInbox, IconClock, IconInfo, IconTeam, IconWarning, IconBolt, IconArrowRight } from '../components/icons.jsx';
+import { IconSparkle, IconInbox, IconClock, IconInfo, IconTeam, IconWarning, IconBolt, IconArrowRight, IconShield } from '../components/icons.jsx';
 
 /**
  * The figures the project is graded against (report §1.4), laid out after the "Spending
@@ -43,7 +43,7 @@ function FiguresSkeleton() {
     return (
         <LoadingRegion label={t('the figures')} className="an2">
             <div className="an2-kpis">
-                {[0, 1, 2].map(i => (
+                {[0, 1, 2, 3].map(i => (
                     <div className="an2-card an2-kpi" key={i}>
                         <div className="an2-kpi__head"><Skel w={28} h={28} style={{ borderRadius: 8 }} /><Skel line w={110} /></div>
                         <div className="an2-kpi__body">
@@ -77,7 +77,7 @@ function FiguresSkeleton() {
     );
 }
 
-export default function AnalyticsPage({ onNavigate }) {
+export default function AnalyticsPage({ onNavigate, onOpenSpam }) {
     const [days, setDays] = useState(30);
     // One cached copy per range, so switching back to a range already seen is instant; a new
     // range keeps the old figures on screen, dimmed, until its own arrive.
@@ -109,7 +109,7 @@ export default function AnalyticsPage({ onNavigate }) {
                 <div className={`an2${refreshing ? ' is-refreshing' : ''}`} aria-busy={refreshing}>
                     {refreshing && <span className="sr-only" role="status">{t('Loading the figures for {n} days', { n: days })}</span>}
                     {error && !refreshing && <p className="auth__error" role="alert">{api.errorMessage(error, t('Could not load the figures.'))}</p>}
-                    <Figures data={data} days={days} onNavigate={onNavigate} />
+                    <Figures data={data} days={days} onNavigate={onNavigate} onOpenSpam={onOpenSpam} />
                 </div>
             )}
         </div>
@@ -181,7 +181,21 @@ function Trend({ daily, mode }) {
     const labelAll = msgs ? t('From customers') : t('Conversations');
     const labelAi = msgs ? t('Answered by AI') : t('Handled by AI');
     const [hover, setHover] = useState(null);
-    const W = 640, H = 220, L = 34, B = 26, T = 10, R = 8;
+    // Drawn at the box's real size, so it can fill the card beside the reasons list without
+    // stretching its labels (the SVG does not keep its aspect ratio).
+    const boxRef = useRef(null);
+    const [size, setSize] = useState({ w: 640, h: 220 });
+    useEffect(() => {
+        const el = boxRef.current;
+        if (!el || typeof ResizeObserver === 'undefined') return undefined;
+        const ro = new ResizeObserver(([entry]) => {
+            const { width, height } = entry.contentRect;
+            if (width > 0 && height > 0) setSize({ w: Math.round(width), h: Math.round(height) });
+        });
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+    const W = size.w, H = size.h, L = 34, B = 26, T = 10, R = 8;
     const total = daily.map(d => (msgs ? d.messagesIn ?? 0 : d.conversations));
     const ai = daily.map(d => (msgs ? d.aiReplies ?? 0 : d.handledByAi));
     const max = Math.max(4, ...total, ...ai);
@@ -197,9 +211,11 @@ function Trend({ daily, mode }) {
         const c2x = x(i) - (x(Math.min(vals.length - 1, i + 1)) - x(i - 1)) / 6, c2y = keep(y(v) - (y(p3) - y(p1)) / 6);
         return `C${c1x},${c1y} ${c2x},${c2y} ${x(i)},${y(v)}`;
     }).join(' ');
-    const step = Math.max(1, Math.round(daily.length / 7));
+    // As many date labels as fit at about 56 px each (a label like "30 Sept"), never more than 7.
+    const fit = Math.max(2, Math.min(7, Math.floor((W - L - R) / 56)));
+    const step = Math.max(1, Math.ceil(daily.length / fit));
     return (
-        <div className="an2-trend" onMouseLeave={() => setHover(null)}>
+        <div className="an2-trend" ref={boxRef} onMouseLeave={() => setHover(null)}>
             <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="none" role="img"
                  aria-label={msgs ? t('Messages from customers per day, and replies the AI sent') : t('Conversations per day, and how many the AI handled alone')}>
                 {[0, 0.5, 1].map(f => (
@@ -261,16 +277,17 @@ function Donut({ parts, total }) {
     );
 }
 
-function Figures({ data, days, onNavigate }) {
+function Figures({ data, days, onNavigate, onOpenSpam }) {
     const [trend, setTrend] = useState('messages');
     const { deflection: d, replyTimes: r, channels = [], spamClosed = 0 } = data;
+    const spam = data.spam || { conversations: 0, kinds: [] };
     const daily = data.daily || [];
     const reasons = data.reasons || [];
     const moods = data.moods || { positive: 0, neutral: 0, negative: 0, angry: 0, unread: 0 };
     const busiest = data.busiest || {};
     const met = d.rate >= d.target;
 
-    if (d.total === 0 && spamClosed === 0) {
+    if (d.total === 0 && spamClosed === 0 && spam.conversations === 0) {
         return (
             <div className="an2-card an2-empty">
                 <span className="an2-empty__icon"><IconInbox size={24} /></span>
@@ -284,6 +301,7 @@ function Figures({ data, days, onNavigate }) {
         { key: 'ai', label: t('Resolved by the AI'), value: d.handledByAi },
         { key: 'team', label: t('Handed to your team'), value: d.escalated },
         { key: 'unrelated', label: t('Closed as unrelated'), value: spamClosed },
+        { key: 'spam', label: t('Marked as spam'), value: spam.conversations },
     ];
     const endedTotal = ended.reduce((s, p) => s + p.value, 0);
 
@@ -305,6 +323,15 @@ function Figures({ data, days, onNavigate }) {
     if (data.urgent > 0) {
         notes.push({ Icon: IconBolt, tone: 'warn', title: data.urgent === 1 ? t('1 urgent conversation') : t('{n} urgent conversations', { n: data.urgent }),
             text: t('Judged urgent from what the customer wrote, such as an order that never came.') });
+    }
+    // Spam is kept out of every other figure, so say here how much the filter caught and where
+    // to check it: a real customer wrongly caught is in the Spam tab, one tap from coming back.
+    if (spam.conversations > 0) {
+        const kinds = spam.kinds.map(k => `${SPAM_KIND_SHORT[k.kind] || SPAM_KIND_SHORT.spam}: ${k.count}`).join(', ');
+        notes.push({ Icon: IconShield, tone: 'warn', key: 'spam',
+            title: spam.conversations === 1 ? t('1 conversation marked as spam') : t('{n} conversations marked as spam', { n: spam.conversations }),
+            text: t('{kinds}. Check the Spam tab in case a real customer was caught.', { kinds }),
+            action: { label: t('Open the Spam tab'), onClick: onOpenSpam } });
     }
     const worst = [...channels].filter(c => c.conversations >= 3).sort((a, b) => b.escalationRate - a.escalationRate)[0];
     if (worst && channels.length > 1) {
@@ -332,6 +359,14 @@ function Figures({ data, days, onNavigate }) {
                      value={duration(r.aiMedianSeconds)}
                      note={r.aiSamples ? t('9 in 10 within {time}', { time: duration(r.aiP90Seconds) }) : t('No AI replies yet')}>
                     <Mini values={daily.map(x => x.aiMedianSeconds)} />
+                </Kpi>
+                <Kpi icon={IconShield} label={t('Spam')}
+                     info={t('Conversations the filter marked as spam in this period. They are left out of the other figures and the AI does not answer them.')}
+                     value={spam.conversations}
+                     note={spam.conversations
+                         ? spam.kinds.map(k => `${SPAM_KIND_SHORT[k.kind] || SPAM_KIND_SHORT.spam}: ${k.count}`).join(', ')
+                         : t('Nothing caught')}>
+                    <Mini values={daily.map(x => x.spam ?? 0)} />
                 </Kpi>
             </div>
 
@@ -434,6 +469,11 @@ function Figures({ data, days, onNavigate }) {
                                     <div>
                                         <strong>{n.title}</strong>
                                         <p>{n.text}</p>
+                                        {n.action && (
+                                            <button type="button" className="an2-link" onClick={n.action.onClick}>
+                                                {n.action.label} <IconArrowRight size={14} />
+                                            </button>
+                                        )}
                                     </div>
                                 </li>
                             ))}

@@ -207,6 +207,14 @@ export const SPAM_KIND = translated({
     spam: 'Not from a customer',
 });
 
+/** The same kinds as short labels, for counts such as "Scam: 2, Advertising: 1". */
+export const SPAM_KIND_SHORT = translated({
+    promotion: 'Advertising',
+    scam: 'Scam',
+    gibberish: 'Random text',
+    spam: 'Other',
+});
+
 export const STATUS_LABEL = translated({
     AI_HANDLING: 'AI handling',
     OPEN_FOR_AGENT: 'Needs staff',

@@ -254,6 +254,8 @@ export default function App() {
     const [active, setActive] = useState(null);
     // Active by default: the inbox opens on work to do, not on the archive.
     const [filter, setFilter] = useState('active');
+    // The inbox on its Spam tab, from the dashboard's and Analytics' spam notices.
+    const openSpam = useCallback(() => { setFilter('spam'); setView('inbox'); }, [setView]);
     // Channel is a separate axis from status, so it is filtered separately.
     const [platform, setPlatform] = useState('all');
     const [query, setQuery] = useState('');
@@ -1131,7 +1133,7 @@ export default function App() {
 
                 {view === 'knowledge' && <KnowledgePage canManage={canManage} />}
 
-                {view === 'analytics' && <AnalyticsPage onNavigate={setView} />}
+                {view === 'analytics' && <AnalyticsPage onNavigate={setView} onOpenSpam={openSpam} />}
 
                 {view === 'notifications' && <NotificationsPage onOpen={openNotification} />}
 

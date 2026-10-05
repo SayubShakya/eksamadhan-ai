@@ -73,15 +73,6 @@ function toWindows(days) {
     return days.filter(d => d.on).flatMap(d => d.ranges.map(r => ({ dayOfWeek: d.day, startMin: toMin(r.start), endMin: endMin(r) })));
 }
 
-/** Minutes worked in a day, for the week's total. */
-const dayMinutes = (d) => (d.on ? d.ranges.reduce((sum, r) => sum + Math.max(0, endMin(r) - (toMin(r.start) ?? 0)), 0) : 0);
-
-/** "40 h" or "37 h 30 min". */
-function hoursText(min) {
-    const h = Math.floor(min / 60), m = min % 60;
-    return m ? t('{h} h {m} min', { h, m }) : t('{h} h', { h });
-}
-
 /**
  * Whether two zone names keep the same clock all year. Browsers still report some zones by an
  * old name (Chrome says Asia/Katmandu for Asia/Kathmandu); those are the same zone, not a move.
@@ -100,112 +91,6 @@ function sameZone(a, b) {
     }
 }
 
-
-/** The whole week at a glance, calendar style: a column per day, hours running down, each set
- *  of hours a block with its times, the day's total underneath, and now marked on today. */
-function WeekOverview({ days, today, status, presence }) {
-    const now = new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    const total = days.reduce((sum, d) => sum + dayMinutes(d), 0);
-    const working = days.filter(d => d.on);
-    const longest = working.reduce((best, d) => (dayMinutes(d) > dayMinutes(best || d) ? d : best || d), null);
-    // "Longest day" only says something when the days differ.
-    const sameEveryDay = working.length > 1 && working.every(d => dayMinutes(d) === dayMinutes(working[0]));
-
-    // Right now, from the server's own reading (the same one routing uses).
-    const nowState = !status ? null
-        : !status.hasAvailability ? { tone: 'warn', text: t('No working hours set, so no new conversations come to you.') }
-        : presence === 'BUSY' ? { tone: 'muted', text: t('Within your hours, but you are Busy: new conversations go to others.') }
-        : status.withinHours ? { tone: 'good', text: t('Open now: new conversations can come to you.') }
-        : { tone: 'muted', text: status.nextAvailableAt ? t('Outside your hours. Back {when}.', { when: formatBackAt(status.nextAvailableAt) }) : t('Outside your hours.') };
-
-    // Only the part of the day anyone works, rounded out to whole hours, so blocks are tall
-    // enough to read; a sensible daytime span when nothing is set.
-    const all = working.flatMap(d => d.ranges.map(r => [toMin(r.start) ?? 0, endMin(r)]));
-    const from = all.length ? Math.max(0, Math.floor(Math.min(...all.map(x => x[0])) / 60) * 60 - 60) : 8 * 60;
-    const to = all.length ? Math.min(1440, Math.ceil(Math.max(...all.map(x => x[1])) / 60) * 60 + 60) : 20 * 60;
-    const span = Math.max(60, to - from);
-    const pos = (m) => `${((Math.min(Math.max(m, from), to) - from) / span) * 100}%`;
-    const step = span > 12 * 60 ? 240 : span > 6 * 60 ? 120 : 60;
-    const ticks = [];
-    for (let m = Math.ceil(from / step) * step; m <= to; m += step) ticks.push(m);
-    const clock = (m) => new Date(2024, 0, 1, Math.floor(m / 60) % 24, m % 60)
-        .toLocaleTimeString(lang() === 'ne' ? 'en-GB' : 'en-US', m % 60 ? { hour: 'numeric', minute: '2-digit' } : { hour: 'numeric' });
-
-    return (
-        <section className="card wk" aria-label={t('Your week')}>
-            <header className="wk__head">
-                <div>
-                    <h2>{t('Your week')}</h2>
-                    {nowState
-                        ? <p className={`wk__now-state is-${nowState.tone}`}><i aria-hidden="true" />{nowState.text}</p>
-                        : <p>{t('When new conversations can come to you, day by day.')}</p>}
-                </div>
-                <dl className="wk__stats">
-                    <div><dt>{t('Hours a week')}</dt><dd>{hoursText(total)}</dd></div>
-                    <div><dt>{t('Working days')}</dt><dd>{working.length}</dd></div>
-                    {sameEveryDay
-                        ? <div><dt>{t('Each day')}</dt><dd>{dayMinutes(working[0]) === 1440 ? t('All day') : hoursText(dayMinutes(working[0]))}</dd></div>
-                        : longest && <div><dt>{t('Longest day')}</dt><dd>{t(DAYS.find(x => x.day === longest.day).short)} · {hoursText(dayMinutes(longest))}</dd></div>}
-                </dl>
-            </header>
-            <div className="wk__cal" aria-hidden="true">
-                <div className="wk__day wk__day--axis">
-                    <span className="wk__name" />
-                    <div className="wk__axis">{ticks.map(m => <span key={m} style={{ top: pos(m) }}>{clock(m)}</span>)}</div>
-                    <span className="wk__total" />
-                </div>
-                {days.map(d => {
-                    const isToday = d.day === today;
-                    return (
-                        <div key={d.day} className={`wk__day${isToday ? ' is-today' : ''}${d.on ? '' : ' is-off'}`}>
-                            <span className="wk__name">{t(DAYS.find(x => x.day === d.day).short)}</span>
-                            <div className="wk__col">
-                                {ticks.map(m => <i key={m} className="wk__line" style={{ top: pos(m) }} />)}
-                                {d.on ? d.ranges.map((r, i) => {
-                                    const a = toMin(r.start) ?? 0, b = endMin(r);
-                                    if (b <= a) return null;
-                                    const tall = (b - a) / span > 0.16;
-                                    return (
-                                        <div key={i} className="wk__block" style={{ top: pos(a), height: `calc(${pos(b)} - ${pos(a)})` }}>
-                                            {tall && (a === 0 && b === 1440
-                                                ? <><strong>{t('All day')}</strong><span>{t('24 hours')}</span></>
-                                                : <><strong>{clock(a)}</strong><span>{clock(b)}</span></>)}
-                                        </div>
-                                    );
-                                }) : <span className="wk__offlabel">{t('Off')}</span>}
-                                {isToday && nowMin >= from && nowMin <= to && <b className="wk__now" style={{ top: pos(nowMin) }} />}
-                            </div>
-                            <span className="wk__total">{d.on ? hoursText(dayMinutes(d)) : '·'}</span>
-                        </div>
-                    );
-                })}
-            </div>
-        </section>
-    );
-}
-
-/** The week card while hours load: title, the status line, three tiles and seven columns. */
-function WeekSkeleton() {
-    return (
-        <section className="card wk" aria-hidden="true">
-            <header className="wk__head">
-                <div style={{ display: 'grid', gap: 10 }}><Skel line w={100} /><Skel w={300} h={30} style={{ borderRadius: 10 }} /></div>
-                <div className="wk__stats">{[0, 1, 2].map(i => <Skel key={i} w={100} h={54} style={{ borderRadius: 12 }} />)}</div>
-            </header>
-            <div className="wk__cal">
-                <div className="wk__day wk__day--axis"><span className="wk__name" /><div /><span className="wk__total" /></div>
-                {DAYS.map(({ day }) => (
-                    <div className="wk__day" key={day}>
-                        <span className="wk__name"><Skel line w={30} /></span>
-                        <div className="wk__col"><Skel w="100%" h="100%" style={{ display: "block" }} /></div>
-                        <span className="wk__total"><Skel line w={24} /></span>
-                    </div>
-                ))}
-            </div>
-        </section>
-    );
-}
 
 function Switch({ checked, onChange, label }) {
     return (
@@ -227,7 +112,6 @@ export default function HoursPage({ onStatus }) {
     const [days, setDays] = useState(null);
     const [zone, setZone] = useState('');
     const [status, setStatus] = useState(null);
-    const [presence, setPresence] = useState(null);
     const [loadError, setLoadError] = useState(null);
     const [save, setSave] = useState({ state: 'idle', message: '' });   // idle | saving | saved | error
     const dirty = useRef(false);            // only a person's edit saves, never loading
@@ -238,7 +122,6 @@ export default function HoursPage({ onStatus }) {
 
     const apply = useCallback((result) => {
         setStatus(result.status);
-        setPresence(result.presence);
         setZone(result.timeZone);
         onStatus?.(result.status);
     }, [onStatus]);
@@ -386,8 +269,6 @@ export default function HoursPage({ onStatus }) {
                             {t("Not saved yet: fix {day}'s hours first.", { day: t(DAYS.find(x => x.day === invalid.day).name) })}
                         </p>
                     )}
-
-                    {days && !loading ? <WeekOverview days={days} today={today} status={status} presence={presence} /> : <WeekSkeleton />}
 
                     <ul className="hours__week" aria-busy={loading || undefined}>
                         {(loading || !days) ? DAYS.map(({ day }) => (

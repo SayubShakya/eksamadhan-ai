@@ -4244,3 +4244,171 @@ a.chn-act { color: var(--accent); }
     .kq-site { flex-direction: column; }
     .kq-site input { flex: none; }
 }
+
+/* Spam: the third line in the dashboard chart and the Analytics segment (2026-10-05). Neutral, not an alarm: it is
+   the filter working, and the button is there to check it. */
+.an2-key--spam { background: #b45309; }
+.an2-donut__seg.is-spam { stroke: #b45309; }
+
+/* Profile as a plain right-side drawer (2026-10-05): full height, flush to the right edge, a
+   title bar, no cover picture, the photo's buttons beside the photo. Phones keep the bottom sheet. */
+@media (min-width: 761px) {
+    .profile-drawer.popover {
+        top: 0; bottom: 0; right: 0; width: min(420px, 100vw); border-radius: 0;
+        border-left: 1px solid var(--border); box-shadow: -12px 0 32px rgba(16, 24, 40, .12);
+    }
+}
+.pd__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 -22px; padding: 16px 22px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 1; }
+.pd__title { margin: 0; font-size: 17px; font-weight: 650; }
+.pd__head .pd__close { position: static; width: 34px; height: 34px; border-radius: var(--r-sm); background: none; color: var(--text-muted); }
+.pd__head .pd__close:hover { background: var(--surface); color: var(--text); }
+.pd__who { display: flex; align-items: flex-start; gap: 16px; margin-top: 0; padding: 20px 0; }
+.pd__whotext { flex: 1; min-width: 0; }
+.pd__who .pd__name { font-size: 18px; margin: 0; }
+.pd__who .pd__photobtns { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.pd__who .pd__avatar { flex-shrink: 0; cursor: pointer; }
+.pd__who .pd__avatar .avatar { border-width: 2px; }
+.pd__who .pd__badge { right: -2px; bottom: -2px; width: 22px; height: 22px; }
+/* Four cards across now that Spam has one (2026-10-05); two by two below 1100px, as before. */
+.an2-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .an2-kpis { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 760px) { .an2-kpis { grid-template-columns: 1fr; } }
+/* Four across: smaller sparklines so the line under each number stays on one or two short lines. */
+@media (min-width: 1101px) {
+    .an2-kpis .an2-mini { width: 72px; }
+    .an2-kpis .an2-kpi__body { gap: 10px; }
+    .an2-kpis .an2-kpi__note { font-size: 12.5px; }
+}
+/* How conversations ended and Worth knowing: Worth knowing gets the wider column and its notes
+   sit two to a row, so the two cards end at about the same height. Before, the short card was
+   stretched to the tall one and was mostly empty space. */
+@media (min-width: 1101px) {
+    .an2-row--even { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); }
+    .an2-row--even .an2-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .an2-row--even .an2-notes li { margin: 0; }
+}
+/* Messages over time fills its card, which is as tall as the reasons list beside it, instead of
+   leaving empty space under a fixed-height chart. */
+.an2-card:has(> .an2-trend) { display: flex; flex-direction: column; }
+.an2-card > .an2-trend { flex: 1; height: auto; min-height: 260px; }
+@media (max-width: 760px) { .an2-card > .an2-trend { min-height: 180px; } }
+/* The chart is drawn at the box's measured size, so the box must not take its height from the
+   chart: the SVG sits absolutely inside it, and only the card decides how tall the box is. */
+.an2-card > .an2-trend > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.dash__key--spam { background: #b45309; }
+.dash__line--spam { stroke: #b45309; stroke-dasharray: 0; }
+.dash__col--spam { fill: #b45309; }
+.dash__pt--spam { stroke: #b45309; }
+
+/* Dashboard, 2026-10-05: status tabs above Recent conversations instead of a dropdown, and the
+   By channel card as one row per channel with a thin share bar (the striped bar is gone). */
+.dash__tablebar { justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.dash__tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 3px; background: var(--surface); border-radius: 10px; }
+.dash__tabs button {
+    display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; cursor: pointer;
+    padding: 6px 12px; border-radius: var(--r-sm); font: inherit; font-size: 13px; font-weight: 500; color: var(--text-muted);
+}
+.dash__tabs button:hover { color: var(--text); }
+.dash__tabs button[aria-selected="true"] { background: var(--bg); color: var(--text); font-weight: 600; box-shadow: 0 1px 2px rgba(16, 24, 40, .1); }
+.dash__tabs button:focus:not(:focus-visible) { outline: none; }
+.dash__tabcount { min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--border); color: var(--text-muted); font-size: 11.5px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
+.dash__tabs button[aria-selected="true"] .dash__tabcount { background: var(--accent-tint); color: var(--accent); }
+.dash__split .dash__big { margin-bottom: 4px; }
+.dash__share { display: block; height: 6px; margin-top: 8px; border-radius: 3px; background: var(--surface); overflow: hidden; }
+.dash__share i { display: block; height: 100%; border-radius: 3px; }
+.dash__share--facebook { background: #2f6fe4; }
+.dash__share--instagram { background: #d9468f; }
+.dash__channels li.is-empty .dash__chip { opacity: .55; }
+@media (max-width: 760px) {
+    .dash__tabs { width: 100%; }
+    .dash__tabs button { white-space: nowrap; padding: 6px 10px; }
+    .dash__tablebar .btn { margin-left: auto; }
+}
+
+/* Edit profile, desktop: as tall as its content, from the top right, instead of a full-height
+   drawer that was mostly blank below the email field (2026-10-05). Long content still scrolls. */
+@media (min-width: 761px) {
+    .profile-drawer.popover {
+        top: 0; right: 0; bottom: auto; height: auto; max-height: 100vh;
+        border-bottom: 1px solid var(--border); border-bottom-left-radius: 14px;
+        display: flex; flex-direction: column;
+    }
+    .profile-drawer .pd { flex: 0 1 auto; }
+    .profile-drawer .pd__foot { margin-top: 0; }
+}
+/* Status tabs: one highlight that slides between them. */
+.dash__tabs { position: relative; isolation: isolate; }
+.dash__tabmark {
+    position: absolute; left: 0; top: 0; z-index: -1; border-radius: var(--r-sm); background: var(--bg);
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .12);
+    transition: transform .28s cubic-bezier(.3, .7, .2, 1), width .28s cubic-bezier(.3, .7, .2, 1);
+}
+.dash__tabs button[aria-selected="true"] { background: none; box-shadow: none; }
+.dash__tabs button:focus { outline: none; }
+.dash__tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) { .dash__tabmark { transition: none; } }
+
+/* Edit profile, 2026-10-05: the page behind blurred, Save in the brand colour (not black), and
+   the "who you are" block as one card with Remove under the photo. */
+.profile-drawer__scrim.popover__catcher {
+    background: rgba(16, 20, 27, .22);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    animation: fade .15s ease;
+}
+.pd__foot .btn--primary, :root[data-theme="dark"] .pd__foot .btn--primary { background: var(--accent); border-color: var(--accent); }
+.pd__foot .btn--primary:hover:not(:disabled) { background: var(--accent-hover, var(--accent)); filter: brightness(.95); }
+/* Waiting for a change: the same readable grey as Settings' disabled Save, not faded blue with
+   grey text on it, which could not be read. */
+.pd__foot .btn--primary:disabled:not(.btn--busy) {
+    opacity: 1; background: var(--surface); border-color: var(--border); color: var(--text-muted); box-shadow: none; filter: none;
+}
+.pd__who {
+    display: flex; align-items: center; gap: 16px; margin: 18px 0 4px; padding: 16px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+}
+.pd__photo { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+.pd__who .pd__remove {
+    border: 0; background: none; padding: 2px 6px; border-radius: var(--r-sm);
+    font: inherit; font-size: 12.5px; font-weight: 500; color: var(--danger); cursor: pointer;
+}
+.pd__who .pd__remove:hover { background: var(--danger-weak); }
+.pd__who .pd__name { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 17px; font-weight: 650; }
+.pd__who .pd__role { background: var(--bg); }
+.pd__who .pd__email { margin-top: 2px; font-size: 13.5px; overflow-wrap: anywhere; }
+.pd__who .pd__meta { flex-wrap: wrap; margin-top: 6px; font-size: 12.5px; }
+.pd__who + * { border-top: 0; }
+
+/* Edit profile opening (2026-10-05): it slides in from the right on a desktop and up from the
+   bottom on a phone, with the blurred backdrop fading in, rather than a 12 px nudge. */
+@keyframes pd-slide-in { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes pd-slide-up { from { transform: translateY(100%); } to { transform: none; } }
+@media (min-width: 761px) {
+    .profile-drawer.popover { animation: pd-slide-in .32s cubic-bezier(.22, .9, .3, 1); }
+}
+@media (max-width: 760px) {
+    .profile-drawer.popover { animation: pd-slide-up .32s cubic-bezier(.22, .9, .3, 1); }
+}
+.profile-drawer__scrim.popover__catcher { animation: fade .25s ease; }
+@media (prefers-reduced-motion: reduce) {
+    .profile-drawer.popover { animation: fade .15s ease; }
+}
+.pd__unsaved { font-size: 11.5px; color: var(--warning); font-weight: 500; }
+
+
+/* Edit profile, 2026-10-05 (Sayub): full height again, a lighter blur behind it, and the role as
+   a coloured badge: tenant in the brand colour, admin in teal, staff in grey. */
+.profile-drawer__scrim.popover__catcher {
+    background: rgba(16, 20, 27, .12);
+    backdrop-filter: blur(1px); -webkit-backdrop-filter: blur(1px);
+}
+@media (min-width: 761px) {
+    .profile-drawer.popover { top: 0; bottom: 0; height: auto; max-height: none; border-bottom: 0; border-bottom-left-radius: 0; }
+    .profile-drawer .pd { flex: 1 1 auto; }
+    .profile-drawer .pd__foot { margin-top: auto; }
+}
+.pd__who .pd__role { font-weight: 600; border-color: transparent; }
+.pd__who .pd__role--owner { background: var(--accent-tint); color: var(--accent); }
+.pd__who .pd__role--admin { background: #dff4f1; color: #0f766e; }
+.pd__who .pd__role--agent { background: var(--bg); color: var(--text-muted); border-color: var(--border); }
+:root[data-theme="dark"] .pd__who .pd__role--admin { background: rgba(20, 184, 166, .16); color: #5eead4; }
