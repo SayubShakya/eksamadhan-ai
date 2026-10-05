@@ -73,14 +73,14 @@ export default function DataPrivacyCard({ user, settings, onStartDeletion, onSig
               footer={error ? <span className="settings__status"><span className="settings__error">{error}</span></span> : null}>
             <Row title={t('Download my data')}
                  hint={t('Your profile, how you sign in, your devices and your notifications, as one file.')}>
-                <button type="button" className={`btn btn--secondary privacy__btn${busy === 'download' ? ' btn--busy' : ''}`}
+                <button type="button" className={`btn btn--tint privacy__btn${busy === 'download' ? ' btn--busy' : ''}`}
                         onClick={download} disabled={Boolean(busy)} aria-busy={busy === 'download'}>
                     <IconDownload size={16} /> {t('Download')}
                 </button>
             </Row>
             <Row title={t('Deactivate account')}
                  hint={t('Signs you out everywhere and stops conversations and alerts coming to you. Sign in again to undo it.')}>
-                <button type="button" className={`btn btn--secondary privacy__btn${busy === 'deactivate' ? ' btn--busy' : ''}`}
+                <button type="button" className={`btn btn--tint-warn privacy__btn${busy === 'deactivate' ? ' btn--busy' : ''}`}
                         onClick={() => setConfirmDeactivate(true)} disabled={Boolean(busy)} aria-busy={busy === 'deactivate'}>
                     {t('Deactivate')}
                 </button>

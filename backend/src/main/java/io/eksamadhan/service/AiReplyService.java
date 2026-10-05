@@ -118,6 +118,7 @@ public class AiReplyService {
     private final int offTopicLimit;
     private final int maxContextChars;
     private final PublicUrl publicUrl;
+    private final CoverageService coverage;
     private final String greetingReply;
     private final String thanksReply;
 
@@ -133,6 +134,7 @@ public class AiReplyService {
                           AgentRoutingService agentRouting,
                           EmailService emailService,
                           AgentNotificationService agentNotifications,
+                          CoverageService coverage,
                           ConversationSummaryService summaryService,
                           AttachmentFetcher attachments,
                           VoiceMessageService mediaService,
@@ -161,6 +163,7 @@ public class AiReplyService {
         this.agentRouting = agentRouting;
         this.emailService = emailService;
         this.agentNotifications = agentNotifications;
+        this.coverage = coverage;
         this.summaryService = summaryService;
         this.attachments = attachments;
         this.mediaService = mediaService;
@@ -818,11 +821,19 @@ public class AiReplyService {
             // it, so the workspace's owners and admins do. Checked on the thread rather than on
             // `assignee`, which is also null for a conversation that already had an owner —
             // telling admins "nobody is assigned" about an assigned conversation would be a lie.
-            agentNotifications.nobodyToAssign(page.getOrganization(), escalated, reason);
+            coverage.nobodyOn(page.getOrganization(), escalated, reason);
         }
 
         if (!alreadyWaiting && page != null && customerId != null && !handoverText(page).isBlank()) {
-            sendHandoverNotice(page, customerId);
+            // Nobody to take it: "shortly" would be a promise nobody keeps, so the customer is
+            // told when the team is back instead (CoverageService), unless someone is due now.
+            String away = escalated.getAssignedAgentId() == null
+                    ? coverage.awayNotice(page.getOrganization(), java.time.Instant.now()) : null;
+            trace.here(TraceRecorder.Kind.DECISION, "Is anyone on to reply?",
+                    away == null ? "yes, or due now" : "no, the customer is told when",
+                    null, TraceRecorder.of("notice", away == null ? "handover" : away));
+            if (away != null) sendNotice(page, customerId, away);
+            else sendHandoverNotice(page, customerId);
         }
     }
 

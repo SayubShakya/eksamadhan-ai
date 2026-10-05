@@ -5,4 +5,5 @@ export default {
     '{ai} resolved by the AI, {team} handed to your team': 'AI ले {ai} सुल्झायो, {team} तपाईंको टोलीलाई दिइयो',
     '{n} by the AI': 'AI बाट {n}',
     '{n} to your team': 'टोलीलाई {n}',
+    'Are you sure you want to sign out?': 'के तपाईं साइन आउट गर्न चाहनुहुन्छ?',
 };

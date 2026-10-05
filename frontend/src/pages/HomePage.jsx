@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import {
     IconPlus, IconArrowRight, IconCheck, IconInbox, IconSparkle, IconTeam, IconClock,
-    IconFacebook, IconInstagram, IconWidget, IconWarning,
+    IconFacebook, IconInstagram, IconWidget, IconWarning, IconKnowledge,
 } from '../components/icons.jsx';
 import { formatTimestamp, formatSeconds, STATUS_LABEL } from '../lib/format.js';
 import * as api from '../lib/api.js';
@@ -117,13 +117,17 @@ export default function HomePage({
                     <h1 className="page__title">{user.firstName ? t('{greeting}, {name}', { greeting: greeting(), name: user.firstName }) : greeting()}</h1>
                     <p className="page__sub">{t('Your conversations, channels and setup at a glance.')}</p>
                 </div>
+                {/* The two things that make the AI useful: where messages come from, and what it
+                    answers from. Side by side so a new owner sees both first steps. */}
                 {canManage && (
-                    <button
-                        className="btn btn--primary"
-                        onClick={() => onNavigate('channels')}
-                    >
-                        <IconPlus /> {connected ? t('Add a channel') : t('Connect a channel')}
-                    </button>
+                    <div className="home__actions">
+                        <button className="btn btn--outline home__knowledge" onClick={() => onNavigate('knowledge')}>
+                            <IconKnowledge size={16} /> {t('Add knowledge')}
+                        </button>
+                        <button className="btn btn--primary" onClick={() => onNavigate('channels')}>
+                            <IconPlus /> {connected ? t('Add a channel') : t('Connect a channel')}
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -470,7 +474,7 @@ function ChannelSplit({ analytics, pending, pages, canManage, onManage }) {
         <section className="card dash__split" aria-labelledby="split-h">
             <div className="dash__cardhead">
                 <h2 id="split-h" className="dash__cardtitle">{t('By channel')}</h2>
-                <button type="button" className="btn btn--sm btn--secondary" onClick={onManage}>
+                <button type="button" className="btn btn--sm btn--outline dash__manage" onClick={onManage}>
                     {canManage ? t('Manage') : t('View')}
                 </button>
             </div>
@@ -495,12 +499,13 @@ function ChannelSplit({ analytics, pending, pages, canManage, onManage }) {
                                     <span className={`dash__chip dash__chip--${platform}`}>{ICON[platform]}</span>
                                     <span className="dash__chname">
                                         <strong>{NAME[platform]}</strong>
-                                        <small>{c
-                                            ? `${c.conversations === 1 ? t('1 conversation') : t('{n} conversations', { n: c.conversations })} · ${t('{pct}% handed to staff', { pct: Math.round(c.escalationRate * 100) })}`
-                                            : connected ? t('No conversations yet') : t('Not connected')}</small>
+                                        {/* Only whether it is connected (Sayub, 2026-10-05). */}
+                                        <small className={`dash__chstate${connected || c ? ' is-on' : ''}`}>
+                                            {connected || c ? t('Connected') : t('Not connected')}
+                                        </small>
                                     </span>
                                     {!c && !connected && canManage && (
-                                        <button type="button" className="btn btn--sm btn--secondary" onClick={onManage}>{t('Connect')}</button>
+                                        <button type="button" className="btn btn--sm btn--primary" onClick={onManage}>{t('Connect')}</button>
                                     )}
                                 </li>
                             );

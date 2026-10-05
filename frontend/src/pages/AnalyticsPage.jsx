@@ -31,13 +31,22 @@ const weekdayName = (n) => new Date(Date.UTC(2024, 0, n)).toLocaleDateString('en
 /** An hour of the day as the clock shows it, "4 PM". */
 const hourLabel = (h) => new Date(Date.UTC(2024, 0, 1, h)).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true, timeZone: 'UTC' });
 
-/** What to suggest for each kind of fix the server tags a handover reason with. */
-const FIX_ADVICE = {
-    KNOWLEDGE: { tip: 'Add what they asked to Knowledge and the AI answers it next time.', action: 'knowledge', label: 'Add knowledge' },
-    SETTINGS: { tip: 'AI replies were switched off. Turn them on in Settings.', action: 'settings', label: 'Open Settings' },
-    SERVICE: { tip: 'The AI service failed to answer. Usually brief; check the server if it keeps happening.' },
-    NONE: { tip: 'Nothing to fix: the customer wanted a person, wrote off topic, or sent something the AI cannot read.' },
-};
+/** Handover reasons grouped by what the business can do about them (Sayub, 2026-10-05). The
+ *  card answers "could the AI have handled these, and what do I do?" before listing reasons, so
+ *  each group carries its own heading, one line of advice and at most one action. */
+const REASON_GROUPS = [
+    { id: 'fix', fixes: ['KNOWLEDGE', 'SETTINGS'], title: 'You can fix these',
+      tip: 'Add the answers to Knowledge and the AI replies next time.',
+      action: 'knowledge', label: 'Add knowledge' },
+    { id: 'warn', fixes: ['SERVICE'], title: 'Technical problem',
+      tip: 'The AI service did not answer. Usually brief.' },
+    { id: 'none', fixes: ['NONE', null], title: 'A person was the right call',
+      tip: 'Nothing to change.' },
+];
+const groupOf = (fix) => REASON_GROUPS.find(g => g.fixes.includes(fix ?? null)) || REASON_GROUPS[2];
+
+/** "Scam (2), Advertising (1)" from the server's spam counts. */
+const spamKinds = (kinds) => kinds.map(k => `${SPAM_KIND_SHORT[k.kind] || SPAM_KIND_SHORT.spam} (${k.count})`).join(', ');
 
 function FiguresSkeleton() {
     return (
@@ -59,8 +68,10 @@ function FiguresSkeleton() {
                     <Skel h={300} />
                 </div>
                 <div className="an2-card">
-                    <div className="an2-card__head"><Skel line w={200} /></div>
-                    {[0, 1, 2].map(i => <div key={i} style={{ display: 'grid', gap: 8, padding: '10px 0' }}><Skel line w="80%" /><Skel h={6} /><Skel line w="60%" /></div>)}
+                    <div className="an2-card__head"><div style={{ display: 'grid', gap: 8 }}><Skel line w={220} /><Skel line w={180} /></div></div>
+                    <Skel h={12} style={{ borderRadius: 6 }} />
+                    <div style={{ height: 14 }} />
+                    {[0, 1, 2].map(i => <div key={i} style={{ marginBottom: 8 }}><Skel h={74} style={{ borderRadius: 10 }} /></div>)}
                 </div>
             </div>
             <div className="an2-row an2-row--even">
@@ -70,7 +81,10 @@ function FiguresSkeleton() {
                 </div>
                 <div className="an2-card">
                     <div className="an2-card__head"><Skel line w={120} /></div>
-                    {[0, 1, 2].map(i => <div key={i} style={{ marginBottom: 10 }}><Skel h={64} style={{ borderRadius: 12 }} /></div>)}
+                    <Skel line w={130} />
+                    <div className="an2-peaks" style={{ margin: '10px 0 20px' }}><Skel h={78} style={{ borderRadius: 10 }} /><Skel h={78} style={{ borderRadius: 10 }} /></div>
+                    <Skel line w={90} />
+                    {[0, 1].map(i => <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12 }}><Skel w={36} h={36} style={{ borderRadius: 10 }} /><div style={{ flex: 1, display: 'grid', gap: 6 }}><Skel line w="60%" /><Skel line w="85%" /></div></div>)}
                 </div>
             </div>
         </LoadingRegion>
@@ -305,37 +319,36 @@ function Figures({ data, days, onNavigate, onOpenSpam }) {
     ];
     const endedTotal = ended.reduce((s, p) => s + p.value, 0);
 
-    // Observations, each only when the data supports it.
-    const notes = [];
-    if (busiest.weekday) {
-        notes.push({ Icon: IconInbox, title: t('Busiest day: {day}', { day: t(weekdayName(busiest.weekday)) }),
-            text: t('{n} customer messages arrived on {day}s in this period. Make sure someone is on hand.', { n: busiest.weekdayCount, day: t(weekdayName(busiest.weekday)) }) });
-    }
-    if (busiest.hour != null) {
-        notes.push({ Icon: IconClock, title: t('Busiest hour: around {time}', { time: hourLabel(busiest.hour) }),
-            text: t('More customers write between {from} and {to} than at any other hour.', { from: hourLabel(busiest.hour), to: hourLabel((busiest.hour + 1) % 24) }) });
-    }
+    // Worth knowing, in two parts: when customers write (for planning hours), then the few things
+    // that need a look, each with the one place to go. Each only when the data supports it.
+    const checks = [];
     const upset = moods.negative + moods.angry;
     if (upset > 0) {
-        notes.push({ Icon: IconWarning, tone: 'warn', title: upset === 1 ? t('1 upset customer') : t('{n} upset customers', { n: upset }),
-            text: t('{angry} angry and {unhappy} unhappy. Their conversations are marked in the inbox.', { angry: moods.angry, unhappy: moods.negative }) });
+        checks.push({ Icon: IconWarning, tone: 'warn', title: upset === 1 ? t('1 upset customer') : t('{n} upset customers', { n: upset }),
+            text: t('{angry} angry, {unhappy} unhappy, judged from their messages.', { angry: moods.angry, unhappy: moods.negative }),
+            action: onNavigate && { label: t('Open the inbox'), onClick: () => onNavigate('inbox') } });
     }
     if (data.urgent > 0) {
-        notes.push({ Icon: IconBolt, tone: 'warn', title: data.urgent === 1 ? t('1 urgent conversation') : t('{n} urgent conversations', { n: data.urgent }),
-            text: t('Judged urgent from what the customer wrote, such as an order that never came.') });
+        checks.push({ Icon: IconBolt, tone: 'warn', title: data.urgent === 1 ? t('1 urgent conversation') : t('{n} urgent conversations', { n: data.urgent }),
+            text: t('Judged urgent from what the customer wrote, such as an order that never came.'),
+            action: onNavigate && { label: t('Open the inbox'), onClick: () => onNavigate('inbox') } });
     }
     // Spam is kept out of every other figure, so say here how much the filter caught and where
     // to check it: a real customer wrongly caught is in the Spam tab, one tap from coming back.
     if (spam.conversations > 0) {
-        const kinds = spam.kinds.map(k => `${SPAM_KIND_SHORT[k.kind] || SPAM_KIND_SHORT.spam}: ${k.count}`).join(', ');
-        notes.push({ Icon: IconShield, tone: 'warn', key: 'spam',
+        checks.push({ Icon: IconShield, tone: 'warn', key: 'spam',
             title: spam.conversations === 1 ? t('1 conversation marked as spam') : t('{n} conversations marked as spam', { n: spam.conversations }),
-            text: t('{kinds}. Check the Spam tab in case a real customer was caught.', { kinds }),
-            action: { label: t('Open the Spam tab'), onClick: onOpenSpam } });
+            text: t('Caught as {kinds}. Bring back anyone caught by mistake.', { kinds: spamKinds(spam.kinds) }),
+            action: { label: t('Open Spam'), onClick: onOpenSpam } });
     }
+    const grouped = REASON_GROUPS.map(g => {
+        const items = reasons.filter(x => groupOf(x.fix) === g);
+        return { ...g, items, count: items.reduce((n, x) => n + x.count, 0) };
+    }).filter(g => g.count > 0);
+    const reasonTotal = grouped.reduce((n, g) => n + g.count, 0);
     const worst = [...channels].filter(c => c.conversations >= 3).sort((a, b) => b.escalationRate - a.escalationRate)[0];
     if (worst && channels.length > 1) {
-        notes.push({ Icon: IconTeam, title: t('{channel} needs people most', { channel: worst.platform === 'instagram' ? 'Instagram' : 'Messenger' }),
+        checks.push({ Icon: IconTeam, title: t('{channel} needs people most', { channel: worst.platform === 'instagram' ? 'Instagram' : 'Messenger' }),
             text: t('{pct} of its conversations reached a person.', { pct: percent(worst.escalationRate) }) });
     }
 
@@ -363,9 +376,7 @@ function Figures({ data, days, onNavigate, onOpenSpam }) {
                 <Kpi icon={IconShield} label={t('Spam')}
                      info={t('Conversations the filter marked as spam in this period. They are left out of the other figures and the AI does not answer them.')}
                      value={spam.conversations}
-                     note={spam.conversations
-                         ? spam.kinds.map(k => `${SPAM_KIND_SHORT[k.kind] || SPAM_KIND_SHORT.spam}: ${k.count}`).join(', ')
-                         : t('Nothing caught')}>
+                     note={spam.conversations ? spamKinds(spam.kinds) : t('Nothing caught')}>
                     <Mini values={daily.map(x => x.spam ?? 0)} />
                 </Kpi>
             </div>
@@ -396,36 +407,60 @@ function Figures({ data, days, onNavigate, onOpenSpam }) {
 
                 <section className="an2-card" aria-labelledby="an-why-h">
                     <header className="an2-card__head">
-                        <h2 id="an-why-h">{t('Why conversations reached a person')}</h2>
+                        <div>
+                            <h2 id="an-why-h">{t('Why conversations reached your team')}</h2>
+                            <p className="an2-card__sub">
+                                {d.escalated === 1
+                                    ? t('1 of {total} conversations needed a person.', { total: d.total })
+                                    : t('{n} of {total} conversations needed a person.', { n: d.escalated, total: d.total })}
+                            </p>
+                        </div>
                     </header>
                     {reasons.length === 0 ? (
                         <p className="an2-quiet">{d.escalated ? t('No reasons were recorded for these.') : t('None did in this period.')}</p>
                     ) : (
-                        <ul className="an2-reasons">
-                            {reasons.map(x => {
-                                const known = FIX_ADVICE[x.fix];
-                                return (
-                                    <li key={x.reason}>
-                                        <div className="an2-reasons__top">
-                                            <strong>{t(x.reason.charAt(0).toUpperCase() + x.reason.slice(1))}</strong>
-                                            <span className="an2-reasons__count">{x.count}</span>
+                        <>
+                            {/* One bar for the whole picture: how much of the handover work was fixable. */}
+                            <div className="an2-split" role="img"
+                                 aria-label={grouped.map(g => `${t(g.title)}: ${g.count}`).join(', ')}>
+                                {grouped.map(g => <i key={g.id} className={`is-${g.id}`} style={{ flexGrow: g.count }} />)}
+                            </div>
+                            <div className="an2-groups">
+                                {grouped.map(g => (
+                                    <div key={g.id} className={`an2-group is-${g.id}`}>
+                                        <div className="an2-group__head">
+                                            <h3>{t(g.title)}</h3>
+                                            <span><b>{g.count}</b> ({percent(g.count / reasonTotal)})</span>
                                         </div>
-                                        <div className="an2-reasons__bar"><i style={{ width: `${(x.count / reasons[0].count) * 100}%` }} /></div>
-                                        {known && <p>{t(known.tip)}</p>}
-                                        {known?.action && onNavigate && (
-                                            <button type="button" className="an2-link" onClick={() => onNavigate(known.action)}>
-                                                {t(known.label)} <IconArrowRight size={14} />
-                                            </button>
-                                        )}
-                                    </li>
-                                );
-                            })}
-                        </ul>
+                                        {/* Counts sit in a column before each reason, and only when the group
+                                            has more than one: a lone reason's count is the group's. */}
+                                        <ul className={g.items.length > 1 ? 'has-counts' : ''}>
+                                            {g.items.map(x => (
+                                                <li key={x.reason}>
+                                                    {g.items.length > 1 && <b>{x.count}</b>}
+                                                    <span>{t(x.reason.charAt(0).toUpperCase() + x.reason.slice(1))}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        <div className="an2-group__foot">
+                                            <p>{t(g.tip)}</p>
+                                            {g.action && onNavigate && (
+                                                <button type="button" className="btn btn--tint btn--sm an2-group__btn" onClick={() => onNavigate(g.action)}>
+                                                    {t(g.label)} <IconArrowRight size={14} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
                     )}
-                    <div className="an2-total">
-                        {d.escalated === 1 ? t('1 conversation handed to your team') : t('{n} conversations handed to your team', { n: d.escalated })}
-                        {r.humanSamples > 0 && <> · {t('your team replied in {time} (middle value)', { time: duration(r.humanMedianSeconds) })}</>}
-                    </div>
+                    {r.humanSamples > 0 && (
+                        <p className="an2-total">
+                            <IconClock size={16} />
+                            <span>{t('Once handed over, your team usually replied within {time}.', { time: duration(r.humanMedianSeconds) })}</span>
+                        </p>
+                    )}
                 </section>
             </div>
 
@@ -459,22 +494,49 @@ function Figures({ data, days, onNavigate, onOpenSpam }) {
 
                 <section className="an2-card" aria-labelledby="an-notes-h">
                     <header className="an2-card__head"><h2 id="an-notes-h">{t('Worth knowing')}</h2></header>
-                    {notes.length === 0 ? (
-                        <p className="an2-quiet">{t('Nothing stands out in this period.')}</p>
+                    {(busiest.weekday || busiest.hour != null) && (
+                        <>
+                            <h3 className="an2-subhead">{t('When customers write')}</h3>
+                            <div className="an2-peaks">
+                                {busiest.weekday && (
+                                    <div className="an2-peak">
+                                        <span className="an2-peak__label"><IconInbox size={15} /> {t('Busiest day')}</span>
+                                        <strong>{t(weekdayName(busiest.weekday))}</strong>
+                                        <span className="an2-peak__note">{t('{n} customer messages', { n: busiest.weekdayCount })}</span>
+                                    </div>
+                                )}
+                                {busiest.hour != null && (
+                                    <div className="an2-peak">
+                                        <span className="an2-peak__label"><IconClock size={15} /> {t('Busiest hour')}</span>
+                                        <strong>{t('{from} to {to}', { from: hourLabel(busiest.hour), to: hourLabel((busiest.hour + 1) % 24) })}</strong>
+                                        <span className="an2-peak__note">{t('More messages than any other hour')}</span>
+                                    </div>
+                                )}
+                            </div>
+                            {onNavigate && (
+                                <button type="button" className="an2-link an2-peaks__link" onClick={() => onNavigate('hours')}>
+                                    {t('Make sure someone is on hand then')} <IconArrowRight size={14} />
+                                </button>
+                            )}
+                        </>
+                    )}
+                    <h3 className="an2-subhead">{t('Needs a look')}</h3>
+                    {checks.length === 0 ? (
+                        <p className="an2-quiet">{t('Nothing needs a look in this period.')}</p>
                     ) : (
-                        <ul className="an2-notes">
-                            {notes.slice(0, 4).map(n => (
+                        <ul className="an2-checks">
+                            {checks.map(n => (
                                 <li key={n.title} className={n.tone ? `is-${n.tone}` : ''}>
-                                    <span className="an2-notes__icon"><n.Icon size={18} /></span>
-                                    <div>
+                                    <span className="an2-checks__icon"><n.Icon size={18} /></span>
+                                    <div className="an2-checks__text">
                                         <strong>{n.title}</strong>
                                         <p>{n.text}</p>
-                                        {n.action && (
-                                            <button type="button" className="an2-link" onClick={n.action.onClick}>
-                                                {n.action.label} <IconArrowRight size={14} />
-                                            </button>
-                                        )}
                                     </div>
+                                    {n.action && (
+                                        <button type="button" className="btn btn--tint btn--sm an2-checks__btn" onClick={n.action.onClick}>
+                                            {n.action.label}
+                                        </button>
+                                    )}
                                 </li>
                             ))}
                         </ul>

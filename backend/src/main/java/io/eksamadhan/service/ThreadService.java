@@ -98,6 +98,26 @@ public class ThreadService {
     }
 
     /**
+     * A person on the team replied: a conversation waiting for a person is now being handled.
+     *
+     * Without this a reply left the status at OPEN_FOR_AGENT, so nothing could tell a
+     * conversation someone is in from one nobody has touched, and the AI kept answering beside
+     * the person. Now the reply is the take-over: the AI goes quiet (ThreadStatus.aiMayReply),
+     * and CoverageService leaves it alone. The assignee is kept; an unassigned one becomes the
+     * replier's. A conversation the AI is handling is left as it is: only a handover changes.
+     */
+    @Transactional
+    public void staffReplied(SocialPage page, String customerId, io.eksamadhan.model.User by) {
+        findActive(page, customerId)
+                .filter(thread -> thread.getStatus() == ThreadStatus.OPEN_FOR_AGENT)
+                .ifPresent(thread -> {
+                    thread.setStatus(ThreadStatus.AGENT_HANDLING);
+                    if (thread.getAssignedAgentId() == null) thread.setAssignedAgentId(by.getId().toString());
+                    threadRepository.save(thread);
+                });
+    }
+
+    /**
      * Give the conversation to a named person.
      *
      * The status follows the assignment: handing a conversation to someone makes it theirs to

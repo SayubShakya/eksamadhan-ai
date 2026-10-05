@@ -10,7 +10,7 @@ import { t } from '../lib/i18n.js';
  */
 export default function ConfirmDialog({
     open, title, message, confirmLabel, cancelLabel,
-    danger = false, onConfirm, onCancel,
+    danger = false, onConfirm, onCancel, icon: Icon = null,
 }) {
     useEffect(() => {
         if (!open) return;
@@ -20,6 +20,31 @@ export default function ConfirmDialog({
     }, [open, onCancel]);
 
     if (!open) return null;
+
+    // With an icon: a short centred prompt (sign out). The icon in a tinted tile, the title and the
+    // one-line consequence centred, and two equal buttons. Without one, the plain dialog below.
+    if (Icon) {
+        return (
+            <>
+                <div className="scrim" onClick={onCancel} aria-hidden="true" />
+                <div className={`confirm confirm--centred${danger ? ' confirm--danger' : ''}`} role="alertdialog" aria-modal="true"
+                     aria-labelledby="confirm-title" aria-describedby="confirm-message">
+                    <button className="icon-btn confirm__close" onClick={onCancel} aria-label={t('Close')}><IconClose /></button>
+                    <span className="confirm__icon" aria-hidden="true"><Icon size={22} /></span>
+                    <h2 className="confirm__title" id="confirm-title">{title}</h2>
+                    <p className="confirm__message" id="confirm-message">{message}</p>
+                    <div className="confirm__buttons">
+                        <button className="btn btn--outline" onClick={onCancel}>{cancelLabel ?? t('Cancel')}</button>
+                        {/* Not focused on open: the focus ring around it read as the button already
+                            being pressed. Escape and Tab still work from the open dialog. */}
+                        <button className={`btn ${danger ? 'btn--destructive' : 'btn--primary'}`} onClick={onConfirm}>
+                            {confirmLabel ?? t('Confirm')}
+                        </button>
+                    </div>
+                </div>
+            </>
+        );
+    }
 
     return (
         <>

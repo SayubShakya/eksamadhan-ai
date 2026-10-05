@@ -120,7 +120,7 @@ export default {
     'Menus, buttons and screens on this device. Emails and alerts from the server stay in English.': 'यो उपकरणका मेनु, बटन र स्क्रिनहरू। सर्भरबाट आउने इमेल र सूचना अंग्रेजीमै रहन्छन्।',
     'Time zone': 'समय क्षेत्र',
     'Your working hours are kept in this zone. It is taken from this device when you change them.': 'तपाईंको कार्य समय यही क्षेत्रमा राखिन्छ। कार्य समय परिवर्तन गर्दा यो उपकरणबाट लिइन्छ।',
-    'Open Hours': 'कार्य समय खोल्नुहोस्',
+    'Edit hours': 'कार्य समय बदल्नुहोस्',
     'How times and dates read in the inbox, notifications and the dashboard.': 'इनबक्स, सूचना र ड्यासबोर्डमा समय र मिति कसरी देखिन्छ।',
     'Clock': 'घडी',
     'Shown beside every message and notification.': 'हरेक सन्देश र सूचनाको छेउमा देखिन्छ।',
@@ -248,4 +248,8 @@ export default {
     'Your name, email, photo, sign-in and devices are deleted immediately, and you are signed out everywhere. Support cannot restore any of it.': 'तपाईंको नाम, इमेल, फोटो, साइन इन र उपकरणहरू तुरुन्तै मेटिन्छन्, र तपाईं सबैतिरबाट साइन आउट हुनुहुन्छ। सपोर्टले पनि यीमध्ये केही फिर्ता ल्याउन सक्दैन।',
     '{name} becomes the tenant of {workspace}.': '{name} {workspace} को टेनेन्ट बन्नुहुन्छ।',
     'Yes, I am sure': 'हो, म पक्का छु',
+    'When nobody is on': 'कोही उपलब्ध नहुँदा',
+    'The AI keeps answering customers at any hour.': 'AI ले जुनसुकै बेला ग्राहकलाई जवाफ दिइरहन्छ।',
+    'If a customer needs a person and nobody is on, they are told when your team is back, and the tenant and admins get an alert and an email.': 'ग्राहकलाई मान्छे चाहिएको तर कोही उपलब्ध नभएमा, टिम कहिले फर्कन्छ भनी ग्राहकलाई भनिन्छ, र टेनेन्ट तथा एडमिनलाई सूचना र इमेल जान्छ।',
+    'A customer nobody has answered yet moves to whoever is on if their person goes Busy, offline or out of hours. Once someone replies, the conversation is theirs and the AI stays quiet.': 'जवाफ नपाएको ग्राहकको व्यक्ति व्यस्त, अफलाइन वा कार्य समयबाहिर भएमा ग्राहक उपलब्ध व्यक्तिकहाँ सर्छ। कसैले जवाफ दिएपछि कुराकानी उसैको हुन्छ र AI चुप लाग्छ।',
 };

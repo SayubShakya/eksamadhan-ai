@@ -110,6 +110,7 @@ public class MessageController {
             syncService.saveOutboundMessage(messageId, request.getRecipientId(), request.getText(),
                     page.getId(), request.getReplyToId(), organization.getApiKey());
             stampSender(messageId);
+            threadService.staffReplied(page, request.getRecipientId(), currentUser.require());
 
             return ResponseEntity.ok(Map.of("success", true, "messageId", messageId));
         } catch (Exception e) {
@@ -146,6 +147,7 @@ public class MessageController {
             syncService.saveOutboundMessage(messageId, recipientId, null, page.getId(),
                     null, organization.getApiKey(), "audio", "/api/media/" + stored);
             stampSender(messageId);
+            threadService.staffReplied(page, recipientId, currentUser.require());
 
             return ResponseEntity.ok(Map.of("success", true, "messageId", String.valueOf(messageId)));
         } catch (Exception e) {
@@ -182,6 +184,7 @@ public class MessageController {
             syncService.saveOutboundMessage(messageId, recipientId, null, page.getId(),
                     null, organization.getApiKey(), "image", "/api/media/" + stored);
             stampSender(messageId);
+            threadService.staffReplied(page, recipientId, currentUser.require());
 
             return ResponseEntity.ok(Map.of("success", true));
         } catch (Exception e) {

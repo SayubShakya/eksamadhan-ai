@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import * as theme from '../lib/theme.js';
 import * as prefs from '../lib/prefs.js';
 import { ACCENTS, usePrefs, accentHex, contrastWithWhite, isHex } from '../lib/prefs.js';
-import { IconCheck, IconChevronLeft } from './icons.jsx';
+import { IconArrowRight, IconCheck, IconChevronLeft, IconGlobe } from './icons.jsx';
+import { formatTime } from '../lib/format.js';
 import { toast } from '../lib/toast.js';
 import { t, zoneName } from '../lib/i18n.js';
 
@@ -250,6 +251,15 @@ const LANGUAGES = [
 ];
 
 /** A dropdown like the reference: the choice with its flag and a chevron, the list under it. */
+
+// "GMT+5:45" for the zone, from Intl so no offset is written down by hand.
+function zoneOffset(zone) {
+    try {
+        return new Intl.DateTimeFormat('en', { timeZone: zone, timeZoneName: 'shortOffset' })
+            .formatToParts(new Date()).find(x => x.type === 'timeZoneName')?.value || '';
+    } catch { return ''; }
+}
+
 function LanguagePicker() {
     const [open, setOpen] = useState(false);
     const p = usePrefs();
@@ -306,8 +316,16 @@ export function LanguageSection({ Card, Row, onOpenHours }) {
             </Row>
             <Row title={t('Time zone')} hint={t('Your working hours are kept in this zone. It is taken from this device when you change them.')}>
                 <div className="setting__buttons">
-                    <span className="setting__value">{zoneLabel} <span className="setting__muted">({zone})</span></span>
-                    <button type="button" className="btn btn--secondary" onClick={onOpenHours}>{t('Open Hours')}</button>
+                    <span className="tz">
+                        <span className="tz__icon" aria-hidden="true"><IconGlobe size={18} /></span>
+                        <span className="tz__text">
+                            <span className="tz__name">{zoneLabel}</span>
+                            <span className="tz__meta">{[zone, zoneOffset(zone), formatTime(new Date())].filter(Boolean).join(' · ')}</span>
+                        </span>
+                    </span>
+                    <button type="button" className="btn btn--tint tz__btn" onClick={onOpenHours}>
+                        {t('Edit hours')} <IconArrowRight size={16} />
+                    </button>
                 </div>
             </Row>
         </Card>

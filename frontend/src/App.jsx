@@ -16,7 +16,7 @@ import { toast } from './lib/toast.js';
 import * as prefs from './lib/prefs.js';
 import { LogoMark } from './components/Logo.jsx';
 import StatusPage, { IconCloudOff } from './components/StatusPage.jsx';
-import { IconHome, IconWarning } from './components/icons.jsx';
+import { IconHome, IconWarning, IconSignOut } from './components/icons.jsx';
 import { CenteredSpinner, Spinner } from './components/Loading.jsx';
 import * as api from './lib/api.js';
 import { mergeThreads } from './lib/format.js';
@@ -873,8 +873,9 @@ export default function App() {
         <ConfirmDialog
             open={confirmSignOut}
             title={t('Sign out?')}
-            message={t('You will need to sign in again to see your inbox. Anything you have typed and not sent will be lost.')}
+            message={t('Are you sure you want to sign out?')}
             confirmLabel={t('Sign out')}
+            icon={IconSignOut}
             onConfirm={() => { setConfirmSignOut(false); handleSignOut(); }}
             onCancel={() => setConfirmSignOut(false)}
         />

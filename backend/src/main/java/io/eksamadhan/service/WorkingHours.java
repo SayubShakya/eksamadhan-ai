@@ -33,8 +33,9 @@ import java.util.List;
  *   <li>startMin 0 to 1439, endMin 1 to 1440 (1440 is midnight at the end of the day), and end
  *       after start. Overnight windows are not accepted: 22:00 to 02:00 is written as 22:00 to
  *       midnight plus 00:00 to 02:00 the next day, so no window can silently never match.</li>
- *   <li>The boundary is a cut-off for new conversations only. Conversations already assigned
- *       stay with their person after the window ends; nothing is taken away mid-reply.</li>
+ *   <li>The boundary is a cut-off for new conversations. One the person has replied in stays
+ *       theirs after the window ends; one they never answered moves to whoever is on
+ *       (CoverageService), so no customer waits on someone who has gone.</li>
  * </ul>
  */
 public final class WorkingHours {

@@ -1839,6 +1839,15 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 /* The same weight as the two blue buttons above it, in the danger colour: pale fill, red text. */
 .privacy__btn.btn--danger { background: var(--danger-weak); border-color: #f1c9c5; font-weight: 600; }
 .privacy__btn.btn--danger:hover:not(:disabled) { border-color: var(--danger); }
+/* Tinted buttons (Sayub, 2026-10-05): a soft fill in the action's colour, so settings actions read
+   as buttons. Blue for going somewhere or getting something, amber for reversible but serious.
+   `.btn.` beats the card rules that turn every secondary button white. */
+.btn.btn--tint { background: var(--accent-tint); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); font-weight: 600; }
+.btn.btn--tint:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 20%, var(--bg)); border-color: var(--accent); }
+.btn.btn--tint-warn { background: var(--warning-weak); color: var(--warning); border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent); font-weight: 600; }
+.btn.btn--tint-warn:hover:not(:disabled) { background: color-mix(in srgb, var(--warning) 16%, var(--bg)); border-color: var(--warning); }
+.privacy__btn.btn--danger { border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+.privacy__btn.btn--danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 14%, var(--bg)); }
 
 
 .sheet__backdrop { position: fixed; inset: 0; z-index: 80; background: rgba(16, 20, 27, .4); animation: fade .15s ease; }
@@ -2148,6 +2157,7 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 .btn--sm.btn--busy::after { width: 14px; height: 14px; }
 .btn--primary, .btn--destructive { --busy-ink: #fff; }
 .btn--danger { --busy-ink: var(--danger); }
+.btn--tint-warn { --busy-ink: var(--warning); }
 .btn--google { --busy-ink: #1f1f1f; }
 .btn--busy.btn--primary:disabled { background: var(--accent); box-shadow: var(--shadow-sm); cursor: progress; }
 .btn--busy.btn--secondary:disabled { background: var(--accent-weak); border-color: #cfe0fb; cursor: progress; }
@@ -3217,9 +3227,21 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
     padding: 8px 14px 8px 45px; font-size: 14.5px; color: var(--text-muted);
 }
 .sp-nav__item:hover { color: var(--text); }
-.sp-nav__item[aria-current="page"] { color: var(--text); font-weight: 650; }
+.sp-nav__item[aria-current="page"] { background: var(--accent-weak); color: var(--accent); font-weight: 600; }
+/* One marker only (Sayub, 2026-10-05): the open group's heading is plain bold text, its pages hang
+   off a thin guide line under the icon, and the page shown gets the fill plus a bar on that line. */
+.sp-nav__group.is-current:has(.sp-nav__items) > .sp-nav__head { background: none; color: var(--text); font-weight: 600; }
+.sp-nav__group.is-current:has(.sp-nav__items) > .sp-nav__head svg { color: var(--text); }
+.sp-nav__group.is-current:has(.sp-nav__items) > .sp-nav__head:hover { background: var(--surface); }
+.sp-nav__items { margin: 2px 0 8px 24px; padding-left: 10px; border-left: 1px solid var(--border); }
+.sp-nav__item { position: relative; padding: 8px 12px; }
+.sp-nav__item[aria-current="page"]::before {
+    content: ""; position: absolute; left: -11px; top: 6px; bottom: 6px; width: 2px; border-radius: 2px; background: var(--accent);
+}
+.sp-nav__group--danger .sp-nav__item[aria-current="page"] { background: var(--danger-weak); color: var(--danger); }
+.sp-nav__group--danger .sp-nav__item[aria-current="page"]::before { background: var(--danger); }
 .sp-nav button:focus { outline: none; }
-/* No ring and no tint on the menu (Sayub, 2026-10-02): the bold page name is the marker. */
+/* No focus ring on the menu (Sayub, 2026-10-02); the tinted page name is the marker. */
 .sp-content { min-width: 0; padding-top: 4px; }
 
 /* Option cards (theme): a small drawing, a tick when chosen, the name and a line. */
@@ -3279,6 +3301,14 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 .setting__select { appearance: auto; max-width: 320px; }
 .sp-row__control:has(.opts), .sp-row__control:has(.keylist) { max-width: none; }
 .setting__muted { color: var(--text-muted); }
+/* Time zone (Sayub, 2026-10-05): a small read-only card with the zone, its offset and the local
+   time now, then one clear way to the Hours page. */
+.tz { display: inline-flex; align-items: center; gap: 12px; padding: 8px 14px 8px 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); text-align: left; }
+.tz__icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: var(--r-sm); background: var(--accent-weak); color: var(--accent); flex-shrink: 0; }
+.tz__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.tz__name { font-size: 14px; font-weight: 600; color: var(--text); }
+.tz__meta { font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.tz__btn { display: inline-flex; align-items: center; gap: 6px; }
 .sp-row__control .setting__buttons { align-items: center; gap: 14px; }
 
 /* Shortcut lists: what it does, then the keys. */
@@ -3305,6 +3335,7 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
     .sp-nav__group:not(:has(.sp-nav__items)) > .sp-nav__head { width: auto; padding: 8px 12px; font-size: 14px; white-space: nowrap; flex-shrink: 0; }
     .sp-nav__group:not(:has(.sp-nav__items)) > .sp-nav__head svg { display: none; }
     .sp-nav__item { width: auto; flex-shrink: 0; padding: 8px 12px; font-size: 14px; white-space: nowrap; }
+    .sp-nav__item[aria-current="page"]::before { display: none; }
 }
 @media (max-width: 760px) {
     .opts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
@@ -3684,21 +3715,63 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 .an2-tip span { display: flex; align-items: center; gap: 7px; color: var(--text-muted); }
 .an2-tip b { margin-left: auto; color: var(--text); font-variant-numeric: tabular-nums; }
 
-.an2-reasons { list-style: none; margin: 0; padding: 0; display: grid; }
-.an2-reasons li { padding: 12px 0; border-bottom: 1px solid var(--border); display: grid; gap: 6px; }
-.an2-reasons li:first-child { padding-top: 0; }
-.an2-reasons__top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.an2-reasons__top strong { font-size: 14px; font-weight: 600; }
-.an2-reasons__count { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
-.an2-reasons__bar { height: 6px; border-radius: 3px; background: var(--surface); overflow: hidden; }
-.an2-reasons__bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
-.an2-reasons p { margin: 0; font-size: 13px; color: var(--text-muted); }
+.an2-card__sub { margin: 4px 0 0; font-size: 13px; color: var(--text-muted); }
+/* Why conversations reached your team (Sayub, 2026-10-05): one split bar for the whole picture,
+   its key, then a box per group (fixable, technical, a person was right) with its reasons, one
+   line of advice and at most one button. Blue = you can act, amber = technical, grey = fine. */
+.an2-split { display: flex; gap: 3px; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 14px; }
+.an2-split i { display: block; min-width: 6px; }
+.an2-split i.is-fix { background: var(--accent); }
+.an2-split i.is-warn { background: var(--warning); }
+.an2-split i.is-none { background: color-mix(in srgb, var(--text-muted) 45%, transparent); }
+.an2-groups { display: grid; gap: 8px; }
+.an2-group { padding: 10px 14px; border: 1px solid var(--border); border-left: 3px solid color-mix(in srgb, var(--text-muted) 45%, transparent); border-radius: 10px; }
+.an2-group.is-fix { border-left-color: var(--accent); background: color-mix(in srgb, var(--accent-weak) 55%, var(--bg)); }
+.an2-group.is-warn { border-left-color: var(--warning); }
+.an2-group__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.an2-group__head h3 { margin: 0; font-size: 14px; font-weight: 650; }
+.an2-group__head span { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.an2-group__head b { color: var(--text); font-weight: 650; }
+.an2-group ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.an2-group li { display: flex; gap: 10px; font-size: 13.5px; color: var(--text); }
+.an2-group li b { min-width: 18px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.an2-group__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.an2-group__foot p { margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.45; flex: 1; min-width: 160px; }
+.an2-group__btn { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+/* Worth knowing (Sayub, 2026-10-05): when customers write as two small figures, then the things
+   that need a look as rows, each with the one button that goes there. */
+.an2-subhead { margin: 0 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+.an2-subhead + .an2-quiet { margin-top: 0; }
+.an2-peaks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.an2-peak { display: grid; gap: 2px; padding: 12px 14px; border-radius: 10px; background: var(--surface); }
+.an2-peak__label { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-muted); }
+.an2-peak strong { font-size: 18px; font-weight: 650; }
+.an2-peak__note { font-size: 12.5px; color: var(--text-muted); }
+.an2-peaks__link { margin: 10px 0 20px; }
+.an2-checks { list-style: none; margin: 0; padding: 0; display: grid; }
+.an2-checks li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+.an2-checks li:first-child { border-top: 0; padding-top: 0; }
+.an2-checks__icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; background: var(--accent-weak); color: var(--accent); }
+.an2-checks li.is-warn .an2-checks__icon { background: var(--warning-weak); color: var(--warning); }
+.an2-checks__text { flex: 1; min-width: 0; }
+.an2-checks strong { font-size: 14px; }
+.an2-checks p { margin: 2px 0 0; font-size: 13px; color: var(--text-muted); line-height: 1.45; }
+.an2-checks__btn { flex-shrink: 0; }
+@media (max-width: 560px) {
+    .an2-checks li { flex-wrap: wrap; }
+    .an2-checks__btn { margin-left: 48px; }
+}
 .an2-link { justify-self: start; display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; padding: 0; font-size: 13px; font-weight: 600; color: var(--accent); }
 .an2-link:hover { text-decoration: underline; }
-.an2-total { margin-top: 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; text-align: center; color: var(--text); }
+.an2-total { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--surface); font-size: 13px; color: var(--text); }
+.an2-total svg { color: var(--text-muted); flex-shrink: 0; }
 .an2-quiet { margin: 0; font-size: 14px; color: var(--text-muted); }
 
 .an2-ended { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+/* The card stretches to its neighbour's height: centre the chart in the space, channels at the foot. */
+.an2-card:has(> .an2-ended) { display: flex; flex-direction: column; }
+.an2-card > .an2-ended { flex: 1; padding: 8px 0 20px; }
 .an2-donut { position: relative; width: 150px; height: 150px; flex-shrink: 0; }
 .an2-donut svg { width: 100%; height: 100%; }
 .an2-donut__track { fill: none; stroke: var(--surface); stroke-width: 14; }
@@ -3714,15 +3787,9 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 .an2-ended__list span { flex: 1; }
 .an2-ended__list b { font-variant-numeric: tabular-nums; }
 .an2-ended__list small { width: 40px; text-align: right; color: var(--text-muted); font-size: 13px; }
-.an2-channels { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); display: grid; gap: 6px; }
+.an2-channels { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); display: grid; gap: 6px; }
 .an2-channel { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
 
-.an2-notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.an2-notes li { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; }
-.an2-notes__icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; border: 1px solid var(--border); color: var(--accent); }
-.an2-notes li.is-warn .an2-notes__icon { color: var(--warning); }
-.an2-notes strong { font-size: 14px; }
-.an2-notes p { margin: 3px 0 0; font-size: 13px; color: var(--text-muted); }
 
 .an2-empty { display: grid; justify-items: center; text-align: center; gap: 8px; padding: 44px 20px; }
 .an2-empty__icon { width: 50px; height: 50px; border-radius: 14px; display: grid; place-items: center; background: var(--accent-weak); color: var(--accent); }
@@ -4284,13 +4351,11 @@ a.chn-act { color: var(--accent); }
    stretched to the tall one and was mostly empty space. */
 @media (min-width: 1101px) {
     .an2-row--even { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); }
-    .an2-row--even .an2-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .an2-row--even .an2-notes li { margin: 0; }
 }
 /* Messages over time fills its card, which is as tall as the reasons list beside it, instead of
    leaving empty space under a fixed-height chart. */
 .an2-card:has(> .an2-trend) { display: flex; flex-direction: column; }
-.an2-card > .an2-trend { flex: 1; height: auto; min-height: 260px; }
+.an2-card > .an2-trend { flex: 1; height: auto; min-height: 260px; max-height: 340px; }
 @media (max-width: 760px) { .an2-card > .an2-trend { min-height: 180px; } }
 /* The chart is drawn at the box's measured size, so the box must not take its height from the
    chart: the SVG sits absolutely inside it, and only the card decides how tall the box is. */
@@ -4412,3 +4477,51 @@ a.chn-act { color: var(--accent); }
 .pd__who .pd__role--admin { background: #dff4f1; color: #0f766e; }
 .pd__who .pd__role--agent { background: var(--bg); color: var(--text-muted); border-color: var(--border); }
 :root[data-theme="dark"] .pd__who .pd__role--admin { background: rgba(20, 184, 166, .16); color: #5eead4; }
+/* By channel: a green dot for connected; Manage as a plain outlined button, Connect solid. */
+.dash__chstate { display: inline-flex; align-items: center; gap: 6px; }
+.dash__chstate::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); }
+.dash__chstate.is-on { color: #15803d; }
+.dash__chstate.is-on::before { background: #16a34a; }
+.dash__manage { background: var(--bg); border: 1px solid var(--border-strong); color: var(--accent); font-weight: 600; }
+.dash__manage:hover { background: var(--surface); }
+
+/* Recent conversations: every priority and status its own colour, with a dot (2026-10-05). Normal
+   and Resolved were grey on the row's hover grey, so they vanished on hover. */
+.dash__prio, .dash__status { align-items: center; gap: 6px; }
+.dash__prio::before, .dash__status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.dash__prio--2 { background: #e0f2fe; color: #0369a1; }
+.dash__prio--3 { background: #f1f5f9; color: #475569; opacity: 1; box-shadow: inset 0 0 0 1px #e2e8f0; }
+.dash__status--resolved { background: #ccfbf1; color: #0f766e; }
+:root[data-theme="dark"] .dash__prio--2 { background: rgba(14, 165, 233, .16); color: #7dd3fc; }
+:root[data-theme="dark"] .dash__prio--3 { background: rgba(148, 163, 184, .14); color: #cbd5e1; box-shadow: none; }
+:root[data-theme="dark"] .dash__status--resolved { background: rgba(20, 184, 166, .16); color: #5eead4; }
+
+/* The centred confirmation (sign out, 2026-10-05): icon tile, title and one line centred, two
+   equal buttons. */
+.confirm--centred { width: min(380px, calc(100vw - 32px)); padding: 28px 24px 22px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.confirm--centred .confirm__close { position: absolute; top: 12px; right: 12px; }
+.confirm__icon { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; background: var(--accent-tint); color: var(--accent); margin-bottom: 14px; }
+.confirm--danger .confirm__icon { background: var(--danger-weak); color: var(--danger); }
+.confirm__title { margin: 0; font-size: 20px; font-weight: 650; }
+.confirm--centred .confirm__message { margin: 8px 0 20px; max-width: 300px; color: var(--text-muted); font-size: 14px; line-height: 1.5; }
+.confirm__buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.confirm__buttons .btn { justify-content: center; height: 42px; }
+/* Dashboard header: Add knowledge beside Add a channel. */
+.home__actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.home__knowledge { color: var(--accent); font-weight: 600; background: var(--bg); border-color: var(--border-strong); }
+@media (max-width: 560px) { .home__actions { width: 100%; } .home__actions .btn { flex: 1; justify-content: center; } }
+/* Sign out in the brand blue (Sayub, 2026-10-05): it is not destructive, so no red. No focus ring
+   on the button that is focused when the dialog opens from a click. */
+.confirm__buttons .btn:focus:not(:focus-visible) { outline: none; box-shadow: none; }
+/* Add knowledge: the soft brand tint, so it reads as an action beside the solid Add a channel.
+   A visible brand border so it reads as a button, and a hover that darkens instead of the generic
+   outline hover (which outranked this rule and turned it page grey). */
+.btn.home__knowledge { background: var(--accent-tint); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); color: var(--accent); box-shadow: 0 1px 2px rgba(16, 24, 40, .05); }
+.btn.home__knowledge:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 20%, var(--bg)); border-color: var(--accent); }
+
+/* Hours: what happens when nobody is on (Sayub, 2026-10-05). */
+.hours__gaps { margin-top: 24px; padding: 16px 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.hours__gaps h2 { margin: 0 0 10px; font-size: 15px; font-weight: 600; }
+.hours__gaps ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.hours__gaps li { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; color: var(--text-muted); line-height: 1.5; }
+.hours__gaps li svg { flex-shrink: 0; margin-top: 2px; color: var(--accent); }

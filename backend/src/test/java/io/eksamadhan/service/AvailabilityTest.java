@@ -34,6 +34,8 @@ class AvailabilityTest {
 
     @Autowired AvailabilityService availability;
     @Autowired AgentRoutingService routing;
+    @Autowired CoverageService coverage;
+    @Autowired ThreadService threadService;
     @Autowired UserRepository users;
     @Autowired SocialPageRepository pages;
     @Autowired ConversationThreadRepository threads;
@@ -145,5 +147,115 @@ class AvailabilityTest {
 
         // Already taken: a second claim changes nothing.
         assertEquals(0, threads.claimUnassigned(waiting.getId(), "someone-else"));
+    }
+
+    // ── gaps in the rota (CoverageService) ──────────────────────────────────────
+
+    private ConversationThread waitingWith(Organization org, User person, ZonedDateTime customerWrote) {
+        SocialPage page = pages.findAll().stream()
+                .filter(p -> p.getOrganization().getId().equals(org.getId())).findFirst().orElseThrow();
+        return threads.saveAndFlush(ConversationThread.builder()
+                .customerId("coverage-test-" + java.util.UUID.randomUUID()).platform("facebook")
+                .tenantId(org.getApiKey()).pageId(page.getPageId()).socialPage(page)
+                .status(ThreadStatus.OPEN_FOR_AGENT).escalatedAt(customerWrote)
+                .assignedAgentId(person.getId().toString())
+                .lastMessageDirection("inbound").lastMessageAt(customerWrote)
+                .build());
+    }
+
+    @Test
+    void aCustomerLeftWithSomeoneWhoWentBusyMovesToSomeoneWhoIsOn() {
+        List<User> members = activeMembers(2);
+        // The first went Busy, the second is on.
+        Organization org = workspaceWith(members, Availability.BUSY, Availability.AVAILABLE);
+        ConversationThread untouched = waitingWith(org, members.get(0), ZonedDateTime.now().minusMinutes(20));
+        ConversationThread answered = waitingWith(org, members.get(0), ZonedDateTime.now().minusMinutes(20));
+        // They replied in the second one before going Busy: that makes it theirs.
+        threadService.staffReplied(answered.getSocialPage(), answered.getCustomerId(), members.get(0));
+        entityManager.flush();
+        entityManager.clear();
+
+        coverage.sweep();
+        entityManager.flush();
+        entityManager.clear();
+
+        assertEquals(members.get(1).getId().toString(), threads.findById(untouched.getId()).orElseThrow().getAssignedAgentId(),
+                "never answered by someone now Busy: handed to the person who is on");
+        ConversationThread kept = threads.findById(answered.getId()).orElseThrow();
+        assertEquals(members.get(0).getId().toString(), kept.getAssignedAgentId(), "answered: stays with them");
+        assertEquals(ThreadStatus.AGENT_HANDLING, kept.getStatus());
+    }
+
+    @Test
+    void aCustomerWithSomeoneStillOnStaysWithThem() {
+        List<User> members = activeMembers(1);
+        Organization org = workspaceWith(members, Availability.AVAILABLE);
+        ConversationThread thread = waitingWith(org, members.get(0), ZonedDateTime.now().minusMinutes(20));
+        coverage.sweep();
+        entityManager.flush();
+        entityManager.clear();
+        assertEquals(members.get(0).getId().toString(), threads.findById(thread.getId()).orElseThrow().getAssignedAgentId());
+    }
+
+    @Test
+    void theCustomerIsToldWhenTheTeamIsBack() {
+        List<User> members = activeMembers(1);
+        Organization org = workspaceWith(members);
+        java.time.ZoneId zone = java.time.ZoneId.of("Asia/Kathmandu");
+        java.time.Instant now = java.time.Instant.now();
+        int tomorrow = (now.atZone(zone).getDayOfWeek().getValue() + 1) % 7;
+        // Everyone off today; one person from 9:00 tomorrow.
+        for (User u : members) users.setWorkingHours(u.getId(), "[]", "Asia/Kathmandu");
+        users.setWorkingHours(members.get(0).getId(),
+                WorkingHours.write(List.of(new WorkingHours.Window(tomorrow, 540, 1080))), "Asia/Kathmandu");
+        entityManager.flush();
+        entityManager.clear();
+
+        CoverageService.Return back = coverage.teamBack(org, now);
+        assertFalse(back.soon());
+        assertEquals(9, back.at().getHour());
+        assertTrue(coverage.awayNotice(org, now).contains("9:00 AM tomorrow"));
+
+        // Someone inside their hours (just not free): "shortly" is true, so no away notice.
+        users.setWorkingHours(members.get(0).getId(), ALL_WEEK, "Asia/Kathmandu");
+        entityManager.flush();
+        entityManager.clear();
+        assertTrue(coverage.teamBack(org, now).soon());
+        assertNull(coverage.awayNotice(org, now));
+    }
+
+    @Test
+    void theReturnTimeReadsLikeAPerson() {
+        java.time.ZoneId zone = java.time.ZoneId.of("Asia/Kathmandu");
+        ZonedDateTime monday8am = ZonedDateTime.of(2026, 10, 5, 8, 0, 0, 0, zone);
+        java.time.Instant now = monday8am.toInstant();
+        assertEquals("9:00 AM today", CoverageService.when(monday8am.withHour(9), now));
+        assertEquals("9:00 AM tomorrow", CoverageService.when(monday8am.plusDays(1).withHour(9), now));
+        assertEquals("12:30 PM on Thursday", CoverageService.when(monday8am.plusDays(3).withHour(12).withMinute(30), now));
+    }
+
+    @Test
+    void aStaffReplyTakesAWaitingConversationButLeavesAnAiOneAlone() {
+        List<User> members = activeMembers(1);
+        Organization org = workspaceWith(members, Availability.AVAILABLE);
+        ConversationThread waiting = waitingWith(org, members.get(0), ZonedDateTime.now());
+        waiting.setAssignedAgentId(null);
+        threads.saveAndFlush(waiting);
+
+        threadService.staffReplied(waiting.getSocialPage(), waiting.getCustomerId(), members.get(0));
+        entityManager.flush();
+        entityManager.clear();
+        ConversationThread taken = threads.findById(waiting.getId()).orElseThrow();
+        assertEquals(ThreadStatus.AGENT_HANDLING, taken.getStatus(), "the reply is the take-over; the AI goes quiet");
+        assertEquals(members.get(0).getId().toString(), taken.getAssignedAgentId(), "unassigned: now the replier's");
+        assertFalse(taken.getStatus().aiMayReply());
+
+        taken.setStatus(ThreadStatus.AI_HANDLING);
+        threads.saveAndFlush(taken);
+        threadService.staffReplied(taken.getSocialPage(), taken.getCustomerId(), members.get(0));
+        entityManager.flush();
+        entityManager.clear();
+        assertEquals(ThreadStatus.AI_HANDLING, threads.findById(waiting.getId()).orElseThrow().getStatus(),
+                "a conversation the AI is handling is not changed by a reply");
     }
 }

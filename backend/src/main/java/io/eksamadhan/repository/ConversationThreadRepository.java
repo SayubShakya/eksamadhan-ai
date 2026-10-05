@@ -74,6 +74,30 @@ public interface ConversationThreadRepository extends JpaRepository<Conversation
           + "WHERE t.id = :id AND t.assignedAgentId IS NULL")
     int claimUnassigned(java.util.UUID id, String agentId);
 
+    /** Handed to someone who has not replied yet: what CoverageService checks every minute. */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT t FROM ConversationThread t WHERE t.status = io.eksamadhan.model.ThreadStatus.OPEN_FOR_AGENT "
+          + "AND t.assignedAgentId IS NOT NULL AND t.spam = false")
+    List<ConversationThread> findAssignedWaiting();
+
+    /** Workspaces with a conversation waiting for anyone at all. */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT DISTINCT t.tenantId FROM ConversationThread t WHERE t.status = io.eksamadhan.model.ThreadStatus.OPEN_FOR_AGENT "
+          + "AND t.assignedAgentId IS NULL AND t.spam = false")
+    List<String> findTenantsWithUnassignedWaiting();
+
+    /**
+     * Put a conversation back in the queue, only if it is still with this person and still not
+     * taken: a reply they sent a moment ago (AGENT_HANDLING) keeps it theirs.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
+    @org.springframework.data.jpa.repository.Query(
+            "UPDATE ConversationThread t SET t.assignedAgentId = NULL "
+          + "WHERE t.id = :id AND t.assignedAgentId = :agentId "
+          + "AND t.status = io.eksamadhan.model.ThreadStatus.OPEN_FOR_AGENT")
+    int releaseIfStillWaiting(java.util.UUID id, String agentId);
+
     /**
      * Conversations the AI still owes an answer on — see {@code SyncService.answerMissed}.
      *

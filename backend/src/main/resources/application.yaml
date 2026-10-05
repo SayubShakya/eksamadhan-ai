@@ -136,6 +136,13 @@ app:
       max-attempts: ${AI_RETRY_ATTEMPTS:3}
     unrelated-message: ${AI_UNRELATED_MESSAGE:I can only help with questions about our products and orders, so I will close this conversation here. Message us again any time you need something.}
     handover-message: ${AI_HANDOVER_MESSAGE:Let me check that with a colleague. Someone from our team will reply here shortly.}
+  # Gaps in the rota (CoverageService). How often a conversation left with someone who is no
+  # longer available, and has not replied, is moved on (0 turns it off). The notices replace
+  # "shortly" when nobody is on; {when} is filled in from the team's working hours.
+  coverage:
+    sweep-seconds: ${COVERAGE_SWEEP_SECONDS:60}
+    away-until-message: ${COVERAGE_AWAY_UNTIL_MESSAGE:Our team is away right now and will reply here from {when}. I can keep helping with other questions meanwhile.}
+    away-message: ${COVERAGE_AWAY_MESSAGE:Our team is away right now. Someone will reply here as soon as they are back. I can keep helping with other questions meanwhile.}
   # The Jev firewall (TypeSafe): one decision-model call per customer message, before the
   # reply model. off | shadow | on. Shadow judges every message and records what it would
   # have done, while the existing pipeline answers as usual — run it first, and compare.

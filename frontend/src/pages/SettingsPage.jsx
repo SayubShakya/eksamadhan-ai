@@ -283,13 +283,13 @@ function NotificationsCard({ settings, onSaved }) {
                 {alerts.supported ? (
                     <div className="setting__buttons">
                         {alerts.on && (
-                            <button type="button" className={btn('btn btn--secondary btn--sm', alerts.busy === 'test')}
+                            <button type="button" className={btn('btn btn--tint btn--sm', alerts.busy === 'test')}
                                     onClick={test} disabled={Boolean(alerts.busy)} aria-busy={alerts.busy === 'test'}>
                                 {t('Send a test')}
                             </button>
                         )}
                         <button type="button"
-                                className={btn(`btn btn--sm ${alerts.on ? 'btn--secondary' : 'btn--primary'}`, alerts.busy === 'toggle')}
+                                className={btn(`btn btn--sm ${alerts.on ? 'btn--tint-warn' : 'btn--primary'}`, alerts.busy === 'toggle')}
                                 onClick={toggle} disabled={Boolean(alerts.busy)} aria-busy={alerts.busy === 'toggle'}>
                             {alerts.on ? t('Turn off') : t('Turn on')}
                         </button>
