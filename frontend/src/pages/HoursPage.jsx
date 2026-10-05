@@ -3,7 +3,7 @@ import * as api from '../lib/api.js';
 import { LoadError, Skel } from '../components/Loading.jsx';
 import { useHeldLoading } from '../lib/loading.js';
 import { formatBackAt } from '../lib/format.js';
-import { IconPlus, IconTrash, IconCopy, IconSparkle, IconClock, IconTeam } from '../components/icons.jsx';
+import { IconPlus, IconTrash, IconCopy } from '../components/icons.jsx';
 import { toast } from '../lib/toast.js';
 import { t, lang, zoneName } from '../lib/i18n.js';
 
@@ -346,17 +346,6 @@ export default function HoursPage({ onStatus }) {
                     </ul>
                 </>
             )}
-
-            {/* Gaps in the rota (Sayub, 2026-10-05): hours are per person, so there can be times
-                nobody is on. What happens then, so nobody has to guess (CoverageService). */}
-            <section className="hours__gaps" aria-labelledby="hours-gaps-h">
-                <h2 id="hours-gaps-h">{t('When nobody is on')}</h2>
-                <ul>
-                    <li><IconSparkle size={16} /><span>{t('The AI keeps answering customers at any hour.')}</span></li>
-                    <li><IconClock size={16} /><span>{t('If a customer needs a person and nobody is on, they are told when your team is back, and the tenant and admins get an alert and an email.')}</span></li>
-                    <li><IconTeam size={16} /><span>{t('A customer nobody has answered yet moves to whoever is on if their person goes Busy, offline or out of hours. Once someone replies, the conversation is theirs and the AI stays quiet.')}</span></li>
-                </ul>
-            </section>
         </div>
     );
 }

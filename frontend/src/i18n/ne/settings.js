@@ -248,8 +248,4 @@ export default {
     'Your name, email, photo, sign-in and devices are deleted immediately, and you are signed out everywhere. Support cannot restore any of it.': 'तपाईंको नाम, इमेल, फोटो, साइन इन र उपकरणहरू तुरुन्तै मेटिन्छन्, र तपाईं सबैतिरबाट साइन आउट हुनुहुन्छ। सपोर्टले पनि यीमध्ये केही फिर्ता ल्याउन सक्दैन।',
     '{name} becomes the tenant of {workspace}.': '{name} {workspace} को टेनेन्ट बन्नुहुन्छ।',
     'Yes, I am sure': 'हो, म पक्का छु',
-    'When nobody is on': 'कोही उपलब्ध नहुँदा',
-    'The AI keeps answering customers at any hour.': 'AI ले जुनसुकै बेला ग्राहकलाई जवाफ दिइरहन्छ।',
-    'If a customer needs a person and nobody is on, they are told when your team is back, and the tenant and admins get an alert and an email.': 'ग्राहकलाई मान्छे चाहिएको तर कोही उपलब्ध नभएमा, टिम कहिले फर्कन्छ भनी ग्राहकलाई भनिन्छ, र टेनेन्ट तथा एडमिनलाई सूचना र इमेल जान्छ।',
-    'A customer nobody has answered yet moves to whoever is on if their person goes Busy, offline or out of hours. Once someone replies, the conversation is theirs and the AI stays quiet.': 'जवाफ नपाएको ग्राहकको व्यक्ति व्यस्त, अफलाइन वा कार्य समयबाहिर भएमा ग्राहक उपलब्ध व्यक्तिकहाँ सर्छ। कसैले जवाफ दिएपछि कुराकानी उसैको हुन्छ र AI चुप लाग्छ।',
 };
