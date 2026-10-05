@@ -69,7 +69,7 @@ function FiguresSkeleton() {
                 </div>
                 <div className="an2-card">
                     <div className="an2-card__head"><div style={{ display: 'grid', gap: 8 }}><Skel line w={220} /><Skel line w={180} /></div></div>
-                    <Skel h={12} style={{ borderRadius: 6 }} />
+                    <Skel h={10} style={{ borderRadius: 5 }} />
                     <div style={{ height: 14 }} />
                     {[0, 1, 2].map(i => <div key={i} style={{ marginBottom: 8 }}><Skel h={74} style={{ borderRadius: 10 }} /></div>)}
                 </div>
@@ -77,7 +77,7 @@ function FiguresSkeleton() {
             <div className="an2-row an2-row--even">
                 <div className="an2-card">
                     <div className="an2-card__head"><Skel line w={170} /></div>
-                    <div className="an2-ended"><Skel circle w={150} h={150} /><div style={{ flex: 1, display: 'grid', gap: 14 }}><Skel line w="80%" /><Skel line w="70%" /><Skel line w="75%" /></div></div>
+                    <div className="an2-ended"><Skel circle w={150} h={150} /><div style={{ flex: 1, display: 'grid', gap: 14 }}><Skel line w="80%" /><Skel line w="70%" /><Skel line w="75%" /><Skel line w="65%" /></div></div>
                 </div>
                 <div className="an2-card">
                     <div className="an2-card__head"><Skel line w={120} /></div>
