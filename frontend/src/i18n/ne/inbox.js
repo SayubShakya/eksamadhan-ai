@@ -202,4 +202,6 @@ export default {
     'alert': 'सूचना',
     'Other': 'अन्य',
     'Microphone not available': 'माइक्रोफोन उपलब्ध छैन',
+    'Hide conversations': 'कुराकानी लुकाउनुहोस्',
+    'Show conversations': 'कुराकानी देखाउनुहोस्',
 };

@@ -3,7 +3,7 @@ import {
     IconInfo, IconPin, IconDots, IconUser, IconCheck, IconSparkle as IconAi,
     IconSend, IconInbox, IconPlus, IconBack, IconReply, IconClose, IconMic, IconStop, IconImage,
     IconSmile, IconThumb, IconSparkle,
-    IconFacebook, IconInstagram, IconPanelRight,
+    IconFacebook, IconInstagram, IconPanelRight, IconChevronLeft,
 } from '../components/icons.jsx';
 import { isRecordingSupported, startRecording, formatDuration } from '../lib/recorder.js';
 import MessageActions from '../components/MessageActions.jsx';
@@ -267,6 +267,15 @@ export default function InboxPage({
             try { localStorage.setItem('inboxDetails', 'hidden'); } catch { /* private mode */ }
         } else setDetailsOpen(false);
     };
+    // On a wider screen the conversation list can fold into a slim rail of faces, for more room
+    // for the thread (Sayub, 2026-10-07). Open by default; remembered on this device.
+    const [listCollapsed, setListCollapsed] = useState(() => {
+        try { return localStorage.getItem('inboxList') === 'collapsed'; } catch { return false; }
+    });
+    const collapseList = (on) => {
+        setListCollapsed(on);
+        try { on ? localStorage.setItem('inboxList', 'collapsed') : localStorage.removeItem('inboxList'); } catch { /* private mode */ }
+    };
     // Phone only: the conversation's actions sit in a "More" menu, as in Messenger, so the name
     // gets the header; and a tapped message shows its react/reply buttons.
     const [moreOpen, setMoreOpen] = useState(false);
@@ -467,7 +476,13 @@ export default function InboxPage({
             <div className="convlist__head">
                 <div className="convlist__title">
                     <h2>{t('Conversations')}</h2>
-                    {!pending && <span className="count convlist__count">{countLabel(filter, platformFilter, visible.length)}</span>}
+                    <span className="convlist__titleend">
+                        {!pending && <span className="count convlist__count">{countLabel(filter, platformFilter, visible.length)}</span>}
+                        <button type="button" className="icon-btn convlist__collapse" onClick={() => collapseList(true)}
+                                aria-label={t('Hide conversations')} title={t('Hide conversations')}>
+                            <IconChevronLeft size={16} />
+                        </button>
+                    </span>
                 </div>
                 {/* One segmented switch for the three lists, after the references: which list
                     you are in reads at a glance, and the spam count is never hidden. */}
@@ -513,9 +528,15 @@ export default function InboxPage({
 
     if (pending || failed) {
         return (
-            <div className="inbox">
+            <div className={`inbox${panelHidden ? ' inbox--details-hidden' : ''}${listCollapsed ? ' inbox--list-collapsed' : ''}`}>
                 <h1 className="sr-only">{t('Inbox')}</h1>
                 <aside className="convlist" aria-label={t('Conversations')}>
+                    <div className="convrail" aria-hidden="true">
+                        <div className="convrail__head"><Skel w={30} h={30} style={{ borderRadius: 8 }} /></div>
+                        <div className="convrail__items">
+                            {SKELETON_ROWS.map((row, i) => <span key={i} className="convrail__item"><Skel circle w={40} h={40} /></span>)}
+                        </div>
+                    </div>
                     {listHead}
                     {failed ? (
                         <LoadError message={loadError} onRetry={onRetry} />
@@ -529,7 +550,7 @@ export default function InboxPage({
                     {!failed && <ThreadSkeleton />}
                 </section>
                 {!failed && (
-                    <aside className="context" aria-hidden="true">
+                    <aside className={`context${panelHidden ? ' context--hidden' : ''}`} aria-hidden="true">
                         <div className="context__labelrow context__toprow"><Skel line w={110} /></div>
                         <div className="profile-card">
                             <Skel circle w={64} h={64} />
@@ -665,10 +686,40 @@ export default function InboxPage({
     };
 
     return (
-        <div className={`inbox ${activeThread ? 'inbox--has-active' : ''}${panelHidden ? ' inbox--details-hidden' : ''}`}>
+        <div className={`inbox ${activeThread ? 'inbox--has-active' : ''}${panelHidden ? ' inbox--details-hidden' : ''}${listCollapsed ? ' inbox--list-collapsed' : ''}`}>
             {/* The page's one heading, for screen readers and search: the layout has no room for a visible title. */}
             <h1 className="sr-only">{t('Inbox')}</h1>
             <aside className="convlist" aria-label={t('Conversations')}>
+                {/* Folded list: one face per conversation, the open one marked, a dot when unread. */}
+                <div className="convrail">
+                    <div className="convrail__head">
+                        <button type="button" className="convrail__open" onClick={() => collapseList(false)}
+                                aria-label={t('Show conversations')} title={t('Show conversations')}>
+                            <IconChevronLeft size={16} />
+                        </button>
+                    </div>
+                    <div className="convrail__items">
+                        {[...pinnedRows, ...otherRows].map(th => {
+                            const platform = platformOf(th.pageId);
+                            const unread = th.unanswered > 0 && th.status !== 'RESOLVED' && !th.spam;
+                            const waiting = th.status === 'OPEN_FOR_AGENT' && !th.spam;
+                            return (
+                                <button key={th.id || th.customerId} type="button"
+                                        className={`convrail__item${waiting ? ' is-waiting' : ''}`}
+                                        aria-current={active?.id === th.id} onClick={() => onSelect(th)}
+                                        title={th.name} aria-label={th.name}>
+                                    <span className="conv__face">
+                                        <PersonAvatar name={th.name} url={th.avatarUrl} size={40} />
+                                        <span className={`conv__channel conv__channel--${platform}`}>
+                                            <ChannelIcon platform={platform} size={12} />
+                                        </span>
+                                    </span>
+                                    {unread && <span className="convrail__dot" aria-hidden="true" />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
                 {listHead}
 
                 <div className="convlist__items">
@@ -780,15 +831,6 @@ export default function InboxPage({
                                         <IconPin filled={activeThread.pinned} />
                                     </button>
                                 )}
-                                <button
-                                    type="button"
-                                    className="btn btn--secondary btn--sm thread__info"
-                                    onClick={showDetails}
-                                    aria-expanded={detailsOpen || !panelHidden}
-                                    title={t('Show the customer\'s details')}
-                                >
-                                    <IconPanelRight size={16} /> <span className="thread__info-text">{t('Details')}</span>
-                                </button>
                                 {/* Phone: one "More" button in place of pin and the text buttons. */}
                                 <div className="thread__more-wrap">
                                     <button type="button" className="icon-btn thread__more-btn" aria-haspopup="menu"
@@ -872,6 +914,15 @@ export default function InboxPage({
                                         {t('Resolve')}
                                     </button>
                                 )}
+                                <button
+                                    type="button"
+                                    className="btn btn--secondary btn--sm thread__info"
+                                    onClick={showDetails}
+                                    aria-expanded={detailsOpen || !panelHidden}
+                                    title={t('Show the customer\'s details')}
+                                >
+                                    <IconPanelRight size={16} /> <span className="thread__info-text">{t('Details')}</span>
+                                </button>
                             </div>
                         </header>
 
