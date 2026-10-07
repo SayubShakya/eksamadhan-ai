@@ -3999,9 +3999,6 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 .tm-share__or::before, .tm-share__or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 .tm-share__qr { justify-self: center; padding: 8px; border: 1px solid var(--border); border-radius: 14px; background: #fff; line-height: 0; }
 .qr { display: block; }
-.tm-invqr { flex-basis: 100%; display: flex; align-items: center; gap: 16px; margin: 4px 0 0 54px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
-.tm-invqr .qr { border-radius: 8px; }
-.tm-invqr p { margin: 0; font-size: 13px; color: var(--text-muted); max-width: 260px; }
 .tm-row--invite { flex-wrap: wrap; }
 @media (max-width: 960px) { .tm-top { grid-template-columns: 1fr; } }
 .tm-invite { align-content: center; }
@@ -4242,11 +4239,7 @@ a.chn-act { color: var(--accent); }
 
 /* QA kct: the invite QR panel took 100% plus its 54px indent, so on a phone it pushed the
    team card sideways and cut the email off. */
-.tm-invqr { flex-basis: calc(100% - 54px); min-width: 0; }
-.tm-invqr p { min-width: 0; overflow-wrap: anywhere; }
-.tm-invqr .qr { flex-shrink: 0; }
 @media (max-width: 560px) {
-    .tm-invqr { flex-basis: 100%; margin-left: 0; }
 }
 
 /* QA inbox: the status control is a button, so it takes the button radius, not a pill. */
@@ -4544,3 +4537,77 @@ a.chn-act { color: var(--accent); }
     .convrail__item[aria-current="true"] { background: var(--accent-weak); box-shadow: inset 3px 0 0 var(--accent); }
     .convrail__dot { position: absolute; top: 5px; right: 13px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
 }
+
+/* Team page clean-up (Sayub, 2026-10-07): only real controls look like buttons. Role counts are
+   plain tags (zero roles hidden), the fixed Tenant role is a tag not a box, member emails read
+   as text until hovered. */
+.tm-counts { gap: 4px 10px; }
+.tm-role.is-fixed { height: auto; padding: 3px 10px; border: 0; border-radius: 999px; background: var(--surface); color: var(--text-muted); font-size: 12.5px; font-weight: 600; }
+.tm-row__email a { text-decoration: none; }
+.tm-row__email a:hover { text-decoration: underline; }
+/* Invite actions by importance: Copy link solid blue (the main one), Show QR light blue (opens
+   the large code), Resend plain white, revoke red. */
+.tm-row__end .tm-resend { background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); }
+.tm-row__end .tm-resend:hover { background: var(--surface); }
+/* Remove and revoke: a red-tinted square, the delete colour used in Settings. */
+.tm-row__end .tm-icon { border-color: color-mix(in srgb, var(--danger) 30%, transparent); background: var(--danger-weak); color: var(--danger); }
+.tm-row__end .tm-icon:hover { background: color-mix(in srgb, var(--danger) 14%, var(--bg)); border-color: var(--danger); }
+
+/* Initials avatars get one of six steady colours by person (Avatar.jsx), no purple. */
+.avatar--tone0 { background: #2563eb; }
+.avatar--tone1 { background: #0f766e; }
+.avatar--tone2 { background: #15803d; }
+.avatar--tone3 { background: #b45309; }
+.avatar--tone4 { background: #be123c; }
+.avatar--tone5 { background: #475569; }
+
+/* Team share card (Sayub, 2026-10-07): the QR beside its instruction instead of under a divider,
+   so the card is shorter and the invite card beside it has no empty gap. */
+.tm-share__scan { display: flex; align-items: center; gap: 16px; margin-top: 10px; padding-top: 14px; border-top: 1px solid var(--border); }
+.tm-share__scan .tm-share__qr { justify-self: auto; flex-shrink: 0; }
+.tm-share__scantext { display: grid; gap: 4px; min-width: 0; }
+.tm-share__scantext strong { font-size: 13.5px; }
+.tm-share__scantext p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text-muted); }
+.tm-row__end .btn:focus:not(:focus-visible) { outline: none; box-shadow: none; }
+
+/* Team: a QR opens large on click. */
+.tm-qrzoom__open { display: block; padding: 0; border: 0; background: none; line-height: 0; cursor: zoom-in; border-radius: 8px; }
+.tm-qrzoom__open:hover { opacity: .85; }
+.tm-qrzoom__scrim { z-index: 60; }
+.tm-qrzoom { line-height: 1.5; position: fixed; z-index: 70; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(380px, calc(100vw - 32px)); display: grid; justify-items: center; gap: 12px; padding: 26px 24px 22px; text-align: center; background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-md); }
+.tm-qrzoom h2 { margin: 0; font-size: 17px; font-weight: 650; overflow-wrap: anywhere; }
+.tm-qrzoom__code { padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: #fff; line-height: 0; }
+.tm-qrzoom__code .qr { width: min(300px, calc(100vw - 112px)); height: auto; }
+.tm-qrzoom p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--text-muted); max-width: 300px; }
+.tm-qrzoom__close { position: absolute; top: 10px; right: 10px; }
+
+/* Role menu (Sayub, 2026-10-07): the app's own menu instead of the system's grey list, each role
+   with one line on what it can do. The button keeps the look of the old select. */
+.tm-rolepick { position: relative; display: inline-flex; }
+.tm-rolepick__button { height: 32px; padding: 0 30px 0 12px; border: 1px solid var(--border); border-radius: 8px; font: inherit; font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer;
+    background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center; }
+.tm-rolepick__button:hover:not(:disabled) { border-color: var(--border-strong); }
+.tm-rolepick__button[aria-expanded="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
+.tm-rolepick__button:disabled { opacity: .6; cursor: progress; }
+.tm-rolepick--field .tm-rolepick__button { height: 30px; border-color: transparent; background-color: var(--surface); border-radius: 7px; }
+.tm-rolepick__menu { position: absolute; z-index: 30; top: calc(100% + 6px); right: 0; width: max-content; min-width: 240px; padding: 6px; display: grid; gap: 2px; text-align: left;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-md); }
+.tm-rolepick__option { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 0; border-radius: 8px; background: none; font: inherit; color: var(--text); text-align: left; cursor: pointer; }
+.tm-rolepick__option:hover { background: var(--surface); }
+.tm-rolepick__option[aria-checked="true"] { background: var(--accent-weak); }
+.tm-rolepick__option svg { margin-left: auto; margin-top: 2px; color: var(--accent); flex-shrink: 0; }
+.tm-rolepick__text { display: grid; gap: 2px; }
+.tm-rolepick__text strong { font-size: 14px; font-weight: 600; }
+.tm-rolepick__text small { font-size: 12.5px; line-height: 1.4; color: var(--text-muted); white-space: nowrap; }
+
+/* Team counts as one legend (Sayub, 2026-10-07): every chip the same quiet shape, told apart by a
+   coloured dot that matches the role's tag in the rows: tenant blue, admin teal, staff grey,
+   invited amber (waiting). The tenant's own tag is highlighted in the same blue. */
+.tm-counts .tm-countchip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg); cursor: default; }
+.tm-countchip__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+.tm-countchip--owner .tm-countchip__dot { background: var(--accent); }
+.tm-countchip--admin .tm-countchip__dot { background: #0f766e; }
+.tm-countchip--invited .tm-countchip__dot { background: var(--warning); }
+.tm-countchip b { font-size: 13px; }
+.tm-role.is-fixed.role-tag--owner { background: var(--accent-weak); color: var(--accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+.tm-tag--invited { background: var(--warning-weak); color: var(--warning); }

@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { userInitials } from '../lib/avatar.js';
 import { IconUser } from './icons.jsx';
 
+/** How many initials colours app.css defines (.avatar--tone0 to 5). */
+const AVATAR_TONES = 6;
+
 /**
  * Photo if one is set and actually loads, else initials, else a generic person.
  *
@@ -31,8 +34,11 @@ export default function Avatar({ user, size = 32, className = '' }) {
         );
     }
 
+    // The same person always gets the same colour, so two "MS" circles side by side differ.
+    const seed = String(user.id || user.email || initials || '');
+    const tone = [...seed].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % AVATAR_TONES;
     return (
-        <span className={`avatar ${className}`} style={style} aria-hidden="true">
+        <span className={`avatar avatar--tone${tone} ${className}`} style={style} aria-hidden="true">
             {initials || <IconUser size={Math.round(size * 0.55)} />}
         </span>
     );

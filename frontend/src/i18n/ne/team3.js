@@ -15,7 +15,6 @@ export default {
     'Open it on your phone': 'फोनमा खोल्नुहोस्',
     'The same dashboard, with alerts on the go. Install it from the browser menu once it opens.': 'उही ड्यासबोर्ड, जहाँ भए पनि सूचनासहित। खुलेपछि ब्राउजर मेनुबाट इन्स्टल गर्नुहोस्।',
     'Share link': 'सेयर लिंक',
-    'or scan to open': 'वा स्क्यान गरेर खोल्नुहोस्',
     'QR code for the dashboard': 'ड्यासबोर्डको QR कोड',
     'Your browser blocked it. Select the link and copy it.': 'ब्राउजरले रोक्यो। लिंक छानेर आफैं कपी गर्नुहोस्।',
     'Not shareable yet': 'अहिले सेयर गर्न मिल्दैन',

@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Avatar from '../components/Avatar.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import * as api from '../lib/api.js';
@@ -10,7 +11,7 @@ import { timeAgo, formatBackAt } from '../lib/format.js';
 import { ROLE_LABEL } from '../lib/format.js';
 import { toast } from '../lib/toast.js';
 import { t } from '../lib/i18n.js';
-import { IconCopy, IconTrash, IconSend } from '../components/icons.jsx';
+import { IconCopy, IconTrash, IconSend, IconClose, IconCheck } from '../components/icons.jsx';
 import { IconMail } from './AuthPage.jsx';
 import QrCode from '../components/QrCode.jsx';
 
@@ -94,6 +95,92 @@ export function isReachable(url) {
  * When neither could be reached from outside, there is nothing worth scanning, so the card says
  * what to change instead of showing a code that cannot open.
  */
+/**
+ * A QR code shown large (Sayub, 2026-10-07): a small code in a card is hard for a phone to read
+ * from across a desk. Closes on the X, a click outside, or Escape. Portalled to <body> so it
+ * never inherits the styles of the row or card it was opened from.
+ */
+function QrDialog({ value, label, title, note, onClose }) {
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [onClose]);
+    return createPortal(
+        <>
+            <div className="scrim tm-qrzoom__scrim" onClick={onClose} aria-hidden="true" />
+            <div className="tm-qrzoom" role="dialog" aria-modal="true" aria-label={title}>
+                <button type="button" className="icon-btn tm-qrzoom__close" onClick={onClose} aria-label={t('Close')}>
+                    <IconClose size={18} />
+                </button>
+                <h2>{title}</h2>
+                <div className="tm-qrzoom__code"><QrCode value={value} size={300} label={label} /></div>
+                <p>{note}</p>
+            </div>
+        </>,
+        document.body,
+    );
+}
+
+/** A small QR code that opens the large one when clicked. */
+function ZoomableQr({ value, size, label, title, note }) {
+    const [open, setOpen] = useState(false);
+    return (
+        <>
+            <button type="button" className="tm-qrzoom__open" onClick={() => setOpen(true)}
+                    aria-label={t('Show the QR code larger')} title={t('Click to enlarge')}>
+                <QrCode value={value} size={size} label={label} />
+            </button>
+            {open && <QrDialog value={value} label={label} title={title} note={note} onClose={() => setOpen(false)} />}
+        </>
+    );
+}
+
+/** What each role may do, in one line, for the role menu. */
+const ROLE_SHORT = {
+    AGENT: 'Answers only their own chats.',
+    ADMIN: 'Sees every chat and manages the team.',
+};
+
+/**
+ * The role menu, in the app's own style rather than the system's grey list, with a line on
+ * what each role can do. Closes on a choice, a click outside, or Escape.
+ */
+function RolePicker({ value, onChange, disabled, label, describedBy, className = '' }) {
+    const [open, setOpen] = useState(false);
+    const box = useRef(null);
+    useEffect(() => {
+        if (!open) return undefined;
+        const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+        const onDown = (e) => { if (!box.current?.contains(e.target)) setOpen(false); };
+        window.addEventListener('keydown', onKey);
+        window.addEventListener('pointerdown', onDown);
+        return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('pointerdown', onDown); };
+    }, [open]);
+    return (
+        <div className={`tm-rolepick ${className}`} ref={box}>
+            <button type="button" className="tm-rolepick__button" disabled={disabled} onClick={() => setOpen(o => !o)}
+                    aria-haspopup="menu" aria-expanded={open} aria-label={label} aria-describedby={describedBy}>
+                {t(ROLE_LABEL[value])}
+            </button>
+            {open && (
+                <div className="tm-rolepick__menu" role="menu" aria-label={label}>
+                    {['AGENT', 'ADMIN'].map(r => (
+                        <button key={r} type="button" role="menuitemradio" aria-checked={value === r} className="tm-rolepick__option"
+                                onClick={() => { setOpen(false); if (r !== value) onChange(r); }}>
+                            <span className="tm-rolepick__text">
+                                <strong>{t(ROLE_LABEL[r])}</strong>
+                                <small>{t(ROLE_SHORT[r])}</small>
+                            </span>
+                            {value === r && <IconCheck size={16} />}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function ShareCard({ appUrl, loading }) {
     const base = [appUrl, window.location.origin].find(u => u && isReachable(u));
     const url = base ? `${base.replace(/\/+$/, '')}/login` : null;
@@ -109,7 +196,10 @@ function ShareCard({ appUrl, loading }) {
             {loading ? (
                 <>
                     <Skel line w={80} /><Skel h={42} style={{ borderRadius: 10 }} />
-                    <div className="tm-share__qr tm-share__qr--skel"><Skel w={150} h={150} /></div>
+                    <div className="tm-share__scan">
+                        <div className="tm-share__qr tm-share__qr--skel"><Skel w={112} h={112} /></div>
+                        <div className="tm-share__scantext"><Skel line w={110} /><Skel line w={150} /><Skel line w={120} /></div>
+                    </div>
                 </>
             ) : url ? (
                 <>
@@ -118,8 +208,14 @@ function ShareCard({ appUrl, loading }) {
                         <input readOnly value={shown} aria-label={t('Share link')} onFocus={e => e.target.select()} />
                         <button type="button" className="tm-icon tm-icon--plain" onClick={copy} aria-label={t('Copy link')} title={t('Copy link')}><IconCopy size={16} /></button>
                     </div>
-                    <div className="tm-share__or"><span>{t('or scan to open')}</span></div>
-                    <div className="tm-share__qr"><QrCode value={url} size={150} label={t('QR code for the dashboard')} /></div>
+                    <div className="tm-share__scan">
+                        <div className="tm-share__qr"><ZoomableQr value={url} size={112} label={t('QR code for the dashboard')}
+                            title={t('Open it on your phone')} note={t('Point a phone camera at the code to open the dashboard there.')} /></div>
+                        <div className="tm-share__scantext">
+                            <strong>{t('Or scan it')}</strong>
+                            <p>{t('Point a phone camera at the code to open the dashboard there.')}</p>
+                        </div>
+                    </div>
                 </>
             ) : (
                 <div className="tm-share__local" role="note">
@@ -174,6 +270,9 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
     // the link by hand.
     const [lastInvite, setLastInvite] = useState(null);
     const [removing, setRemoving] = useState(null);
+    // Making someone an admin hands them every chat and the team, so it is confirmed first;
+    // moving someone back to staff is instant.
+    const [promoting, setPromoting] = useState(null);
     const [changingRole, setChangingRole] = useState('');
     const [qrFor, setQrFor] = useState('');      // the pending invite whose QR is showing
 
@@ -290,10 +389,7 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                             <span className="sr-only">{t('Invite by email')}</span>
                             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                                    placeholder="name@business.com" required />
-                            <select value={role} onChange={e => setRole(e.target.value)} aria-label={t('Role')} aria-describedby="role-meaning">
-                                <option value="AGENT">{t('Staff')}</option>
-                                <option value="ADMIN">{t('Admin')}</option>
-                            </select>
+                            <RolePicker value={role} onChange={setRole} label={t('Role')} describedBy="role-meaning" className="tm-rolepick--field" />
                         </label>
                         <button className={`btn btn--primary${busy ? ' btn--busy' : ''}`} type="submit" disabled={busy} aria-busy={busy}>
                             <IconSend size={15} /> {t('Invite')}
@@ -321,15 +417,15 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                         {/* How many of each role, overall; what a role may do is in the role menu's hint. */}
                         {!loading && (
 <div className="tm-counts">
-                                {['OWNER', 'ADMIN', 'AGENT'].map(r => (
-                                    <span key={r} className={`tm-countchip${roleCount(r) ? '' : ' is-zero'}`} title={t(ROLE_MEANING[r])}>
-                                        <b>{roleCount(r)}</b>{roleNoun(r, roleCount(r))}
+                                {['OWNER', 'ADMIN', 'AGENT'].filter(r => roleCount(r) > 0).map(r => (
+                                    <span key={r} className={`tm-countchip tm-countchip--${r.toLowerCase()}`} title={t(ROLE_MEANING[r])}>
+                                        <i className="tm-countchip__dot" aria-hidden="true" /><b>{roleCount(r)}</b>{roleNoun(r, roleCount(r))}
                                     </span>
                                 ))}
                                 {/* Staff are not shown invites, so a count of them would always read 0. */}
-                                {canManage && (
-                                    <span className={`tm-countchip${invites.length ? ' is-invited' : ' is-zero'}`}>
-                                        <b>{invites.length}</b>{t('invited')}
+                                {canManage && invites.length > 0 && (
+                                    <span className="tm-countchip tm-countchip--invited">
+                                        <i className="tm-countchip__dot" aria-hidden="true" /><b>{invites.length}</b>{t('invited')}
                                     </span>
                                 )}
                             </div>
@@ -378,12 +474,9 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                                     </div>
                                     <div className="tm-row__end">
                                         {canSetRole ? (
-                                            <select className="tm-role" value={member.role} disabled={changingRole === member.id}
-                                                    onChange={(e) => changeRole(member, e.target.value)}
-                                                    aria-label={t('Role for {name}', { name: name(member) })}>
-                                                <option value="AGENT">{t('Staff')}</option>
-                                                <option value="ADMIN">{t('Admin')}</option>
-                                            </select>
+                                            <RolePicker value={member.role} disabled={changingRole === member.id}
+                                                        onChange={(r) => (r === 'ADMIN' ? setPromoting(member) : changeRole(member, r))}
+                                                        label={t('Role for {name}', { name: name(member) })} />
                                         ) : (
                                             <span className={`tm-role is-fixed role-tag--${member.role.toLowerCase()}`}>{t(ROLE_LABEL[member.role])}</span>
                                         )}
@@ -410,24 +503,24 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                                         </span>
                                     </div>
                                     <div className="tm-row__end">
-                                        <button type="button" className="btn btn--secondary btn--sm" onClick={() => copy(pending.inviteUrl, pending.id)}>
+                                        <button type="button" className="btn btn--primary btn--sm" onClick={() => copy(pending.inviteUrl, pending.id)}>
                                             <IconCopy size={14} /> {copied === pending.id ? t('Copied') : t('Copy link')}
                                         </button>
                                         {isReachable(pending.inviteUrl) && (
-                                            <button type="button" className="btn btn--secondary btn--sm" onClick={() => setQrFor(q => (q === pending.id ? '' : pending.id))}
-                                                    aria-expanded={qrFor === pending.id}>{t('QR')}</button>
+                                            <button type="button" className="btn btn--sm btn--tint"
+                                                    onClick={() => setQrFor(pending.id)} aria-haspopup="dialog">{t('Show QR')}</button>
                                         )}
-                                        <button type="button" className="btn btn--secondary btn--sm" onClick={() => resend(pending)}>{t('Resend')}</button>
+                                        <button type="button" className="btn btn--secondary btn--sm tm-resend" onClick={() => resend(pending)}>{t('Resend')}</button>
                                         <button type="button" className="tm-icon" onClick={() => revoke(pending.id)}
                                                 aria-label={t('Revoke the invite for {email}', { email: pending.email })} title={t('Revoke')}>
                                             <IconTrash size={15} />
                                         </button>
                                     </div>
                                     {qrFor === pending.id && (
-                                        <div className="tm-invqr">
-                                            <QrCode value={pending.inviteUrl} size={132} label={t('QR code for the invite to {email}', { email: pending.email })} />
-                                            <p>{t('{email} can scan this with a phone camera to open the invite.', { email: pending.email })}</p>
-                                        </div>
+                                        <QrDialog value={pending.inviteUrl} onClose={() => setQrFor('')}
+                                                  label={t('QR code for the invite to {email}', { email: pending.email })}
+                                                  title={t('Invite for {email}', { email: pending.email })}
+                                                  note={t('{email} can scan this with a phone camera to open the invite.', { email: pending.email })} />
                                     )}
                                 </li>
                             );
@@ -435,6 +528,15 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
                     </ul>
                 )}
             </section>
+
+            <ConfirmDialog
+                open={Boolean(promoting)}
+                title={promoting ? t('Make {name} an admin?', { name: promoting.firstName }) : ''}
+                message={t('They will see every chat, and can invite and remove people and change settings.')}
+                confirmLabel={t('Make admin')}
+                onConfirm={() => { const m = promoting; setPromoting(null); changeRole(m, 'ADMIN'); }}
+                onCancel={() => setPromoting(null)}
+            />
 
             <ConfirmDialog
                 open={Boolean(removing)}
