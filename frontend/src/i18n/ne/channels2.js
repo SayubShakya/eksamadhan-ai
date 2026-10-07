@@ -29,4 +29,6 @@ export default {
     'Remove this Page and delete its conversations': 'यो पेज हटाउनुहोस् र यसका कुराकानी मेटाउनुहोस्',
     'View Page': 'पेज हेर्नुहोस्',
     'Open the Page on Facebook': 'पेज Facebook मा खोल्नुहोस्',
+    'Channels connected': 'जोडिएका च्यानल',
+    'Conversations so far': 'अहिलेसम्मका कुराकानी',
 };

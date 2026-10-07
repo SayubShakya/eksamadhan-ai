@@ -71,7 +71,7 @@ function MemberSkeleton({ name, email }) {
         <li className="tm-row" aria-hidden="true">
             <Skel circle w={40} h={40} />
             <div className="tm-row__who"><Skel line w={name} /><Skel line w={email} /><Skel line w={110} /></div>
-            <Skel w={90} h={32} style={{ borderRadius: 8 }} />
+            <span className="tm-row__end"><Skel w={90} h={32} style={{ borderRadius: 8 }} /><Skel w={32} h={32} style={{ borderRadius: 8 }} /></span>
         </li>
     );
 }

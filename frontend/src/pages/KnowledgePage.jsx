@@ -1,10 +1,11 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
-import { IconUpload, IconSearch, IconTrash, IconImage, IconClose, IconDoc, IconGlobe, IconKnowledge } from '../components/icons.jsx';
+import { IconUpload, IconSearch, IconTrash, IconImage, IconClose, IconDoc, IconGlobe, IconKnowledge, IconPlus, IconEye } from '../components/icons.jsx';
 import * as api from '../lib/api.js';
-import { CenteredSpinner, LoadError, LoadingRegion, Skel, UploadProgress } from '../components/Loading.jsx';
+import { LoadError, LoadingRegion, Skel, UploadProgress } from '../components/Loading.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
 import { toast } from '../lib/toast.js';
+import { formatDate } from '../lib/format.js';
 import { t } from '../lib/i18n.js';
 
 /** A translated sentence with {name} slots filled by elements, so word order stays the translator's. */
@@ -50,20 +51,24 @@ const WEAK_MATCH = 0.25;
 /** A source row inside the same classes as the real one, so it is the same height. */
 function SourceSkeleton({ title, meta }) {
     return (
-        <div className="member">
-            <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="member__name"><Skel line w={title} /></div>
-                <div className="member__email"><Skel line w={meta} /></div>
+        <div className="kq-item" aria-hidden="true">
+            <div className="kq-item__main">
+                <Skel w={36} h={36} style={{ borderRadius: 9, flexShrink: 0 }} />
+                <div className="kq-item__text"><Skel line w={title} /><Skel line w={meta} /></div>
             </div>
-            <div className="member__actions">
-                <span className="tag"><Skel line w={34} /></span>
-                <Skel w={84} h={33} style={{ borderRadius: 8 }} />
-            </div>
+            <span className="kq-item__num"><Skel line w={18} /></span>
+            <span className="kq-item__status"><Skel line w={54} /></span>
+            <span className="kq-item__date"><Skel line w={78} /></span>
+            <span className="kq-item__actions"><Skel w={32} h={32} style={{ borderRadius: 8 }} /><Skel w={32} h={32} style={{ borderRadius: 8 }} /></span>
         </div>
     );
 }
 
 const btn = (base, busy) => `${base}${busy ? ' btn--busy' : ''}`;
+
+/** Topics to start a piece of text from. Each adds its name as a heading line, which starts a new
+ *  passage, so every answer stays on one topic. */
+const STARTERS = ['Returns', 'Delivery', 'Payment', 'Opening hours', 'Contact'];
 
 const ADD_TABS = [
     { id: 'text', label: 'Write text', Icon: IconDoc, tone: 'blue' },
@@ -82,6 +87,22 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
     // Bytes sent for the file being uploaded: { label, fraction } while it goes, else null.
     const [sent, setSent] = useState(null);
     const [addTab, setAddTab] = useState('text');
+    // The highlight under the chosen tab slides to it (Sayub, 2026-10-07); measured, since the
+    // tabs are not the same width.
+    const tabsRef = useRef(null);
+    const [glider, setGlider] = useState(null);
+    useLayoutEffect(() => {
+        const box = tabsRef.current;
+        if (!box) return undefined;
+        const place = () => {
+            const on = box.querySelector('[aria-selected="true"]');
+            if (on) setGlider({ left: on.offsetLeft, top: on.offsetTop, width: on.offsetWidth, height: on.offsetHeight });
+        };
+        place();
+        const ro = new ResizeObserver(place);
+        ro.observe(box);
+        return () => ro.disconnect();
+    }, [addTab]);
     const [title, setTitle] = useState('');
     const [text, setText] = useState('');
     const [error, setError] = useState('');
@@ -281,7 +302,11 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                             <span className="kq-badge tone-blue"><IconKnowledge size={18} /></span>
                             <h2 id="add-h">{t('Add knowledge')}</h2>
                         </span>
-                        <div className="kq-tabs" role="tablist" aria-label={t('How to add')}>
+                        <div className="kq-tabs" role="tablist" aria-label={t('How to add')} ref={tabsRef}>
+                            {glider && (
+                                <span className={`kq-tabs__glider tone-${ADD_TABS.find(x => x.id === addTab)?.tone || 'blue'}`} aria-hidden="true"
+                                      style={{ transform: `translate(${glider.left}px, ${glider.top + glider.height - 2}px)`, width: glider.width }} />
+                            )}
                             {ADD_TABS.map(tab => (
                                 <button key={tab.id} type="button" role="tab" className={`kq-tab tone-${tab.tone}`}
                                         aria-selected={addTab === tab.id}
@@ -299,23 +324,40 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                         <div className="kq-panel" data-on={addTab === 'text'} inert={addTab !== 'text'} aria-hidden={addTab !== 'text'}>
                             <form onSubmit={addText}>
                                 <label className="field">
-                                    <span>{t('Title')}</span>
+                                    <span>{t('Title')} <small className="kq-optional">{t('optional, taken from the text if empty')}</small></span>
                                     <input value={title} onChange={e => setTitle(e.target.value)}
                                            placeholder={t('Shipping and returns')} maxLength={120} />
                                 </label>
-                                <label className="field" style={{ marginTop: 10 }}>
-                                    <span>{t('Text')}</span>
-                                    <textarea className="knowledge__text" value={text} rows={6}
-                                              onChange={e => setText(e.target.value)}
-                                              placeholder={t('Paste your policies, FAQs or product details here…')} />
-                                    <small className="field__hint">
-                                        {t('Headings help. A short line like “Returns” starts a new passage, which keeps each answer on one topic.')}
-                                    </small>
+                                <div className="kq-starters">
+                                    <span>{t('Start a topic:')}</span>
+                                    {STARTERS.map(topic => (
+                                        <button key={topic} type="button" className="kq-starter"
+                                                onClick={() => setText(prev => `${prev.trim() ? `${prev.trimEnd()}\n\n` : ''}${t(topic)}\n`)}>
+                                            <IconPlus size={12} /> {t(topic)}
+                                        </button>
+                                    ))}
+                                </div>
+                                <label className="field">
+                                    <span className="sr-only">{t('Text')}</span>
+                                    <span className="kq-textbox">
+                                        <textarea className="knowledge__text" value={text} rows={7}
+                                                  onChange={e => setText(e.target.value)}
+                                                  placeholder={t('Paste your policies, FAQs or product details here…')} />
+                                        <span className="kq-textfoot">
+                                            <span>{t('Headings help. A short line like “Returns” starts a new passage, which keeps each answer on one topic.')}</span>
+                                            <span className="kq-chars">{text.length === 1 ? t('1 character') : t('{n} characters', { n: text.length.toLocaleString() })}</span>
+                                        </span>
+                                    </span>
                                 </label>
-                                <div className="knowledge__actions">
+                                <div className="knowledge__actions kq-actions">
+                                    {(title || text) && (
+                                        <button type="button" className="btn btn--secondary" onClick={() => { setTitle(''); setText(''); }} disabled={busy}>
+                                            {t('Clear')}
+                                        </button>
+                                    )}
                                     <button className={btn('btn btn--primary', busy && !sent)} type="submit"
                                             disabled={busy || !text.trim()} aria-busy={busy && !sent}>
-                                        {t('Add to knowledge base')}
+                                        <IconPlus size={15} /> {t('Add to knowledge base')}
                                     </button>
                                 </div>
                             </form>
@@ -410,24 +452,21 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
 
             {error && <p className="auth__error" role="alert">{error}</p>}
 
-            <h2 className="section-title">
-                {t('Sources')}
-                {totalChunks > 0 && <span className="count"> · {t('{n} passages indexed', { n: totalChunks })}</span>}
-            </h2>
+            <div className="kq-sources-head">
+                <h2 className="section-title">{t('Sources')}</h2>
+                {!loading && library.sources.length > 0 && (
+                    <span className="kq-sources-meta">
+                        {library.sources.length === 1 ? t('1 source') : t('{n} sources', { n: library.sources.length })}
+                        {totalChunks > 0 && <> · {t('{n} passages indexed', { n: totalChunks })}</>}
+                    </span>
+                )}
+            </div>
 
-            {loading && (loadError && !firstLoad ? (
+            {loading && loadError && !firstLoad ? (
                 <LoadError className="empty--panel"
                            message={api.errorMessage(loadError, t('Could not load the knowledge base.'))}
                            onRetry={load} />
-            ) : (
-                <LoadingRegion label={t('the knowledge sources')}>
-                    <SourceSkeleton title={180} meta={130} />
-                    <SourceSkeleton title={140} meta={170} />
-                    <SourceSkeleton title={200} meta={110} />
-                </LoadingRegion>
-            ))}
-
-            {!loading && library.sources.length === 0 && (
+            ) : !loading && library.sources.length === 0 ? (
                 <div className="empty empty--panel">
                     <p className="muted">
                         {canManage
@@ -435,45 +474,61 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                             : t('Nothing here yet. The tenant or an admin can add your policies and FAQs here.')}
                     </p>
                 </div>
-            )}
-
-            {!loading && library.sources.map(source => (
-                <div className="member" key={source.id}>
-                    {source.imageUrl ? (
-                        <img className="source__thumb" src={source.imageUrl} alt="" />
-                    ) : (() => {
+            ) : (
+                <section className="card kq-list" aria-label={t('Sources')}>
+                    <div className="kq-item kq-item--head" aria-hidden="true">
+                        <span>{t('Source')}</span><span>{t('Passages')}</span><span>{t('Status')}</span><span>{t('Added')}</span><span />
+                    </div>
+                    {loading ? (
+                        <LoadingRegion label={t('the knowledge sources')}>
+                            <SourceSkeleton title={180} meta={90} />
+                            <SourceSkeleton title={140} meta={110} />
+                            <SourceSkeleton title={200} meta={80} />
+                        </LoadingRegion>
+                    ) : library.sources.map(source => {
                         const look = KIND_LOOK[source.sourceType] || KIND_LOOK.TEXT;
-                        return <span className={`kq-badge tone-${look.tone}`} aria-hidden="true"><look.Icon size={18} /></span>;
-                    })()}
-                    <div style={{ minWidth: 0 }}>
-                        <div className="member__name">{source.title}</div>
-                        <div className="member__email">
-                            {source.sourceType === 'PDF' ? 'PDF'
-                                : source.sourceType === 'IMAGE' ? t('Picture')
-                                : source.sourceType === 'URL' ? t('Web page') : t('Text')}
-                            {source.sourceUrl && ` · ${source.sourceUrl.replace(/^https?:\/\//, '').slice(0, 44)}`}
-                            {source.status === 'READY' && ` · ${source.chunkCount === 1 ? t('1 passage') : t('{n} passages', { n: source.chunkCount })}`}
-                            {source.status === 'FAILED' && source.error && ` · ${source.error}`}
-                        </div>
-                    </div>
-                    <div className="member__actions">
-                        <span className={`tag ${STATUS_TONE[source.status] || 'tag--ai'}`}>
-                            {STATUS_LABEL[source.status] ? t(STATUS_LABEL[source.status]) : source.status}
-                        </span>
-                        {source.chunkCount > 0 && (
-                            <button className="btn btn--secondary btn--sm" onClick={() => view(source)}>
-                                {t('View text')}
-                            </button>
-                        )}
-                        {canManage && (
-                            <button className="btn btn--danger btn--sm" onClick={() => setRemoving(source)}
-                                    aria-label={t('Remove {title}', { title: source.title })}>
-                                <IconTrash /> {t('Remove')}
-                            </button>
-                        )}
-                    </div>
-                </div>
-            ))}
+                        const kind = source.sourceType === 'PDF' ? 'PDF'
+                            : source.sourceType === 'IMAGE' ? t('Picture')
+                            : source.sourceType === 'URL' ? t('Web page') : t('Text');
+                        return (
+                            <div className="kq-item" key={source.id}>
+                                <div className="kq-item__main">
+                                    {source.imageUrl
+                                        ? <img className="kq-item__thumb" src={source.imageUrl} alt="" />
+                                        : <span className={`kq-badge kq-item__icon tone-${look.tone}`} aria-hidden="true"><look.Icon size={17} /></span>}
+                                    <div className="kq-item__text">
+                                        <strong title={source.title}>{source.title}</strong>
+                                        <span>
+                                            {kind}
+                                            {source.sourceUrl && ` · ${source.sourceUrl.replace(/^https?:\/\//, '').slice(0, 44)}`}
+                                            {source.status === 'FAILED' && source.error && ` · ${source.error}`}
+                                        </span>
+                                    </div>
+                                </div>
+                                <span className="kq-item__num">{source.status === 'READY' ? source.chunkCount : ''}</span>
+                                <span className={`kq-item__status is-${(source.status || '').toLowerCase()}`}>
+                                    <i aria-hidden="true" />{STATUS_LABEL[source.status] ? t(STATUS_LABEL[source.status]) : source.status}
+                                </span>
+                                <span className="kq-item__date">{source.createdAt ? formatDate(source.createdAt) : ''}</span>
+                                <span className="kq-item__actions">
+                                    {source.chunkCount > 0 && (
+                                        <button type="button" className="kq-iconbtn" onClick={() => view(source)}
+                                                aria-label={t('View the text of {title}', { title: source.title })} title={t('View text')}>
+                                            <IconEye size={16} />
+                                        </button>
+                                    )}
+                                    {canManage && (
+                                        <button type="button" className="kq-iconbtn kq-iconbtn--danger" onClick={() => setRemoving(source)}
+                                                aria-label={t('Remove {title}', { title: source.title })} title={t('Remove')}>
+                                            <IconTrash size={16} />
+                                        </button>
+                                    )}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </section>
+            )}
 
             <section className="card kq-test" aria-labelledby="kq-test-h">
             <header className="kq-test__head">
@@ -497,7 +552,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                 )}
                 <button className={btn('btn btn--primary', searching)} type="submit"
                         disabled={searching || !query.trim()} aria-busy={searching}>
-                    {t('Search')}
+                    <IconSearch size={15} /> {t('Search')}
                 </button>
             </form>
 
@@ -541,7 +596,12 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                         <div className="confirm__body">
                             {viewing.sourceUrl && <p className="muted" style={{ margin: '0 0 8px' }}>{viewing.sourceUrl}</p>}
                             {viewing.content === null ? (
-                                <CenteredSpinner label={t('Reading the extracted text')} />
+                                <LoadingRegion label={t('the extracted text')}>
+                                    <p className="muted" style={{ margin: '0 0 10px' }}><Skel line w={230} /></p>
+                                    <div className="sourcetext" style={{ display: 'grid', gap: 8 }}>
+                                        {['96%', '88%', '92%', '60%', '94%', '85%', '72%'].map((w, i) => <Skel key={i} line w={w} />)}
+                                    </div>
+                                </LoadingRegion>
                             ) : (
                                 <>
                                     <p className="muted" style={{ margin: '0 0 10px' }}>

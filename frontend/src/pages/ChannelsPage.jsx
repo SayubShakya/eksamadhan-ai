@@ -4,7 +4,7 @@ import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { LoadingRegion, Skel } from '../components/Loading.jsx';
 import { useHeldLoading } from '../lib/loading.js';
 import { formatDate } from '../lib/format.js';
-import { IconFacebook, IconInstagram, IconPlus, IconWidget, IconTrash, IconCheck, IconRefresh, IconLink } from '../components/icons.jsx';
+import { IconFacebook, IconInstagram, IconPlus, IconWidget, IconTrash, IconCheck, IconRefresh, IconLink, IconChannels, IconInbox, IconUser } from '../components/icons.jsx';
 import { toast } from '../lib/toast.js';
 import { t } from '../lib/i18n.js';
 
@@ -67,7 +67,7 @@ function AccountRow({ page, isTenant, canManage, onReconnect, onDisconnect, reco
                 <PageFace page={page} />
                 <div className="chn-acc__text">
                     <strong><span className="chn-acc__name">{page.pageName}</span></strong>
-                    {since && <small>{t('Connected {date}', { date: since })}</small>}
+                    {since && <small className="chn-acc__since"><i className="chn-acc__live" aria-hidden="true" />{t('Connected {date}', { date: since })}</small>}
                 </div>
             </div>
             {/* Each action named, not just an icon. */}
@@ -166,13 +166,24 @@ export default function ChannelsPage({ user, pages = [], statusLoaded = true, on
 
             {/* Where things stand, from what is connected. */}
             {loading && (
-                <div className="chn-summary" aria-hidden="true">{[150, 90, 170].map(w => <Skel key={w} w={w} h={36} style={{ borderRadius: 10 }} />)}</div>
+                <div className="chn-summary" aria-hidden="true">
+                    {[0, 1, 2].map(i => <div key={i} className="chn-stat"><Skel w={34} h={34} style={{ borderRadius: 9 }} /><span className="chn-stat__text"><Skel line w={40} /><Skel line w={110} /></span></div>)}
+                </div>
             )}
             {!loading && (
                 <div className="chn-summary">
-                    <span><b>{connectedPlatforms}</b> {t('of {n} channels connected', { n: PLATFORMS.length })}</span>
-                    <span><b>{pages.length}</b> {pages.length === 1 ? t('account') : t('accounts')}</span>
-                    <span><b>{totalConversations}</b> {totalConversations === 1 ? t('conversation so far') : t('conversations so far')}</span>
+                    <div className="chn-stat">
+                        <span className="chn-stat__icon"><IconChannels size={17} /></span>
+                        <span className="chn-stat__text"><b>{connectedPlatforms}<small> / {PLATFORMS.length}</small></b><span>{t('Channels connected')}</span></span>
+                    </div>
+                    <div className="chn-stat">
+                        <span className="chn-stat__icon"><IconUser size={17} /></span>
+                        <span className="chn-stat__text"><b>{pages.length}</b><span>{pages.length === 1 ? t('Connected account') : t('Connected accounts')}</span></span>
+                    </div>
+                    <div className="chn-stat">
+                        <span className="chn-stat__icon"><IconInbox size={17} /></span>
+                        <span className="chn-stat__text"><b>{totalConversations}</b><span>{t('Conversations so far')}</span></span>
+                    </div>
                 </div>
             )}
 
@@ -220,7 +231,7 @@ export default function ChannelsPage({ user, pages = [], statusLoaded = true, on
                                 {canManage && (
                                     <div className="chn-card__foot">
                                         {on ? (
-                                            <button type="button" className={btn('btn btn--secondary chn-wide', busy === `${id}:another`)}
+                                            <button type="button" className={btn('btn btn--tint chn-wide', busy === `${id}:another`)}
                                                     onClick={() => connect(id, `${id}:another`)} disabled={Boolean(busy)} aria-busy={busy === `${id}:another`}>
                                                 <IconPlus size={15} /> {t(another)}
                                             </button>
