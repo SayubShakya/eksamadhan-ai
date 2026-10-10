@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import NavRail from '../components/NavRail.jsx';
-import { IconFlow, IconMenu } from '../components/icons.jsx';
-import { LogoMark } from '../components/Logo.jsx';
+import NavRail from '../components/layout/NavRail.jsx';
+import { IconFlow, IconMenu } from '../components/ui/icons.jsx';
+import { LogoMark } from '../components/ui/Logo.jsx';
 import ConversationVisualizer from './ConversationVisualizer.jsx';
 
 /**

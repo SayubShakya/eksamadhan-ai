@@ -1,0 +1,59 @@
+/* ── Pop-overs, notifications and figures, 2026-10-01 ───────────────────────────────── */
+/* Focus: a clear but not heavy ring, only for the keyboard. */
+:focus-visible { outline: 2px solid rgba(37, 99, 235, .55); outline-offset: 2px; }
+
+/* Shared look for every menu that drops from the top bar */
+.availability__menu, .bell__panel, .popover {
+    border: 1px solid #e8ebf0; border-radius: 16px;
+    box-shadow: 0 20px 48px -12px rgba(16, 24, 40, .22), 0 4px 12px rgba(16, 24, 40, .06);
+}
+
+/* Status menu: each choice is a row that lights up, the chosen one stays tinted */
+.availability__menu { padding: 8px; min-width: 300px; }
+.availability__option { padding: 12px; border-radius: 12px; gap: 12px; }
+.availability__option:hover { background: #f5f6f8; }
+.availability__option[aria-checked="true"] { background: #f1f5ff; }
+.availability__option .dot { width: 10px; height: 10px; margin-top: 5px; box-shadow: 0 0 0 4px rgba(0, 0, 0, .04); }
+.availability__foot { margin: 6px 4px 4px; padding: 12px 8px 4px; }
+.availability__hours { margin: 0 4px 4px; }
+
+/* Notifications: an icon tile per alert, plain dark titles, the unread state as a soft fill */
+.bell__item { display: flex; align-items: flex-start; }
+.bell__icon {
+    width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+    display: grid; place-items: center; background: #eaf1ff; color: var(--accent);
+}
+.bell__icon--urgent { background: #fdecec; color: var(--danger); }
+.bell__title { color: var(--text); }
+.bell__item--unread .bell__title::after {
+    content: ''; width: 7px; height: 7px; margin-left: 8px;
+    border-radius: 50%; background: var(--accent); vertical-align: middle;
+}
+.bell__panel { overflow: hidden; }
+.bell__head { padding: 16px 18px 12px; }
+.bell__foot { background: #fafbfc; }
+
+/* The full page: one list in a card, rows divided, not a stack of boxes */
+.notes { gap: 0; background: #fff; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+.notes__row + .notes__row { border-top: 1px solid #eef0f3; }
+.notes__row .bell__item { border: 0; border-radius: 0; padding: 16px 20px; background: #fff; }
+.notes__row .bell__item:hover { background: #f8f9fb; }
+.notes__row .bell__item--unread { border: 0; }
+.notes__row .bell__item--unread:hover { background: #eef4ff; }
+
+/* Home figures: a small icon beside each label */
+.stat__label { display: flex; align-items: center; gap: 8px; }
+.stat__icon { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: #eaf1ff; color: var(--accent); }
+.stat { border-radius: 14px; }
+.stat__value { margin-top: 14px; }
+
+/* Edit profile: the same rounded card */
+.popover { border-radius: 18px; }
+
+/* Menu: the dark-mode switch row */
+.switch--sm { width: 34px; height: 20px; }
+.switch--sm .switch__knob { width: 14px; height: 14px; }
+.switch--sm.switch--on .switch__knob { transform: translateX(14px); }
+@media (min-width: 1024px) {
+    .rail--closed .rail__theme .switch, .rail--closed .rail__theme > span:not(.rail__icon) { display: none; }
+}

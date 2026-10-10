@@ -1,0 +1,53 @@
+/* Knowledge, same layout with colour (2026-10-03): an icon by each heading, the four ways to add
+   as coloured tabs, a coloured icon per source, the test in its own card. */
+.tone-blue { --tone: #2563eb; --tone-weak: #eaf1ff; }
+.tone-red { --tone: #dc2626; --tone-weak: #fdecec; }
+.tone-amber { --tone: #b45309; --tone-weak: #fdf1df; }
+.tone-teal { --tone: #0f766e; --tone-weak: #e2f5f2; }
+:root[data-theme="dark"] .tone-blue { --tone: #5b8ff9; --tone-weak: #1b2740; }
+:root[data-theme="dark"] .tone-red { --tone: #f87171; --tone-weak: #331b1d; }
+:root[data-theme="dark"] .tone-amber { --tone: #fbbf24; --tone-weak: #33270f; }
+:root[data-theme="dark"] .tone-teal { --tone: #2dd4bf; --tone-weak: #12302c; }
+.kq-badge { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; background: var(--tone-weak); color: var(--tone); }
+.knowledge__addhead { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 18px 22px !important; }
+.kq-title { display: inline-flex; align-items: center; gap: 12px; }
+.kq-title h2 { margin: 0; font-size: 17px; }
+.kq-tabs { display: flex; flex-wrap: wrap; }
+.kq-tab { display: inline-flex; align-items: center; border: 1px solid transparent; border-radius: 9px; background: none; font-size: 13.5px; font-weight: 500; transition: background .15s ease, color .15s ease, box-shadow .15s ease; }
+.kq-tab__icon { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: var(--tone-weak); color: var(--tone); }
+.kq-tab:hover { color: var(--text); background: var(--bg); }
+.kq-tab[aria-selected="true"] { background: var(--bg); font-weight: 600; }
+.kq-tab[aria-selected="true"] .kq-tab__icon { background: var(--tone); }
+.knowledge__addbody { padding: 20px 22px 22px !important; }
+.knowledge__add .knowledge__actions .btn--primary:disabled { border-color: var(--accent); }
+.knowledge__text, .knowledge__addbody input:not([type=file]) { border-radius: 10px !important; }
+.member .kq-badge { margin-right: 4px; }
+.kq-test { padding: 20px 22px; display: grid; gap: 14px; }
+.kq-test__head { display: flex; gap: 12px; align-items: flex-start; }
+.kq-test__head h2 { margin: 0; font-size: 16px; }
+.kq-test__head p { margin: 3px 0 0; font-size: 13.5px; color: var(--text-muted); }
+.kq-test .knowledge__search { margin: 0; }
+.kq-test .knowledge__search .btn--primary:disabled { background: var(--accent); border-color: var(--accent); color: #fff; opacity: .45; }
+.kq-test .knowledge__hit { box-shadow: none; background: var(--surface); }
+@media (max-width: 760px) { .kq-tabs { width: 100%; } .kq-tab { flex: 1 1 calc(50% - 6px); } }
+.knowledge__add { overflow: hidden; }
+.knowledge__addhead { border-radius: var(--r-md) var(--r-md) 0 0; }
+.kq-tab { white-space: nowrap; }
+@media (max-width: 760px) { .kq-tab { font-size: 12.5px; padding-right: 8px; } }
+
+/* Knowledge, minimal (2026-10-03): one neutral palette; icons in grey line only, no coloured
+   tiles; the tabs a plain switch; disabled buttons a quiet grey. */
+.knowledge__addhead { background: var(--bg); }
+.kq-tabs { border-color: transparent; }
+.kq-tab { padding: 6px 12px; gap: 7px; color: var(--text-muted); }
+.kq-tab__icon, .kq-tab[aria-selected="true"] .kq-tab__icon { width: auto; height: auto; background: none; color: inherit; border-radius: 0; }
+.kq-tab[aria-selected="true"] { color: var(--text); border-color: transparent; box-shadow: 0 1px 2px rgba(16, 24, 40, .1); }
+.knowledge__add .knowledge__actions .btn--primary:disabled,
+.kq-test .knowledge__search .btn--primary:disabled { background: var(--surface); }
+.kq-test { margin-top: 24px; }
+.kq-clear { border: 0; background: none; padding: 6px; margin-right: 2px; border-radius: 7px; color: var(--text-muted); display: grid; place-items: center; flex-shrink: 0; }
+.kq-clear:hover { background: var(--surface); color: var(--text); }
+/* The add forms stacked in one cell: the card takes the tallest one's height and never jumps. */
+.knowledge__addbody { display: grid; }
+.kq-panel { grid-area: 1 / 1; min-width: 0; }
+.kq-panel[data-on="false"] { visibility: hidden; pointer-events: none; }

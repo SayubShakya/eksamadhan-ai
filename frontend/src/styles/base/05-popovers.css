@@ -1,0 +1,207 @@
+/* ── Profile popover ───────────────────────────────────────────────────── */
+.popover__catcher { position: fixed; inset: 0; z-index: 55; }
+.popover__grab { display: none; place-items: center; padding: 10px 0 2px; cursor: grab; touch-action: none; }
+.popover__grab span { width: 40px; height: 4px; border-radius: 2px; background: var(--border-strong); }
+@keyframes sheet-up { from { transform: translateY(40px); opacity: 0; } }
+
+/* A dialog's backdrop must cover the docked sidebar too. */
+.confirm ~ .scrim, .scrim:not(.scrim--nav) { z-index: 65; }
+
+.popover {
+    position: fixed; z-index: 60;
+    top: calc(var(--topbar) + 6px); right: 12px;
+    width: min(340px, calc(100vw - 24px));
+    max-height: calc(100vh - var(--topbar) - 24px);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 16px 44px rgba(16, 20, 27, .16);
+    display: flex; flex-direction: column;
+    animation: drop .14s ease;
+}
+@keyframes drop {
+    from { transform: translateY(-6px); opacity: 0 }
+    to   { transform: none; opacity: 1 }
+}
+
+.panel__head {
+    flex-shrink: 0;
+    padding: 11px 10px 11px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+}
+.panel__title { font-size: 14px; font-weight: 600; margin: 0; }
+
+.panel__body { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.panel__identity { display: flex; align-items: center; gap: 12px; }
+.panel__identity--solo { justify-content: center; padding: 4px 0 2px; }
+.panel__avatarActions { min-width: 0; }
+
+.avatarEdit { position: relative; flex-shrink: 0; }
+.avatarEdit__hit {
+    display: block; position: relative;
+    border: 0; background: none; padding: 0;
+    border-radius: 50%;
+}
+.avatarEdit__hit .avatar { border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--border); }
+.avatarEdit__hit:hover .avatar { filter: brightness(.94); }
+.avatarEdit__badge {
+    position: absolute; right: -2px; bottom: -2px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    border: 2px solid var(--bg);
+    display: grid; place-items: center;
+}
+.avatarEdit__hit:hover .avatarEdit__badge { filter: brightness(1.08); }
+.avatar--lg { width: 56px; height: 56px; font-size: 22px; }
+.panel__hint { color: var(--text-muted); font-size: 12px; margin: 0; }
+.field input, .field select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    background: var(--bg);
+    color: var(--text);
+}
+.field input:focus, .field select:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak);
+}
+
+.panel__note {
+    font-size: 12px; color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 9px 11px; margin: 0;
+}
+.panel__actions {
+    display: flex; gap: 10px; justify-content: flex-end;
+    padding-top: 4px;
+}
+
+/* The user chip is a button now. */
+.user {
+    color: inherit;
+}
+.user__text { display: block; }
+
+.avatar--photo { object-fit: cover; display: block; }
+.panel__avatarActions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.btn--quiet { background: none; border-color: transparent; color: var(--text-muted); }
+.btn--quiet:hover { background: var(--danger-weak); color: var(--danger); }
+.panel__error {
+    margin: 0; font-size: 13px; color: var(--danger);
+    background: var(--danger-weak); border-radius: var(--r-sm); padding: 8px 10px;
+}
+
+.field__note { font-size: 12px; }
+
+/* The notification switch: the button and its test sit on one line, wrapping on a
+   narrow panel rather than squeezing the labels. */
+/* The two reasons a notification will fire, in the sign-in prompt. */
+.notify__list {
+    margin: 0 0 14px; padding-left: 18px;
+    color: var(--text-muted); font-size: 14px; line-height: 1.7;
+}
+
+/* ── Notification bell ─────────────────────────────────────────────────── */
+.bell { position: relative; flex-shrink: 0; }
+.bell__button { position: relative; }
+/* On the notifications page the bell is where you are, like a selected nav item. */
+.bell__button--current, .bell__button--current:hover { background: var(--accent-tint); color: var(--accent); }
+
+/* Sits on the bell's upper-right, ringed in the bar's own colour so it reads as a
+   badge rather than as part of the icon. */
+.bell__count {
+    position: absolute; top: 0; right: 0;
+    min-width: 16px; height: 16px; padding: 0 4px;
+    border-radius: 999px; border: 2px solid var(--panel);
+    background: var(--danger); color: #fff;
+    font-size: 10px; font-weight: 700; line-height: 12px;
+    display: grid; place-items: center;
+}
+
+.bell__panel {
+    position: absolute; top: calc(100% + 8px); right: 0; z-index: 60;
+    max-height: min(480px, 75vh);
+    display: flex; flex-direction: column;
+    background: var(--bg);
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    box-shadow: var(--shadow-lg, 0 12px 40px rgba(16, 20, 27, .16));
+}
+.bell__head {
+    gap: 8px;
+}
+/* Only the list scrolls, and a scroll that reaches its end stops there instead of carrying on
+   into the page (which is also locked: html.scroll-locked). */
+.bell__scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.bell__empty { margin: 0; padding: 16px 14px; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+.bell__list { list-style: none; margin: 0; }
+.bell__row { margin-bottom: 4px; }
+.bell__row:last-child { margin-bottom: 0; }
+
+.bell__item {
+    width: 100%; text-align: left;
+    border: 0; background: none;
+    color: var(--text);
+}
+.bell__item:disabled { cursor: default; }
+/* Unread reads as unread at a glance: a tinted card, a dot, and the title in bold. */
+.bell__item--unread { background: var(--accent-weak); }
+.bell__item--unread:hover:not(:disabled) { background: var(--accent-tint); }
+.bell__item--unread .bell__title { font-weight: 600; }
+.bell__dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    margin-top: 6px; background: var(--accent);
+}
+.bell__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+
+.bell__title { line-height: 1.4; }
+.bell__title--urgent { color: var(--danger); }
+.bell__body {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.bell__time { font-size: 11px; color: var(--text-muted); }
+
+/* "Mark all read": each card collapses, fades and slides out, one after another (the delay is
+   set per card). --h is the card's own height, measured when the sweep starts. */
+.bell__row--leaving { overflow: hidden; animation: bell-leave 460ms ease-in forwards; }
+@keyframes bell-leave {
+    0% { opacity: 1; transform: none; max-height: var(--h, 96px); margin-bottom: 4px; }
+    55% { opacity: 0; transform: translateX(28px); max-height: var(--h, 96px); margin-bottom: 4px; }
+    100% { opacity: 0; transform: translateX(28px); max-height: 0; margin-bottom: 0; }
+}
+
+.bell__caughtup { display: grid; justify-items: center; text-align: center; gap: 4px; padding: 28px 20px 24px; }
+.bell__caughtup-icon {
+    width: 44px; height: 44px; border-radius: 50%; margin-bottom: 8px;
+    display: grid; place-items: center;
+    background: var(--success-weak); color: var(--success);
+}
+.bell__caughtup-title { margin: 0; font-weight: 600; font-size: 14px; }
+.bell__caughtup-text { margin: 0 0 10px; color: var(--text-muted); font-size: 13px; }
+
+/* The quiet action on the left, the way onward in the accent on the right. */
+.bell__foot {
+    display: flex; align-items: center; gap: 8px;
+}
+.bell__markall, .bell__link {
+    border: 0; background: none; padding: 6px 8px; border-radius: var(--r-sm); font-size: 13px;
+}
+.bell__markall:hover:not(:disabled) { background: var(--surface); color: var(--text); }
+.bell__markall:disabled { cursor: progress; }
+.bell__link { color: var(--accent); font-weight: 600; }
+.bell__link:hover { background: var(--accent-weak); }
+
+html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behavior: none; }
+.bell__catcher { touch-action: none; }
+
+/* The full notifications page reuses the bell's rows, on cards. */
+.notes { list-style: none; margin: 0; padding: 0; display: grid; }
+.notes__row .bell__item--unread { border-color: #cfe0fb; }
+.notes__row .bell__title { font-size: 14px; }
+.notes__row .bell__body { font-size: 13px; }
+.bell__dot--read { background: transparent; }
+
+/* How long the AI took, beside the timestamp. Quiet by default; the wait turns amber
+   because a long one means the message was not delivered live. */
+.msg__timing--warn { color: var(--warning); opacity: 1; }

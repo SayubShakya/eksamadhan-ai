@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { IconBell, IconTeam, IconWarning } from '../components/icons.jsx';
-import { LoadError, LoadingRegion, Skel } from '../components/Loading.jsx';
+import { IconBell, IconTeam, IconWarning } from '../components/ui/icons.jsx';
+import { LoadError, LoadingRegion, Skel } from '../components/ui/Loading.jsx';
 import { timeAgo } from '../lib/format.js';
 import { useHeldLoading, useResource } from '../lib/loading.js';
 import * as api from '../lib/api.js';
-import { NoteAvatar, NoteTag, kindOf } from '../components/NoteParts.jsx';
+import { NoteAvatar, NoteTag, kindOf } from '../components/layout/NoteParts.jsx';
 import { toast } from '../lib/toast.js';
 import { t } from '../lib/i18n.js';
+import PageHeader from '../components/ui/PageHeader.jsx';
 
 const URGENT = new Set(['ESCALATED']);
 const announce = () => window.dispatchEvent(new Event('notifications:changed'));
@@ -49,15 +50,11 @@ export default function NotificationsPage({ onOpen }) {
 
     return (
         <div className="page">
-            <div className="page__head">
-                <div>
-                    <h1 className="page__title">{t('Notifications')}</h1>
-                    <p className="page__sub">{t('What you have been alerted about, newest first. The latest 30 are kept.')}</p>
-                </div>
+            <PageHeader title={t('Notifications')} sub={t('What you have been alerted about, newest first. The latest 30 are kept.')}>
                 {unread > 0 && (
                     <button className="btn btn--secondary" onClick={markAll}>{t('Mark all read')}</button>
                 )}
-            </div>
+            </PageHeader>
 
             {firstLoad || (!data && !error) ? (
                 <LoadingRegion label={t('notifications')} className="notes">

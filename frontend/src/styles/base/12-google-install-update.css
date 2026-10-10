@@ -1,0 +1,28 @@
+/* Sign in with Google: white, bordered, Google's mark on the left, as its branding asks. */
+.btn--google {
+    justify-content: center; gap: 10px; background: #fff; color: #1f1f1f;
+    border: 1px solid #dadce0; font-weight: 500;
+}
+.btn--google:hover:not(:disabled) { background: #f8f9fa; border-color: #c4c7c5; }
+.btn--google:disabled { opacity: .7; cursor: default; }
+.auth__google-hint { margin-top: -8px; }
+.auth__or {
+    display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 12px;
+}
+.auth__or::before, .auth__or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Install the dashboard as an app — shown only while the browser offers it. */
+.topbar__install { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+@media (max-width: 640px) { .topbar__install-text { display: none; } }
+
+/* A new version is installed and waiting; it takes over only when the person says so. */
+.update-banner {
+    position: fixed; z-index: 1000; left: 50%; transform: translateX(-50%);
+    top: calc(12px + env(safe-area-inset-top));
+    display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md);
+    box-shadow: var(--shadow-md); font-size: 13px;
+}
+
+.update-banner--problem { width: min(440px, calc(100vw - 32px)); box-sizing: border-box; justify-content: space-between; }
+.update-banner--problem span { line-height: 1.45; }

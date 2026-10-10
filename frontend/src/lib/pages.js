@@ -1,5 +1,5 @@
 import { createElement, lazy } from 'react';
-import StatusPage, { IconCloudOff } from '../components/StatusPage.jsx';
+import StatusPage, { IconCloudOff } from '../components/layout/StatusPage.jsx';
 import { t } from './i18n.js';
 
 /**

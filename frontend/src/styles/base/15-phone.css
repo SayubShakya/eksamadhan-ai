@@ -1,0 +1,66 @@
+/* ── Phone layout ──────────────────────────────────────────────────────────────────────
+   Last in the file on purpose. Several desktop rules above are declared after the older mobile
+   queries and silently beat them — the name beside the avatar stayed on phones although a query
+   hid it. Anything placed here wins. Same 760px breakpoint as the single-pane inbox. */
+@media (max-width: 760px) {
+    /* Top bar: icons only. The name and role are one tap away, in the profile panel. */
+    .topbar__actions { gap: 6px; }
+    /* The state in words beside the dot: a green dot alone did not say what it meant. */
+    .availability__label { display: inline; font-size: 13px; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .availability__button { padding: 7px 9px; gap: 6px; }
+    .availability__menu { position: fixed; top: calc(var(--topbar) + env(safe-area-inset-top) + 6px); left: 8px; right: 8px; width: auto; }
+    .user__text { display: none; }
+
+    /* One title size on every screen: Home used 21px, the other pages a 16px section title. */
+    .page__title, .page h1.section-title { font-size: 22px; font-weight: 650; letter-spacing: -.02em; line-height: 1.25; margin: 0 0 6px; }
+    .page .section-sub { font-size: 14px; }
+
+    /* Setup checklist: the title above its description (the old rule laid them side by side and
+       squeezed "Finish setting up" onto two lines), then the progress line under both. */
+    .checklist__head > div:first-child { display: block; }
+
+    /* List rows — team members, knowledge sources, escalation by channel. The details take the
+       width they need and the actions drop to a line of their own when both do not fit, instead
+       of the Remove button running off the screen. */
+    .member { flex-wrap: wrap; row-gap: 10px; padding: 12px; }
+    .member > div:not(.member__actions) { flex: 1 1 190px; min-width: 0; }
+    .an__bar { width: 120px; }
+
+    /* Knowledge: the form's buttons the same width, stacked, instead of three ragged widths. */
+    .knowledge__actions { flex-direction: row; align-items: center; }
+    .knowledge__actions .btn { justify-content: center; }
+
+    /* Conversation header: the name on one line with "…", the channel as its icon only. */
+    .thread__name { flex-wrap: nowrap; }
+    .thread__nametext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .thread__name .badge { flex-shrink: 0; padding: 3px 5px; }
+    .thread__name .badge__text { display: none; }
+    .thread__actions { gap: 6px; }
+    /* The (i) details button needs room on a phone, so the header drops the avatar (the list and
+       the details sheet both show it) and keeps "Last active" to one line. */
+    .thread__who { flex: 1; }
+    .thread__meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* The notification list was pinned to the bell and opened off the left of the screen. On a
+       phone it is a sheet under the top bar, the full width minus a margin. */
+    .bell__panel {
+        position: fixed; top: calc(var(--topbar) + env(safe-area-inset-top) + 6px);
+        left: 8px; right: 8px; width: auto; max-height: 70vh;
+    }
+    /* The profile panel: a sheet from the bottom, under the thumb, with a handle to drag it
+       down and away, and the page dimmed behind it. */
+    .popover {
+        top: auto; bottom: 0; left: 0; right: 0; width: auto;
+        max-height: 88dvh; overflow-y: auto;
+        border-radius: var(--r-lg) var(--r-lg) 0 0; border-bottom: 0;
+        padding-bottom: env(safe-area-inset-bottom);
+        animation: sheet-up .22s ease-out;
+        transition: transform .18s ease;
+    }
+    .popover__catcher { background: rgba(16, 20, 27, .4); animation: fade .15s ease; }
+    .popover__grab { display: grid; }
+
+    /* Touch targets: the small buttons and filter chips people tap all day, no shorter than 34–36px. */
+    .btn--sm { min-height: 36px; }
+    .chip { min-height: 34px; }
+}

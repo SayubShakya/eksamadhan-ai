@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { LogoMark } from '../components/Logo.jsx';
-import { IconArrowLeft } from '../components/icons.jsx';
+import { LogoMark } from '../components/ui/Logo.jsx';
+import { IconArrowLeft } from '../components/ui/icons.jsx';
 
 /**
  * The Privacy Policy and the Terms, public whether or not someone is signed in.

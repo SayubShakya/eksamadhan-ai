@@ -1,48 +1,21 @@
-import { Fragment, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { t } from '../lib/i18n.js';
-import { LogoMark } from '../components/Logo.jsx';
-import { IconArrowLeft, IconDownload, IconEye, IconEyeOff, IconLock } from '../components/icons.jsx';
-import AuthArt from '../components/AuthArt.jsx';
-import usePwa from '../lib/usePwa.js';
-import InstallProblem from '../components/InstallProblem.jsx';
+import { LogoMark } from '../components/ui/Logo.jsx';
+import { IconArrowLeft } from '../components/ui/icons.jsx';
+import AuthArt from './auth/AuthArt.jsx';
+import InstallProblem from '../components/layout/InstallProblem.jsx';
 import * as api from '../lib/api.js';
-import { CenteredSpinner } from '../components/Loading.jsx';
+import { CenteredSpinner } from '../components/ui/Loading.jsx';
 import { googleSignInAvailable, googleIdToken, isCancelled, googleErrorMessage } from '../lib/firebase.js';
+import { IconMail, emph } from './auth/authMarks.jsx';
+import GoogleBlock from './auth/GoogleBlock.jsx';
+import InvalidInvite from './auth/InvalidInvite.jsx';
+import PasswordField from './auth/PasswordField.jsx';
+import AuthLegal from './auth/AuthLegal.jsx';
+import InstallOffer from './auth/InstallOffer.jsx';
 
-export const IconMail = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-         strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m4 7 8 6 8-6" />
-    </svg>
-);
-
-/**
- * A translated title with its accent word marked *like this*: the marked part is set in the
- * italic serif. The translation decides where the accent falls, since Nepali puts the verb last.
- */
-export function emph(text) {
-    return text.split(/\*([^*]+)\*/).map((s, i) => (i % 2 ? <em key={i}>{s}</em> : s));
-}
-
-/** A translated sentence with {name} slots filled by elements, so word order stays the translator's. */
-function rich(text, parts) {
-    return text.split(/(\{\w+\})/).map((s, i) => {
-        const m = s.match(/^\{(\w+)\}$/);
-        return m && parts[m[1]] !== undefined ? <Fragment key={i}>{parts[m[1]]}</Fragment> : s;
-    });
-}
-
-/** Google's own mark, as its sign-in branding asks for: the four-colour G, unaltered. */
-function GoogleMark() {
-    return (
-        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-        </svg>
-    );
-}
+// Other screens use these from here: the mail icon, and the accent-word title helper.
+export { IconMail, emph };
 
 /**
  * Sign in, sign up, and accepting an invite — one screen, because the three differ only in
@@ -51,8 +24,6 @@ function GoogleMark() {
  * `mode` is 'login' | 'signup' | 'invite'. On success the parent receives the session.
  */
 export default function AuthPage({ mode, inviteToken, onSession, onNavigate, notice }) {
-    const app = usePwa();
-    const [showPassword, setShowPassword] = useState(false);
     const [form, setForm] = useState({
         organizationName: '', firstName: '', lastName: '', email: '', password: '',
     });
@@ -133,20 +104,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
     };
 
     const googleBlock = googleSignInAvailable && (
-        <>
-            <button type="button" className={`btn btn--google${googleBusy ? ' btn--busy' : ''}`}
-                    onClick={withGoogle} disabled={googleBusy || busy} aria-busy={googleBusy}>
-                <GoogleMark />
-                <span>
-                    {mode === 'login' ? t('Continue with Google')
-                        : mode === 'signup' ? t('Sign up with Google') : t('Join with Google')}
-                </span>
-            </button>
-            {mode === 'invite' && invite && (
-                <small className="field__hint auth__google-hint">{t('Use the Google account for {email}.', { email: invite.email })}</small>
-            )}
-            <div className="auth__or" role="separator"><span>{mode === 'login' ? t('or') : t('or use a password')}</span></div>
-        </>
+        <GoogleBlock mode={mode} invite={invite} googleBusy={googleBusy} busy={busy} onGoogle={withGoogle} />
     );
 
     // The accent word, *marked*, in the product page's italic serif, so the two pages read as
@@ -170,18 +128,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
     }
 
     // A dead invite link has nothing to submit, so offer the way out rather than a form.
-    if (mode === 'invite' && !invite) {
-        return (
-            <div className="auth">
-                <div className="auth__card">
-                    <LogoMark size={40} color="#2563eb" />
-                    <h1 className="auth__title">{t('This invite is not valid')}</h1>
-                    <p className="auth__sub">{error || t('The link may have expired or already been used. Ask your admin for a new one.')}</p>
-                    <button className="btn btn--secondary" onClick={() => onNavigate('login')}>{t('Go to sign in')}</button>
-                </div>
-            </div>
-        );
-    }
+    if (mode === 'invite' && !invite) return <InvalidInvite error={error} onNavigate={onNavigate} />;
 
     return (
         <div className="auth auth--split">
@@ -241,26 +188,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                     </label>
                 )}
 
-                <label className="field">
-                    <span>{t('Password')}</span>
-                    <span className="field__password field__iconed">
-                        <IconLock size={18} />
-                        <input type={showPassword ? 'text' : 'password'} value={form.password}
-                               onChange={set('password')}
-                               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                               minLength={mode === 'login' ? undefined : 8} required />
-                        {/* A button, not an icon: it must be reachable by keyboard and announce
-                            its state, or a screen-reader user cannot check what they typed. */}
-                        <button type="button" className="field__reveal"
-                                onClick={() => setShowPassword(v => !v)}
-                                aria-label={showPassword ? t('Hide password') : t('Show password')}
-                                aria-pressed={showPassword}
-                                title={showPassword ? t('Hide password') : t('Show password')}>
-                            {showPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
-                        </button>
-                    </span>
-                    {mode !== 'login' && <small className="field__hint">{t('At least 8 characters.')}</small>}
-                </label>
+                <PasswordField mode={mode} value={form.password} onChange={set('password')} />
                 {mode === 'login' && (
                     <button type="button" className="auth__forgot" onClick={() => onNavigate('forgot')}>{t('Forgot password?')}</button>
                 )}
@@ -273,45 +201,11 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                         : mode === 'signup' ? t('Create workspace') : t('Join the team')}
                 </button>
 
-                {/* Creating or joining an account is accepting the terms, so say so where both ways
-                    of doing it — the password form and the Google button — can be seen. Opens in a
-                    new tab, so reading them does not lose what has been typed. */}
-                {mode !== 'login' && (
-                    <p className="auth__legal">
-                        {rich(mode === 'signup'
-                            ? t('By creating a workspace, you agree to the {terms} and confirm you have read the {privacy}.')
-                            : t('By joining, you agree to the {terms} and confirm you have read the {privacy}.'), {
-                            terms: <a href="/terms" target="_blank" rel="noopener">{t('Terms & Conditions')}</a>,
-                            privacy: <a href="/privacy" target="_blank" rel="noopener">{t('Privacy Policy')}</a>,
-                        })}
-                    </p>
-                )}
-
-                <nav className="auth__footer" aria-label={t('Legal')}>
-                    <a href="/privacy">{t('Privacy Policy')}</a>
-                    <a href="/terms">{t('Terms & Conditions')}</a>
-                </nav>
+                <AuthLegal mode={mode} />
             </form>
             <InstallProblem />
 
-            {/* Offered here too, not only once signed in: on a phone the first visit is when
-                people decide whether to keep it on the home screen. Outside the card: it is about
-                this device, not signing in. Shown only when this
-                browser can install now (or, on an iPhone, how to do it by hand). */}
-            {!app.installed && (app.canPrompt || app.iosHint) && (
-                <div className="auth__install">
-                    {app.canPrompt ? (
-                        <>
-                            <span>{t('Get EkSamadhan AI as an app on this device')}</span>
-                            <button type="button" className="btn btn--secondary btn--sm" onClick={app.install}>
-                                <IconDownload size={15} /> {t('Install app')}
-                            </button>
-                        </>
-                    ) : (
-                        <span>{t('To add it to your home screen: in Safari, tap Share, then "Add to Home Screen".')}</span>
-                    )}
-                </div>
-            )}
+            <InstallOffer />
             </div>
             <AuthArt />
         </div>

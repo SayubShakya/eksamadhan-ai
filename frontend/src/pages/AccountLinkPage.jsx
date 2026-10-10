@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { LogoMark } from '../components/Logo.jsx';
-import AuthArt from '../components/AuthArt.jsx';
-import PasswordInput from '../components/PasswordInput.jsx';
-import { IconArrowLeft, IconCheck, IconWarning } from '../components/icons.jsx';
-import { CenteredSpinner } from '../components/Loading.jsx';
+import { LogoMark } from '../components/ui/Logo.jsx';
+import AuthArt from './auth/AuthArt.jsx';
+import PasswordInput from '../components/ui/PasswordInput.jsx';
+import { IconArrowLeft, IconCheck, IconWarning } from '../components/ui/icons.jsx';
+import { CenteredSpinner } from '../components/ui/Loading.jsx';
 import * as api from '../lib/api.js';
 import { IconMail, emph } from './AuthPage.jsx';
 import { t } from '../lib/i18n.js';

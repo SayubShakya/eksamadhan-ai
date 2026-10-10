@@ -1,0 +1,59 @@
+/* ── Edit profile after the reference: a tall panel beside the menu, a cover, a large photo,
+   your name and role, then each field in its own section, the buttons fixed at the foot. ── */
+.profile-drawer.popover {
+    top: 12px; bottom: 12px; right: 12px; left: auto; width: min(420px, calc(100vw - 24px));
+    max-height: none; padding: 0; overflow: hidden; border-radius: 20px; animation: pd-in .2s ease;
+}
+@keyframes pd-in { from { transform: translateX(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+.profile-drawer .popover__grab { display: none; }
+.pd { position: relative; padding: 0 22px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 0; }
+.pd__cover { height: 120px; margin: 8px -14px 0; border-radius: 14px; overflow: hidden; }
+.pd__close {
+    position: absolute; top: 18px; right: 18px; width: 34px; height: 34px; border-radius: 9px; border: 0;
+    display: grid; place-items: center; background: rgba(255, 255, 255, .8); color: var(--text);
+}
+.pd__close:hover { background: #fff; }
+.pd__top { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-top: -48px; }
+.pd__avatar { position: relative; border: 0; padding: 0; background: none; border-radius: 50%; }
+.pd__avatar .avatar { border: 4px solid var(--bg); box-shadow: 0 6px 18px rgba(16, 24, 40, .14); }
+.pd__badge { position: absolute; right: 4px; bottom: 6px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; border: 2px solid var(--bg); }
+.pd__actions { display: flex; gap: 8px; padding-bottom: 6px; }
+.pd__actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+.pd__name { margin: 0; font-size: 22px; font-weight: 650; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pd__role { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.pd__role::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+.pd__email { margin: 4px 0 0; color: var(--text-muted); font-size: 14px; }
+.pd__facts { display: grid; grid-template-columns: repeat(2, 1fr); margin: 18px 0 0; padding: 14px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.pd__facts div + div { border-left: 1px solid var(--border); padding-left: 16px; }
+.pd__facts dt { font-size: 12.5px; color: var(--text-muted); }
+.pd__facts dd { margin: 3px 0 0; font-size: 15px; font-weight: 500; }
+.pd__section { display: flex; flex-direction: column; gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.pd__label { font-size: 13.5px; font-weight: 600; }
+.pd__readonly { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); color: var(--text); font-size: 14px; }
+.pd__readonly svg { color: var(--text-muted); flex-shrink: 0; }
+.pd__hint { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+.pd__hint svg { color: var(--accent); }
+.pd .panel__error { margin-top: 12px; }
+.pd__foot { position: sticky; bottom: 0; margin: auto -22px 0; padding: 14px 22px; background: var(--bg); border-top: 1px solid var(--border); }
+.pd__foot .btn--primary { background: #16181d; border-color: #16181d; }
+:root[data-theme="dark"] .pd__foot .btn--primary { background: var(--accent); border-color: var(--accent); }
+:root[data-theme="dark"] .pd__cover { opacity: .35; }
+:root[data-theme="dark"] .pd__close { background: rgba(23, 26, 33, .8); }
+@media (max-width: 760px) {
+    .profile-drawer.popover { top: auto; left: 0; right: 0; bottom: 0; width: 100%; max-height: 92vh; border-radius: 20px 20px 0 0; }
+    .profile-drawer .popover__grab { display: flex; }
+}
+/* Profile, second pass: no blur, a light dim; one role mention; photo actions in their own row;
+   Settings at the foot. */
+.pd__meta { display: flex; align-items: center; gap: 6px; margin: 8px 0 0; font-size: 13px; color: var(--text-muted); }
+.pd__status { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+.pd__status--busy { background: var(--warning); }
+.pd__role::before { display: none; }
+.pd__who { padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.pd__photorow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pd__photobtns { display: flex; gap: 6px; flex-shrink: 0; }
+.pd__remove { border: 0; background: none; color: var(--danger); }
+.pd__remove:hover { background: var(--danger-weak); }
+.pd__foot { justify-content: flex-end; align-items: center; }
+.pd__settings { margin-right: auto; display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; color: var(--text-muted); font-size: 13.5px; font-weight: 500; padding: 6px 4px; }
+.pd__settings:hover { color: var(--accent); }

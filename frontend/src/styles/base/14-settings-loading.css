@@ -1,0 +1,153 @@
+/* ── Settings ─────────────────────────────────────────────────────────────────────────── */
+/* A section list on the left, cards on the right. Each setting is a row: its name and what it
+   does on the left, the control on the right, so the page scans as a list of decisions. */
+
+.settings__card { padding: 0; scroll-margin-top: 16px; }
+.settings__cardhead h2 { font-weight: 600; }
+.settings__cardhead p { font-size: 13px; color: var(--text-muted); }
+.settings__status { margin-right: auto; font-size: 13px; color: var(--text-muted); }
+/* Nothing to save yet: still visibly a button, just an inactive one, on the grey footer. */
+.settings__foot .btn:disabled:not(.btn--busy) { background: var(--bg); border-color: var(--border); color: var(--text-muted); }
+.settings__saved { color: var(--success); }
+.settings__error { color: var(--danger); }
+
+.setting {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 8px 32px;
+    padding: 18px 0;
+}
+.setting + .setting { border-top: 1px solid var(--border); }
+.setting__hint { margin: 3px 0 0; font-size: 13px; line-height: 1.5; color: var(--text-muted); }
+.setting__input {
+    width: 100%; padding: 9px 12px; font: inherit; font-size: 14px; color: var(--text);
+    border: 1px solid var(--border-strong); border-radius: var(--r-sm); background: var(--bg);
+}
+.setting__input:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+.setting__input:disabled { background: var(--surface); color: var(--text-muted); cursor: not-allowed; }
+.setting__textarea { resize: vertical; min-height: 64px; line-height: 1.5; field-sizing: content; }
+.setting__value { font-size: 14px; color: var(--text); overflow-wrap: anywhere; text-align: right; }
+.setting__state { font-size: 13px; color: var(--text-muted); }
+.setting__state--on { color: var(--success); font-weight: 500; }
+.setting__switch { display: flex; align-items: center; gap: 10px; }
+.setting__buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+/* On or off. Square-cornered like every other control here: nothing pill-shaped. */
+.switch {
+    position: relative; width: 40px; height: 22px; flex-shrink: 0; padding: 0;
+    border: 0; border-radius: 6px; background: var(--border-strong);
+    transition: background .15s ease;
+}
+.switch__knob {
+    position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+    border-radius: 4px; background: #fff; box-shadow: 0 1px 2px rgba(16, 24, 40, .2);
+    transition: transform .15s ease;
+}
+.switch--on { background: var(--accent); }
+.switch--on .switch__knob { transform: translateX(18px); }
+.switch:disabled { opacity: .55; cursor: not-allowed; }
+.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 760px) {
+    .settings__cardhead, .settings__rows, .settings__foot { padding-left: 16px; padding-right: 16px; }
+    .setting { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 16px 0; }
+    .setting__value { text-align: left; }
+    /* A switch stays beside its label on a phone; only inputs drop below. */
+    .setting:has(.setting__switch) { grid-template-columns: minmax(0, 1fr) auto; }
+}
+
+/* ── Loading states ────────────────────────────────────────────────────────────────────
+   See components/Loading.jsx for which indicator is used where. Skeleton blocks sit inside
+   the same classes as the content they stand in for, so a line of skeleton text is exactly as
+   tall as the line of text that replaces it. Motion stops under prefers-reduced-motion (the
+   rule in tokens.css), which leaves plain grey blocks and a still ring beside its label. */
+.skip-link {
+    position: fixed; top: 8px; left: 8px; z-index: 2000;
+    padding: 10px 14px; border-radius: var(--r-sm);
+    background: var(--accent); color: #ffffff; font-weight: 600; text-decoration: none;
+    transform: translateY(-160%);
+}
+.skip-link:focus, .skip-link:focus-visible { transform: none; outline: 2px solid var(--text); outline-offset: 2px; }
+.skip-target { display: block; height: 0; outline: none; }
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.skel {
+    display: block; position: relative; overflow: hidden;
+    background: #e3e7ed; border-radius: 6px;
+}
+/* One linear sweep, left to right, at a steady speed: an eased sweep looks like it stalls. */
+.skel::after {
+    content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .65), transparent);
+    animation: skel-sweep 1.6s linear infinite;
+}
+@keyframes skel-sweep { to { transform: translateX(100%); } }
+/* A text line: an inline block shorter than the line box and centred in it, so the line keeps
+   the height of the text it stands in for. (Block margins would collapse into the parent's
+   and lose that height.) */
+.skel--line { display: inline-block; vertical-align: middle; height: .8em; max-width: 100%; }
+.skel--circle { border-radius: 50%; flex-shrink: 0; }
+
+.spinner {
+    display: inline-block; flex-shrink: 0; border-radius: 50%;
+    border: 2px solid var(--border-strong); border-top-color: var(--accent);
+    animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading {
+    display: grid; place-items: center; align-content: center; gap: 10px;
+    min-height: 160px; padding: 24px; text-align: center; height: 100%;
+}
+.loading__label { margin: 0; color: var(--text-muted); font-size: 13px; }
+.loading--error .loading__label { color: var(--text); }
+.loading__long { margin: 12px 0 0; color: var(--text-muted); font-size: 13px; }
+
+/* A working button keeps its size and colour: the label turns transparent (it is still read
+   out) and a ring takes its place. The label is never swapped for "Saving...", because a
+   button that changes width moves everything beside it. */
+.btn--busy { position: relative; color: transparent !important; cursor: progress; }
+.btn--busy > * { visibility: hidden; }
+.btn--busy::after {
+    content: ''; position: absolute; inset: 0; margin: auto;
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid var(--busy-ink, var(--accent)); border-right-color: transparent;
+    animation: spin .7s linear infinite;
+}
+.btn--sm.btn--busy::after { width: 14px; height: 14px; }
+.btn--primary, .btn--destructive { --busy-ink: #fff; }
+.btn--danger { --busy-ink: var(--danger); }
+.btn--tint-warn { --busy-ink: var(--warning); }
+.btn--google { --busy-ink: #1f1f1f; }
+.btn--busy.btn--primary:disabled { background: var(--accent); box-shadow: var(--shadow-sm); cursor: progress; }
+.btn--busy.btn--secondary:disabled { background: var(--accent-weak); border-color: #cfe0fb; cursor: progress; }
+.btn--busy.btn--danger:disabled { background: var(--bg); border-color: var(--border); cursor: progress; }
+.btn--busy.btn--google:disabled { opacity: 1; }
+
+/* Adds nothing to the layout, so a skeleton can sit directly in a grid or a flex row. */
+.loading__content { display: contents; }
+.thread__skeleton { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.composer__upload { padding: 0 20px; }
+
+/* Determinate: the browser knows how many bytes are left. */
+.upload { margin: 10px 0; }
+.upload__text { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+.upload__bar { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.upload__bar > span { display: block; height: 100%; background: var(--accent); transition: width .2s linear; }
+.upload--unknown { display: flex; align-items: center; gap: 8px; }
+.upload--unknown .upload__text { margin: 0; }
+
+/* Reduced motion. The rule in tokens.css (`* { animation: none }`) does not reach ::after, which
+   is where the sweep and the button ring live, so they are stopped here by name. The skeleton
+   becomes plain grey blocks; a working button shows its label, dimmed, instead of a ring that
+   would no longer turn. */
+@media (prefers-reduced-motion: reduce) {
+    .skel::after { animation: none; display: none; }
+    .btn--busy { color: var(--busy-ink, var(--accent)) !important; opacity: .7; }
+    .btn--busy > * { visibility: visible; }
+    .btn--busy::after { display: none; }
+}
+
+/* Data from before a refresh stays readable, marked as being updated rather than blanked. */
+.is-refreshing { opacity: .55; transition: opacity .15s ease; }

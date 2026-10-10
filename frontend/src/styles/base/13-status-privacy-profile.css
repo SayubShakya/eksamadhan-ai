@@ -1,0 +1,192 @@
+/* ── Status pages: 404 and offline ── */
+.status-page { min-height: 100dvh; display: flex; flex-direction: column; background: var(--surface); }
+.status-page__head { padding: 20px 28px; }
+.status-page__main { flex: 1; display: grid; place-items: center; padding: 24px 16px 48px; }
+.status-page__foot { display: flex; justify-content: center; gap: 20px; padding: 20px; font-size: 13px; }
+.status-page__foot a { color: var(--text-muted); }
+.status-page--shell { display: grid; place-items: center; min-height: 0; }
+.status { max-width: 460px; text-align: center; display: grid; justify-items: center; }
+.status__icon {
+    width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--accent-weak); color: var(--accent); margin-bottom: 18px;
+}
+.status__code { margin: 0 0 6px; font-size: 13px; font-weight: 600; letter-spacing: .12em; color: var(--accent); }
+.status__title { margin: 0 0 10px; font-size: 26px; font-weight: 650; letter-spacing: -.02em; color: var(--text); }
+.status__text { color: var(--text-muted); font-size: 15px; line-height: 1.6; }
+.status__text p { margin: 0 0 8px; }
+.status__path {
+    font-size: 13px; padding: 2px 6px; border-radius: 6px; background: var(--bg);
+    border: 1px solid var(--border); color: var(--text); overflow-wrap: anywhere;
+}
+.status__live { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+.status__actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+/* An error with a code (404): the code large, the name under it, one way out. */
+.status--warning .status__icon {
+    width: 84px; height: 84px; background: var(--warning-weak); color: var(--warning); margin-bottom: 22px;
+}
+.status--coded .status__code {
+    margin: 0; font-size: 44px; line-height: 1.1; font-weight: 700; letter-spacing: -.01em; color: var(--text);
+}
+.status--coded .status__title { margin: 4px 0 12px; font-size: 26px; font-weight: 500; letter-spacing: 0; }
+.status--coded .status__text { max-width: 360px; }
+.status--coded .status__actions { margin-top: 22px; }
+.status__home { gap: 8px; padding-left: 20px; padding-right: 20px; }
+
+/* ── Data and privacy, the "Would deactivating be enough?" sheet, the deletion steps ── */
+/* Three controls of one size, the reversible ones first. Only delete carries the danger colour,
+   and only as text on the same plain outline: a filled red button would make it the loudest
+   thing on the page. */
+.btn--outline {
+    background: var(--bg); color: var(--text); border-color: var(--border-strong);
+    justify-content: center; font-weight: 500;
+}
+.btn--outline:hover:not(:disabled) { background: var(--surface); }
+.btn--outline-danger { color: var(--danger); }
+.btn--outline-danger:hover:not(:disabled) { background: var(--danger-weak); }
+.privacy__btn { min-width: 128px; }
+/* The same weight as the two blue buttons above it, in the danger colour: pale fill, red text. */
+.privacy__btn.btn--danger { background: var(--danger-weak); border-color: #f1c9c5; font-weight: 600; }
+.privacy__btn.btn--danger:hover:not(:disabled) { border-color: var(--danger); }
+/* Tinted buttons (Sayub, 2026-10-05): a soft fill in the action's colour, so settings actions read
+   as buttons. Blue for going somewhere or getting something, amber for reversible but serious.
+   `.btn.` beats the card rules that turn every secondary button white. */
+.btn.btn--tint { background: var(--accent-tint); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); font-weight: 600; }
+.btn.btn--tint:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 20%, var(--bg)); border-color: var(--accent); }
+.btn.btn--tint-warn { background: var(--warning-weak); color: var(--warning); border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent); font-weight: 600; }
+.btn.btn--tint-warn:hover:not(:disabled) { background: color-mix(in srgb, var(--warning) 16%, var(--bg)); border-color: var(--warning); }
+.privacy__btn.btn--danger { border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+.privacy__btn.btn--danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 14%, var(--bg)); }
+
+.sheet__backdrop { position: fixed; inset: 0; z-index: 80; background: rgba(16, 20, 27, .4); animation: fade .15s ease; }
+.sheet {
+    position: fixed; left: 50%; bottom: 0; z-index: 81; transform: translateX(-50%);
+    width: min(560px, 100vw); max-height: 88dvh; overflow-y: auto;
+    background: var(--bg); border-radius: var(--r-lg) var(--r-lg) 0 0;
+    box-shadow: 0 -12px 40px rgba(16, 20, 27, .18);
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: sheet-in .2s ease-out;
+    transition: transform .18s ease;
+}
+@keyframes sheet-in { from { transform: translateX(-50%) translateY(24px); opacity: 0; } }
+.sheet:focus { outline: none; }
+.sheet__grab { display: grid; place-items: center; padding: 10px 0 4px; cursor: grab; touch-action: none; }
+.sheet__handle { width: 40px; height: 4px; border-radius: 2px; background: var(--border-strong); }
+.sheet__body { padding: 6px 24px 22px; }
+.sheet__title { font-size: 18px; font-weight: 650; margin: 4px 0 14px; }
+.sheet__text { margin: 0 0 10px; font-size: 14px; line-height: 1.6; color: var(--text); }
+/* Delete as a quiet question in a footer strip of its own, set apart from the two buttons so it
+   reads as a way out, not a third choice. The strip runs to the dialog's edges. */
+.sheet__more {
+    margin: 20px -24px -22px; padding: 12px 24px; text-align: center;
+    border-top: 1px solid var(--border); background: var(--surface);
+}
+.sheet__more-link {
+    border: 0; background: none; padding: 2px 0; font: inherit; font-size: 13px;
+    color: var(--danger); cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+}
+.sheet__more-link:hover { text-decoration-thickness: 2px; }
+.sheet__text--quiet { color: var(--text-muted); font-size: 13px; }
+/* Phone: stacked, the safe choice on top under the thumb. Desktop: one row, safe choice last
+   (where the eye ends), as in every other dialog here. */
+/* The reversible choice is the big one; delete is a small red text link, last. Phone: stacked
+   in that order. Desktop: one row, the link pushed to the left. */
+.sheet__actions { display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin-top: 16px; }
+.sheet__actions .btn { justify-content: center; }
+.sheet__link {
+    border: 0; background: none; padding: 10px; font-size: 14px; color: var(--text-muted);
+    border-radius: var(--r-sm); cursor: pointer;
+}
+.sheet__link:hover:not(:disabled) { background: var(--surface); color: var(--text); }
+.sheet__link:disabled { cursor: default; opacity: .6; }
+@media (max-width: 520px) {
+    .sheet__body { padding: 6px 16px 18px; }
+    .sheet__more { margin: 16px -16px -18px; padding: 12px 16px; }
+}
+/* On a desktop a sheet pinned to the bottom edge reads as broken: it becomes a centred dialog,
+   with no drag handle (there is nothing to drag with a mouse). */
+@media (min-width: 721px) {
+    .sheet {
+        top: 50%; bottom: auto; transform: translate(-50%, -50%); width: min(440px, calc(100vw - 48px));
+        border-radius: var(--r-lg); box-shadow: 0 20px 60px rgba(16, 20, 27, .22);
+        animation: dialog-in .16s ease-out;
+    }
+    .sheet__grab { display: none; }
+    .sheet__body { padding: 24px 28px 24px; }
+    .sheet__actions { flex-direction: row-reverse; justify-content: flex-start; align-items: center; margin-top: 22px; }
+    .sheet__more { margin: 22px -28px -24px; padding: 14px 28px; }
+}
+@keyframes dialog-in { from { transform: translate(-50%, -48%); opacity: 0; } }
+
+.wizard__successors { border: 0; margin: 18px 0 0; padding: 0; min-width: 0; display: grid; gap: 8px; }
+.wizard__successors legend { padding: 0; }
+.wizard__successors .wizard__text { margin-top: 0; }
+.wizard__person {
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer;
+    border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg);
+}
+.wizard__person:hover { background: var(--surface); }
+.wizard__person.is-chosen { border-color: var(--accent); background: var(--accent-weak); }
+.wizard__person input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; flex-shrink: 0; }
+.wizard__person-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.wizard__person-text strong { font-size: 14px; font-weight: 600; color: var(--text); }
+.wizard__person-text span { font-size: 13px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wizard__steps { list-style: none; margin: 0 0 18px; padding: 0; display: flex; gap: 6px; flex-wrap: wrap; }
+.wizard__steps li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: var(--r-sm); font-size: 13px; color: var(--text-muted); background: var(--bg); border: 1px solid var(--border); }
+.wizard__steps li.is-current { border-color: var(--accent); color: var(--accent); background: var(--accent-weak); font-weight: 500; }
+.wizard__steps li.is-done { color: var(--text); }
+.wizard__num { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; background: var(--surface); }
+.is-current .wizard__num { background: var(--accent); color: #fff; }
+.is-done .wizard__num { background: var(--success-weak); color: var(--success); }
+.wizard__card { max-width: 640px; }
+.page > .wizard__card { margin-left: 0; }
+.wizard__title { font-size: 16px; font-weight: 600; margin: 0 0 10px; }
+.wizard__title + .wizard__list { margin-top: 0; }
+.wizard__list { list-style: none; margin: 0 0 22px; padding: 0; border: 1px solid var(--border); border-radius: var(--r-sm); }
+.wizard__list li { display: flex; justify-content: space-between; gap: 16px; padding: 9px 12px; font-size: 14px; }
+.wizard__list li + li { border-top: 1px solid var(--border); }
+.wizard__list span { color: var(--text-muted); }
+.wizard__list strong { font-weight: 500; text-align: right; overflow-wrap: anywhere; }
+.wizard__text { margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: var(--text-muted); }
+.wizard__text strong { color: var(--text); }
+.wizard__actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.wizard__spacer { flex: 1; }
+.wizard__hint { margin-right: auto; font-size: 13px; color: var(--text-muted); }
+/* Back sits on the left, apart from the two choices on the right. */
+.wizard__back {
+    background: none; border-color: transparent; color: var(--text-muted); padding-left: 8px; padding-right: 12px;
+}
+.wizard__back:hover:not(:disabled) { background: var(--surface); color: var(--text); }
+/* Phone: one column, the step's own action on top, Back last. */
+@media (max-width: 520px) {
+    .wizard__actions { flex-direction: column-reverse; align-items: stretch; gap: 8px; }
+    .wizard__actions .btn { justify-content: center; }
+    .wizard__actions .wizard__spacer { display: none; }
+}
+.wizard__code { letter-spacing: .3em; font-size: 18px; max-width: 220px; }
+.wizard__danger { display: flex; gap: 12px; padding: 14px 16px; border-radius: var(--r-sm); background: var(--danger-weak); color: var(--danger); }
+.wizard__danger p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--text); }
+.wizard__danger .wizard__danger-title { color: var(--danger); font-weight: 600; margin-bottom: 4px; }
+
+/* ── Knowledge: one card, a tab per way of adding ── */
+.knowledge__addhead h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.knowledge__addbody .imgform { margin-bottom: 0; }
+@media (max-width: 760px) { .knowledge__addbody { padding: 16px; } }
+
+/* ── Profile panel ── */
+.profile__facts { margin: 4px 0 0; display: grid; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); }
+.profile__facts > div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding: 10px 12px; }
+.profile__facts > div + div { border-top: 1px solid var(--border); }
+.profile__facts dt { font-size: 13px; color: var(--text-muted); }
+.profile__facts dd { margin: 0; font-size: 14px; color: var(--text); overflow-wrap: anywhere; }
+.profile__facts dd small { display: block; font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+.profile__install {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm);
+    font-size: 13px; color: var(--text-muted);
+}
+.profile__link, .profile__remove {
+    align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
+    border: 0; background: none; padding: 4px 0; font-size: 13px; font-weight: 500; color: var(--accent);
+}
+.profile__link:hover, .profile__remove:hover { text-decoration: underline; }
+.profile__remove { align-self: center; color: var(--text-muted); font-weight: 400; margin-top: -6px; }

@@ -1,0 +1,239 @@
+/* ── Inbox ─────────────────────────────────────────────────────────── */
+.inbox { flex: 1; display: flex; min-height: 0; min-width: 0; }
+
+.convlist {
+    width: var(--list); flex-shrink: 0; min-width: 0;
+    background: var(--panel); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; min-height: 0;
+}
+.convlist__head { padding: 14px 16px 10px; border-bottom: 1px solid var(--border); }
+.convlist__title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.convlist__title h2 { font-size: 15px; font-weight: 600; margin: 0; }
+.count { font-size: 12px; color: var(--text-muted); }
+.search { position: relative; margin-bottom: 10px; }
+.search input {
+    width: 100%; padding: 7px 10px 7px 30px;
+    border: 1px solid var(--border); border-radius: var(--r-sm);
+    background: var(--surface); color: var(--text);
+}
+.search svg { position: absolute; left: 9px; top: 8px; color: var(--text-muted); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+    padding: 4px 10px; border-radius: var(--r-sm); font-size: 12px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text-muted);
+}
+.chip[aria-pressed="true"] { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
+
+.convlist__items { overflow-y: auto; flex: 1; }
+.conv {
+    width: 100%; text-align: left; border: 0; background: none;
+    display: flex; gap: 10px; padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    border-left: 3px solid transparent;
+}
+.conv:hover { background: var(--surface); }
+.conv[aria-current="true"] { background: var(--accent-tint); border-left-color: var(--accent); }
+.conv--attention { border-left-color: var(--warning); }
+.conv__body { min-width: 0; flex: 1; }
+.conv__top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.conv__name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conv__time { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+/* The row's pin button sits at the end of the top line, after the time. That line already cuts the
+   name short when needed, so the room it takes never pushes the tags onto a second line. */
+.conv-row { position: relative; }
+.conv-row .conv__top { padding-right: 24px; }
+.conv-row__pin {
+    position: absolute; right: 8px; top: 8px; width: 28px; height: 28px;
+    display: grid; place-items: center; border: 0; border-radius: var(--r-sm);
+    background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.conv-row__pin:hover { background: var(--accent-weak); color: var(--accent); }
+.conv-row__pin.is-on { color: var(--accent); background: transparent; }
+.conv-row__pin.is-on:hover { background: var(--accent-weak); }
+.thread__pin.is-on { color: var(--accent); background: var(--accent-weak); }
+.conv__preview { color: var(--text-muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: var(--r-sm); }
+.tag--agent { background: var(--warning-weak); color: var(--warning); }
+.tag--ai { background: var(--success-weak); color: var(--success); }
+
+/* Thread */
+.thread { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--surface); }
+.thread__head {
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    padding: 12px 20px; display: flex; align-items: center; gap: 12px;
+}
+.thread__avatar { display: contents; }
+.thread__name { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.thread__meta { font-size: 12px; color: var(--text-muted); }
+.badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; padding: 2px 8px; border-radius: 999px;
+    background: var(--accent-weak); color: var(--accent);
+}
+
+.thread__body { flex: 1; overflow-y: auto; padding: 22px 24px; }
+.day { text-align: center; margin: 4px 0 18px; }
+.day span { background: var(--bg); border: 1px solid var(--border); color: var(--text-muted); font-size: 11px; letter-spacing: .05em; padding: 3px 12px; border-radius: 999px; }
+
+.msg { display: flex; gap: 10px; margin-bottom: 16px; max-width: 74%; }
+.msg--in { margin-right: auto; }
+.msg--out { margin-left: auto; flex-direction: row-reverse; }
+.bubble { padding: 10px 14px; border-radius: var(--r-lg); }
+/* Three speakers, three treatments — see docs/design.md */
+.bubble--customer { background: var(--bg); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.bubble--ai { background: var(--ai); color: var(--text); border: 1px solid var(--border-strong); border-bottom-left-radius: 4px; }
+.bubble--agent { background: var(--bubble-out); color: #fff; border-bottom-right-radius: 4px; }
+.msg__meta { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+.msg--out .msg__meta { text-align: right; }
+
+.note { text-align: center; margin: 18px 0; }
+.note span { font-size: 12px; padding: 4px 12px; border-radius: 999px; }
+
+.composer { background: var(--bg); border-top: 1px solid var(--border); }
+.composer__status {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 20px; border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+}
+.composer__form { display: flex; gap: 10px; padding: 14px 20px; }
+.composer__form input {
+    flex: 1; padding: 10px 14px;
+    border: 1px solid var(--border); border-radius: var(--r-sm);
+    background: var(--surface); color: var(--text);
+}
+
+/* Context pane */
+.context {
+    width: var(--context); flex-shrink: 0;
+    background: var(--panel); border-left: 1px solid var(--border);
+    padding: 20px; overflow-y: auto;
+}
+.context__label { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 18px; }
+.context__who { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; }
+.context__row { margin-bottom: 16px; }
+.context__key { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+.pill--positive { background: var(--success-weak); color: var(--success); }
+.pill--neutral { background: var(--surface); color: var(--text-muted); }
+.pill--negative { background: var(--danger-weak); color: var(--danger); }
+.kb__text { font-size: 12px; color: var(--text-muted); margin: 0; }
+
+/* Below 1100px the details column does not fit beside the thread. It is not dropped: the (i)
+   button in the conversation header opens it as a sheet from the right. */
+.thread__info, .context__close { display: none; }
+.context__labelrow { display: flex; align-items: center; justify-content: space-between; }
+@media (max-width: 1100px) {
+    .context { display: none; }
+    .thread__info { display: grid; }
+    .context--open {
+        display: block; position: fixed; top: 0; right: 0; bottom: 0; z-index: 66;
+        width: min(340px, 92vw);
+        padding-top: calc(20px + env(safe-area-inset-top));
+        padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        box-shadow: var(--shadow-md); border-left: 1px solid var(--border);
+        overscroll-behavior: contain;
+        animation: context-in .18s ease-out;
+    }
+    .context--open .context__close { display: grid; margin: -6px -6px -6px 0; }
+    .context__scrim { z-index: 65; }
+}
+@keyframes context-in { from { transform: translateX(24px); opacity: 0; } }
+.thread__back { display: none; }
+
+/* The top bar's brand is the logo with its name, or nothing: the logo on its own beside the menu
+   button read as a stray icon. It only has to give way beside the search box, and on the
+   narrowest phones. (:has() carries the specificity these need over `.topbar .brand`.) */
+@media (max-width: 900px) {
+    .user__text { display: none; }
+    .topbar:has(.topbar__search) .brand { display: none; }
+}
+@media (max-width: 760px) {
+    /* The logo alone, next to the menu button; the name is in the menu (Sayub). */
+    .topbar .brand, .topbar:has(.topbar__search) .brand { display: inline-flex; }
+    .topbar .brand__name { display: none; }
+}
+@media (max-width: 340px) {
+    .topbar:has(.brand) .brand { display: none; }
+}
+
+@media (max-width: 760px) {
+    /* One pane at a time: the list, or the thread with a way back. */
+    .convlist { width: 100%; flex: 1 1 auto; }
+    .thread { display: none; }
+    .inbox--has-active .convlist { display: none; }
+    .inbox--has-active .thread { display: flex; }
+    .thread__back { display: grid; }
+    .topbar__search { display: none; }
+
+    .page { padding: 18px 14px 36px; }
+    .page__head { flex-direction: column; align-items: flex-start; gap: 14px; }
+    .page__title { font-size: 21px; }
+
+    /* Checklist header stacked: side by side, the title and progress collide. */
+    /* Keep the label and bar on one line; stacking them made "1 of 3 complete" wrap. */
+    .checklist__head { flex-direction: column; align-items: stretch; gap: 10px; }
+    .checklist__head > div { display: flex; align-items: center; gap: 10px; }
+    .checklist__head .count { white-space: nowrap; }
+    .progress { flex: 1; width: auto; }
+    .checklist__steps { grid-template-columns: 1fr; }
+    /* Two up: one tile per row made the page several screens tall for four numbers. */
+    .stats { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+    .stat { padding: 12px 14px; }
+    .stat__label { font-size: 10px; }
+    .stat__value { font-size: 19px; margin-top: 6px; }
+
+    .channels { grid-template-columns: 1fr; gap: 12px; }
+    .channel { padding: 16px 14px; display: grid; grid-template-columns: 44px 1fr; gap: 12px 14px; text-align: left; align-items: center; }
+    .channel .btn { grid-column: 2; justify-self: start; }
+
+    .card { padding: 16px; }
+    .checklist__steps { gap: 10px; }
+    .step { padding: 14px; }
+    .section-title { margin: 22px 0 10px; }
+    .rail { width: min(280px, 82vw); }
+}
+
+@media (max-width: 380px) {
+    .status-select { padding: 6px 8px; }
+    /* Still two a row on the smallest phones: four stacked cards pushed everything else
+       a whole screen down. The figure stays big; the note under it wraps. */
+    .stat { padding: 10px 12px; }
+}
+
+/* Row footer: state tag plus an unread dot for anything still awaiting a reply. */
+.conv__foot {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 6px 7px; margin-top: 6px; min-width: 0;
+}
+
+/* The state pill is never cut short. When it does not fit beside the reference, the whole
+   pill moves to the next line; the name is always shown in full. Its text may wrap only if a
+   name is too long for the entire row — never a "…", which hid exactly who the conversation
+   was waiting for. */
+.conv__tag {
+    display: inline-flex; align-items: center;
+    max-width: 100%;
+}
+.conv__tag-text { min-width: 0; overflow-wrap: anywhere; }
+.conv__mood { flex-shrink: 0; }
+.conv__mid { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.conv__mid .conv__preview { flex: 1; min-width: 0; margin-top: 0; }
+.conv__mid .unread-count { flex-shrink: 0; }
+.conv__foot svg { display: block; flex-shrink: 0; }
+
+/* Centred against the bubble, not pinned to its top or bottom. */
+.msg__avatar { width: 28px; height: 28px; font-size: 11px; align-self: center; }
+
+/* Inert rather than faded: a greyed-out button that keeps its border still looks
+   pressable. */
+.btn:disabled {
+    background: var(--surface); color: var(--text-muted);
+    border-color: var(--border); box-shadow: none;
+    cursor: not-allowed;
+}
+.btn:disabled:hover { background: var(--surface); }
+
+/* Anchor the conversation to the bottom of the pane, as messaging apps do, while
+   keeping normal scrolling once the thread is long enough to overflow. */
+.thread__body { display: flex; flex-direction: column; }
+.thread__spacer { flex: 1 1 auto; min-height: 0; }

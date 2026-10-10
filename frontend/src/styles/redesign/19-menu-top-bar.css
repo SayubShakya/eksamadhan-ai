@@ -1,0 +1,95 @@
+/* ── Menu after Sayub's "Daily" reference (light mode), 2026-10-01 ───────────────────────
+   White panel, a large logo row, one dark action button, tall rows with the current page on
+   soft grey, a divider, then you at the foot. Collapsed on a desktop: the narrow icon strip. */
+.rail { background: #ffffff; padding: 10px 14px 14px; }
+.rail__head { border-bottom: 0; padding: 10px 6px 14px; }
+.rail__head .brand__name { font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+.rail__action {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; margin: 4px 0 14px; padding: 12px 14px;
+    border: 0; border-radius: var(--r-sm); background: #16181d; color: #fff;
+    font-size: 14px; font-weight: 600;
+    transition: background .15s ease, transform .15s ease;
+}
+.rail__action:hover { background: #2a2e36; }
+.rail__action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rail__item { padding: 12px 14px; gap: 14px; font-weight: 500; color: #4b5260; margin-bottom: 2px; }
+.rail__item:hover { background: #f5f6f8; color: var(--text); }
+.rail__item[aria-current="page"] { background: #f1f3f6; color: var(--text); font-weight: 650; }
+.rail__item[aria-current="page"] .rail__icon { color: var(--accent); }
+.rail__icon { position: relative; display: inline-flex; }
+.rail__dot { position: absolute; top: -3px; right: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--danger); border: 2px solid #fff; display: none; }
+.rail__rule { border: 0; border-top: 1px solid var(--border); margin: 10px 4px; width: calc(100% - 8px); }
+.rail__me {
+    display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 10px;
+    padding: 10px; border: 0; border-radius: var(--r-md); background: #f7f8fa; text-align: left;
+}
+.rail__me:hover { background: #f1f3f6; }
+.rail__me:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rail__me .avatar { border-radius: 10px; flex-shrink: 0; }
+.rail__me-text { display: grid; min-width: 0; }
+.rail__me-text strong { font-size: 14px; font-weight: 600; color: var(--text); }
+.rail__me-text small { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* On a phone the drawer floats as a rounded card, as the reference's panel. */
+@media (max-width: 1023px) {
+    .rail { top: 8px; bottom: 8px; left: 8px; border-radius: 22px; border-right: 0; }
+}
+@media (min-width: 1024px) {
+    .rail__head { border-bottom: 1px solid var(--border); padding: 0 4px 0 6px; margin-bottom: 14px; }
+    .rail--closed .rail__action { width: 52px; height: 52px; padding: 0; margin: 4px auto 14px; }
+    .rail--closed .rail__action span { display: none; }
+    .rail--closed .rail__item { width: 52px; padding: 13px 0; flex-direction: row; justify-content: center; }
+    .rail--closed .rail__item > span:not(.rail__icon), .rail--closed .rail__badge { display: none; }
+    .rail--closed .rail__dot { display: block; }
+    .rail--closed .rail__item[aria-current="page"] { background: #f1f3f6; }
+    .rail--closed .rail__me { width: 52px; padding: 6px; justify-content: center; background: none; }
+    .rail--closed .rail__me-text { display: none; }
+    .rail--closed .rail__rule { width: 40px; margin: 10px auto; }
+}
+
+/* ── Top bar, matched to the menu (2026-10-01): white, the page's name on the left, the
+   controls as one set of quiet rounded squares on the right. ── */
+.topbar { background: #ffffff; gap: 14px; }
+@media (min-width: 1024px) { .rail { padding-top: 0; } }
+.topbar__title { color: var(--text); letter-spacing: -.01em; white-space: nowrap; }
+.topbar__search { margin-left: 8px; }
+.topbar__search input { background: #f5f6f8; border-color: transparent; border-radius: var(--r-sm); height: 38px; }
+.topbar__search input:focus-visible { background: #fff; border-color: var(--accent); }
+.bell__button {
+    display: grid; place-items: center;
+}
+.user {
+    display: flex; align-items: center;
+    text-align: left;
+}
+@media (max-width: 760px) {
+    .topbar { gap: 8px; }
+    .topbar__title { display: none; }
+    .user { border: 0; padding: 2px; height: auto; background: none; }
+    .bell__button { width: 36px; height: 36px; }
+    .availability__button { height: 36px; }
+}
+
+/* ── Top bar, second pass (2026-10-01): the page and today's date on the left; on the right
+   status, bell and you, without boxes round each one. You appear only here, not twice. ── */
+.topbar { height: 72px; padding: 0 28px; border-bottom: 1px solid #eef0f3; }
+@media (min-width: 1024px) { .rail__head { height: 72px; } }
+.topbar__where { display: grid; line-height: 1.2; }
+.topbar__title { font-size: 18px; font-weight: 650; }
+.topbar__date { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+.topbar__actions { gap: 14px; }
+.topbar__sep { width: 1px; height: 28px; background: #e6e8ec; }
+.availability__button { height: 38px; padding: 0 14px 0 12px; background: #f5f6f8; border-color: transparent; }
+.availability__button:hover:not(:disabled) { background: #eceef2; }
+.bell__button { border: 0; width: 40px; height: 40px; border-radius: 50%; background: transparent; }
+.bell__button:hover { background: #f5f6f8; }
+.user { border: 0; background: none; height: auto; padding: 4px 6px 4px 4px; border-radius: 999px; gap: 10px; }
+.user:hover { background: #f5f6f8; }
+.user .avatar { border-radius: 50%; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #e3e7ee; }
+.user__name { font-size: 14px; font-weight: 600; }
+@media (max-width: 760px) {
+    .topbar { height: 56px; padding: 0 12px; }
+    .topbar__where, .topbar__sep { display: none; }
+    .user .user__text { display: none; }
+}

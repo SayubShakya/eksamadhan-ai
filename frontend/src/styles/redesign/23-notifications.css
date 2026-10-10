@@ -1,0 +1,43 @@
+/* ── Notifications after the "Relay" reference (2026-10-01): mark all at the top, filter
+   tabs, a person's initials with a badge for the kind, the kind as a tag, time on the right. ── */
+.bell__panel { width: min(440px, calc(100vw - 24px)); }
+.bell__head { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+.bell__head .panel__title { font-size: 17px; }
+.bell__markall { border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 13px; padding: 4px 2px; }
+.bell__markall:hover { text-decoration: underline; }
+.bell__tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 18px; }
+.bell__tab { border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 12.5px; font-weight: 500; padding: 5px 10px; border-radius: var(--r-sm); }
+.bell__tab:hover { background: var(--surface); }
+.bell__tab.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.bell__item { position: relative; padding: 14px 18px 14px 26px; gap: 12px; border-radius: 0; }
+.bell__row + .bell__row .bell__item { border-top: 1px solid var(--border); }
+.bell__item--unread, .bell__item--unread:hover:not(:disabled) { background: transparent; }
+.bell__item:hover:not(:disabled) { background: var(--surface); }
+.bell__item--unread .bell__title::after { display: none; }
+.bell__list { padding: 0; }
+.note__unread { position: absolute; left: 10px; top: 24px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.note__unread--read { background: transparent; }
+.note__avatar { position: relative; flex-shrink: 0; }
+.note__avatar .avatar { width: 38px; height: 38px; }
+.note__badge {
+    position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px; border-radius: 50%;
+    display: grid; place-items: center; border: 2px solid var(--bg); color: #fff; background: var(--accent);
+}
+.note__badge--urgent { background: var(--danger); }
+.note__badge--green { background: var(--success); }
+.note__glyph { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-weak); color: var(--accent); }
+.note__glyph--urgent { background: var(--danger-weak); color: var(--danger); }
+.bell__title { font-size: 14px; font-weight: 600; }
+.bell__body { color: var(--text-muted); font-size: 13px; line-height: 1.45; }
+.note__meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
+.note__meta .bell__time { margin: 0; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.note__tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 500; background: var(--accent-weak); color: var(--accent); }
+.note__tag--urgent { background: var(--danger-weak); color: var(--danger); }
+.note__tag--green { background: var(--success-weak); color: var(--success); }
+.bell__foot { justify-content: center; border-top: 1px solid var(--border); padding: 0; }
+.bell__viewall { width: 100%; border: 0; background: none; padding: 14px; font-size: 14px; font-weight: 500; color: var(--text); }
+.bell__viewall:hover { background: var(--surface); color: var(--accent); }
+.notes__row .bell__item { padding-left: 32px; }
+.notes__row .note__unread { left: 14px; top: 26px; }
+.notes__row .bell__item--unread { background: var(--bg); }
+:root[data-theme="dark"] .notes__row .bell__item--unread { background: var(--bg); }

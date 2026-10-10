@@ -1,0 +1,115 @@
+/* ── Sign-in and sign-up, split layout (after Sayub's portal-login reference, 2026-10-01) ──
+   The form on the left on white, the illustration (components/AuthArt.jsx) on the right in a
+   tinted panel. Below 960px the picture goes and the form is the card it was before. */
+.auth--split {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
+    place-items: stretch; gap: 16px; padding: 16px; background: #ffffff;
+}
+.auth__main { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 32px 24px; }
+.auth--split .auth__card { border: 0; box-shadow: none; background: transparent; padding: 0; max-width: 400px; }
+.auth--split .auth__title { font-size: 28px; margin-top: 18px; }
+.auth--split .auth__sub { margin: -6px 0 0; }
+.auth--split .auth__switch { text-align: left; margin: -4px 0 6px; }
+.auth--split .auth__install { max-width: 400px; }
+.auth__logo { align-self: flex-start; display: inline-flex; border-radius: var(--r-sm); }
+.auth__logo:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.field__iconed { position: relative; display: flex; align-items: center; }
+.field__iconed > svg { position: absolute; left: 12px; color: var(--text-muted); pointer-events: none; }
+.field__iconed input { flex: 1; min-width: 0; padding-left: 40px; }
+
+.auth-art {
+    display: flex; flex-direction: column; justify-content: space-between; gap: 20px;
+    border-radius: 24px; padding: 36px 32px 28px; overflow: hidden;
+}
+.auth-art__top { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px 22px; }
+.auth-art__lead {
+    display: grid; gap: 2px; padding: 14px 18px; border-radius: 16px;
+    color: var(--text);
+}
+.auth-art__lead strong { font-size: 20px; font-weight: 650; color: #1f4f8f; letter-spacing: -.01em; }
+.auth-art__lead > span:not(.auth-art__faces) { font-size: 14px; color: var(--text-muted); }
+.auth-art__faces { display: flex; margin-top: 8px; }
+.auth-art__faces i {
+    width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+    background: #fff; border: 2px solid #e6f0ff; margin-right: -6px; font-style: normal;
+}
+.auth-art__faces i.is-you { width: auto; padding: 0 9px; border-radius: 999px; background: #f08a3c; color: #fff; font-size: 11px; font-weight: 600; margin-left: 10px; }
+.auth-art__fact { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: #1f4f8f; }
+.auth-art__ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: #1f4f8f; }
+.auth-art__scene { width: 100%; max-height: 62vh; display: block; }
+.auth-art__journey { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; color: var(--text-muted); }
+.auth-art__journey li { display: flex; align-items: center; gap: 8px; }
+.auth-art__step {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px;
+    background: #fff; color: var(--text); font-size: 12.5px; font-weight: 500;
+    box-shadow: 0 2px 8px rgba(31, 79, 143, .08);
+}
+.auth-art__step svg { color: #1f4f8f; }
+
+@media (max-width: 960px) {
+    .auth--split { grid-template-columns: 1fr; background: var(--panel); place-items: center; }
+    .auth-art { display: none; }
+    .auth__main { padding: 0; width: 100%; }
+    .auth--split .auth__card {
+        max-width: 400px; background: var(--bg); border: 1px solid var(--border);
+        border-radius: var(--r-lg); box-shadow: var(--shadow-md); padding: 32px 28px;
+    }
+}
+
+/* Sign-in: the way back to the product page, and a livelier picture. */
+.auth__back {
+    align-self: flex-start; margin-bottom: 22px;
+    display: inline-flex; align-items: center; gap: 10px;
+    color: var(--text-muted); font-size: 13.5px; font-weight: 500; text-decoration: none;
+    border-radius: var(--r-sm);
+}
+.auth__back-ico {
+    width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--accent-weak); color: var(--accent);
+    transition: transform .15s ease, background .15s ease;
+}
+.auth__back:hover { color: var(--text); }
+.auth__back:hover .auth__back-ico { transform: translateX(-2px); background: var(--accent-tint); }
+.auth__back:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.auth--split .auth__title em {
+    font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+    font-style: italic; font-weight: 400; color: #4f8cf0; letter-spacing: -.01em;
+}
+.auth--split .auth__submit {
+    background: linear-gradient(180deg, #3b82f6, #2563eb); border-color: #2563eb;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, .28);
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+.auth--split .auth__submit:hover:not(:disabled) { box-shadow: 0 10px 26px rgba(37, 99, 235, .36); transform: translateY(-1px); }
+.auth--split .field input:focus-visible { box-shadow: 0 0 0 4px rgba(37, 99, 235, .12); }
+
+.auth-art {
+    position: relative; isolation: isolate;
+    background:
+        radial-gradient(60% 45% at 85% 8%, rgba(120, 166, 242, .35) 0%, rgba(120, 166, 242, 0) 70%),
+        radial-gradient(55% 45% at 10% 95%, rgba(47, 124, 246, .22) 0%, rgba(47, 124, 246, 0) 70%),
+        linear-gradient(165deg, #eef4ff 0%, #f7faff 45%, #e3edff 100%);
+    border: 1px solid #e3ecfb;
+}
+.auth-art__lead { background: #ffffff; box-shadow: 0 10px 28px rgba(31, 79, 143, .12); }
+.auth-art__ico { background: #ffffff; box-shadow: 0 4px 12px rgba(31, 79, 143, .1); }
+.auth-art__scene { filter: drop-shadow(0 18px 30px rgba(31, 79, 143, .12)); }
+
+/* Gentle movement: the routes drift and the hubs breathe. Never with reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+    .auth-art__routes { animation: auth-route 22s linear infinite; }
+    .auth-art__links { animation: auth-route 30s linear infinite reverse; }
+    .auth-art__pulse { transform-box: fill-box; transform-origin: center; animation: auth-pulse 3.2s ease-in-out infinite; }
+}
+@keyframes auth-route { to { stroke-dashoffset: -260; } }
+@keyframes auth-pulse { 0%, 100% { transform: scale(1); opacity: .18; } 50% { transform: scale(1.35); opacity: 0; } }
+
+/* Sign-in picture: the conversation builds up on the phone, the team pins breathe. */
+@media (prefers-reduced-motion: no-preference) {
+    .aa-msg { animation: aa-msg 6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+    .aa-msg--2 { animation-delay: .8s; } .aa-msg--3 { animation-delay: 1.6s; } .aa-msg--4 { animation-delay: 2.4s; }
+    .aa-pin { animation: aa-bob 3.2s ease-in-out infinite; }
+}
+@keyframes aa-msg { 0% { opacity: 0; transform: translateY(6px) scale(.9); } 12%, 82% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes aa-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }

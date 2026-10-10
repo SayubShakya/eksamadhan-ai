@@ -1,0 +1,58 @@
+/* ── Dark mode (2026-10-01). The tokens carry most of it; the rest are the surfaces that were
+   given a fixed white. Blue stays the accent; no purple. ── */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #171a21;
+    --surface: #1d2129;
+    --panel: #12151b;
+    --surface-raised: #1d2129;
+    --border: #2a2f39;
+    --border-strong: #363c48;
+    --text: #e8eaee;
+    --text-muted: #9aa2b1;
+    --accent: #5b8ff9;
+    --bubble-out: #3d6bd1;
+    --accent-weak: #1b2740;
+    --accent-tint: #22314f;
+    --ai: #232833;
+    --success: #4ade80;
+    --success-weak: #15281d;
+    --warning: #f5a524;
+    --warning-weak: #2c2416;
+    --danger: #f87171;
+    --danger-weak: #2e1a1c;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, .35);
+}
+:root[data-theme="dark"] body { background: var(--panel); }
+:root[data-theme="dark"] .rail,
+:root[data-theme="dark"] .topbar { background: var(--bg); border-color: var(--border); }
+:root[data-theme="dark"] .rail__item { color: var(--text-muted); }
+:root[data-theme="dark"] .rail__item:hover,
+:root[data-theme="dark"] .rail__item[aria-current="page"],
+:root[data-theme="dark"] .rail--closed .rail__item[aria-current="page"] { background: var(--surface); color: var(--text); }
+:root[data-theme="dark"] .availability__button { background: var(--surface); color: var(--text); }
+:root[data-theme="dark"] .availability__button:hover:not(:disabled) { background: var(--border); }
+:root[data-theme="dark"] .bell__button:hover,
+:root[data-theme="dark"] .user:hover { background: var(--surface); }
+:root[data-theme="dark"] .user .avatar { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--border-strong); }
+:root[data-theme="dark"] .topbar__sep { background: var(--border); }
+:root[data-theme="dark"] .topbar__search input { background: var(--surface); color: var(--text); }
+:root[data-theme="dark"] .availability__menu,
+:root[data-theme="dark"] .bell__panel,
+:root[data-theme="dark"] .popover { background: var(--bg); border-color: var(--border); }
+:root[data-theme="dark"] .availability__option:hover { background: var(--surface); }
+:root[data-theme="dark"] .availability__option[aria-checked="true"] { background: var(--accent-weak); }
+:root[data-theme="dark"] .bell__foot { background: var(--surface); }
+:root[data-theme="dark"] .bell__icon, :root[data-theme="dark"] .stat__icon { background: var(--accent-weak); }
+:root[data-theme="dark"] .bell__icon--urgent { background: var(--danger-weak); }
+:root[data-theme="dark"] .notes { background: var(--bg); border-color: var(--border); }
+:root[data-theme="dark"] .notes__row + .notes__row { border-color: var(--border); }
+:root[data-theme="dark"] .notes__row .bell__item { background: var(--bg); }
+:root[data-theme="dark"] .notes__row .bell__item:hover { background: var(--surface); }
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .stat { background: var(--bg); border-color: var(--border); }
+:root[data-theme="dark"] .switch { background: var(--border-strong); }
+:root[data-theme="dark"] .switch--on { background: var(--accent); }
+:root[data-theme="dark"] input, :root[data-theme="dark"] select, :root[data-theme="dark"] textarea { color: var(--text); }
+:root[data-theme="dark"] .msg--out .msg__bubble, :root[data-theme="dark"] .btn--primary { color: #fff; }

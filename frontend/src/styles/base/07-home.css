@@ -1,0 +1,55 @@
+/* ── Home: clearer sections and states ─────────────────────────────────── */
+.section-head { margin: 32px 0 14px; }
+.section-head .section-title { margin: 0; }
+.section-sub { color: var(--text-muted); font-size: 13px; margin: 2px 0 0; }
+
+.stat--empty { background: var(--surface); box-shadow: none; }
+.stat__placeholder { margin-top: 10px; font-size: 13px; color: var(--text-muted); }
+
+/* Solid, not a faint tint — a completed step should be obvious at a glance. */
+.step__done {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-top: 10px;
+    font-size: 12px; font-weight: 600;
+    color: #fff; background: var(--success);
+    padding: 4px 10px; border-radius: 999px;
+}
+.step__done svg { stroke-width: 2.6; }
+
+/* The whole completed card reads as done, not just the label. */
+.step--done { border-color: #bbf0cd; }
+.step--done .step__num { background: var(--success); color: #fff; }
+.step__cta { margin-top: 10px; }
+.step--done { background: var(--surface); }
+
+.pill--idle { background: var(--surface); color: var(--text-muted); }
+.channel .pill { margin-bottom: 14px; align-self: flex-start; }
+
+/* ── Recent conversations on Home ──────────────────────────────────────── */
+.card--flush { padding: 0; overflow: hidden; }
+
+.recent { list-style: none; margin: 0; padding: 0; }
+.recent li + li { border-top: 1px solid var(--border); }
+
+.recent__row {
+    width: 100%; display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; border: 0; background: none; text-align: left;
+}
+.recent__row:hover { background: var(--surface); }
+
+.recent__body { flex: 1; min-width: 0; }
+.recent__top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.recent__name { font-weight: 600; }
+.recent__time { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+.recent__preview {
+    display: block; margin-top: 2px; font-size: 13px; color: var(--text-muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.recent__you { color: var(--text-muted); }
+
+.recent__all {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px; border: 0; border-top: 1px solid var(--border);
+    background: var(--surface); color: var(--accent); font-weight: 600; font-size: 13px;
+}
+.recent__all:hover { background: var(--accent-weak); }

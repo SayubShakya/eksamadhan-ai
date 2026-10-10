@@ -1,0 +1,25 @@
+/* ── Confirmation dialog ───────────────────────────────────────────────── */
+.confirm {
+    position: fixed; z-index: 70;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: min(440px, calc(100vw - 32px));
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-md);
+    animation: pop .14s ease;
+}
+@keyframes pop {
+    from { transform: translate(-50%, -48%) scale(.98); opacity: 0 }
+    to   { transform: translate(-50%, -50%) scale(1);   opacity: 1 }
+}
+.confirm__body { padding: 20px; }
+.confirm__message { margin: 0 0 20px; color: var(--text-muted); line-height: 1.6; }
+
+.btn--destructive { background: var(--danger); color: #fff; box-shadow: var(--shadow-sm); }
+.btn--destructive:hover { filter: brightness(.94); }
+
+.tag--handling { background: var(--accent-weak); color: var(--accent); }
+.tag--resolved { background: var(--surface); color: var(--text-muted); }
+
+.composer__status { text-transform: none; letter-spacing: 0; font-size: 12px; }

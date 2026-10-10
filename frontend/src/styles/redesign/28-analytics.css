@@ -1,0 +1,176 @@
+/* ── Analytics, after the "Spending Analytics" dashboard (2026-10-03): three headline cards
+   with a small chart each, the trend beside why work reached people, then how conversations
+   ended beside a few observations. ── */
+.an2 { display: grid; gap: 16px; }
+.an2-card { background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; box-shadow: 0 1px 2px rgba(16, 24, 40, .04); min-width: 0; }
+.an2-card__head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.an2-card__head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.an2-range { position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 3px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; isolation: isolate; }
+.an2-range::before { content: ''; position: absolute; z-index: -1; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / 3); border-radius: 7px; background: var(--accent-weak); transform: translateX(calc(var(--i, 1) * 100%)); transition: transform .28s cubic-bezier(.3, .7, .2, 1); }
+.an2-range button { border: 0; background: none; padding: 6px 14px; font-size: 13px; font-weight: 500; color: var(--text-muted); border-radius: 7px; white-space: nowrap; }
+.an2-range button[aria-selected="true"] { color: var(--accent); font-weight: 600; }
+
+.an2-kpis { display: grid; gap: 16px; }
+.an2-kpi { display: grid; gap: 14px; }
+.an2-kpi__head { display: flex; align-items: center; gap: 9px; }
+.an2-kpi__icon { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--accent-weak); color: var(--accent); }
+.an2-kpi__label { flex: 1; font-size: 14px; font-weight: 500; color: var(--text-muted); }
+.an2-kpi__info { color: var(--text-muted); display: inline-flex; cursor: help; border-radius: 50%; }
+.an2-kpi__info:hover, .an2-kpi__info:focus-visible { color: var(--text); outline: none; }
+.an2-kpi__body { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
+.an2-kpi__value { font-size: 32px; font-weight: 650; letter-spacing: -.02em; line-height: 1.1; color: var(--text); font-variant-numeric: tabular-nums; }
+.an2-kpi__note { margin-top: 6px; font-size: 13px; color: var(--text-muted); }
+.an2-kpi .is-good { color: var(--success); }
+.an2-kpi .is-under { color: var(--warning); }
+.an2-mini { width: 120px; height: 44px; flex-shrink: 0; }
+.an2-mini__track { fill: var(--surface); }
+.an2-mini__bar { fill: color-mix(in srgb, var(--accent) 55%, var(--bg)); }
+.an2-mini__bar.is-last { fill: var(--accent); }
+.an2-mini__line { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.an2-mini__fill { fill: var(--accent); opacity: .1; }
+
+.an2-row { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+.an2-row--even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.an2-legend { display: flex; gap: 14px; font-size: 13px; color: var(--text-muted); }
+.an2-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.an2-key { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.an2-key--all, .an2-key--team { background: var(--accent); }
+.an2-key--ai { background: #16a34a; }
+.an2-key--unrelated { background: var(--border-strong); }
+.an2-trend { position: relative; }
+.an2-grid { stroke: var(--border); stroke-dasharray: 3 4; }
+.an2-axis { font-size: 11px; fill: var(--text-muted); }
+.an2-area { fill: var(--accent); opacity: .08; }
+.an2-line { fill: none; stroke-width: 2.4; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+.an2-line--all { stroke: var(--accent); }
+.an2-line--ai { stroke: #16a34a; }
+.an2-cursor { stroke: var(--border-strong); stroke-dasharray: 3 3; }
+.an2-dot { stroke: var(--bg); stroke-width: 2; }
+.an2-dot--all { fill: var(--accent); }
+.an2-dot--ai { fill: #16a34a; }
+.an2-tip { position: absolute; top: 4px; transform: translateX(-50%); display: grid; gap: 5px; padding: 10px 12px; min-width: 170px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 24px rgba(16, 24, 40, .12); font-size: 12.5px; pointer-events: none; }
+.an2-tip strong { font-size: 13px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.an2-tip span { display: flex; align-items: center; gap: 7px; color: var(--text-muted); }
+.an2-tip b { margin-left: auto; color: var(--text); font-variant-numeric: tabular-nums; }
+
+.an2-card__sub { margin: 4px 0 0; font-size: 13px; color: var(--text-muted); }
+/* Why conversations reached your team (Sayub, 2026-10-05): one split bar for the whole picture,
+   its key, then a box per group (fixable, technical, a person was right) with its reasons, one
+   line of advice and at most one button. Blue = you can act, amber = technical, grey = fine. */
+.an2-split { display: flex; gap: 3px; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 14px; }
+.an2-split i { display: block; min-width: 6px; }
+.an2-split i.is-fix { background: var(--accent); }
+.an2-split i.is-warn { background: var(--warning); }
+.an2-split i.is-none { background: color-mix(in srgb, var(--text-muted) 45%, transparent); }
+.an2-groups { display: grid; gap: 8px; }
+.an2-group { padding: 10px 14px; border: 1px solid var(--border); border-left: 3px solid color-mix(in srgb, var(--text-muted) 45%, transparent); border-radius: 10px; }
+.an2-group.is-fix { border-left-color: var(--accent); background: color-mix(in srgb, var(--accent-weak) 55%, var(--bg)); }
+.an2-group.is-warn { border-left-color: var(--warning); }
+.an2-group__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.an2-group__head h3 { margin: 0; font-size: 14px; font-weight: 650; }
+.an2-group__head span { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.an2-group__head b { color: var(--text); font-weight: 650; }
+.an2-group ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.an2-group li { display: flex; gap: 10px; font-size: 13.5px; color: var(--text); }
+.an2-group li b { min-width: 18px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.an2-group__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.an2-group__foot p { margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.45; flex: 1; min-width: 160px; }
+.an2-group__btn { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+/* Worth knowing (Sayub, 2026-10-05): when customers write as two small figures, then the things
+   that need a look as rows, each with the one button that goes there. */
+.an2-subhead { margin: 0 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+.an2-subhead + .an2-quiet { margin-top: 0; }
+.an2-peaks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.an2-peak { display: grid; gap: 2px; padding: 12px 14px; border-radius: 10px; background: var(--surface); }
+.an2-peak__label { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-muted); }
+.an2-peak strong { font-size: 18px; font-weight: 650; }
+.an2-peak__note { font-size: 12.5px; color: var(--text-muted); }
+.an2-peaks__link { margin: 10px 0 20px; }
+.an2-checks { list-style: none; margin: 0; padding: 0; display: grid; }
+.an2-checks li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+.an2-checks li:first-child { border-top: 0; padding-top: 0; }
+.an2-checks__icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; background: var(--accent-weak); color: var(--accent); }
+.an2-checks li.is-warn .an2-checks__icon { background: var(--warning-weak); color: var(--warning); }
+.an2-checks__text { flex: 1; min-width: 0; }
+.an2-checks strong { font-size: 14px; }
+.an2-checks p { margin: 2px 0 0; font-size: 13px; color: var(--text-muted); line-height: 1.45; }
+.an2-checks__btn { flex-shrink: 0; }
+@media (max-width: 560px) {
+    .an2-checks li { flex-wrap: wrap; }
+    .an2-checks__btn { margin-left: 48px; }
+}
+.an2-link { justify-self: start; display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; padding: 0; font-size: 13px; font-weight: 600; color: var(--accent); }
+.an2-link:hover { text-decoration: underline; }
+.an2-total { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--surface); font-size: 13px; color: var(--text); }
+.an2-total svg { color: var(--text-muted); flex-shrink: 0; }
+.an2-quiet { margin: 0; font-size: 14px; color: var(--text-muted); }
+
+.an2-ended { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+/* The card stretches to its neighbour's height: centre the chart in the space, channels at the foot. */
+.an2-card:has(> .an2-ended) { display: flex; flex-direction: column; }
+.an2-card > .an2-ended { flex: 1; padding: 8px 0 20px; }
+.an2-donut { position: relative; width: 150px; height: 150px; flex-shrink: 0; }
+.an2-donut svg { width: 100%; height: 100%; }
+.an2-donut__track { fill: none; stroke: var(--surface); stroke-width: 14; }
+.an2-donut__seg { fill: none; stroke-width: 14; stroke-linecap: round; }
+.an2-donut__seg.is-ai { stroke: #16a34a; }
+.an2-donut__seg.is-team { stroke: var(--accent); }
+.an2-donut__seg.is-unrelated { stroke: var(--border-strong); }
+.an2-donut__center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.an2-donut__center strong { font-size: 26px; font-weight: 650; line-height: 1; }
+.an2-donut__center span { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+.an2-ended__list { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 200px; display: grid; gap: 12px; }
+.an2-ended__list li { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.an2-ended__list span { flex: 1; }
+.an2-ended__list b { font-variant-numeric: tabular-nums; }
+.an2-ended__list small { width: 40px; text-align: right; color: var(--text-muted); font-size: 13px; }
+.an2-channels { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); display: grid; gap: 6px; }
+.an2-channel { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+
+.an2-empty { display: grid; justify-items: center; text-align: center; gap: 8px; padding: 44px 20px; }
+.an2-empty__icon { width: 50px; height: 50px; border-radius: 14px; display: grid; place-items: center; background: var(--accent-weak); color: var(--accent); }
+.an2-empty h2 { margin: 4px 0 0; font-size: 17px; }
+.an2-empty p { margin: 0; color: var(--text-muted); }
+
+@media (max-width: 1100px) { .an2-row, .an2-row--even { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .an2-range { width: 100%; } .page__head:has(.an2-range) { flex-wrap: wrap; } }
+.an2-trend { height: 300px; }
+@media (max-width: 760px) { .an2-trend { height: 180px; } }
+.dash__chartside { display: grid; justify-items: end; gap: 8px; }
+.dash__more { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--border); background: var(--bg); color: var(--accent); border-radius: var(--r-sm); padding: 5px 10px; font-size: 13px; font-weight: 600; }
+.dash__more:hover { background: var(--accent-weak); border-color: var(--accent); }
+.an2-card__head { align-items: flex-start; }
+.an2-card__head .an2-legend { margin-top: 6px; flex-wrap: wrap; }
+.an2-legend__sum { color: var(--text); font-weight: 500; }
+.an2-switch { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; padding: 3px; background: var(--surface); border-radius: 9px; isolation: isolate; }
+.an2-switch::before { content: ''; position: absolute; z-index: -1; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); border-radius: 7px; background: var(--bg); box-shadow: 0 1px 3px rgba(16, 24, 40, .12); transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .28s cubic-bezier(.3, .7, .2, 1); }
+.an2-switch button { border: 0; background: none; padding: 5px 12px; font-size: 13px; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
+.an2-switch button[aria-selected="true"] { color: var(--text); font-weight: 600; }
+.an2-card__head { flex-wrap: nowrap; }
+.an2-card__head > div:first-child { flex: 1; min-width: 0; }
+.an2-card__head .an2-switch { flex-shrink: 0; }
+@media (max-width: 560px) { .an2-card__head { flex-wrap: wrap; } }
+
+/* Working hours: split shifts, copy, and the week at a glance (2026-10-03). */
+.hours__ranges { display: grid; gap: 8px; min-width: 0; }
+.hours__ranges .hours__times { flex-wrap: nowrap; }
+.hours__icon { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid transparent; border-radius: var(--r-sm); background: none; color: var(--text-muted); flex-shrink: 0; }
+.hours__icon:hover { background: var(--surface); border-color: var(--border); color: var(--text); }
+.hours__dayactions { display: inline-flex; align-self: start; }
+.hours__day { grid-template-columns: auto 150px minmax(0, 1fr) auto; }
+.hours__day > .switch, .hours__day > .hours__name, .hours__day > .hours__off { align-self: center; }
+.hours__ranges .hours__allday-check { margin: 0; }
+@media (max-width: 860px) {
+    .hours__day { grid-template-columns: auto 1fr auto; }
+    .hours__ranges { grid-column: 1 / -1; }
+    .hours__dayactions { grid-row: 1; grid-column: 3; }
+}
+@media (max-width: 520px) {
+    .hours__ranges .hours__times { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; }
+}
+.hours__dayactions { align-items: center; gap: 4px; }
+.hours__dayactions .hours__allday-check { margin-right: 8px; font-size: 13.5px; }
+.hours__allday-note { font-size: 14px; color: var(--text); align-self: center; min-height: 40px; display: inline-flex; align-items: center; }
+.hours__day { align-items: center; }
+@media (min-width: 861px) { .hours__dayactions { align-self: center; } }

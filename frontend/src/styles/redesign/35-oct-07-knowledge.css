@@ -1,0 +1,96 @@
+/* Knowledge with colour and icons again (Sayub, 2026-10-07): the card headings and each source
+   carry their coloured tile (text blue, file red, picture amber, website teal, as the tabs), the
+   buttons say what they do with an icon, and a disabled main button is a faded blue, not grey. */
+.kq-title .kq-badge, .kq-test__head .kq-badge { display: grid; }
+.member .kq-badge { background: var(--tone-weak); color: var(--tone); border: 0; width: 38px; height: 38px; }
+.kq-tab[aria-selected="true"] .kq-tab__icon { color: var(--tone); }
+.knowledge__add .knowledge__actions .btn--primary:disabled,
+.kq-test .knowledge__search .btn--primary:disabled { background: color-mix(in srgb, var(--accent) 40%, var(--bg)); border-color: transparent; color: #fff; opacity: 1; }
+.knowledge__actions .btn, .knowledge__search .btn, .kq-act { display: inline-flex; align-items: center; gap: 6px; }
+.kq-act--remove:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 14%, var(--bg)); border-color: var(--danger); }
+
+/* Add knowledge, write text (Sayub, 2026-10-07): optional title said so, quick topic starters,
+   the hint and a character count inside the text box's own footer, Clear beside Add. */
+.kq-optional { font-weight: 400; font-size: 12px; color: var(--text-muted); margin-left: 4px; }
+.kq-starters { display: flex; flex-wrap: wrap; align-items: center; font-size: 12.5px; color: var(--text-muted); }
+.kq-starters > span { margin-right: 2px; }
+.kq-starter { display: inline-flex; align-items: center; gap: 4px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.kq-starter:hover { border-color: var(--accent); }
+.kq-starter svg { color: var(--accent); }
+.kq-textbox { display: block; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--bg); overflow: hidden; }
+.kq-textbox:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
+.kq-textbox .knowledge__text { display: block; width: 100%; border: 0; border-radius: 0; box-shadow: none; outline: 0; resize: vertical; }
+.kq-textbox .knowledge__text:focus-visible { outline: 0; box-shadow: none; }
+.kq-textfoot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-top: 1px solid var(--border); background: var(--surface); font-size: 12px; color: var(--text-muted); }
+.kq-chars { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.kq-actions { justify-content: flex-end; }
+@media (max-width: 560px) { .kq-textfoot { flex-direction: column; align-items: flex-start; } }
+
+/* Add knowledge tabs (Sayub, 2026-10-07): a highlight that slides to the chosen tab and takes its
+   colour, a hover state, and the form fading in when you switch. Off when motion is reduced. */
+.kq-tabs { position: relative; isolation: isolate; }
+.kq-tabs__glider { position: absolute; top: 0; left: 0;
+    transition: transform .28s cubic-bezier(.3, .7, .2, 1), width .28s cubic-bezier(.3, .7, .2, 1); }
+.kq-tabs .kq-tab { position: relative; background: none; box-shadow: none; border-color: transparent; }
+.kq-tabs .kq-tab[aria-selected="true"] { background: none; box-shadow: none; color: var(--tone); font-weight: 600; }
+.kq-tabs .kq-tab:not([aria-selected="true"]):hover { color: var(--text); }
+.kq-tabs .kq-tab .kq-tab__icon { transition: color .2s ease, transform .2s ease; }
+.kq-tabs .kq-tab:hover .kq-tab__icon { color: var(--tone); transform: translateY(-1px); }
+.kq-panel { transition: opacity .22s ease, transform .22s ease; }
+.kq-panel[data-on="false"] { opacity: 0; transform: translateY(6px); }
+.kq-panel[data-on="true"] { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+    .kq-tabs__glider, .kq-panel, .kq-tabs .kq-tab .kq-tab__icon { transition: none; }
+    .kq-panel[data-on="false"] { transform: none; }
+}
+
+/* Knowledge, calmer (Sayub, 2026-10-07, after SaaS knowledge-base layouts): fewer pills and tints.
+   Tabs are text with a sliding underline; topic starters are quiet text buttons; sources are one
+   card laid out as a table (source, passages, status dot, date, icon actions); counts are plain
+   text; the main button keeps its normal size and only fades when it cannot be used yet. */
+.kq-tabs { background: none; border: 0; padding: 0; gap: 4px; border-radius: 0; }
+.kq-tabs .kq-tab { padding: 8px 10px; border-radius: 8px; font-weight: 500; }
+.kq-tabs .kq-tab:focus:not(:focus-visible) { outline: none; box-shadow: none; }
+.kq-tabs .kq-tab:not([aria-selected="true"]):hover { background: var(--surface); }
+.kq-tabs__glider { height: 2px; border-radius: 2px; background: var(--tone); box-shadow: none; z-index: 1; }
+
+.kq-starters { gap: 2px 4px; margin: 12px 0 8px; }
+.kq-starter { border: 0; background: none; padding: 4px 8px; border-radius: 6px; color: var(--text-muted); font-weight: 500; }
+.kq-starter:hover { background: var(--surface); color: var(--accent); border: 0; }
+
+.knowledge__add .knowledge__actions .btn--primary:disabled { background: var(--accent); color: #fff; opacity: .45; }
+.knowledge__addbody .btn--primary:not(:disabled) { box-shadow: none; }
+
+.kq-sources-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.kq-sources-meta { font-size: 13px; color: var(--text-muted); }
+
+.kq-list { padding: 0; overflow: hidden; }
+.kq-item { display: grid; grid-template-columns: minmax(0, 1fr) 90px 110px 120px 84px; align-items: center; gap: 16px; padding: 12px 18px; border-top: 1px solid var(--border); }
+.kq-item:first-child { border-top: 0; }
+.kq-item:not(.kq-item--head):hover { background: color-mix(in srgb, var(--surface) 60%, var(--bg)); }
+.kq-item--head { padding-top: 10px; padding-bottom: 10px; background: var(--surface); font-size: 12px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--text-muted); }
+.kq-item__main { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.kq-item .kq-item__icon { width: 36px; height: 36px; margin: 0; border-radius: 9px; }
+.kq-item__thumb { width: 36px; height: 36px; border-radius: 9px; object-fit: cover; flex-shrink: 0; border: 1px solid var(--border); }
+.kq-item__text { display: grid; gap: 2px; min-width: 0; }
+.kq-item__text strong { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kq-item__text span { font-size: 12.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kq-item__num, .kq-item__date { font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums; }
+.kq-item__date { color: var(--text-muted); }
+.kq-item__status { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text); }
+.kq-item__status i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
+.kq-item__status.is-ready i { background: var(--success); }
+.kq-item__status.is-indexing i, .kq-item__status.is-pending i { background: var(--warning); }
+.kq-item__status.is-failed { color: var(--danger); }
+.kq-item__status.is-failed i { background: var(--danger); }
+.kq-item__actions { display: flex; justify-content: flex-end; gap: 4px; }
+.kq-iconbtn { width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 8px; background: none; color: var(--text-muted); cursor: pointer; }
+.kq-iconbtn:hover { background: var(--accent-weak); color: var(--accent); }
+.kq-iconbtn--danger:hover { background: var(--danger-weak); color: var(--danger); }
+@media (max-width: 760px) {
+    .kq-item { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; }
+    .kq-item--head { display: none; }
+    .kq-item__num, .kq-item__date { display: none; }
+    .kq-item__status { grid-column: 1; padding-left: 48px; }
+    .kq-item__actions { grid-row: 1 / span 2; grid-column: 2; }
+}

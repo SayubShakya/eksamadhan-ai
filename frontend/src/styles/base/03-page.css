@@ -1,0 +1,104 @@
+/* ── Page ──────────────────────────────────────────────────────────── */
+.page { flex: 1; overflow-y: auto; padding: 32px 36px 56px; }
+/* Every screen's content stops at the same width and sits in the middle, so the spare room on
+   a wide screen is split equally left and right instead of piling up on one side, and moving
+   between pages does not change where things sit. Dialogs and their backdrops are fixed to the
+   window, so they are left out. The inbox is not a .page and keeps the full width. */
+.page > :not(.scrim):not(.confirm):not(.popover__catcher) {
+    max-width: 1200px; margin-left: auto; margin-right: auto;
+}
+.page__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.page__title { font-size: 26px; font-weight: 650; letter-spacing: -.02em; margin: 0 0 5px; }
+.page__sub { color: var(--text-muted); margin: 0; }
+
+.btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-radius: var(--r-sm);
+    border: 1px solid transparent; font-weight: 500;
+    transition: background .15s ease, box-shadow .15s ease, transform .06s ease;
+}
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn--primary { background: var(--accent); color: #fff; box-shadow: var(--shadow-sm); }
+.btn--primary:hover { filter: brightness(.94); }
+/* Tinted with the accent so it reads as actionable. A grey fill made it look
+   identical to the disabled button beside it. */
+.btn--secondary {
+    background: var(--accent-weak); color: var(--accent);
+    border-color: #cfe0fb; box-shadow: none; font-weight: 600;
+}
+.btn--secondary:hover { background: var(--accent-tint); border-color: var(--accent); }
+.btn--danger { background: var(--bg); color: var(--danger); border-color: var(--border); }
+.btn--danger:hover { background: var(--danger-weak); }
+.btn--sm { padding: 6px 10px; font-size: 13px; }
+
+.card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-sm);
+    padding: 24px;
+}
+.section-title { font-size: 16px; font-weight: 600; letter-spacing: -.01em; margin: 28px 0 12px; }
+
+/* Setup checklist */
+.checklist__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.checklist__steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.step {
+    position: relative;
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 18px;
+    background: var(--bg);
+}
+.step--active { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-weak), var(--shadow-sm); }
+.step__badge {
+    position: absolute; top: -9px; right: 12px;
+    background: var(--accent); color: #fff;
+    font-size: 10px; font-weight: 600; letter-spacing: .04em;
+    padding: 2px 8px; border-radius: var(--r-sm);
+}
+.step__num {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 12px; font-weight: 600;
+    background: var(--surface); color: var(--text-muted); flex-shrink: 0;
+}
+.step--active .step__num { background: var(--accent); color: #fff; }
+.step__row { display: flex; gap: 10px; align-items: flex-start; }
+.step__title { font-weight: 600; margin: 0 0 2px; }
+.step__desc { color: var(--text-muted); margin: 0; font-size: 13px; }
+.progress { width: 160px; height: 6px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.progress > span { display: block; height: 100%; background: var(--accent); }
+
+/* Stat tiles */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-top: 20px; }
+.stat {
+    background: var(--bg); border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    padding: 18px 20px;
+}
+.stat__label { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.stat__value { font-size: 28px; font-weight: 650; letter-spacing: -.02em; }
+.stat__note { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.stat__unit { font-size: 12px; color: var(--text-muted); font-weight: 400; margin-left: 6px; }
+
+/* Channel cards */
+.channels { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.channel {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--r-md); box-shadow: var(--shadow-sm);
+    padding: 20px; text-align: left;
+    display: flex; flex-direction: column;
+    transition: box-shadow .16s ease;
+}
+.channel:hover { box-shadow: var(--shadow-md); }
+.channel .btn { align-self: flex-start; justify-content: center; margin-top: 4px; }
+
+/* Empty states */
+.empty { display: grid; place-items: center; text-align: center; padding: 48px 24px; }
+.empty__icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--surface); color: var(--border-strong);
+    display: grid; place-items: center; margin-bottom: 16px;
+}
+.empty__title { font-size: 17px; font-weight: 600; margin: 0 0 6px; }
+.empty__text { color: var(--text-muted); max-width: 380px; margin: 0 0 18px; }
+.empty--panel { border: 1px dashed var(--border); border-radius: var(--r-md); background: var(--bg); }

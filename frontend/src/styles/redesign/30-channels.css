@@ -1,0 +1,105 @@
+/* ── Channels as integration cards (2026-10-03), like the integrations pages most products use:
+   logo, provider and name, a line on what it does, the connected accounts inside, then the
+   status and the one action in the card's footer. ── */
+.chn { display: grid; gap: 18px; }
+.chn > .page__head { margin-bottom: 0; }
+.chn > * { width: 100%; }
+.chn-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.chn-card { display: flex; flex-direction: column; transition: box-shadow .15s ease, border-color .15s ease; }
+.chn-card:hover { box-shadow: 0 8px 22px -12px rgba(16, 24, 40, .22); }
+.chn-card__head { display: flex; gap: 12px; }
+.chn-logo { display: grid; place-items: center; flex-shrink: 0; color: var(--text-muted); }
+.chn-card__title h2 { font-weight: 600; }
+.chn-card__sub { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--text-muted); }
+.chn-card__foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.chn-status { display: inline-flex; align-items: center; gap: 6px; }
+.chn-status i { border-radius: 50%; background: var(--border-strong); }
+.chn-status.is-soon { border: 1px dashed var(--border-strong); }
+.chn-card__foot .btn--secondary:hover { background: var(--surface); }
+.chn-accs { list-style: none; margin: 0; padding: 0; display: grid; }
+.chn-acc { display: flex; }
+.chn-acc__text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.chn-acc__text span { font-size: 12.5px; color: var(--text-muted); line-height: 1.45; }
+.chn-acc__text small { color: var(--text-muted); opacity: .85; }
+.chn-acc__actions { align-items: center; flex-shrink: 0; }
+.chn-acc__actions .btn--secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); }
+@media (max-width: 1180px) { .chn-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 720px) { .chn-grid { grid-template-columns: 1fr; } .chn-acc { flex-wrap: wrap; } .chn-acc__actions { width: 100%; padding-left: 18px; } }
+.chn { align-content: start; }
+.chn-acc__actions { padding-left: 18px; }
+
+/* Channels, brand colours (2026-10-03): each card opens on a soft band of its platform's colour,
+   the logo sits on it, and the connect button is in that colour. No purple: Instagram uses its
+   orange-pink end. */
+.chn-card { position: relative; overflow: hidden; padding-top: 0; }
+.chn-card::before { content: ''; height: 64px; margin: 0 -20px -34px; background: var(--brand-band, var(--surface)); border-bottom: 1px solid var(--border); }
+.chn-card--facebook { --brand: #1877f2; --brand-band: linear-gradient(135deg, #e8f1fe, #f4f8ff); }
+.chn-card--instagram { --brand: #e1306c; --brand-band: linear-gradient(135deg, #fff1e6, #ffe8ef); }
+.chn-card--widget { --brand: var(--text-muted); --brand-band: repeating-linear-gradient(135deg, var(--surface) 0 10px, var(--bg) 10px 20px); }
+:root[data-theme="dark"] .chn-card--facebook { --brand: #4d94ff; --brand-band: linear-gradient(135deg, #16243a, #1a2130); }
+:root[data-theme="dark"] .chn-card--instagram { --brand: #ff5c8a; --brand-band: linear-gradient(135deg, #33231c, #301d25); }
+.chn-logo { position: relative; z-index: 1; }
+.chn-card__title { padding-bottom: 2px; }
+.chn-gives { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.chn-gives li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
+.chn-gives svg { flex-shrink: 0; }
+.chn-cta:hover:not(:disabled) { filter: brightness(1.07); }
+.chn-card__foot .btn, .chn-acc__actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Channels, calmer (2026-10-03): no colour bands or stripes; equal-height cards with the status in
+   the header corner, plain account rows, one full-width action at the bottom. */
+.chn-card::before { display: none; }
+.chn-card { padding: 20px; gap: 14px; min-height: 0; }
+.chn-grid { align-items: stretch; }
+.chn-card.is-on { box-shadow: none; border-color: var(--border); }
+.chn-card__head { align-items: center; }
+.chn-logo { width: 44px; height: 44px; border-radius: 12px; box-shadow: none; background: var(--surface); border: 1px solid var(--border); }
+.chn-card__title { flex: 1; min-width: 0; padding: 0; }
+.chn-card__title h2 { margin: 0; font-size: 15.5px; }
+.chn-card__title small { display: block; margin-top: 1px; font-size: 12.5px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--text-muted); }
+.chn-status { flex-shrink: 0; padding: 3px 9px; font-size: 12px; font-weight: 600; border-radius: 999px; background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+.chn-status i { width: 6px; height: 6px; }
+.chn-status.is-on { background: var(--success-weak); border-color: transparent; color: var(--success); }
+.chn-status.is-on i { background: var(--success); }
+.chn-status.is-soon { border-style: solid; background: var(--surface); }
+.chn-card.is-soon { background: var(--bg); }
+.chn-card.is-soon .chn-logo, .chn-card.is-soon .chn-card__title, .chn-card.is-soon .chn-card__sub { opacity: .7; }
+.chn-acc { background: none; border: 0; border-bottom: 1px solid var(--border); }
+.chn-acc__text strong { font-size: 14px; }
+.chn-gives { padding-top: 2px; }
+.chn-gives svg { color: var(--success); }
+.chn-card__foot { border-top: 0; padding-top: 4px; }
+.chn-wide { width: 100%; justify-content: center; }
+.chn-card__foot .btn--secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); }
+/* The connected Page, unmistakable: its photo, a Live mark and a link to it, on a soft green row. */
+.chn-accs__label { font-size: 11.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); margin-bottom: -6px; }
+.chn-accs { border-top: 0; gap: 8px; }
+.chn-acc { padding: 12px; border: 1px solid color-mix(in srgb, var(--success) 30%, var(--border)); border-radius: 12px; background: color-mix(in srgb, var(--success-weak) 60%, var(--bg)); }
+.chn-face { position: relative; width: 42px; height: 42px; flex-shrink: 0; }
+.chn-face img, .chn-face__initial { width: 42px; height: 42px; border-radius: 10px; object-fit: cover; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--border); font-weight: 700; color: var(--text-muted); }
+.chn-face__badge { position: absolute; right: -4px; bottom: -4px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: var(--bg); box-shadow: 0 0 0 2px var(--bg); }
+.chn-acc__text strong { display: flex; align-items: center; gap: 8px; }
+.chn-acc__text small a { color: var(--accent); font-weight: 500; }
+.chn-acc__text small a { text-decoration: none; } .chn-acc__text small a:hover { text-decoration: underline; }
+/* Connected Page: one fact per line, then the named actions on their own line. */
+.chn-acc { flex-direction: column; align-items: stretch; gap: 10px; flex-wrap: nowrap; }
+.chn-acc__top { display: flex; gap: 12px; min-width: 0; }
+.chn-acc__text > * { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chn-acc__text strong { flex-wrap: nowrap; }
+.chn-acc__name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.chn-acc__actions { width: auto; padding: 10px 0 0; margin: 0; border-top: 1px solid color-mix(in srgb, var(--success) 22%, var(--border)); }
+.chn-act { display: inline-flex; align-items: center; border: 1px solid transparent; border-radius: var(--r-sm); background: none; font-weight: 500; color: var(--text); text-decoration: none; }
+.chn-act:hover { background: var(--bg); border-color: var(--border); }
+a.chn-act { color: var(--accent); }
+.chn-act--danger { color: var(--danger); }
+.chn-act--danger:hover { background: var(--danger-weak); border-color: transparent; }
+.chn-acc__actions { flex-wrap: nowrap; }
+.chn-act { gap: 5px; white-space: nowrap; font-size: 12.5px; }
+.chn-acc__name { font-weight: 650; color: var(--text); font-size: 14.5px; }
+.chn-acc__text strong { color: var(--text); }
+.chn-acc { overflow: hidden; }
+.chn-acc__actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; }
+.chn-act { justify-content: center; min-width: 0; padding: 6px 4px; overflow: hidden; text-overflow: ellipsis; }
+.chn-act--danger { margin-left: 0; }
+.chn-acc__text strong .chn-acc__name { font-size: 14.5px; font-weight: 650; color: var(--text); }
+.chn-acc__top { align-items: center; } .chn-acc__text small { font-size: 12.5px; }
