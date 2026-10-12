@@ -29,10 +29,12 @@ public final class EscalationReasons {
     public static final String OFF_TOPIC = "the question is not about this business";
     public static final String ASKED_FOR_PERSON = "the customer asked to speak to a person";
     public static final String ANGRY = "the customer is angry";
+    public static final String COMPLAINT = "the customer is unhappy and complaining";
     public static final String INJECTION = "the message tried to change the AI's instructions";
     public static final String NO_REPLY = "the AI could not produce a reply";
     public static final String CUT_OFF = "the AI's answer was cut off before it finished";
     public static final String AI_OFF = "AI replies are switched off for this workspace";
+    public static final String CHECK_REPLY = "the AI wrote a reply for you to check before it is sent";
     /** Starts the reason written when a customer repeats themselves; the count follows. */
     public static final String REPEATED_PREFIX = "The customer has sent the same message ";
 
@@ -43,7 +45,7 @@ public final class EscalationReasons {
             case NOT_COVERED, KNOWLEDGE_EMPTY, NOT_CONFIDENT -> Fix.KNOWLEDGE;
             case AI_OFF -> Fix.SETTINGS;
             case NO_REPLY, CUT_OFF -> Fix.SERVICE;
-            case OFF_TOPIC, ASKED_FOR_PERSON, INJECTION, ANGRY -> Fix.NONE;
+            case OFF_TOPIC, ASKED_FOR_PERSON, INJECTION, ANGRY, COMPLAINT, CHECK_REPLY -> Fix.NONE;
             default -> reason.startsWith(REPEATED_PREFIX) ? Fix.KNOWLEDGE
                     : reason.startsWith("the customer sent ") ? Fix.NONE   // a voice note, video or unreadable file
                     : null;

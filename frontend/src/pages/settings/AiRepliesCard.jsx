@@ -22,6 +22,18 @@ export default function AiRepliesCard({ ws, note, settings }) {
                                 disabled={readOnly} label={t('The AI answers customers')} />
                     </div>
                 </Row>
+                <Row title={t('Check AI replies first')}
+                     hint={draft.reviewAiReplies
+                         ? t('On: the AI writes its answer as a draft in the inbox, and a person reads it and sends it. Greetings still go straight out.')
+                         : t('Off: the AI sends its answers itself. Turn this on while your knowledge is still being filled in.')}>
+                    <div className="setting__switch">
+                        <span className={`setting__state${draft.reviewAiReplies ? ' setting__state--on' : ''}`}>
+                            {draft.reviewAiReplies ? t('On') : t('Off')}
+                        </span>
+                        <Switch checked={draft.reviewAiReplies} onChange={v => set('reviewAiReplies', v)}
+                                disabled={readOnly || !draft.aiRepliesEnabled} label={t('Check AI replies first')} />
+                    </div>
+                </Row>
                 <Row title={t('Handover message')} htmlFor="set-handover"
                      hint={t('Sent to the customer when a person takes over. Leave it empty to use the wording shown.')}>
                     <textarea id="set-handover" className="setting__input setting__textarea" rows={2} maxLength={500}

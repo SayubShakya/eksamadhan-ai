@@ -1,6 +1,7 @@
 // The reply area under the open conversation: who has it, any send error, the quote being
 // answered, upload progress, and either the voice recorder or the text box with its tools.
-import { IconSend, IconClose, IconMic, IconStop, IconImage, IconSmile, IconThumb } from '../../components/ui/icons.jsx';
+import { useState } from 'react';
+import { IconSend, IconClose, IconMic, IconStop, IconImage, IconSmile, IconThumb, IconSparkle } from '../../components/ui/icons.jsx';
 import { UploadProgress } from '../../components/ui/Loading.jsx';
 import { isRecordingSupported, formatDuration } from '../../lib/recorder.js';
 import { STATUS_LABEL, ownershipLabel } from '../../lib/format.js';
@@ -18,6 +19,9 @@ export default function Composer({ thread, me, typing, acting, act, sendError, o
         emojiOpen, setEmojiOpen, emojiRef, imageRef, fieldRef,
         beginRecording, finishRecording, discardRecording, sendImage, submit, insertEmoji,
     } = composer;
+    // The draft used (sent, or moved into the box), hidden until the server clears it, so it
+    // cannot be sent twice in the moment before the conversation refreshes.
+    const [spentDraft, setSpentDraft] = useState(null);
 
     return (
         <div className="composer">
@@ -46,6 +50,25 @@ export default function Composer({ thread, me, typing, acting, act, sendError, o
                 )}
 
             </div>
+            )}
+
+            {/* "Check AI replies first" (Settings): the AI's answer, waiting for a person to
+                read it. Send it as it is, or put it in the box to change it first. */}
+            {thread.aiDraft && thread.aiDraft !== spentDraft && !thread.spam && !recorder && (
+                <div className="composer__aidraft">
+                    <span className="composer__aidraft-label"><IconSparkle size={14} /> {t('The AI suggests this reply. Check it before it goes.')}</span>
+                    <p className="composer__aidraft-text">{thread.aiDraft}</p>
+                    <div className="composer__aidraft-actions">
+                        <button type="button" className="btn btn--secondary" disabled={busy}
+                                onClick={() => { setSpentDraft(thread.aiDraft); setDraft(thread.aiDraft); requestAnimationFrame(() => fieldRef.current?.focus()); }}>
+                            {t('Edit first')}
+                        </button>
+                        <button type="button" className={`btn btn--primary${busy ? ' btn--busy' : ''}`} disabled={busy}
+                                onClick={async () => { setSpentDraft(thread.aiDraft); if (await onSend(thread, thread.aiDraft, null) === false) setSpentDraft(null); }}>
+                            {t('Send this reply')} <IconSend size={14} />
+                        </button>
+                    </div>
+                </div>
             )}
 
             {sendError && (

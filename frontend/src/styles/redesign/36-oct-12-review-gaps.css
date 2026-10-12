@@ -1,0 +1,31 @@
+/* 12 Oct: after the shop owners' survey. The AI's draft waiting in the composer ("Check AI
+   replies first"), and the Knowledge page's questions the AI could not answer. */
+
+.composer__aidraft {
+    margin: 10px 20px 0; padding: 12px 14px; border-radius: var(--r-sm);
+    background: var(--accent-tint); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    display: grid; gap: 8px;
+}
+.composer__aidraft-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--accent); }
+.composer__aidraft-text { margin: 0; font-size: 14px; line-height: 1.5; color: var(--text); white-space: pre-wrap; }
+.composer__aidraft-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.composer__aidraft-actions .btn { min-height: 34px; padding: 6px 12px; font-size: 13.5px; }
+
+.kq-gaps { padding: 20px 22px; display: grid; gap: 14px; margin-top: 24px; }
+.kq-gaps__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.kq-gaps__more { justify-self: start; }
+.kq-gap {
+    display: flex; align-items: center; gap: 14px; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg);
+}
+.kq-gap--on { border-color: var(--tone, var(--warning)); background: var(--warning-weak); }
+.kq-gap__body { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.kq-gap__q { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; quotes: "\201C" "\201D"; }
+.kq-gap__meta { font-size: 12.5px; color: var(--text-muted); }
+.kq-gap__actions { display: flex; gap: 6px; flex-shrink: 0; }
+.kq-gap__actions .btn { min-height: 32px; padding: 5px 10px; font-size: 13px; }
+
+@media (max-width: 560px) {
+    .kq-gap { flex-direction: column; align-items: stretch; }
+    .kq-gap__actions { justify-content: flex-end; }
+}

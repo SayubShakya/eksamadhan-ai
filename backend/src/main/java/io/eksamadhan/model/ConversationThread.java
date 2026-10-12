@@ -137,6 +137,16 @@ public class ConversationThread {
     @Column(name = "summary_message_count")
     private Integer summaryMessageCount;
 
+    /**
+     * The AI's answer held back for a person to check (Settings, "Check AI replies first").
+     * Cleared when someone replies or the AI next sends on its own.
+     */
+    @Column(name = "ai_draft", columnDefinition = "TEXT")
+    private String aiDraft;
+
+    @Column(name = "ai_draft_at")
+    private ZonedDateTime aiDraftAt;
+
     /** Denormalised so the inbox can sort and preview without loading every message. */
     private ZonedDateTime lastMessageAt;
 

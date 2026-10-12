@@ -1,6 +1,6 @@
 // The "Add a picture" tab once a picture is chosen: its preview, what it shows, an optional
 // caption, upload progress, and Add picture / Cancel.
-import { useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { UploadProgress } from '../../components/ui/Loading.jsx';
 import { t } from '../../lib/i18n.js';
 
@@ -9,14 +9,20 @@ import { t } from '../../lib/i18n.js';
  * be retrieved, so saving first would create something unreachable.
  */
 export default function AddPictureForm({ image, title, onTitle, caption, onCaption, busy, sent, onSubmit, onCancel }) {
-    // One preview address per chosen picture, released when it changes; made in render it was a
-    // new blob URL (and a leaked one) on every keystroke in the title.
-    const preview = useMemo(() => (image ? URL.createObjectURL(image) : null), [image]);
-    useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+    // One preview address per chosen picture, made and released in the same effect. With useMemo
+    // the address outlived its cleanup: React's development double-run revoked it, and the
+    // preview showed a broken image (2026-10-11).
+    const [preview, setPreview] = useState(null);
+    useEffect(() => {
+        if (!image) { setPreview(null); return undefined; }
+        const url = URL.createObjectURL(image);
+        setPreview(url);
+        return () => URL.revokeObjectURL(url);
+    }, [image]);
 
     return (
         <form className="imgform" onSubmit={onSubmit}>
-            <img className="imgform__preview" src={preview} alt="" />
+            {preview ? <img className="imgform__preview" src={preview} alt="" /> : <span className="imgform__preview" aria-hidden="true" />}
             <div className="imgform__fields">
                 <label className="field">
                     <span>{t('What does this show?')}</span>

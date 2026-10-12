@@ -83,6 +83,12 @@ class AccuracyEvaluationTest {
     @Test
     void ragAnswersAgainstTheLabelledSet() throws Exception {
         List<Question> questions = load();
+        // -Devaluation.only=C11,W22 runs just those, to look again at a few without the full hour.
+        String only = System.getProperty("evaluation.only", "").strip();
+        if (!only.isEmpty()) {
+            java.util.Set<String> ids = java.util.Set.of(only.split("\\s*,\\s*"));
+            questions = questions.stream().filter(q -> ids.contains(q.id())).toList();
+        }
         List<UUID> found = jdbc.queryForList("""
                 SELECT sp.id FROM social_pages sp
                   JOIN knowledge_sources ks ON ks.organization_id = sp.organization_id

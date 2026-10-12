@@ -24,7 +24,7 @@ export default function AddTextForm({ title, onTitle, text, onText, busy, sent, 
             <label className="field">
                 <span className="sr-only">{t('Text')}</span>
                 <span className="kq-textbox">
-                    <textarea className="knowledge__text" value={text} rows={7}
+                    <textarea id="kq-text" className="knowledge__text" value={text} rows={7}
                               onChange={e => onText(e.target.value)}
                               placeholder={t('Paste your policies, FAQs or product details here…')} />
                     <span className="kq-textfoot">

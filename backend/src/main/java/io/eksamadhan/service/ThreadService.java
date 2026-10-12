@@ -108,13 +108,18 @@ public class ThreadService {
      */
     @Transactional
     public void staffReplied(SocialPage page, String customerId, io.eksamadhan.model.User by) {
-        findActive(page, customerId)
-                .filter(thread -> thread.getStatus() == ThreadStatus.OPEN_FOR_AGENT)
-                .ifPresent(thread -> {
-                    thread.setStatus(ThreadStatus.AGENT_HANDLING);
-                    if (thread.getAssignedAgentId() == null) thread.setAssignedAgentId(by.getId().toString());
-                    threadRepository.save(thread);
-                });
+        findActive(page, customerId).ifPresent(thread -> {
+            // A person has answered, so any AI draft waiting to be checked is spent.
+            boolean changed = thread.getAiDraft() != null;
+            thread.setAiDraft(null);
+            thread.setAiDraftAt(null);
+            if (thread.getStatus() == ThreadStatus.OPEN_FOR_AGENT) {
+                thread.setStatus(ThreadStatus.AGENT_HANDLING);
+                if (thread.getAssignedAgentId() == null) thread.setAssignedAgentId(by.getId().toString());
+                changed = true;
+            }
+            if (changed) threadRepository.save(thread);
+        });
     }
 
     /**

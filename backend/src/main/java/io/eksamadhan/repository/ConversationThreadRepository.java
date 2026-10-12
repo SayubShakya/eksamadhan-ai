@@ -142,6 +142,13 @@ public interface ConversationThreadRepository extends JpaRepository<Conversation
             "UPDATE ConversationThread t SET t.offTopicStreak = :streak, t.unrelated = :unrelated WHERE t.id = :id")
     int updateOffTopic(UUID id, int streak, boolean unrelated);
 
+    /** The AI's reply held back for a person to check; null clears it. */
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
+    @org.springframework.data.jpa.repository.Query(
+            "UPDATE ConversationThread t SET t.aiDraft = :draft, t.aiDraftAt = :at WHERE t.id = :id")
+    int updateAiDraft(UUID id, String draft, java.time.ZonedDateTime at);
+
     /** Only ever raises it: the conversation is as urgent as its most urgent message. */
     @org.springframework.transaction.annotation.Transactional
     @org.springframework.data.jpa.repository.Modifying

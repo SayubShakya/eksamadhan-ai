@@ -86,6 +86,11 @@ public class MessageIngestedListener {
                 Sentiment mood = sentimentService.analyse(event.messageId());
                 if (mood != null && mood.warrantsHuman()) {
                     aiReplyService.escalateForMood(event.messageId(), event.pageId());
+                } else if (mood == Sentiment.NEGATIVE && isComplaint(event.messageId())) {
+                    // Frustration is mostly read as NEGATIVE, not ANGRY ("I am furious", "this
+                    // is the third time and nobody helps"): measured on 12 October, Table10TriageTest.
+                    // An unhappy complaint is what a person is for, even when the AI could answer.
+                    aiReplyService.escalateForMood(event.messageId(), event.pageId(), EscalationReasons.COMPLAINT);
                 }
             } catch (Exception e) {
                 log.debug("Sentiment failed for message {}: {}", event.messageId(), e.getMessage());
@@ -100,5 +105,12 @@ public class MessageIngestedListener {
         } catch (Exception e) {
             log.debug("Could not embed message {}: {}", event.messageId(), e.getMessage());
         }
+    }
+
+    /** Jev read the message as a complaint. Without Jev nothing says so, and only anger counts. */
+    private boolean isComplaint(java.util.UUID messageId) {
+        return triageService.judged(messageId)
+                .map(t -> "complaint".equals(t.getIntent()))
+                .orElse(false);
     }
 }

@@ -56,8 +56,10 @@ public class SettingsController {
         this.jwt = jwt;
     }
 
+    /** `reviewAiReplies` may be left out, which keeps the current setting. */
     public record WorkspaceSettings(String name, boolean aiRepliesEnabled,
-                                    String handoverMessage, String closingMessage) {}
+                                    String handoverMessage, String closingMessage,
+                                    Boolean reviewAiReplies) {}
 
     public record MySettings(Boolean emailAlerts) {}
 
@@ -71,6 +73,7 @@ public class SettingsController {
                 "workspace", Map.of("name", org.getName()),
                 "ai", Map.of(
                         "repliesEnabled", org.isAiRepliesEnabled(),
+                        "reviewReplies", org.isReviewAiReplies(),
                         "handoverMessage", org.getHandoverMessage() == null ? "" : org.getHandoverMessage(),
                         "closingMessage", org.getClosingMessage() == null ? "" : org.getClosingMessage(),
                         "defaultHandover", aiReplies.defaultHandoverMessage(),
@@ -97,6 +100,7 @@ public class SettingsController {
         Organization org = organizations.findById(me.getOrganization().getId()).orElseThrow();
         org.setName(name);
         org.setAiRepliesEnabled(request.aiRepliesEnabled());
+        if (request.reviewAiReplies() != null) org.setReviewAiReplies(request.reviewAiReplies());
         org.setHandoverMessage(message(request.handoverMessage(), "The handover message"));
         org.setClosingMessage(message(request.closingMessage(), "The closing message"));
         organizations.save(org);

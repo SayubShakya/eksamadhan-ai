@@ -87,6 +87,9 @@ export const changeRole = (id, role) => axios.patch(`/api/team/members/${id}/rol
 // ── Knowledge base ──────────────────────────────────────────────────────────
 export const getKnowledge = () => axios.get('/api/knowledge').then(r => r.data);
 export const addKnowledgeText = (payload) => axios.post('/api/knowledge/text', payload).then(r => r.data);
+export const getKnowledgeGaps = () => axios.get('/api/knowledge/gaps').then(r => r.data);
+export const dismissKnowledgeGap = (question) =>
+    axios.post('/api/knowledge/gaps/dismiss', { question }).then(r => r.data);
 export const getKnowledgeContent = (id) =>
     axios.get(`/api/knowledge/${id}/content`).then(r => r.data);
 export const reindexKnowledge = (id) =>

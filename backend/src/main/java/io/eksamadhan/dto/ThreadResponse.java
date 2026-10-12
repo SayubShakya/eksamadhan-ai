@@ -27,6 +27,7 @@ public class ThreadResponse {
     private int unanswered;
     private String summary;          // the handover brief
     private boolean summaryStale;    // messages have arrived since it was written
+    private String aiDraft;          // the AI's reply waiting for a person to check, or null
     private Integer priority;        // 1 urgent, 2 normal, 3 low; null until Jev has judged a message
     private boolean spam;
     private String spamKind;         // promotion | scam | gibberish | spam

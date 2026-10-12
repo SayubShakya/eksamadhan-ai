@@ -8,6 +8,7 @@ import { t } from '../../lib/i18n.js';
 const fromSettings = (s) => ({
     name: s.workspace.name,
     aiRepliesEnabled: s.ai.repliesEnabled,
+    reviewAiReplies: Boolean(s.ai.reviewReplies),
     handoverMessage: s.ai.handoverMessage,
     closingMessage: s.ai.closingMessage,
 });
@@ -29,6 +30,7 @@ export default function useWorkspaceDraft({ settings, onSaved, onRenamed }) {
     const set = (key, value) => setDraft(d => ({ ...d, [key]: value }));
     const nameChanged = draft.name !== saved.name;
     const aiChanged = draft.aiRepliesEnabled !== saved.aiRepliesEnabled
+        || draft.reviewAiReplies !== saved.reviewAiReplies
         || draft.handoverMessage !== saved.handoverMessage
         || draft.closingMessage !== saved.closingMessage;
 
@@ -38,7 +40,7 @@ export default function useWorkspaceDraft({ settings, onSaved, onRenamed }) {
         setBusy(card);
         const payload = card === 'workspace'
             ? { ...saved, name: draft.name }
-            : { ...saved, aiRepliesEnabled: draft.aiRepliesEnabled, handoverMessage: draft.handoverMessage, closingMessage: draft.closingMessage };
+            : { ...saved, aiRepliesEnabled: draft.aiRepliesEnabled, reviewAiReplies: draft.reviewAiReplies, handoverMessage: draft.handoverMessage, closingMessage: draft.closingMessage };
         try {
             const next = await api.saveWorkspaceSettings(payload);
             onSaved(next);
@@ -48,7 +50,7 @@ export default function useWorkspaceDraft({ settings, onSaved, onRenamed }) {
             const kept = fromSettings(next);
             setDraft(d => (card === 'workspace'
                 ? { ...d, name: kept.name }
-                : { ...d, aiRepliesEnabled: kept.aiRepliesEnabled, handoverMessage: kept.handoverMessage, closingMessage: kept.closingMessage }));
+                : { ...d, aiRepliesEnabled: kept.aiRepliesEnabled, reviewAiReplies: kept.reviewAiReplies, handoverMessage: kept.handoverMessage, closingMessage: kept.closingMessage }));
             setSavedCard(card);
             toast.success(card === 'workspace' ? t('Workspace name saved') : t('AI reply settings saved'), { body: card === 'workspace' ? t('Invites and the join page use the new name.') : t('They apply to the next customer message.') });
         } catch (err) {
@@ -60,7 +62,7 @@ export default function useWorkspaceDraft({ settings, onSaved, onRenamed }) {
 
     const cancel = (card) => () => setDraft(d => (card === 'workspace'
         ? { ...d, name: saved.name }
-        : { ...d, aiRepliesEnabled: saved.aiRepliesEnabled, handoverMessage: saved.handoverMessage, closingMessage: saved.closingMessage }));
+        : { ...d, aiRepliesEnabled: saved.aiRepliesEnabled, reviewAiReplies: saved.reviewAiReplies, handoverMessage: saved.handoverMessage, closingMessage: saved.closingMessage }));
 
     return { draft, set, busy, error, savedCard, readOnly, nameChanged, aiChanged, save, cancel };
 }

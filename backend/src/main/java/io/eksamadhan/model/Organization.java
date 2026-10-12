@@ -40,6 +40,14 @@ public class Organization {
     @Column(name = "ai_replies_enabled", nullable = false)
     private boolean aiRepliesEnabled = true;
 
+    /**
+     * Settings page: on, the AI's answer to a question waits as a draft for a person to check
+     * and send. Greetings still go straight out.
+     */
+    @Builder.Default
+    @Column(name = "review_ai_replies", nullable = false)
+    private boolean reviewAiReplies = false;
+
     /** What the customer is told when a person takes over; null means the built-in default. */
     @Column(name = "handover_message", columnDefinition = "TEXT")
     private String handoverMessage;

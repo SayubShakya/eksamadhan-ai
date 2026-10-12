@@ -228,6 +228,7 @@ public class ThreadController {
                 .lastMessageDirection(t.getLastMessageDirection())
                 .unanswered(t.getUnanswered())
                 .summary(t.getSummary())
+                .aiDraft(t.getAiDraft())
                 .summaryStale(t.getSummary() != null && t.getSummaryMessageCount() != null
                         && summaryService.messageCount(t) > t.getSummaryMessageCount())
                 .priority(t.getPriority())

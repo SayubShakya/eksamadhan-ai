@@ -14,6 +14,7 @@ import SourcesHead from './knowledge/SourcesHead.jsx';
 import SourceList from './knowledge/SourceList.jsx';
 import KnowledgeTest from './knowledge/KnowledgeTest.jsx';
 import SourceTextDialog from './knowledge/SourceTextDialog.jsx';
+import KnowledgeGaps from './knowledge/KnowledgeGaps.jsx';
 
 /**
  * The knowledge base the AI answers from (PRD 4.3, FR-02).
@@ -35,7 +36,14 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
     const [removing, setRemoving] = useState(null);
     // What a source was actually read as — the crawler's reading of a page is worth checking.
     const [viewing, setViewing] = useState(null);
-    const add = useAddKnowledge({ load, setError });
+    // Questions the AI handed over for want of knowledge; managers only, as they can add it.
+    const [gaps, setGaps] = useState(null);
+    const [answering, setAnswering] = useState(null);   // the gap being written up in the text tab
+    const add = useAddKnowledge({ load, setError, afterText: () => {
+        if (!answering) return;
+        api.dismissKnowledgeGap(answering).then(setGaps).catch(() => {});
+        setAnswering(null);
+    } });
     const test = useKnowledgeSearch(setError);
     const closeViewing = useCallback(() => setViewing(null), []);
 
@@ -46,6 +54,36 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
         const id = setInterval(load, 2000);
         return () => clearInterval(id);
     }, [indexing, load]);
+
+    const canManageNow = library ? library.canManage : roleCanManage;
+    useEffect(() => {
+        if (!canManageNow) return;
+        api.getKnowledgeGaps().then(setGaps).catch(() => setGaps(null));
+    }, [canManageNow]);
+
+    // The question goes in as the passage's heading line, so the answer written under it is
+    // found by the same words the customer used.
+    const answerGap = (question) => {
+        setAnswering(question);
+        setAddTab('text');
+        setError('');
+        add.setText(prev => `${prev.trim() ? `${prev.trimEnd()}\n\n` : ''}${question}\n`);
+        requestAnimationFrame(() => {
+            const box = document.getElementById('kq-text');
+            box?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            box?.focus({ preventScroll: true });
+        });
+    };
+
+    // Cleared without adding: whatever is written next is not that question's answer.
+    useEffect(() => { if (!add.text.trim()) setAnswering(null); }, [add.text]);
+
+    const dismissGap = async (question) => {
+        try {
+            setGaps(await api.dismissKnowledgeGap(question));
+            if (answering === question) setAnswering(null);
+        } catch (err) { setError(api.errorMessage(err, t('That could not be dismissed.'))); }
+    };
 
     const view = async (source) => {
         setViewing({ ...source, content: null });
@@ -97,6 +135,8 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                 <SourceList sources={loading ? [] : library.sources} loading={loading} canManage={canManage}
                             onView={view} onRemove={setRemoving} />
             )}
+
+            {canManage && <KnowledgeGaps gaps={gaps} answering={answering} onAnswer={answerGap} onDismiss={dismissGap} />}
 
             <KnowledgeTest query={test.query} onQuery={test.setQuery} results={test.results}
                            searching={test.searching} onSearch={test.search} onClear={test.clear} />

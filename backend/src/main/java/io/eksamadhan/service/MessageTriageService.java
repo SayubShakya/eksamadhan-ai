@@ -134,6 +134,11 @@ public class MessageTriageService {
         return mode;
     }
 
+    /** The judgment already made for this message, if any, without asking Jev again. */
+    public Optional<MessageTriage> judged(UUID messageId) {
+        return mode == Mode.OFF ? Optional.empty() : triageRepository.findBySocialMessageId(messageId);
+    }
+
     /**
      * The triage for one inbound message: the stored one if it was already judged, otherwise
      * a fresh Jev call, recorded. Empty when there is nothing to judge (no text) or the call

@@ -61,6 +61,15 @@ public class AiReplyService {
             Declining is a correct outcome when the context genuinely does not cover the \
             question. But if the answer IS in the context, give it.
 
+            Advice about the health or safety of a person or an animal, an allergy, or whether \
+            a product suits a particular skin, body or medical condition, is answered only when \
+            the context states it for that case. Otherwise set "answered" to false and leave \
+            "reply" empty, so the shop answers it: never give a general tip of your own.
+
+            You are the shop's assistant, not a person: never say or suggest that you are a \
+            human. If the customer asks to speak to a person, a human, staff or the owner, set \
+            "answered" to false and leave "reply" empty, so a human takes it.
+
             Write like a person in a chat: two or three short sentences, no sign-off, \
             no markdown, no bullet points.
 
@@ -374,6 +383,19 @@ public class AiReplyService {
             return;
         }
 
+        // A request for a person is honoured in shadow mode too (2026-10-11). Shadow only
+        // records Jev's judgment, so "I want to talk to a real person" reached the model, which
+        // answered "I am a real person". Only this action; the firewall's other shortcuts still
+        // wait for "on".
+        if (triageService.mode() == MessageTriageService.Mode.SHADOW && question.equals(ownQuestion)
+                && triageService.judged(message.getId()).map(MessageTriageService::actionOf)
+                        .orElse(MessageTriageService.Action.NONE) == MessageTriageService.Action.ESCALATE_HUMAN) {
+            trace.here(TraceRecorder.Kind.DECISION, "Asks for a person?", "yes, hand over",
+                    TraceRecorder.of("mode", "shadow"), TraceRecorder.of("action", "ESCALATE_HUMAN"));
+            escalate(thread, page, message.getSenderId(), EscalationReasons.ASKED_FOR_PERSON);
+            return;
+        }
+
         long searchStarted = System.nanoTime();
         List<RetrievalService.Passage> passages =
                 retrievalService.search(organization, question, KNOWLEDGE_PASSAGES);
@@ -469,6 +491,23 @@ public class AiReplyService {
         // sent a payment QR code in reply to an insult — the QR was simply the least
         // unrelated thing in a two-item knowledge base.
         List<RetrievalService.Passage> used = weakContext ? List.of() : passages;
+
+        // "Check AI replies first" (Settings): an answer to a real question waits for a person
+        // to read and send. A greeting carries no facts to get wrong, so it still goes out.
+        boolean review = organization.isReviewAiReplies() && !weakContext;
+        if (organization.isReviewAiReplies()) {
+            trace.here(TraceRecorder.Kind.DECISION, "Does a person check AI replies first?",
+                    review ? "yes, kept as a draft" : "no, a greeting goes now",
+                    TraceRecorder.of("workspace setting", true, "greeting", weakContext), null);
+        }
+        if (review) {
+            // After the handover, whose save of the whole conversation would otherwise write
+            // over the draft with the copy it loaded.
+            escalate(thread, page, message.getSenderId(), EscalationReasons.CHECK_REPLY);
+            threadRepository.updateAiDraft(thread.getId(), plainPunctuation(verdict.reply()), java.time.ZonedDateTime.now());
+            return;
+        }
+        if (thread.getAiDraft() != null) threadRepository.updateAiDraft(thread.getId(), null, null);
         send(message, page, verdict, summarise(used), pictureFor(used), startedAt);
     }
 
@@ -1076,13 +1115,18 @@ public class AiReplyService {
      * follows straight after it.
      */
     public void escalateForMood(UUID messageId, UUID pageId) {
+        escalateForMood(messageId, pageId, EscalationReasons.ANGRY);
+    }
+
+    /** As above, with the reason the person is given: angry, or an unhappy complaint. */
+    public void escalateForMood(UUID messageId, UUID pageId, String reason) {
         trace.begin(messageId);
         try {
             SocialMessage message = messageRepository.findWithThreadById(messageId).orElse(null);
             if (message == null || message.getThread() == null
                     || message.getThread().getStatus() != ThreadStatus.AI_HANDLING) return;
             SocialPage page = pageRepository.findWithOrganizationById(pageId).orElse(null);
-            escalate(message.getThread(), page, message.getSenderId(), EscalationReasons.ANGRY);
+            escalate(message.getThread(), page, message.getSenderId(), reason);
         } catch (Exception e) {
             log.error("Could not hand an angry customer to a person", e);
         } finally {

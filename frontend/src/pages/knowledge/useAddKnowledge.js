@@ -5,7 +5,7 @@ import * as api from '../../lib/api.js';
 import { toast } from '../../lib/toast.js';
 import { t } from '../../lib/i18n.js';
 
-export default function useAddKnowledge({ load, setError }) {
+export default function useAddKnowledge({ load, setError, afterText }) {
     // Bytes sent for the file being uploaded: { label, fraction } while it goes, else null.
     const [sent, setSent] = useState(null);
     const [title, setTitle] = useState('');
@@ -28,6 +28,7 @@ export default function useAddKnowledge({ load, setError }) {
             setTitle('');
             setText('');
             await load();
+            afterText?.();
         } catch (err) {
             setError(api.errorMessage(err, t('That could not be added.')));
         } finally {
