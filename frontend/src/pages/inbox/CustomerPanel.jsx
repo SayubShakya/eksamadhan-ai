@@ -9,11 +9,13 @@ import { t } from '../../lib/i18n.js';
 import PersonAvatar, { ChannelIcon } from './PersonAvatar.jsx';
 import SpamStatus from './SpamStatus.jsx';
 import ConversationSummary from './ConversationSummary.jsx';
+import SamePerson from './SamePerson.jsx';
 import IconButton from '../../components/ui/IconButton.jsx';
 
 export default function CustomerPanel({
     thread, platform, participants, me, team, open, hidden, onClose, onHide,
     onAssign, onThreadAction, acting, act, summarising, onSummarise,
+    allThreads, platformOf, onOpenThread,
 }) {
     const [copiedId, setCopiedId] = useState(false);
 
@@ -145,6 +147,8 @@ export default function CustomerPanel({
                         </ul>
                     </div>
                 )}
+
+                <SamePerson thread={thread} allThreads={allThreads} platformOf={platformOf} onOpenThread={onOpenThread} />
 
                 <ConversationSummary thread={thread} summarising={summarising} onSummarise={onSummarise} />
             </aside>

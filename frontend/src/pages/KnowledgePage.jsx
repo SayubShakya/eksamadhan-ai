@@ -87,7 +87,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
 
     const view = async (source) => {
         setViewing({ ...source, content: null });
-        try { setViewing(await api.getKnowledgeContent(source.id)); }
+        try { setViewing({ ...source, ...(await api.getKnowledgeContent(source.id)) }); }   // keeps the picture's address
         catch (err) {
             setViewing(null);
             setError(api.errorMessage(err, t('Could not read that source.')));

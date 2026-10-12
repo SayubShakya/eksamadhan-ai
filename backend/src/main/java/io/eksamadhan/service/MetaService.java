@@ -50,7 +50,7 @@ public class MetaService {
                 .uri(uriBuilder -> uriBuilder
                         .path("/me/accounts")
                         .queryParam("access_token", userAccessToken)
-                        .queryParam("fields", "name,access_token,instagram_business_account,tasks")
+                        .queryParam("fields", "name,access_token,instagram_business_account{id,username},tasks")
                         .build())
                 .retrieve()
                 .bodyToMono(Map.class)
@@ -234,9 +234,21 @@ public class MetaService {
      * granted), so callers treat an empty result as normal.
      */
     public Mono<Map> getUserProfile(String psid, String pageAccessToken) {
+        return getUserProfile(psid, pageAccessToken, "FACEBOOK");
+    }
+
+    /**
+     * The same for either platform. An Instagram user has no first or last name: Meta answers
+     * with {@code name} (often empty) and {@code username}. Asking an Instagram id for
+     * first_name fails outright, which left every Instagram customer called "Unknown".
+     */
+    public Mono<Map> getUserProfile(String psid, String pageAccessToken, String platform) {
+        String fields = "INSTAGRAM".equalsIgnoreCase(platform)
+                ? "name,username,profile_pic"
+                : "first_name,last_name,profile_pic";
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder.path("/{psid}")
-                        .queryParam("fields", "first_name,last_name,profile_pic")
+                        .queryParam("fields", fields)
                         .queryParam("access_token", pageAccessToken)
                         .build(psid))
                 .retrieve()
@@ -245,6 +257,40 @@ public class MetaService {
                     log.debug("Could not fetch profile for {}: {}", psid, err.getMessage());
                     return Mono.empty();
                 });
+    }
+
+    /** An Instagram account's or a Facebook Page's username, or empty when there is none. */
+    public Mono<String> getInstagramUsername(String instagramId, String pageAccessToken) {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder.path("/{id}")
+                        .queryParam("fields", "username")
+                        .queryParam("access_token", pageAccessToken)
+                        .build(instagramId))
+                .retrieve()
+                .bodyToMono(Map.class)
+                .map(m -> m.get("username") instanceof String u ? u : "")
+                .onErrorResume(err -> {
+                    log.debug("Could not read the username of {}: {}", instagramId, err.getMessage());
+                    return Mono.just("");
+                });
+    }
+
+    /**
+     * The name to show for a profile from either platform: first and last name on Facebook,
+     * the name and then the username on Instagram. Blank when Meta gave neither.
+     */
+    public static String displayName(Map<?, ?> profile) {
+        if (profile == null) return "";
+        String first = text(profile.get("first_name"));
+        String last = text(profile.get("last_name"));
+        String full = (first + " " + last).trim();
+        if (!full.isEmpty()) return full;
+        String name = text(profile.get("name"));
+        return name.isEmpty() ? text(profile.get("username")) : name;
+    }
+
+    private static String text(Object value) {
+        return value instanceof String s ? s.trim() : "";
     }
 
     public Mono<Map> sendAttachment(String recipientId, java.io.File file, String type,

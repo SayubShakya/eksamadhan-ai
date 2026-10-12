@@ -163,6 +163,41 @@ npm run dev > "$ROOT_DIR/frontend.log" 2>&1 &
 FRONTEND_PID=$!
 cd "$ROOT_DIR"
 
+# 📱 6. DASHBOARD TUNNEL (phones and colleagues)
+# A Cloudflare quick tunnel gives the dashboard a public https address. The backend reads that
+# address from cloudflared itself (PublicUrl), so links and the Team page's QR code follow it.
+# A quick tunnel loses its connection when the laptop sleeps or the network changes, and does
+# not come back: cloudflared keeps running, but its address no longer resolves. So this checks
+# cloudflared's /ready every 30 seconds and starts a fresh tunnel after two failed checks.
+DASH_TUNNEL_LOG="$ROOT_DIR/dashboard-tunnel.log"
+dashboard_tunnel_ready() {
+  for port in 20241 20242 20243 20244 20245; do
+    curl -s -m 2 "http://localhost:$port/ready" 2>/dev/null | grep -q '"status":200' && return 0
+  done
+  return 1
+}
+if command -v cloudflared >/dev/null 2>&1; then
+  echo "📱 Starting the dashboard tunnel (Cloudflare)..."
+  pkill -f 'cloudflared tunnel --url http://localhost:5174' 2>/dev/null || true
+  cloudflared tunnel --url http://localhost:5174 > "$DASH_TUNNEL_LOG" 2>&1 &
+  (
+    FAILS=0
+    while true; do
+      sleep 30
+      if dashboard_tunnel_ready; then FAILS=0; continue; fi
+      FAILS=$((FAILS + 1))
+      [ "$FAILS" -lt 2 ] && continue
+      echo "♻️  Dashboard tunnel lost its connection — starting a new one..."
+      pkill -f 'cloudflared tunnel --url http://localhost:5174' 2>/dev/null || true
+      cloudflared tunnel --url http://localhost:5174 > "$DASH_TUNNEL_LOG" 2>&1 &
+      FAILS=0
+    done
+  ) &
+  DASH_TUNNEL_PID=$!
+else
+  echo "ℹ️  cloudflared not installed — the dashboard opens on this computer only."
+fi
+
 echo "--------------------------------------------------------"
 echo "🎉 SYSTEM FULL-STACK READY!"
 echo "--------------------------------------------------------"
@@ -189,7 +224,8 @@ echo "Press Ctrl+C to stop all services."
 cleanup() {
     echo ""
     echo "🛑 Shutting down all services..."
-    kill $BACKEND_PID $FRONTEND_PID $TUNNEL_PID $KEEPALIVE_PID 2>/dev/null
+    kill $BACKEND_PID $FRONTEND_PID $TUNNEL_PID $KEEPALIVE_PID $DASH_TUNNEL_PID 2>/dev/null
+    pkill -f 'cloudflared tunnel --url http://localhost:5174' 2>/dev/null
     echo "👋 Goodbye!"
 }
 trap cleanup EXIT

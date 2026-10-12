@@ -37,6 +37,8 @@ public class ThreadResponse {
     private SpamMessage spamMessage; // the message that decided it
     private boolean pinned;          // pinned by the person asking, not by anyone else
     private boolean aiTyping;        // the AI is writing a reply right now (AiTypingState)
+    private java.util.List<String> linkedChannels; // other channels this person is linked on (CustomerLinkService)
+    private String contactId;        // the linked person this conversation belongs to, or null
 
     public record SpamMessage(String id, String text, String timestamp) {}
 }

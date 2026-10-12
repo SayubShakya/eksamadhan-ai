@@ -2,7 +2,8 @@
 // Everyone / Mine, and the channel select.
 import { IconChevronLeft } from '../../components/ui/icons.jsx';
 import { t } from '../../lib/i18n.js';
-import { FILTERS, PLATFORMS, countLabel } from './inboxFilters.js';
+import { FILTERS, countLabel } from './inboxFilters.js';
+import ChannelFilter from './ChannelFilter.jsx';
 import IconButton from '../../components/ui/IconButton.jsx';
 
 /**
@@ -18,7 +19,7 @@ export default function ConversationListHead({
             <div className="convlist__title">
                 <h2>{t('Conversations')}</h2>
                 <span className="convlist__titleend">
-                    {!pending && <span className="count convlist__count">{countLabel(filter, platformFilter, shownCount)}</span>}
+                    {!pending && <span className="count convlist__count">{countLabel(filter, shownCount)}</span>}
                     <IconButton type="button" className="convlist__collapse" onClick={onCollapse}
                                 label={t('Hide conversations')} title={t('Hide conversations')}>
                         <IconChevronLeft size={16} />
@@ -55,14 +56,7 @@ export default function ConversationListHead({
                 </div>
                 {/* A separate control, because a channel is not a state: this way you
                     can ask for active Facebook conversations. */}
-                <label className="channel-filter">
-                    <span className="sr-only">{t('Filter by channel')}</span>
-                    <select value={platformFilter} onChange={(e) => onPlatformChange?.(e.target.value)}>
-                        {PLATFORMS.map(pf => (
-                            <option key={pf.id} value={pf.id}>{t(pf.label)}</option>
-                        ))}
-                    </select>
-                </label>
+                <ChannelFilter value={platformFilter} onChange={onPlatformChange} />
             </div>
         </div>
     );

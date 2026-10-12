@@ -7,7 +7,7 @@ import { groupOf } from './settingsSections.js';
 export default function SettingsNav({ groups, current, open, onJump, onPick, onToggleGroup }) {
     return (
         <nav className="sp-nav" aria-label={t('Settings sections')}>
-            <h1 className="sp__title">{t('Settings')}</h1>
+            <h1 className="sp__title page__title--echo">{t('Settings')}</h1>
             {/* Phones: every section in one grouped picker, so none is out of reach. */}
             <label className="sp-mobile">
                 <span className="sr-only">{t('Settings sections')}</span>

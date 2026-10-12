@@ -29,6 +29,8 @@ public class SyncService {
     private final SocialMessageRepository messageRepository;
     private final io.eksamadhan.repository.SocialPageRepository socialPageRepository;
     private final io.eksamadhan.repository.ConversationThreadRepository threadRepository;
+    private final AiTypingState aiTypingState;
+    private final PendingReplies pendingReplies;
     private final Set<UUID> syncingPages = Collections.synchronizedSet(new HashSet<>());
 
     /**
@@ -131,6 +133,7 @@ public class SyncService {
      */
     @Transactional
     public void syncPageHistory(SocialPage page) {
+        rememberInstagramUsername(page);
         if (!syncingPages.add(page.getId())) {
             log.info("ℹ️ Sync already in progress for page: {}. Skipping.", page.getPageName());
             return;
@@ -286,7 +289,9 @@ public class SyncService {
             if (fromObj instanceof Map) {
                 Map<String, Object> fromMap = (Map<String, Object>) fromObj;
                 senderId = (String) fromMap.get("id");
-                senderName = (String) fromMap.getOrDefault("name", "Unknown");
+                // Messenger names the sender; Instagram gives a username instead.
+                String named = MetaService.displayName(fromMap);
+                if (!named.isBlank()) senderName = named;
             } else if (fromObj instanceof String) {
                 senderId = (String) fromObj;
             }
@@ -442,8 +447,15 @@ public class SyncService {
         retried.values().removeIf(at -> at.isBefore(Instant.now().minus(RETRY_INTERVAL)));
 
         for (ConversationThread thread : waiting) {
-            messageRepository.findLatestInbound(thread, org.springframework.data.domain.PageRequest.of(0, 1))
-                    .stream().findFirst()
+            List<SocialMessage> owed = messageRepository.findOldestUnanswered(thread,
+                    org.springframework.data.domain.PageRequest.of(0, 50));
+            // Already on its way: queued, being judged or being written. A slow model takes
+            // longer than the catch-up waits, and answering again sent the customer two replies.
+            if (aiTypingState.isTyping(thread.getId())
+                    || pendingReplies.anyPending(owed.stream().map(SocialMessage::getId).toList())) {
+                continue;
+            }
+            owed.stream().findFirst()
                     .filter(message -> retried.putIfAbsent(message.getId(), Instant.now()) == null)
                     .ifPresent(message -> {
                         log.info("🔁 No reply went out for {} in conversation {} — answering it now",
@@ -478,6 +490,28 @@ public class SyncService {
 
 
     /**
+     * The account's username, for the Channels card: an Instagram handle, or a Facebook Page's
+     * own username when its owner set one (optional on Facebook, so it may stay empty). Read once,
+     * on the next sync, so nobody has to reconnect. A Page without one is asked again after a
+     * restart, in case it was set since.
+     */
+    private final java.util.Set<UUID> usernameChecked = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    private void rememberInstagramUsername(SocialPage page) {
+        if (page.getUsername() != null || !usernameChecked.add(page.getId())) return;
+        try {
+            String username = metaService.getInstagramUsername(page.getPageId(), page.getAccessToken()).block();
+            if (username != null && !username.isBlank()) {
+                page.setUsername(username);
+                socialPageRepository.save(page);
+                log.info("Username for {} ({}): @{}", page.getPageName(), page.getPlatform(), username);
+            }
+        } catch (Exception e) {
+            log.debug("Instagram username lookup failed for {}: {}", page.getPageId(), e.getMessage());
+        }
+    }
+
+    /**
      * Fills in customer names and profile pictures.
      *
      * Messages stored before profile lookup existed have neither, and Meta's photo URLs go
@@ -504,12 +538,10 @@ public class SyncService {
 
         for (String customerId : customerIds) {
             try {
-                Map profile = metaService.getUserProfile(customerId, page.getAccessToken()).block();
+                Map profile = metaService.getUserProfile(customerId, page.getAccessToken(), page.getPlatform()).block();
                 if (profile == null || profile.isEmpty()) continue;
 
-                String first = (String) profile.get("first_name");
-                String last = (String) profile.get("last_name");
-                String name = ((first == null ? "" : first) + " " + (last == null ? "" : last)).trim();
+                String name = MetaService.displayName(profile);
                 String avatar = (String) profile.get("profile_pic");
                 if (name.isBlank() && avatar == null) continue;
 
@@ -518,6 +550,10 @@ public class SyncService {
                     if (!name.isBlank()) m.setSenderName(name);
                     if (avatar != null) m.setSenderAvatarUrl(avatar);
                 }
+                // The inbox lists the conversation's own copy of the name, set from the first
+                // message; without this a name found later never reached the list.
+                threadRepository.updateCustomerProfile(page, customerId,
+                        name.isBlank() ? null : name, avatar);
                 log.info("👤 Refreshed profile for {} ({})", name.isBlank() ? customerId : name, customerId);
             } catch (Exception e) {
                 log.debug("Profile refresh failed for {}: {}", customerId, e.getMessage());

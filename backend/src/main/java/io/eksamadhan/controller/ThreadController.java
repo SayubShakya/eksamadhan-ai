@@ -35,12 +35,24 @@ public class ThreadController {
     private final io.eksamadhan.repository.PinnedConversationRepository pins;
     private final io.eksamadhan.service.AvailabilityService availability;
     private final io.eksamadhan.service.AiTypingState aiTyping;
+    private final io.eksamadhan.service.CustomerLinkService customerLinks;
 
     @GetMapping
     public List<ThreadResponse> list() {
         User me = currentUser.require();
         java.util.Set<UUID> pinned = pins.threadIdsFor(me.getId());
-        return threadService.visibleTo(me).stream().map(t -> toDto(t, pinned)).toList();
+        java.util.Map<String, java.util.Set<String>> linked = customerLinks.linkedChannels(me.getOrganization().getId());
+        java.util.Map<String, UUID> contacts = customerLinks.contacts(me.getOrganization().getId());
+        return threadService.visibleTo(me).stream().map(t -> {
+            ThreadResponse dto = toDto(t, pinned);
+            String key = t.getSocialPage() == null ? null
+                    : io.eksamadhan.service.CustomerLinkService.key(t.getSocialPage().getId(), t.getCustomerId());
+            java.util.Set<String> channels = key == null ? null : linked.get(key);
+            dto.setLinkedChannels(channels == null ? java.util.List.of() : java.util.List.copyOf(channels));
+            UUID contact = key == null ? null : contacts.get(key);
+            dto.setContactId(contact == null ? null : contact.toString());
+            return dto;
+        }).toList();
     }
 
     /**
@@ -59,6 +71,51 @@ public class ThreadController {
         User me = currentUser.require();
         pins.unpin(me.getId(), threadId);
         return Map.of("pinned", false);
+    }
+
+    /**
+     * The same person's conversations on other channels, and ones that may be (same name,
+     * not linked yet). Only conversations the caller can see are listed.
+     */
+    @GetMapping("/{threadId}/same-person")
+    public Map<String, Object> samePerson(@PathVariable UUID threadId) {
+        User me = requireVisible(threadId);
+        return samePersonOf(threadId, me);
+    }
+
+    public record LinkRequest(UUID threadId) {}
+
+    /** Records that another conversation is the same person as this one. */
+    @PostMapping("/{threadId}/same-person")
+    public Map<String, Object> link(@PathVariable UUID threadId, @RequestBody LinkRequest body) {
+        User me = requireVisible(threadId);
+        if (body == null || body.threadId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose the conversation to link.");
+        }
+        requireVisible(body.threadId());
+        try {
+            customerLinks.link(threadId, body.threadId(), me.getOrganization().getId(), me.getId());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+        return samePersonOf(threadId, me);
+    }
+
+    /** This conversation's customer is not the same person after all. */
+    @DeleteMapping("/{threadId}/same-person")
+    public Map<String, Object> unlink(@PathVariable UUID threadId) {
+        User me = requireVisible(threadId);
+        customerLinks.unlink(threadId, me.getOrganization().getId());
+        return samePersonOf(threadId, me);
+    }
+
+    private Map<String, Object> samePersonOf(UUID threadId, User me) {
+        UUID org = me.getOrganization().getId();
+        java.util.Set<UUID> visible = threadService.visibleTo(me).stream()
+                .map(ConversationThread::getId).collect(java.util.stream.Collectors.toSet());
+        return Map.of(
+                "linked", customerLinks.linked(threadId, org).stream().filter(o -> visible.contains(o.threadId())).toList(),
+                "suggestions", customerLinks.suggestions(threadId, org).stream().filter(o -> visible.contains(o.threadId())).toList());
     }
 
     private User requireVisible(UUID threadId) {

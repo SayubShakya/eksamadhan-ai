@@ -82,7 +82,7 @@ export default function DataPrivacyCard({ user, settings, onStartDeletion, onSig
             </Row>
             <Row title={t('Deactivate account')}
                  hint={t('Signs you out everywhere and stops conversations and alerts coming to you. Sign in again to undo it.')}>
-                <button type="button" className={`btn btn--tint-warn privacy__btn${busy === 'deactivate' ? ' btn--busy' : ''}`}
+                <button type="button" className={`btn btn--tint privacy__btn${busy === 'deactivate' ? ' btn--busy' : ''}`}
                         onClick={() => setConfirmDeactivate(true)} disabled={Boolean(busy)} aria-busy={busy === 'deactivate'}>
                     {t('Deactivate')}
                 </button>
@@ -93,7 +93,7 @@ export default function DataPrivacyCard({ user, settings, onStartDeletion, onSig
                          ? t('You choose who takes over as tenant first. Then your name, email, photo, sign-in and devices are erased for good; the workspace carries on.')
                          : t('Erases your name, email, photo, sign-in and devices for good. Your replies to customers stay with the business, with no name.')}>
                 {canDelete ? (
-                    <button type="button" className="btn btn--danger privacy__btn"
+                    <button type="button" className="btn btn--tint-danger privacy__btn"
                             onClick={() => setSheet(true)} disabled={Boolean(busy)}>
                         <IconWarning size={16} /> {t('Delete')}
                     </button>

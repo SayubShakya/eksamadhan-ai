@@ -34,7 +34,7 @@ export default function InboxPage({
     active, onSelect, onSend, onSendVoice, onSendImage, onReact, onHideMessage, onThreadAction,
     onConnect, search, onSearchChange, sendError, onDismissError, me, team = [], onAssign,
     platform: platformFilter = 'all', onPlatformChange,
-    onSummarise, summarising, onPin, aiTyping = {},
+    onSummarise, summarising, onPin, aiTyping = {}, allThreads = [], onOpenThread,
 }) {
     const [shown, setShown] = useState(PAGE_SIZE);   // messages rendered, newest first
     const [lightbox, setLightbox] = useState(null);  // photo opened full size, or null
@@ -129,8 +129,31 @@ export default function InboxPage({
         threads.forEach(th => n.set(th.customerId, (n.get(th.customerId) || 0) + 1));
         return n;
     }, [threads]);
-    const pinnedRows = visible.filter(th => th.pinned);
-    const otherRows = visible.filter(th => !th.pinned);
+    // One row per person: conversations linked as the same customer (Same person) collapse into
+    // the first of them, which carries every channel in `channels` and their unanswered total.
+    // Each still answers on its own channel; the open conversation's header switches between them.
+    const rows = useMemo(() => {
+        const groups = new Map();
+        const out = [];
+        for (const th of visible) {
+            if (!th.contactId) { out.push(th); continue; }
+            const group = groups.get(th.contactId);
+            if (group) { group.push(th); continue; }
+            const members = [th];
+            groups.set(th.contactId, members);
+            out.push({ ...th, channels: members });
+        }
+        return out.map(row => (row.channels && row.channels.length > 1
+            ? { ...row, unanswered: row.channels.reduce((n, c) => n + (c.unanswered || 0), 0),
+                pinned: row.channels.some(c => c.pinned) }
+            : row.channels ? { ...row, channels: undefined } : row));
+    }, [visible]);
+    const pinnedRows = rows.filter(th => th.pinned);
+    const otherRows = rows.filter(th => !th.pinned);
+    // The open conversation's other channels, for the tabs in its header.
+    const channelTabs = activeThread?.contactId
+        ? threads.filter(th => th.contactId === activeThread.contactId && !th.spam)
+        : [];
 
     const platformOf = (pageId) => pages.find(p => p.pageId === pageId)?.platform || 'facebook';
 
@@ -146,7 +169,7 @@ export default function InboxPage({
             onFilterChange={onFilterChange}
             platformFilter={platformFilter}
             onPlatformChange={onPlatformChange}
-            shownCount={visible.length}
+            shownCount={rows.length}
             spamCount={spamCount}
             mineOnly={mineOnly}
             onMineOnlyChange={setMineOnly}
@@ -223,6 +246,9 @@ export default function InboxPage({
                         <ThreadHeader
                             thread={activeThread}
                             platform={platformOf(activeThread.pageId)}
+                            channelTabs={channelTabs}
+                            platformOf={platformOf}
+                            onSelect={onSelect}
                             me={me}
                             acting={acting}
                             act={act}
@@ -254,6 +280,7 @@ export default function InboxPage({
 
                         <Composer
                             thread={activeThread}
+                            replyChannel={channelTabs.length > 1 ? (platformOf(activeThread.pageId) === 'instagram' ? 'Instagram' : 'Messenger') : null}
                             me={me}
                             typing={Boolean(aiTyping[activeThread.id] || activeThread.aiTyping)}
                             acting={acting}
@@ -284,6 +311,9 @@ export default function InboxPage({
                     act={act}
                     summarising={summarising}
                     onSummarise={onSummarise}
+                    allThreads={allThreads}
+                    platformOf={platformOf}
+                    onOpenThread={onOpenThread}
                 />
             )}
 

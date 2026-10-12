@@ -25,6 +25,7 @@ export default function SourceTextDialog({ source, onClose }) {
                     </IconButton>
                 </header>
                 <div className="confirm__body">
+                    {source.imageUrl && <img className="sourcetext__img" src={source.imageUrl} alt={source.title} />}
                     {source.sourceUrl && <p className="muted" style={{ margin: '0 0 8px' }}>{source.sourceUrl}</p>}
                     {source.content === null ? (
                         <LoadingRegion label={t('the extracted text')}>

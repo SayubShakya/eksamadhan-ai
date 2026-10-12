@@ -32,14 +32,16 @@ export default function useConversationActions({ setServerThreads, refreshThread
 
     // The manual button ignores the cooldown: a person asking for it now has better judgement
     // about whether the conversation has settled than a timer does.
-    const handleSummarise = useCallback(async (thread) => {
+    // `quiet` for the automatic refresh in the details panel: no toast, and a failure is left
+    // for the next check rather than shown as an error nobody asked about.
+    const handleSummarise = useCallback(async (thread, { quiet = false } = {}) => {
         setSummarising(true);
         try {
             await api.summariseThread(thread.id);
             await refreshThreadsRef.current?.();
-            toast.success(t('Summary written'), { body: t('It is in the conversation details.') });
+            if (!quiet) toast.success(t('Summary written'), { body: t('It is in the conversation details.') });
         } catch (err) {
-            setSendError(api.errorMessage(err, t('Could not write a summary for that conversation.')));
+            if (!quiet) setSendError(api.errorMessage(err, t('Could not write a summary for that conversation.')));
         } finally {
             setSummarising(false);
         }

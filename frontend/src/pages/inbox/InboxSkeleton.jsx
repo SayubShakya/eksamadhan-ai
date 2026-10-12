@@ -104,6 +104,9 @@ export function CustomerPanelSkeleton({ hidden }) {
                     <div><Skel line w={w} /></div>
                 </div>
             ))}
+            {/* Same person: a line of text and the button to link a conversation. */}
+            <div className="context__section"><Skel line w={90} /></div>
+            <div className="sameperson"><Skel line w="80%" /><Skel w={170} h={30} style={{ borderRadius: 8 }} /></div>
             <div className="context__section"><Skel line w={70} /></div>
             <div className="summary-card"><Skel line w="90%" /><Skel line w="70%" /><Skel w={100} h={30} style={{ borderRadius: 8 }} /></div>
         </aside>

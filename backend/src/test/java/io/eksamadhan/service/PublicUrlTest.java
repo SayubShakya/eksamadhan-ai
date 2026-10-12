@@ -38,6 +38,10 @@ class PublicUrlTest {
             ex.getResponseBody().write(body);
             ex.close();
         });
+        server.createContext("/ready", ex -> {
+            ex.sendResponseHeaders(200, -1);
+            ex.close();
+        });
         server.start();
         try {
             // The first port asked has nothing on it, as when another program holds 20241.
@@ -45,6 +49,33 @@ class PublicUrlTest {
                     "http://127.0.0.1:1/quicktunnel, http://127.0.0.1:" + server.getAddress().getPort() + "/quicktunnel");
             assertEquals("https://fresh-name-here.trycloudflare.com", url.get());
             assertEquals("http://localhost:5174", url.configured());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void aTunnelThatLostItsConnectionIsNotUsed() throws Exception {
+        // As on 12 Oct: cloudflared still reported its hostname, Cloudflare had dropped it, and
+        // Facebook sent people back to an address that did not resolve.
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/quicktunnel", ex -> {
+            byte[] body = "{\"hostname\":\"gone-name.trycloudflare.com\"}".getBytes(StandardCharsets.UTF_8);
+            ex.sendResponseHeaders(200, body.length);
+            ex.getResponseBody().write(body);
+            ex.close();
+        });
+        server.createContext("/ready", ex -> {
+            byte[] body = "{\"status\":503,\"readyConnections\":0}".getBytes(StandardCharsets.UTF_8);
+            ex.sendResponseHeaders(503, body.length);
+            ex.getResponseBody().write(body);
+            ex.close();
+        });
+        server.start();
+        try {
+            PublicUrl url = new PublicUrl("http://localhost:5174",
+                    "http://127.0.0.1:" + server.getAddress().getPort() + "/quicktunnel");
+            assertEquals("http://localhost:5174", url.get());
         } finally {
             server.stop(0);
         }

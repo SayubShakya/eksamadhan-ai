@@ -8,7 +8,7 @@ import { fullName } from '../../lib/avatar.js';
 
 import { ROLE_LABEL } from '../../lib/format.js';
 import { VIEW_TITLES } from '../../lib/pageMeta.js';
-import { t, lang, longDate } from '../../lib/i18n.js';
+import { t, longDate } from '../../lib/i18n.js';
 
 
 /**
@@ -44,12 +44,8 @@ export default function TopBar({
             {VIEW_TITLES[view] && (
                 <span className="topbar__where" aria-hidden="true">
                     <span className="topbar__title">{VIEW_TITLES[view]}</span>
-                    {/* Which business this is, then the date (Sayub, 2026-10-03): the context line under
-                        the page name, so it never competes with the status and account on the right. */}
-                    <span className="topbar__date">
-                        {workspace && <><span className="topbar__ws" title={t('Workspace: {name}', { name: workspace })}>{workspace}</span><span aria-hidden="true"> · </span></>}
-                        {longDate()}
-                    </span>
+                    {/* Today's date under the page name (Sayub, 2026-10-12); the workspace is in the footer. */}
+                    <span className="topbar__date">{longDate()}</span>
                 </span>
             )}
 

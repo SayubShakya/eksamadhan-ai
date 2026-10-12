@@ -14,12 +14,15 @@ export default function AccountRow({ page, isTenant, canManage, onReconnect, onD
                 <PageFace page={page} />
                 <div className="chn-acc__text">
                     <strong><span className="chn-acc__name">{page.pageName}</span></strong>
+                    {page.username && <small className="chn-acc__handle">@{page.username}</small>}
                     {since && <small className="chn-acc__since"><i className="chn-acc__live" aria-hidden="true" />{t('Connected {date}', { date: since })}</small>}
                 </div>
             </div>
             {/* Each action named, not just an icon. */}
             <div className="chn-acc__actions">
-                {link && <a className="chn-act" href={link} target="_blank" rel="noreferrer" title={t('Open the Page on Facebook')}><IconLink size={14} />{t('View Page')}</a>}
+                {link && (page.platform === 'instagram'
+                    ? <a className="chn-act" href={link} target="_blank" rel="noreferrer" title={t('Open the profile on Instagram')}><IconLink size={14} />{t('View profile')}</a>
+                    : <a className="chn-act" href={link} target="_blank" rel="noreferrer" title={t('Open the Page on Facebook')}><IconLink size={14} />{t('View Page')}</a>)}
                 {canManage && (
                     // Signing in again with Meta refreshes the page's access, the fix when messages stop arriving.
                     <button type="button" className={btn('chn-act', reconnecting)} onClick={onReconnect} disabled={reconnecting}

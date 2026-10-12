@@ -41,7 +41,7 @@ export default function NotificationsCard({ settings, onSaved }) {
                             </button>
                         )}
                         <button type="button"
-                                className={btn(`btn btn--sm ${alerts.on ? 'btn--tint-warn' : 'btn--primary'}`, alerts.busy === 'toggle')}
+                                className={btn(`btn btn--sm ${alerts.on ? 'btn--tint' : 'btn--primary'}`, alerts.busy === 'toggle')}
                                 onClick={toggle} disabled={Boolean(alerts.busy)} aria-busy={alerts.busy === 'toggle'}>
                             {alerts.on ? t('Turn off') : t('Turn on')}
                         </button>

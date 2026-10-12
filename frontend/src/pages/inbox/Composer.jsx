@@ -13,7 +13,7 @@ import StatusDot from '../../components/ui/StatusDot.jsx';
 const QUICK_EMOJI = ['😊', '😂', '👍', '🙏', '❤️', '😅', '🎉', '😢', '😮', '🔥', '✅', '👋'];
 
 /** `composer` is the state from useComposer; the page holds it so a draft outlives the thread. */
-export default function Composer({ thread, me, typing, acting, act, sendError, onDismissError, onSend, composer }) {
+export default function Composer({ replyChannel, thread, me, typing, acting, act, sendError, onDismissError, onSend, composer }) {
     const {
         draft, setDraft, replyTo, setReplyTo, recorder, seconds, busy, sending,
         emojiOpen, setEmojiOpen, emojiRef, imageRef, fieldRef,
@@ -130,7 +130,9 @@ export default function Composer({ thread, me, typing, acting, act, sendError, o
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) submit(e);
                         }}
-                        placeholder={sending ? `${sending.label}…` : t('Reply to {name}…', { name: thread.name })}
+                        placeholder={sending ? `${sending.label}…` : replyChannel
+                            ? t('Reply to {name} on {channel}…', { name: thread.name, channel: replyChannel })
+                            : t('Reply to {name}…', { name: thread.name })}
                         aria-label={t('Your reply')}
                         disabled={busy}
                     />

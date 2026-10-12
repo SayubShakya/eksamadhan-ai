@@ -23,7 +23,8 @@ class MoodHandoverTest {
     private final SentimentService sentiment = mock(SentimentService.class);
     private final MessageTriageService triage = mock(MessageTriageService.class);
     private final MessageIngestedListener listener = new MessageIngestedListener(
-            mock(ConversationMemoryService.class), ai, sentiment, mock(AgentNotificationService.class), triage);
+            mock(ConversationMemoryService.class), ai, sentiment, mock(AgentNotificationService.class), triage,
+            new PendingReplies());
 
     private final UUID message = UUID.randomUUID();
     private final UUID page = UUID.randomUUID();

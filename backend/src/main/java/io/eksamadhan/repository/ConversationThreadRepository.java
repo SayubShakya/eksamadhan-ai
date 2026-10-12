@@ -117,6 +117,15 @@ public interface ConversationThreadRepository extends JpaRepository<Conversation
     @org.springframework.data.jpa.repository.Modifying
     void deleteByTenantId(String tenantId);
 
+    /** A customer's name and photo as Meta reports them now; a null leaves that one as it was. */
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
+    @org.springframework.data.jpa.repository.Query(
+            "UPDATE ConversationThread t SET t.customerName = COALESCE(:name, t.customerName), "
+          + "t.customerAvatarUrl = COALESCE(:avatar, t.customerAvatarUrl) "
+          + "WHERE t.socialPage = :page AND t.customerId = :customerId")
+    int updateCustomerProfile(io.eksamadhan.model.SocialPage page, String customerId,
+                              String name, String avatar);
+
     // Narrow writes. Each background path that annotates a conversation — sentiment, the
     // handover brief, the off-topic count — writes only its own columns. Saving the whole
     // entity instead merged a copy loaded before a slow model call back over the row, and

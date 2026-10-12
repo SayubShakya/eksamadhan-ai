@@ -87,6 +87,8 @@ export default function DashboardPages({
                 onSummarise={actions.handleSummarise}
                 onPin={actions.handlePin}
                 summarising={actions.summarising}
+                allThreads={allThreads}
+                onOpenThread={(threadId) => openNotification({ threadId })}
             />
         )}
 

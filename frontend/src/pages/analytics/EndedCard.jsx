@@ -2,6 +2,7 @@
 import { t } from '../../lib/i18n.js';
 import Donut from './Donut.jsx';
 import { percent } from './analyticsFormat.js';
+import { ChannelIcon } from '../inbox/PersonAvatar.jsx';
 
 export default function EndedCard({ deflection: d, spamClosed, spam, channels }) {
     const ended = [
@@ -27,14 +28,25 @@ export default function EndedCard({ deflection: d, spamClosed, spam, channels })
                     ))}
                 </ul>
             </div>
+            {/* Per channel, how much of its traffic needed a person: a bar each, so the two
+                compare at a glance instead of as two sentences. */}
             {channels.length > 0 && (
                 <div className="an2-channels">
-                    {channels.map(c => (
-                        <div key={c.platform} className="an2-channel">
-                            <span>{c.platform === 'instagram' ? 'Instagram' : c.platform === 'facebook' ? 'Messenger' : c.platform}</span>
-                            <span className="muted">{t('{n} of {total} reached a person', { n: c.escalated, total: c.conversations })}</span>
-                        </div>
-                    ))}
+                    <div className="an2-channels__title">{t('By channel')}</div>
+                    {channels.map(c => {
+                        const share = c.conversations ? c.escalated / c.conversations : 0;
+                        const name = c.platform === 'instagram' ? 'Instagram' : c.platform === 'facebook' ? 'Messenger' : c.platform;
+                        return (
+                            <div key={c.platform} className="an2-channel">
+                                <span className="an2-channel__name"><ChannelIcon platform={c.platform} size={14} />{name}</span>
+                                <span className="an2-channel__bar" aria-hidden="true"><i style={{ width: `${Math.round(share * 100)}%` }} /></span>
+                                <span className="an2-channel__value">
+                                    {t('{n} of {total} reached a person', { n: c.escalated, total: c.conversations })}
+                                    <b>{percent(share)}</b>
+                                </span>
+                            </div>
+                        );
+                    })}
                 </div>
             )}
         </section>

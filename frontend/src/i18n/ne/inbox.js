@@ -11,9 +11,6 @@ export default {
     '{n} active': '{n} सक्रिय',
     '{n} resolved': '{n} समाधान भएका',
     '{n} spam': '{n} स्प्याम',
-    '{n} active on {channel}': '{channel} मा {n} सक्रिय',
-    '{n} resolved on {channel}': '{channel} मा {n} समाधान भएका',
-    '{n} spam on {channel}': '{channel} मा {n} स्प्याम',
     '{n} in spam': 'स्प्याममा {n}',
     'Filter by channel': 'च्यानल अनुसार छान्नुहोस्',
 
@@ -204,4 +201,5 @@ export default {
     'Microphone not available': 'माइक्रोफोन उपलब्ध छैन',
     'Hide conversations': 'कुराकानी लुकाउनुहोस्',
     'Show conversations': 'कुराकानी देखाउनुहोस्',
+    'Filter by channel: {channel}': 'च्यानल अनुसार छान्नुहोस्: {channel}',
 };

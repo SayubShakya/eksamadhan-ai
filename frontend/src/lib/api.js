@@ -139,6 +139,13 @@ export const setThreadState = (threadId, action, body) =>
     axios.post(`/api/threads/${threadId}/${action}`, body || {});
 export const pinThread = (threadId, pinned) =>
     (pinned ? axios.put(`/api/threads/${threadId}/pin`) : axios.delete(`/api/threads/${threadId}/pin`)).then(r => r.data);
+/** The same person's conversations on other channels, and same-name ones that may be. */
+export const getSamePerson = (threadId) =>
+    axios.get(`/api/threads/${threadId}/same-person`).then(r => r.data);
+export const linkSamePerson = (threadId, otherThreadId) =>
+    axios.post(`/api/threads/${threadId}/same-person`, { threadId: otherThreadId }).then(r => r.data);
+export const unlinkSamePerson = (threadId) =>
+    axios.delete(`/api/threads/${threadId}/same-person`).then(r => r.data);
 export const summariseThread = (threadId) =>
     axios.post(`/api/threads/${threadId}/summarise`).then(r => r.data);
 export const assignThread = (threadId, userId) =>

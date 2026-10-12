@@ -115,13 +115,13 @@ public class MetaMessageParser {
                 Long timestampMillis = ((Number) msg.get("timestamp")).longValue();
 
                 // Find the page this message belongs to
-                // The recipient of an inbound message is our page
-                SocialPage page = pageRepository.findByPageIdAndPlatform(recipientId, "FACEBOOK")
-                        .orElse(null);
+                // The recipient of an inbound message is our page. An Instagram DM arrives in the
+                // same "messaging" shape, addressed to the Instagram business id instead.
+                SocialPage page = findPage(recipientId);
 
                 // Fallback: try entryPageId
                 if (page == null && entryPageId != null) {
-                    page = pageRepository.findByPageIdAndPlatform(entryPageId, "FACEBOOK").orElse(null);
+                    page = findPage(entryPageId);
                 }
 
                 if (page == null) {
@@ -188,6 +188,13 @@ public class MetaMessageParser {
         }
     }
 
+    /** The connected Facebook Page or Instagram account with this Meta id, if any. */
+    private SocialPage findPage(String metaId) {
+        return pageRepository.findByPageIdAndPlatform(metaId, "FACEBOOK")
+                .or(() -> pageRepository.findByPageIdAndPlatform(metaId, "INSTAGRAM"))
+                .orElse(null);
+    }
+
     @Transactional
     private void saveMessage(String mid, String senderId, String recipientId, String text,
                              SocialPage page, long timestampMillis) {
@@ -214,15 +221,13 @@ public class MetaMessageParser {
             senderName = "User " + senderId.substring(Math.max(0, senderId.length() - 8));
             Map profile = profileCache.computeIfAbsent(senderId, id -> {
                 try {
-                    return metaService.getUserProfile(id, page.getAccessToken()).block();
+                    return metaService.getUserProfile(id, page.getAccessToken(), page.getPlatform()).block();
                 } catch (Exception e) {
                     return java.util.Collections.emptyMap();
                 }
             });
             if (profile != null && !profile.isEmpty()) {
-                String first = (String) profile.get("first_name");
-                String last = (String) profile.get("last_name");
-                String full = ((first == null ? "" : first) + " " + (last == null ? "" : last)).trim();
+                String full = MetaService.displayName(profile);
                 if (!full.isBlank()) senderName = full;
                 senderAvatarUrl = (String) profile.get("profile_pic");
             }

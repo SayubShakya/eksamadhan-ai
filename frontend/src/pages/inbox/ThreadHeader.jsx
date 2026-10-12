@@ -8,10 +8,31 @@ import ThreadActionSheet from './ThreadActionSheet.jsx';
 import IconButton from '../../components/ui/IconButton.jsx';
 
 export default function ThreadHeader({
-    thread, platform, me, acting, act, onBack, onPin,
+    thread, platform, channelTabs = [], platformOf, onSelect, me, acting, act, onBack, onPin,
     moreOpen, onMoreOpenChange, sheetDrag, onOpenDetails, onShowDetails, detailsExpanded,
 }) {
+    const tabs = channelTabs.length > 1 && (
+        // One person on several channels (linked as the same person): a tab per channel, under
+        // the header. Each tab is its own conversation, so a reply goes out on that channel.
+        <nav className="chtabs" role="tablist" aria-label={t('Channels of this customer')}>
+            {channelTabs.map(tab => {
+                const p = platformOf?.(tab.pageId) || 'facebook';
+                const on = tab.id === thread.id;
+                return (
+                    <button key={tab.id} type="button" role="tab" aria-selected={on}
+                            className={`chtabs__tab${on ? ' is-on' : ''}`}
+                            onClick={() => { if (!on) onSelect?.(tab); }}>
+                        <ChannelIcon platform={p} size={14} />
+                        <span>{p === 'instagram' ? 'Instagram' : 'Messenger'}</span>
+                        {!on && tab.unanswered > 0 && <span className="chtabs__count">{tab.unanswered}</span>}
+                    </button>
+                );
+            })}
+        </nav>
+    );
+
     return (
+        <>
         <header className="thread__head">
             {/* On a phone the list and the thread share the screen, so the
                 thread needs its own way back. */}
@@ -98,5 +119,7 @@ export default function ThreadHeader({
                 </button>
             </div>
         </header>
+        {tabs}
+        </>
     );
 }

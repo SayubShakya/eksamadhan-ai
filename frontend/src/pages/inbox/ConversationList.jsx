@@ -10,11 +10,13 @@ export default function ConversationList({
             key={th.id || th.customerId}
             thread={th}
             platform={platformOf(th.pageId)}
-            isOpen={active?.id === th.id}
-            typing={Boolean(aiTyping[th.id] || th.aiTyping)}
+            platformOf={platformOf}
+            isOpen={active?.id === th.id || Boolean(th.channels?.some(c => c.id === active?.id))}
+            typing={Boolean(aiTyping[th.id] || th.aiTyping || th.channels?.some(c => aiTyping[c.id] || c.aiTyping))}
             showRef={Boolean(th.id && perCustomer.get(th.customerId) > 1)}
             me={me}
-            onSelect={onSelect}
+            // A person's row stays on whichever of their channels is already open.
+            onSelect={(row) => { if (!row.channels?.some(c => c.id === active?.id)) onSelect(row); }}
             onPin={onPin}
         />
     );

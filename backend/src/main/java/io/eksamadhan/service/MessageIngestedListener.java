@@ -24,17 +24,30 @@ public class MessageIngestedListener {
     private final SentimentService sentimentService;
     private final AgentNotificationService agentNotifications;
     private final MessageTriageService triageService;
+    private final PendingReplies pendingReplies;
 
     public MessageIngestedListener(ConversationMemoryService memoryService,
                                    AiReplyService aiReplyService,
                                    SentimentService sentimentService,
                                    AgentNotificationService agentNotifications,
-                                   MessageTriageService triageService) {
+                                   MessageTriageService triageService,
+                                   PendingReplies pendingReplies) {
         this.memoryService = memoryService;
         this.aiReplyService = aiReplyService;
         this.sentimentService = sentimentService;
         this.agentNotifications = agentNotifications;
         this.triageService = triageService;
+        this.pendingReplies = pendingReplies;
+    }
+
+    /**
+     * Marks a customer's message as on its way to an answer the moment it is stored, on the
+     * storing thread: the work below is queued, and a queued message is pending too. See
+     * PendingReplies for why the catch-up needs to know.
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void markPending(MessageIngested event) {
+        if (event.inbound()) pendingReplies.started(event.messageId());
     }
 
     // The customer's own pool: this must never queue behind a crawl or a history sync.
@@ -74,6 +87,8 @@ public class MessageIngestedListener {
             } catch (Exception e) {
                 log.error("AI reply failed for message {}", event.messageId(), e);
                 aiReplyService.escalateAfterFailure(event.messageId(), EscalationReasons.NO_REPLY);
+            } finally {
+                pendingReplies.finished(event.messageId());
             }
         }
 

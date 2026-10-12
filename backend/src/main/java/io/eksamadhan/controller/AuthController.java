@@ -276,6 +276,10 @@ public class AuthController {
                 String igId = (String) igAccount.get("id");
                 if (igId != null) {
                     SocialPage igPage = saveOrUpdatePage(igId, pageName, pageToken, "INSTAGRAM", organization, pageId);
+                    if (igPage != null && igAccount.get("username") instanceof String username && !username.isBlank()) {
+                        igPage.setUsername(username);
+                        igPage = pageRepository.save(igPage);
+                    }
                     if (igPage != null) {
                         savedPages.add(igPage);
                         log.info("✅ Linked Instagram account {} to Facebook page {}", igId, pageName);
@@ -354,6 +358,7 @@ public class AuthController {
                             .pageId(page.getPageId())
                             .pageName(page.getPageName())
                             .platform(page.getPlatform().toLowerCase())
+                            .username(page.getUsername())
                             .connectedAt(page.getConnectedAt())
                             .conversations(row == null ? 0 : ((Number) row[1]).longValue())
                             .withPeople(row == null || row[2] == null ? 0 : ((Number) row[2]).longValue())

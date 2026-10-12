@@ -1,5 +1,5 @@
 // One row of the conversation list, with its pin button beside it.
-import { IconPin, IconSparkle } from '../../components/ui/icons.jsx';
+import { IconPin, IconSparkle, IconLink } from '../../components/ui/icons.jsx';
 import { formatTimestamp, STATUS_LABEL, ownershipLabel, SENTIMENT, PRIORITY } from '../../lib/format.js';
 import { t } from '../../lib/i18n.js';
 import PersonAvatar, { ChannelIcon } from './PersonAvatar.jsx';
@@ -33,7 +33,10 @@ function previewOf(message) {
  *
  * `showRef` is true when the same customer has more than one conversation listed.
  */
-export default function ConversationRow({ thread: th, platform, isOpen, typing, showRef, me, onSelect, onPin }) {
+const channelLabel = (p) => (p === 'instagram' ? 'Instagram' : 'Messenger');
+
+export default function ConversationRow({ thread: th, platform, platformOf, isOpen, typing, showRef, me, onSelect, onPin }) {
+    const channels = th.channels?.length > 1 ? [...new Set(th.channels.map(c => platformOf?.(c.pageId) || 'facebook'))] : null;
     const awaitingReply = th.status === 'OPEN_FOR_AGENT' || th.unanswered > 0;
     const unread = th.unanswered > 0 && th.status !== 'RESOLVED' && !th.spam;
     const urgent = th.priority === 1 && !th.spam && PRIORITY[1];
@@ -86,6 +89,23 @@ export default function ConversationRow({ thread: th, platform, isOpen, typing, 
                             <span className={`tag conv__mood ${SENTIMENT[th.sentiment].tag}`}
                                   title={t('{mood} customer', { mood: SENTIMENT[th.sentiment].label })}>
                                 {SENTIMENT[th.sentiment].label}
+                            </span>
+                        )}
+                        {/* Linked as the same person on another channel (Same person in the
+                            details): two rows stay, each answered on its own channel, so the
+                            tag says why the person appears twice. */}
+                        {/* One person on several channels: which ones, in a quiet chip. */}
+                        {channels && (
+                            <span className="tag conv__linked" title={t('One customer on {channels}', { channels: channels.map(channelLabel).join(' and ') })}>
+                                {channels.map(p => <ChannelIcon key={p} platform={p} size={11} />)}
+                                {channels.map(channelLabel).join(' + ')}
+                            </span>
+                        )}
+                        {!channels && th.linkedChannels?.length > 0 && (
+                            <span className="tag conv__linked"
+                                  title={t('Linked as the same person as their conversation on {channels}', { channels: th.linkedChannels.map(channelLabel).join(', ') })}>
+                                <IconLink size={11} />
+                                {t('Also on {channels}', { channels: th.linkedChannels.map(channelLabel).join(', ') })}
                             </span>
                         )}
                         {/* The reference tells apart two conversations with the same customer,

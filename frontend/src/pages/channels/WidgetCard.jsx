@@ -13,7 +13,7 @@ export default function WidgetCard() {
                 </div>
                 <span className="chn-status is-soon">{t('Coming later')}</span>
             </div>
-            <p className="chn-card__sub">{t('A chat box on your own website, answered in the same inbox.')}</p>
+            <p className="chn-card__sub">{t('A chat box on your website, in the same inbox.')}</p>
         </section>
     );
 }

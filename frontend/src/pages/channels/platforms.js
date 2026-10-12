@@ -12,7 +12,7 @@ export const PLATFORMS = [
     },
     {
         id: 'instagram', name: 'Instagram', provider: 'Meta', Icon: IconInstagram,
-        sub: 'Direct messages to your Instagram professional account.',
+        sub: 'Direct messages to your Instagram account.',
         connect: 'Connect an Instagram account', another: 'Connect another account', cta: 'Connect Instagram',
         gives: ['AI replies from your knowledge', 'Photos and voice notes', 'Handover to your team'],
     },
@@ -23,5 +23,12 @@ export const btn = (base, busy) => `${base}${busy ? ' btn--busy' : ''}`;
 // The app's own date format, so it reads in Nepali too (English month names were written out here).
 export const connectedOn = (value) => (value ? formatDate(value) || null : null);
 
-/** Where to see the account itself: the Facebook Page by its id. */
-export const pageLink = (page) => (page.platform === 'facebook' && page.pageId ? `https://www.facebook.com/${page.pageId}` : null);
+/**
+ * Where to see the account itself: a Facebook Page by its id, an Instagram profile by its
+ * username (the only address Instagram has; filled in on connect, or by the next sync).
+ */
+export const pageLink = (page) => {
+    if (page.platform === 'facebook' && (page.username || page.pageId)) return `https://www.facebook.com/${encodeURIComponent(page.username || page.pageId)}`;
+    if (page.platform === 'instagram' && page.username) return `https://www.instagram.com/${encodeURIComponent(page.username)}/`;
+    return null;
+};

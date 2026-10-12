@@ -87,12 +87,19 @@ public interface SocialMessageRepository extends JpaRepository<SocialMessage, UU
     java.util.List<SocialMessage> findRecent(io.eksamadhan.model.ConversationThread thread,
                                              org.springframework.data.domain.Pageable page);
 
-    /** The customer's most recent message in a conversation — what the AI owes an answer to. */
+    /**
+     * The customer's first message since the last reply: what the AI owes an answer to. The
+     * first, not the latest: when the unanswered messages include the same question twice, the
+     * latest is a repeat, and RepeatDetector rightly holds a repeat back while the first copy
+     * waits, so answering the latest would answer nothing.
+     */
     @org.springframework.data.jpa.repository.Query(
             "SELECT m FROM SocialMessage m WHERE m.thread = :thread AND m.direction = 'inbound' "
-          + "ORDER BY m.timestamp DESC")
-    java.util.List<SocialMessage> findLatestInbound(io.eksamadhan.model.ConversationThread thread,
-                                                    org.springframework.data.domain.Pageable page);
+          + "AND NOT EXISTS (SELECT o FROM SocialMessage o WHERE o.thread = :thread "
+          + "AND o.direction = 'outbound' AND o.timestamp >= m.timestamp) "
+          + "ORDER BY m.timestamp ASC, m.id ASC")
+    java.util.List<SocialMessage> findOldestUnanswered(io.eksamadhan.model.ConversationThread thread,
+                                                       org.springframework.data.domain.Pageable page);
 
     /**
      * Writes just the transcript.

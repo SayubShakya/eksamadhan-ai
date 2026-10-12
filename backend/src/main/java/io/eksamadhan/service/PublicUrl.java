@@ -20,8 +20,8 @@ import java.time.Instant;
  * A Cloudflare quick tunnel gets a new random address every time it starts. When one is running
  * on this machine it reports that address on its local status port, so this reads it from there
  * (at most every 30 seconds) and the links follow the tunnel without editing .env or restarting.
- * With no tunnel running, or the lookup switched off (TUNNEL_STATUS_URL empty), it is
- * app.frontend-url, as before.
+ * With no tunnel running, one that has lost its connection, or the lookup switched off
+ * (TUNNEL_STATUS_URL empty), it is app.frontend-url, as before.
  */
 @Service
 @Slf4j
@@ -69,12 +69,29 @@ public class PublicUrl {
                         .timeout(Duration.ofSeconds(1)).GET().build(), HttpResponse.BodyHandlers.ofString());
                 if (res.statusCode() != 200) continue;
                 String found = fromStatus(res.body());
-                if (found != null) return found;
+                if (found != null && connected(url)) return found;
             } catch (Exception e) {
                 // nothing listening there: try the next port
             }
         }
         return null;                                      // no tunnel running here: the usual case
+    }
+
+    /**
+     * Whether that cloudflared still has a live connection to Cloudflare. A quick tunnel that lost
+     * it (the laptop slept, the network changed) keeps reporting its hostname, but Cloudflare has
+     * already dropped the name, so a link to it does not resolve. Its /ready answers 503 then.
+     */
+    private boolean connected(String statusUrl) {
+        String ready = statusUrl.replaceAll("/quicktunnel$", "/ready");
+        if (ready.equals(statusUrl)) return true;          // not cloudflared's status path: trust it
+        try {
+            HttpResponse<String> res = http.send(HttpRequest.newBuilder(URI.create(ready))
+                    .timeout(Duration.ofSeconds(1)).GET().build(), HttpResponse.BodyHandlers.ofString());
+            return res.statusCode() == 200;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /** cloudflared answers {"hostname":"xyz.trycloudflare.com"}; anything else is not a tunnel. */

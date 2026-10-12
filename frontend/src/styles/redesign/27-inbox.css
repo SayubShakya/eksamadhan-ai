@@ -126,7 +126,7 @@
 /* The list header: title with its count, the three lists, then whose and which channel. */
 .inbox .convlist__head { border-bottom: 1px solid var(--border); padding: 18px 16px 14px; }
 .inbox .convlist__title h2 { font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
-.convlist__count { font-size: 12px; font-weight: 500; color: var(--text-muted); padding: 3px 9px; border-radius: var(--r-sm); background: var(--surface); }
+.convlist__count { white-space: nowrap; font-size: 12px; font-weight: 500; color: var(--text-muted); padding: 3px 9px; border-radius: var(--r-sm); background: var(--surface); }
 .inbox .segtabs { background: var(--surface); border-color: transparent; }
 .inbox .mini-toggle { padding: 2px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); }
 .inbox .mini-toggle button { padding: 4px 11px; border-radius: 7px; }

@@ -1,0 +1,70 @@
+/* "Same person" in the customer panel (2026-10-12): the customer's conversations on other
+   channels, same-name suggestions, and the picker to link one by hand. */
+.sameperson { display: grid; gap: 10px; }
+.sameperson__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.sameperson__row {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px;
+    padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg);
+}
+.sameperson__who { display: grid; min-width: 0; }
+.sameperson__name { font-size: 13.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sameperson__channel { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); }
+.sameperson__none, .sameperson__hint { margin: 0; font-size: 13px; color: var(--text-muted); }
+.sameperson__pick { display: grid; gap: 8px; }
+/* The conversation picker reuses the assignee dropdown; it opens full width in the panel. */
+.inbox .sameperson__picker .assignee__current {
+    width: 100%; margin-left: 0; padding: 7px 10px; border-color: var(--border); background: var(--bg);
+}
+.inbox .sameperson__picker .assignee__current:hover { border-color: var(--border-strong); }
+.sameperson__picker .assignee__current .assignee__who { flex: 1; min-width: 0; text-align: left; }
+.inbox .context .sameperson__picker .assignee__menu { left: 0; right: 0; width: auto; }
+.sameperson__placeholder { color: var(--text-muted); }
+.assignee__who small.sameperson__meta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.assignee__who small.sameperson__meta svg { flex: none; margin-right: 1px; }
+.sameperson__convid { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11.5px; }
+.sameperson__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* The list row's "Also on Instagram": why one person has two rows. Quiet, like the reference. */
+.conv__linked { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted); background: var(--surface); }
+.conv__linked svg { flex: none; }
+
+/* Picker options: name and time on one line, channel and CONV id on the next. */
+.sameperson__opt { display: grid; gap: 3px; min-width: 0; width: 100%; }
+.sameperson__optname { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; }
+.sameperson__optlabel { font-size: 14px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sameperson__opttime { flex: none; font-size: 12px; color: var(--text-muted); }
+.assignee__who small.sameperson__meta { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; margin: 0; }
+.sameperson__picker .assignee__option { align-items: center; gap: 10px; }
+.sameperson__picker .assignee__option .assignee__who { flex: 1; min-width: 0; }
+
+/* 2026-10-12, simpler: linked rows carry Open and Unlink; a same-name match is one question;
+   the picker links as soon as a conversation is chosen. */
+.sameperson__rowactions { display: inline-flex; align-items: center; gap: 4px; }
+.sameperson__row:has(.sameperson__footer) { grid-template-columns: auto minmax(0, 1fr); }
+.sameperson__footer { grid-column: 1 / -1; display: flex; gap: 6px; padding-left: 38px; }
+.sameperson__footer .btn { height: 26px; min-height: 0; padding: 0 12px; font-size: 12.5px; border-radius: 6px; }
+.btn.sameperson__unlink {
+    background: var(--danger-weak); color: var(--danger); font-weight: 600;
+    border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+}
+.btn.sameperson__unlink:hover:not(:disabled) { border-color: var(--danger); }
+.sameperson__suggest {
+    display: grid; gap: 8px; padding: 10px; border-radius: 10px;
+    background: var(--accent-tint); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.sameperson__suggest-q { margin: 0; font-size: 13px; font-weight: 600; color: var(--text); }
+.inbox .sameperson__picker .sameperson__trigger { gap: 8px; color: var(--accent); }
+.sameperson__trigger .assignee__name { flex: 1; text-align: left; color: var(--accent); font-weight: 500; }
+
+/* Channel tabs under the open conversation's header: one person on Instagram and Messenger. */
+.chtabs { display: flex; gap: 4px; padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--bg); }
+.chtabs__tab {
+    display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 12px; margin-bottom: -1px;
+    font: inherit; font-size: 13.5px; font-weight: 500; color: var(--text-muted);
+    background: none; border: 0; border-bottom: 2px solid transparent; cursor: pointer;
+}
+.chtabs__tab:hover { color: var(--text); }
+.chtabs__tab.is-on { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
+.chtabs__tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--r-sm); }
+.chtabs__count { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 600; display: inline-grid; place-items: center; }
+.conv__linked { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted); background: var(--surface); }

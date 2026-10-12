@@ -21,7 +21,7 @@ export default function PlatformCard({ platform, accounts, isTenant, canManage, 
                     {on ? (accounts.length === 1 ? t('Connected') : t('{n} connected', { n: accounts.length })) : t('Not connected')}
                 </span>
             </div>
-            <p className="chn-card__sub">{t(sub)}</p>
+            <p className="chn-card__sub" title={t(sub)}>{t(sub)}</p>
 
             {on ? (
                 <>

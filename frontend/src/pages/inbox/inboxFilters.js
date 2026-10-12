@@ -21,13 +21,12 @@ export const PLATFORMS = [
     { id: 'instagram', label: 'Instagram' },
 ];
 
-/** The count has to describe what is actually listed, or "3 active" lies on the Resolved tab. */
-export function countLabel(status, platform, n) {
-    if (platform === 'all') {
-        return status === 'resolved' ? t('{n} resolved', { n })
-            : status === 'spam' ? t('{n} spam', { n }) : t('{n} active', { n });
-    }
-    const channel = PLATFORMS.find(p => p.id === platform)?.label ?? platform;
-    return status === 'resolved' ? t('{n} resolved on {channel}', { n, channel })
-        : status === 'spam' ? t('{n} spam on {channel}', { n, channel }) : t('{n} active on {channel}', { n, channel });
+/**
+ * The count has to describe what is actually listed, or "3 active" lies on the Resolved tab.
+ * The channel is not repeated: the channel menu right below already names it, and
+ * "1 active on Instagram" wrapped onto two lines in the narrow list header.
+ */
+export function countLabel(status, n) {
+    return status === 'resolved' ? t('{n} resolved', { n })
+        : status === 'spam' ? t('{n} spam', { n }) : t('{n} active', { n });
 }

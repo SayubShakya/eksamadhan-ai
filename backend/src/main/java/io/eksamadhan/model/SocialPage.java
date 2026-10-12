@@ -33,6 +33,9 @@ public class SocialPage {
 
     private String instagramBusinessId;
 
+    /** Instagram only: the profile's username, for a link to it. Null for a Facebook Page. */
+    private String username;
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id", nullable = false)

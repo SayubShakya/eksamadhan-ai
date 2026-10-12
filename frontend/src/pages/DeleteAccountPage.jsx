@@ -131,7 +131,7 @@ export default function DeleteAccountPage({ onCancel, onDeleted }) {
 
     return (
         <div className="page">
-            <PageHeader title={t('Delete your account')} sub={t('Step {n} of 5: {step}. You can stop at any step, and nothing is deleted until the last one.', { n: stage + 1, step: t(STEPS[stage]) })} />
+            <PageHeader echo={false} title={t('Delete your account')} sub={t('Step {n} of 5: {step}. You can stop at any step, and nothing is deleted until the last one.', { n: stage + 1, step: t(STEPS[stage]) })} />
 
             <WizardSteps stage={stage} />
 

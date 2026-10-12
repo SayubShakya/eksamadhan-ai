@@ -49,7 +49,7 @@ export default function HomePage({
     return (
         <div className="page">
             {user.emailVerified === false && <VerifyEmailBanner email={user.email} />}
-            <PageHeader title={user.firstName ? t('{greeting}, {name}', { greeting: greeting(), name: user.firstName }) : greeting()} sub={t('Your conversations, channels and setup at a glance.')}>
+            <PageHeader echo={false} title={user.firstName ? t('{greeting}, {name}', { greeting: greeting(), name: user.firstName }) : greeting()} sub={t('Your conversations, channels and setup at a glance.')}>
                 {/* The two things that make the AI useful: where messages come from, and what it
                     answers from. Side by side so a new owner sees both first steps. */}
                 {canManage && (

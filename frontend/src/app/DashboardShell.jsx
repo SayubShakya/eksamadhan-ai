@@ -68,6 +68,14 @@ export default function DashboardShell({
                 <span id="main-content" tabIndex={-1} className="skip-target" />
 
                 {children}
+
+                {/* Which business this is (Sayub, 2026-10-12): a footer line on the right, so the
+                    top bar carries the page's name and today's date. */}
+                {workspace && (
+                    <footer className="appfoot">
+                        <span className="appfoot__ws" title={t('Workspace: {name}', { name: workspace })}>{workspace}</span>
+                    </footer>
+                )}
             </div>
 
             <DisconnectDialog
