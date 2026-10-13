@@ -54,3 +54,4 @@
 .bubble--agent .voice__time { color: rgba(255,255,255,.85); }
 @media (max-width: 760px) { .voice { width: 210px; } }
 @media (prefers-reduced-motion: reduce) { .voice__wave.is-loading i { animation: none; } }
+

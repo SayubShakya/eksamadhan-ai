@@ -11,7 +11,7 @@ import java.util.UUID;
 
 /**
  * Sends to a customer on whichever channel the page is. Messenger and Instagram go through
- * Meta; website chat has nobody to call, because the visitor's chat box fetches its messages
+ * Meta. Website chat has nobody to call, because the visitor's chat box fetches its messages
  * (WidgetController), so sending there only makes the id the message is saved under.
  *
  * Every send that used to call MetaService directly comes through here, so a reply, a

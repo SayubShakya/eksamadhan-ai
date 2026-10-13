@@ -131,7 +131,10 @@
 .conv__peep--1 { z-index: 2; transform: translate(0, 0) scale(.92); opacity: .9; }
 .conv__peep--2 { z-index: 1; transform: translate(12px, -3px) scale(.8); opacity: .75; }
 .conv__face--n3 .conv__peep--1 { transform: translate(-2px, 4px) scale(.88); }
-.conv__peep .avatar { box-shadow: 0 0 0 2px var(--bg); background-color: var(--bg); }
+.conv__peep .avatar { box-shadow: 0 0 0 2px var(--bg); }
+/* Only a photo gets a solid backing (for transparent corners): on initials it painted the circle
+   white, so a website visitor's face, which is always initials, came out blank (13 October 2026). */
+.conv__peep .avatar--photo { background-color: var(--bg); }
 .conv__face--pair .conv__channel { z-index: 4; }
 @media (prefers-reduced-motion: reduce) { .conv__peep { transition: none; } }
 
