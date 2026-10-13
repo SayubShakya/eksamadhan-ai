@@ -9,6 +9,8 @@ const s = (p) => ({
 export const IconGrid = (p) => <svg {...s(p)}><rect x="3" y="3" width="7" height="8" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="15" width="7" height="6" rx="1.5" /></svg>;
 export const IconMoon = (p) => <svg {...s(p)}><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></svg>;
 export const IconHome = (p) => <svg {...s(p)}><path d="M3 10l9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path d="M9 22V12h6v10" /></svg>;
+/** A chat bubble with lines: a customer's message. */
+export const IconChat = (p) => <svg {...s(p)}><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 20.5l1.4-4.2A8 8 0 0 1 3 11.5 8.5 8.5 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z" /><path d="M8 10h8" /><path d="M8 14h5" /></svg>;
 export const IconInbox = (p) => <svg {...s(p)}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>;
 export const IconKnowledge = (p) => <svg {...s(p)}><path d="M9 18h6" /><path d="M10 22h4" /><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z" /></svg>;
 export const IconChannels = (p) => <svg {...s(p)}><path d="M12 10v8" /><path d="M8.5 6.5a5 5 0 0 0 0 7" /><path d="M15.5 6.5a5 5 0 0 1 0 7" /><path d="M5.5 3.5a9 9 0 0 0 0 13" /><path d="M18.5 3.5a9 9 0 0 1 0 13" /></svg>;
@@ -35,6 +37,8 @@ export const IconSignOut = (p) => <svg {...s(p)}><path d="M9 21H5a2 2 0 0 1-2-2V
 export const IconClose = (p) => <svg {...s(p)}><path d="M18 6L6 18" /><path d="M6 6l12 12" /></svg>;
 export const IconImage = (p) => <svg {...s(p)}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>;
 export const IconMic = (p) => <svg {...s(p)}><rect x="9" y="2" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0" /><path d="M12 18v4" /></svg>;
+export const IconPlay = (p) => <svg {...s(p)} fill="currentColor" stroke="none"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" /></svg>;
+export const IconPause = (p) => <svg {...s(p)} fill="currentColor" stroke="none"><rect x="6" y="5" width="4" height="14" rx="1.2" /><rect x="14" y="5" width="4" height="14" rx="1.2" /></svg>;
 export const IconStop = (p) => <svg {...s(p)} fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>;
 export const IconThumb = (p) => <svg {...s(p)} fill="currentColor" stroke="none"><path d="M7 10h2v11H7a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z" /><path d="M11 10 14 3a2.2 2.2 0 0 1 2.2 2.6L15.4 9h4a2 2 0 0 1 2 2.4l-1.3 6.3A3 3 0 0 1 17.2 20H11z" /></svg>;
 export const IconSmile = (p) => <svg {...s({ size: p.size || 16 })}><circle cx="12" cy="12" r="9" /><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0" /><circle cx="9" cy="10" r=".9" fill="currentColor" /><circle cx="15" cy="10" r=".9" fill="currentColor" /></svg>;

@@ -151,7 +151,6 @@ export default function ThreadMessage({
                         {isAi && (
                             <span className="msg__ai" title={m.aiGeneratedMs != null ? aiTimingDetail(m) : undefined}>
                                 AI{m.aiGeneratedMs != null && <span className="msg__ai-time"> · {formatMillis(m.aiGeneratedMs)}</span>}
-                                {m.aiWaitedMs > SLOW_DELIVERY_MS && <span className="msg__timing--warn"> · {t('slow to send')}</span>}
                             </span>
                         )}
                     </div>

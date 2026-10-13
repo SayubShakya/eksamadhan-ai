@@ -3,6 +3,7 @@ import { IconPin, IconSparkle, IconLink } from '../../components/ui/icons.jsx';
 import { formatTimestamp, STATUS_LABEL, ownershipLabel, SENTIMENT, PRIORITY } from '../../lib/format.js';
 import { t } from '../../lib/i18n.js';
 import PersonAvatar, { ChannelIcon } from './PersonAvatar.jsx';
+import { channelName } from '../../lib/channels.js';
 
 /** Tag colour per conversation state. */
 const STATUS_TONE = {
@@ -33,9 +34,46 @@ function previewOf(message) {
  *
  * `showRef` is true when the same customer has more than one conversation listed.
  */
-const channelLabel = (p) => (p === 'instagram' ? 'Instagram' : 'Messenger');
+const channelLabel = channelName;
 
-export default function ConversationRow({ thread: th, platform, platformOf, isOpen, typing, showRef, me, onSelect, onPin }) {
+/**
+ * A person linked across channels shows their faces stacked, one peeping from behind another
+ * (up to three). The one in front is the conversation open in the thread (its tab), else this
+ * row's own. Each face keeps its place in the markup, so switching tabs slides them past each other.
+ */
+function PairedFaces({ members, frontId, platformOf }) {
+    const front = members.find(m => m.id === frontId) || members[0];
+    const order = [front, ...members.filter(m => m.id !== front.id)].slice(0, 3);
+    const rank = new Map(order.map((m, i) => [m.id, i]));
+    const frontPlatform = platformOf?.(front.pageId) || 'facebook';
+    return (
+        <span className={`conv__face conv__face--pair conv__face--n${order.length}`}>
+            {[...members].sort((a, b) => String(a.id).localeCompare(String(b.id))).map(m => (
+                rank.has(m.id) && (
+                    <span key={m.id} className={`conv__peep conv__peep--${rank.get(m.id)}${m.id === front.id ? ' is-front' : ''}`}
+                          aria-hidden={m.id !== front.id || undefined}>
+                        <PersonAvatar name={m.name} url={m.avatarUrl} size={30} />
+                    </span>
+                )
+            ))}
+            <span className={`conv__channel conv__channel--${frontPlatform}`} title={channelLabel(frontPlatform)}>
+                <ChannelIcon platform={frontPlatform} size={12} />
+            </span>
+        </span>
+    );
+}
+
+/** "Instagram + 2 Messenger": each channel once, with how many conversations when more than one. */
+function channelsLabel(members, platformOf) {
+    const count = new Map();
+    for (const m of members) {
+        const p = platformOf?.(m.pageId) || 'facebook';
+        count.set(p, (count.get(p) || 0) + 1);
+    }
+    return [...count].map(([p, n]) => (n > 1 ? `${n} ${channelLabel(p)}` : channelLabel(p))).join(' + ');
+}
+
+export default function ConversationRow({ thread: th, platform, platformOf, activeId, isOpen, typing, showRef, me, onSelect, onPin }) {
     const channels = th.channels?.length > 1 ? [...new Set(th.channels.map(c => platformOf?.(c.pageId) || 'facebook'))] : null;
     const awaitingReply = th.status === 'OPEN_FOR_AGENT' || th.unanswered > 0;
     const unread = th.unanswered > 0 && th.status !== 'RESOLVED' && !th.spam;
@@ -48,15 +86,18 @@ export default function ConversationRow({ thread: th, platform, platformOf, isOp
                 aria-current={isOpen}
                 onClick={() => onSelect(th)}
             >
-                <span className="conv__face">
-                    <PersonAvatar name={th.name} url={th.avatarUrl} size={40} />
-                    <span className={`conv__channel conv__channel--${platform}`} title={platform === 'instagram' ? 'Instagram' : 'Messenger'}>
-                        <ChannelIcon platform={platform} size={12} />
+                {channels ? <PairedFaces members={th.channels} frontId={activeId} platformOf={platformOf} /> : (
+                    <span className="conv__face">
+                        <PersonAvatar name={th.name} url={th.avatarUrl} size={40} />
+                        <span className={`conv__channel conv__channel--${platform}`} title={channelName(platform)}>
+                            <ChannelIcon platform={platform} size={12} />
+                        </span>
                     </span>
-                </span>
+                )}
                 <div className="conv__body">
                     <div className="conv__top">
-                        <span className="conv__name">{th.name}</span>
+                        {/* A person under several names (two accounts linked as one): the open one's. */}
+                        <span className="conv__name">{(th.channels?.find(c => c.id === activeId) || th).name}</span>
                         <span className="conv__time">{formatTimestamp(th.last.timestamp)}</span>
                     </div>
                     <div className="conv__mid">
@@ -98,7 +139,7 @@ export default function ConversationRow({ thread: th, platform, platformOf, isOp
                         {channels && (
                             <span className="tag conv__linked" title={t('One customer on {channels}', { channels: channels.map(channelLabel).join(' and ') })}>
                                 {channels.map(p => <ChannelIcon key={p} platform={p} size={11} />)}
-                                {channels.map(channelLabel).join(' + ')}
+                                {channelsLabel(th.channels, platformOf)}
                             </span>
                         )}
                         {!channels && th.linkedChannels?.length > 0 && (

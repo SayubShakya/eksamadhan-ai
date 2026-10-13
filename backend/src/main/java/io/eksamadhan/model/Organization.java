@@ -48,6 +48,10 @@ public class Organization {
     @Column(name = "review_ai_replies", nullable = false)
     private boolean reviewAiReplies = false;
 
+    /** The business's logo, shown in the menu and the footer; null shows the name's initial. */
+    @Column(columnDefinition = "TEXT")
+    private String logo;
+
     /** What the customer is told when a person takes over; null means the built-in default. */
     @Column(name = "handover_message", columnDefinition = "TEXT")
     private String handoverMessage;

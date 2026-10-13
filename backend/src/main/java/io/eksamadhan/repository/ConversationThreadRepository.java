@@ -25,6 +25,10 @@ public interface ConversationThreadRepository extends JpaRepository<Conversation
           + "ORDER BY t.lastMessageAt DESC")
     List<ConversationThread> findActive(SocialPage page, String customerId);
 
+    /** The status as the database has it now, not as a copy loaded earlier in this transaction. */
+    @org.springframework.data.jpa.repository.Query("SELECT t.status FROM ConversationThread t WHERE t.id = :id")
+    Optional<ThreadStatus> findStatusById(UUID id);
+
     List<ConversationThread> findByTenantIdOrderByLastMessageAtDesc(String tenantId);
 
     List<ConversationThread> findByTenantIdAndStatusOrderByLastMessageAtDesc(String tenantId, ThreadStatus status);

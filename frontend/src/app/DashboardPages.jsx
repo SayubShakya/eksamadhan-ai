@@ -102,7 +102,7 @@ export default function DashboardPages({
 
         {view === 'settings' && (
             <SettingsPage user={user} onDisconnect={() => channels.setConfirmDisconnect(true)} onNavigate={setView}
-                          onWorkspaceRenamed={(name) => setSession(s => (s ? { ...s, organization: { ...s.organization, name } } : s))}
+                          onWorkspaceRenamed={(name, logo) => setSession(s => (s ? { ...s, organization: { ...s.organization, name, logo } } : s))}
                           onStartDeletion={() => setView('delete-account')}
                           onSignedOut={() => signedOutWithNotice(
                               t('Your account is deactivated. Sign in any time to turn it back on.'))} />

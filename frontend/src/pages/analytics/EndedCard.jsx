@@ -3,6 +3,7 @@ import { t } from '../../lib/i18n.js';
 import Donut from './Donut.jsx';
 import { percent } from './analyticsFormat.js';
 import { ChannelIcon } from '../inbox/PersonAvatar.jsx';
+import { channelName } from '../../lib/channels.js';
 
 export default function EndedCard({ deflection: d, spamClosed, spam, channels }) {
     const ended = [
@@ -35,7 +36,7 @@ export default function EndedCard({ deflection: d, spamClosed, spam, channels })
                     <div className="an2-channels__title">{t('By channel')}</div>
                     {channels.map(c => {
                         const share = c.conversations ? c.escalated / c.conversations : 0;
-                        const name = c.platform === 'instagram' ? 'Instagram' : c.platform === 'facebook' ? 'Messenger' : c.platform;
+                        const name = channelName(c.platform);
                         return (
                             <div key={c.platform} className="an2-channel">
                                 <span className="an2-channel__name"><ChannelIcon platform={c.platform} size={14} />{name}</span>

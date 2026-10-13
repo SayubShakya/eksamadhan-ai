@@ -39,6 +39,7 @@ class AiTraceRecordingTest {
     @Autowired AiReplyService aiReplyService;
     @Autowired AiTraceStepRepository traces;
     @Autowired SocialPageRepository pages;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @Autowired ConversationThreadRepository threads;
     @Autowired SocialMessageRepository messages;
     @Autowired io.eksamadhan.repository.OrganizationRepository organizations;
@@ -57,7 +58,8 @@ class AiTraceRecordingTest {
 
     @BeforeEach
     void setUp() {
-        List<SocialPage> all = pages.findAll();
+        // A Meta page: these tests check what is sent to Meta, which website chat never calls.
+        List<SocialPage> all = pages.findAll().stream().filter(p -> !SocialPage.isWebsite(p)).toList();
         assumeFalse(all.isEmpty(), "needs a connected page to hang a conversation on");
         page = all.get(0);
         when(llmClient.isConfigured()).thenReturn(true);
@@ -132,6 +134,23 @@ class AiTraceRecordingTest {
         aiReplyService.escalateForMood(customerAsksAgain(angry, "Still waiting!!"), page.getId());
         org.mockito.Mockito.verify(metaService, org.mockito.Mockito.atMost(1))
                 .sendMessage(anyString(), anyString(), any(), any());
+    }
+
+    @Test
+    void anAnswerFinishedAfterStaffResolvedTheConversationIsNotSent() {
+        UUID asked = customerAsks("Is the shop open on Saturday?");
+        UUID threadId = messages.findWithThreadById(asked).orElseThrow().getThread().getId();
+        // Staff resolve it while the model is still writing (13 October 2026: the late answer
+        // was filed in the customer's next conversation).
+        when(llmClient.complete(anyString(), anyString())).thenAnswer(call -> {
+            jdbc.update("UPDATE conversation_threads SET status = 'RESOLVED' WHERE id = ?", threadId);
+            return "{\"related\": true, \"answered\": true, \"confidence\": 0.9, \"reply\": \"We are closed on Saturday.\"}";
+        });
+
+        aiReplyService.reply(asked, page.getId());
+
+        org.mockito.Mockito.verify(metaService, org.mockito.Mockito.never()).sendMessage(anyString(), anyString(), any(), any());
+        assertTrue(titles(asked).contains("Answer not sent"));
     }
 
     @Test

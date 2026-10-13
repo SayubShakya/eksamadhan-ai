@@ -1,11 +1,17 @@
 // A customer's (or colleague's) face in the inbox, and the small Messenger / Instagram mark
 // drawn beside it.
 import { useEffect, useState } from 'react';
-import { IconFacebook, IconInstagram } from '../../components/ui/icons.jsx';
+import { IconFacebook, IconInstagram, IconWidget } from '../../components/ui/icons.jsx';
 import { initials } from '../../lib/format.js';
+import { platformKey } from '../../lib/channels.js';
 
-export const ChannelIcon = ({ platform, size = 14 }) =>
-    platform === 'instagram' ? <IconInstagram size={size} /> : <IconFacebook size={size} />;
+export const ChannelIcon = ({ platform, size = 14 }) => {
+    const p = platformKey(platform);
+    if (p === 'instagram') return <IconInstagram size={size} />;
+    // Website chat: the chat bubble in the app's blue, since it has no brand of its own.
+    if (p === 'web') return <span className="channel-web" style={{ display: 'inline-flex', color: 'var(--accent)' }}><IconWidget size={size} /></span>;
+    return <IconFacebook size={size} />;
+};
 
 /**
  * Customer avatar: their Facebook photo when Meta gave us one and it still loads, else initials.

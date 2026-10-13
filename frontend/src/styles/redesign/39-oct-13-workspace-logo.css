@@ -1,0 +1,48 @@
+/* A workspace's logo (13 October 2026): in the menu, the footer and Settings. Fitted inside a
+   rounded square on a plain tile, so a transparent or wide logo still sits evenly. */
+.wslogo {
+    flex: none; display: inline-flex; align-items: center; justify-content: center; overflow: hidden;
+    border-radius: var(--r-sm); background: var(--accent, #2563eb); color: #fff; font-weight: 700; line-height: 1;
+}
+.wslogo--image { background: #fff; border: 1px solid var(--border); }
+.wslogo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* A long business name ("Acme Support Pvt. Ltd.") ran under the collapse button and into the top
+   bar: the brand takes the room that is left and cuts the name short, the button keeps its own. */
+.rail__head .brand { flex: 1 1 auto; min-width: 0; overflow: hidden; justify-content: flex-start; }
+.rail__head .brand .brand__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+/* A business name may take two lines before it is cut, so most names show whole. */
+.rail__head .brand--workspace .brand__name {
+    font-size: 13px; line-height: 1.25; text-align: left; white-space: normal; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.rail__head .rail__collapse { flex: none; }
+.rail--closed .brand .wslogo { width: 24px !important; height: 24px !important; }
+/* Collapsed, the menu shows the logo only: the two-line name squeezed into "A c." beside it. */
+.rail--closed .rail__head .brand--workspace .brand__name { display: none; }
+.rail--closed .rail__head .brand { flex: none; }
+
+.appfoot .wslogo { border-radius: 5px; }
+
+/* Settings: the logo as a drop zone (13 October 2026). The buttons sit under the text, so the
+   row never runs past the card's edge as it did with three things in a line. */
+.wslogo-field {
+    display: flex; align-items: center; gap: 16px; width: 100%;
+    padding: 14px; border: 1px dashed var(--border-strong); border-radius: var(--r-sm, 8px);
+    background: var(--surface); transition: border-color .15s ease, background .15s ease;
+}
+.wslogo-field.is-dragging { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--bg)); }
+.wslogo-field.is-readonly { border-style: solid; }
+.wslogo-field__tile {
+    flex: none; padding: 0; border: 0; background: none; border-radius: var(--r-sm, 8px); cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+.wslogo-field__tile:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 24, 40, .1); }
+.wslogo-field__tile:disabled { cursor: default; }
+.wslogo-field__tile .wslogo { font-size: 28px !important; }
+.wslogo-field__text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.wslogo-field__title { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.wslogo-field__hint { font-size: 12.5px; color: var(--text-muted); }
+.wslogo-field__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.sp-row__control .wslogo-field__actions .btn { min-height: 32px; padding: 0 14px; font-size: 13px; }
+.wslogo-field .settings__error { margin-top: 4px; }

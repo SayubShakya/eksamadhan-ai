@@ -32,8 +32,12 @@ public class AnalyticsService {
         this.deflectionTarget = deflectionTarget;
     }
 
+    /**
+     * {@code people} counts customers, not conversations: one person on Instagram and Messenger
+     * (linked as the same person) is one, however many conversations they started.
+     */
     public record Deflection(long total, long handledByAi, long escalated, long unrelated,
-                             double rate, double target) {}
+                             double rate, double target, long people) {}
 
     public record ReplyTimes(Double aiMedianSeconds, Double humanMedianSeconds,
                              Double aiP90Seconds, long aiSamples, long humanSamples) {}
@@ -224,8 +228,14 @@ public class AnalyticsService {
 
         long total = num(row.get("total"));
         long ai = num(row.get("handled_by_ai"));
+        Long people = jdbc.queryForObject("""
+                SELECT count(DISTINCT coalesce(l.contact_id::text, t.social_page_id || '|' || t.customer_id))
+                  FROM conversation_threads t
+                  LEFT JOIN customer_links l ON l.social_page_id = t.social_page_id AND l.customer_id = t.customer_id
+                 WHERE t.tenant_id = ? AND t.created_at >= now() - make_interval(days => ?) AND NOT t.unrelated
+                """, Long.class, tenant, days);
         return new Deflection(total, ai, num(row.get("escalated")), num(row.get("unrelated")),
-                total == 0 ? 0 : (double) ai / total, deflectionTarget);
+                total == 0 ? 0 : (double) ai / total, deflectionTarget, people == null ? 0 : people);
     }
 
     /**

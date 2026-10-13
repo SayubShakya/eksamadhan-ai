@@ -359,6 +359,8 @@ public class AuthController {
                             .pageName(page.getPageName())
                             .platform(page.getPlatform().toLowerCase())
                             .username(page.getUsername())
+                            .avatarUrl("INSTAGRAM".equalsIgnoreCase(page.getPlatform())
+                                    ? metaService.instagramPicture(page.getPageId(), page.getAccessToken()) : null)
                             .connectedAt(page.getConnectedAt())
                             .conversations(row == null ? 0 : ((Number) row[1]).longValue())
                             .withPeople(row == null || row[2] == null ? 0 : ((Number) row[2]).longValue())

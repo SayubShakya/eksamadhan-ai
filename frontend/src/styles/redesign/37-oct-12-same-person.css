@@ -48,23 +48,137 @@
     border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
 }
 .btn.sameperson__unlink:hover:not(:disabled) { border-color: var(--danger); }
-.sameperson__suggest {
-    display: grid; gap: 8px; padding: 10px; border-radius: 10px;
-    background: var(--accent-tint); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+/* A suggestion (13 October 2026): a small label, then one row with the answer on the right. */
+.sameperson__suggest { display: grid; gap: 6px; }
+.sameperson__suggest-q { margin: 0; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.sameperson__srow {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px;
+    padding: 8px 8px 8px 10px; border-radius: var(--r-sm); background: var(--bg);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+    box-shadow: inset 3px 0 0 var(--accent);
 }
-.sameperson__suggest-q { margin: 0; font-size: 13px; font-weight: 600; color: var(--text); }
+.sameperson__answer { display: inline-flex; gap: 6px; }
+/* Small labelled buttons: words, because a lone cross read as "close" and threw a suggestion away. */
+.sameperson__btn {
+    display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px;
+    font: inherit; font-size: 12.5px; font-weight: 600; white-space: nowrap; cursor: pointer;
+    border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.sameperson__btn--yes { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sameperson__btn--yes:hover:not(:disabled) { filter: brightness(1.08); }
+.sameperson__btn--open { color: var(--accent); }
+.sameperson__btn--open:hover:not(:disabled), .sameperson__btn--no:hover:not(:disabled) { background: var(--surface); border-color: var(--border-strong); }
+.sameperson__btn--unlink { color: var(--danger); }
+.sameperson__btn--unlink:hover:not(:disabled) { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 6%, var(--bg)); }
+.sameperson__btn:disabled { cursor: default; }
+.sameperson__btn:disabled:not([aria-busy]) { opacity: .5; }
+.sameperson__btn--yes .spinner { border-color: rgba(255,255,255,.4); border-top-color: #fff; }
+/* The row: who on the left, the two buttons under them when the panel is narrow. */
+.sameperson__srow { grid-template-columns: auto minmax(0, 1fr); row-gap: 8px; }
+.sameperson__srow .sameperson__answer { grid-column: 2; }
+/* While its request is out the row dims, so it reads as working rather than stuck. */
+.sameperson__srow { transition: opacity .2s ease; }
+.sameperson__srow.is-pending { opacity: .7; }
+.sameperson__srow--loading { box-shadow: none; border-color: var(--border); }
+.sameperson__srow--loading .sameperson__who { gap: 6px; }
+.sameperson__srow .sameperson__channel { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sameperson__suggest-q { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .inbox .sameperson__picker .sameperson__trigger { gap: 8px; color: var(--accent); }
 .sameperson__trigger .assignee__name { flex: 1; text-align: left; color: var(--accent); font-weight: 500; }
 
 /* Channel tabs under the open conversation's header: one person on Instagram and Messenger. */
-.chtabs { display: flex; gap: 4px; padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--bg); }
+.chtabs { position: relative; display: flex; gap: 4px; padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--bg); }
 .chtabs__tab {
     display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 12px; margin-bottom: -1px;
+    transition: color .2s ease;
     font: inherit; font-size: 13.5px; font-weight: 500; color: var(--text-muted);
     background: none; border: 0; border-bottom: 2px solid transparent; cursor: pointer;
 }
 .chtabs__tab:hover { color: var(--text); }
-.chtabs__tab.is-on { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
+.chtabs__tab.is-on { color: var(--text); font-weight: 600; }
+/* One underline that slides from tab to tab (13 October 2026). */
+.chtabs__bar {
+    position: absolute; left: 0; bottom: 0; height: 2px; background: var(--accent); border-radius: 2px;
+    transition: transform .25s cubic-bezier(.2,.7,.3,1), width .25s cubic-bezier(.2,.7,.3,1);
+}
+/* A soft tint behind the open tab that glides with the underline. */
+.chtabs__glow {
+    position: absolute; left: 0; top: 5px; height: 30px; border-radius: var(--r-sm);
+    background: color-mix(in srgb, var(--accent) 9%, transparent); pointer-events: none;
+    transition: transform .25s cubic-bezier(.2,.7,.3,1), width .25s cubic-bezier(.2,.7,.3,1);
+}
+.chtabs__tab { position: relative; z-index: 1; }
+.chtabs__tab.is-on { color: var(--accent); }
+.chtabs__tab.is-on svg { transform: scale(1.08); }
+.chtabs__tab svg { transition: transform .25s ease; }
+/* Keyboard focus only: a click leaves no box around the tab. */
+.chtabs__tab:focus:not(:focus-visible) { outline: none; }
+@media (prefers-reduced-motion: reduce) { .chtabs__bar, .chtabs__glow, .chtabs__tab svg { transition: none; } }
 .chtabs__tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--r-sm); }
 .chtabs__count { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 600; display: inline-grid; place-items: center; }
 .conv__linked { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted); background: var(--surface); }
+
+/* A person on two channels (13 October 2026): both faces, one peeping from behind the other.
+   The open channel's face comes to the front; the two slide past each other when it changes. */
+.conv__face--pair { width: 40px; height: 40px; }
+.conv__peep {
+    position: absolute; left: 0; top: 0; border-radius: 50%;
+    transition: transform .25s ease, opacity .25s ease;
+}
+/* 0 is the open conversation, in front; 1 and 2 peep from behind it. */
+.conv__peep--0 { z-index: 3; transform: translate(10px, 10px); }
+.conv__peep--1 { z-index: 2; transform: translate(0, 0) scale(.92); opacity: .9; }
+.conv__peep--2 { z-index: 1; transform: translate(12px, -3px) scale(.8); opacity: .75; }
+.conv__face--n3 .conv__peep--1 { transform: translate(-2px, 4px) scale(.88); }
+.conv__peep .avatar { box-shadow: 0 0 0 2px var(--bg); background-color: var(--bg); }
+.conv__face--pair .conv__channel { z-index: 4; }
+@media (prefers-reduced-motion: reduce) { .conv__peep { transition: none; } }
+
+/* Why a suggestion was made, and the person's totals across channels (13 October 2026). */
+.sameperson__why {
+    white-space: nowrap; font-size: 11px; font-weight: 600; color: var(--accent);
+    padding: 1px 7px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+}
+.sameperson__totals { margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.45; }
+.sameperson__list { display: grid; gap: 6px; }
+
+/* Each tab: the person on top, the channel underneath (13 October 2026). */
+.chtabs { overflow-x: auto; scrollbar-width: none; }
+.chtabs__tab { flex: none; height: 52px; gap: 9px; padding: 0 12px; }
+.chtabs__text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2; min-width: 0; }
+.chtabs__name { font-size: 13px; font-weight: 600; color: var(--text); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chtabs__channel { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 500; color: var(--text-muted); }
+.chtabs__tab:not(.is-on) .avatar { opacity: .75; transition: opacity .2s ease; }
+.chtabs__tab:not(.is-on):hover .avatar { opacity: 1; }
+.chtabs__tab.is-on .chtabs__channel { color: var(--accent); }
+.chtabs__glow { top: 6px; height: 40px; }
+/* A linked person is settled, not a question: plain border, no blue edge. */
+.sameperson__srow--linked { box-shadow: none; border-color: var(--border); }
+.sameperson__srow--linked:hover { border-color: var(--border-strong); }
+.sameperson__channel svg { flex: none; }
+/* The panel could not be loaded: say so, with a retry, rather than "Not linked". */
+.sameperson__retry { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; }
+.sameperson__retry:hover { text-decoration: underline; }
+/* Working (13 October 2026): a light runs round the row's border instead of a spinner in the
+   button, so the whole row reads as busy without the buttons changing width. */
+@property --sameperson-spin { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.sameperson__srow { position: relative; }
+.sameperson__srow.is-pending { opacity: 1; }
+.sameperson__srow.is-pending::after {
+    content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 2px; pointer-events: none;
+    background: conic-gradient(from var(--sameperson-spin), transparent 0 60%, var(--accent) 85%, transparent 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    animation: sameperson-run 1.1s linear infinite;
+}
+.sameperson__srow.is-pending .sameperson__btn[aria-busy] { border-color: var(--accent); }
+.sameperson__srow.is-pending .sameperson__btn--yes[aria-busy] { filter: brightness(1.08); }
+@keyframes sameperson-run { to { --sameperson-spin: 360deg; } }
+@media (prefers-reduced-motion: reduce) {
+    .sameperson__srow.is-pending::after { animation: none; background: var(--accent); opacity: .5; }
+}
+/* A suggestion is plain too (13 October 2026, owner): no blue edge or tint, the same grey border
+   as a linked row. The question above it already says it is a suggestion. */
+.sameperson__srow { box-shadow: none; border-color: var(--border); }
+.sameperson__srow:hover { border-color: var(--border-strong); }

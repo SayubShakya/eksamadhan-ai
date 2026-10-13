@@ -1,0 +1,56 @@
+/* Website chat on the Channels page (13 October 2026): the card in the app's own blue, each chat
+   box's websites, the code to paste, and the form that sets one up. */
+.chn-card--widget { --brand: var(--accent); --brand-band: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, var(--bg)), color-mix(in srgb, var(--accent) 4%, var(--bg))); }
+.chn-logo--widget { color: var(--accent); }
+
+/* Each chat box is laid out like a connected Page (the same green box, face, name and named
+   actions), with the code to paste on one line between: click it to select it all. */
+.chn-widget__face { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--bg)); border-color: color-mix(in srgb, var(--accent) 22%, var(--border)); }
+.chn-widget__more { font-style: normal; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.chn-widget__code {
+    display: block; padding: 7px 10px; border-radius: var(--r-sm); background: var(--bg);
+    border: 1px solid color-mix(in srgb, var(--success) 18%, var(--border));
+    font-family: var(--font-mono, ui-monospace, monospace); font-size: 11.5px; line-height: 1.5; color: var(--text-muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: all; cursor: text;
+}
+.chn-act.chn-act--accent { color: var(--accent); }
+
+.chn-wform { display: grid; gap: 12px; }
+.chn-wform__field { display: grid; gap: 5px; font-size: 13px; }
+.chn-wform__field > span { font-weight: 600; color: var(--text); }
+.chn-wform__field em { font-style: normal; font-weight: 400; color: var(--text-muted); }
+.chn-wform__field small { font-size: 12px; color: var(--text-muted); }
+.chn-wform__field textarea, .chn-wform__field input[type="text"] {
+    width: 100%; padding: 8px 10px; font: inherit; font-size: 13.5px; color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-sm); resize: vertical;
+}
+.chn-wform__field textarea:focus, .chn-wform__field input[type="text"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
+.chn-wform__field--row { display: flex; align-items: center; gap: 10px; }
+.chn-wform__field--row input[type="color"] { width: 40px; height: 30px; padding: 2px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); cursor: pointer; }
+.chn-wform__field--row code { font-size: 12.5px; color: var(--text-muted); }
+.chn-wform__actions { display: flex; justify-content: flex-end; gap: 8px; }
+.dash__chip--web { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
+
+/* Voice notes as a waveform (13 October 2026): play, the recording's own shape filling in as it
+   plays, the length. Replaces the browser's player, which read "0:00 / 0:00" until played. */
+.voice { display: flex; align-items: center; gap: 10px; width: 260px; max-width: 100%; padding: 2px 4px; }
+.voice__btn {
+    flex: none; width: 34px; height: 34px; border: 0; border-radius: var(--r-sm); cursor: pointer;
+    display: grid; place-items: center;
+    background: color-mix(in srgb, var(--text) 9%, var(--bg)); color: var(--text);
+}
+.voice__btn:hover { background: color-mix(in srgb, var(--text) 15%, var(--bg)); }
+.voice__btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.voice__wave { flex: 1; min-width: 0; height: 30px; display: flex; align-items: center; gap: 2px; cursor: pointer; }
+.voice__wave i { flex: 1; min-width: 2px; border-radius: 2px; background: color-mix(in srgb, currentColor 28%, transparent); transition: background .15s ease; }
+.voice__wave i.is-played { background: var(--accent); }
+.voice__wave.is-loading i { animation: voice-wait 1.2s ease-in-out infinite; }
+@keyframes voice-wait { 50% { opacity: .45; } }
+.voice__time { flex: none; min-width: 32px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.voice audio { display: none; }
+/* On a blue (staff) bubble: white button and bars. */
+.bubble--agent .voice__btn { background: #fff; color: var(--accent); }
+.bubble--agent .voice__wave i.is-played { background: #fff; }
+.bubble--agent .voice__time { color: rgba(255,255,255,.85); }
+@media (max-width: 760px) { .voice { width: 210px; } }
+@media (prefers-reduced-motion: reduce) { .voice__wave.is-loading i { animation: none; } }

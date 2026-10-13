@@ -259,6 +259,36 @@ public class MetaService {
                 });
     }
 
+    private record CachedPicture(String url, java.time.Instant at) {}
+    private final Map<String, CachedPicture> instagramPictures = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * An Instagram account's own profile picture, or null when it has none. Meta's picture
+     * addresses are signed and expire, so this is read at most once an hour per account rather
+     * than stored.
+     */
+    public String instagramPicture(String instagramId, String pageAccessToken) {
+        CachedPicture cached = instagramPictures.get(instagramId);
+        if (cached != null && cached.at().isAfter(java.time.Instant.now().minus(java.time.Duration.ofHours(1)))) {
+            return cached.url();
+        }
+        String url = null;
+        try {
+            Map<?, ?> m = webClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/{id}")
+                            .queryParam("fields", "profile_picture_url")
+                            .queryParam("access_token", pageAccessToken)
+                            .build(instagramId))
+                    .retrieve().bodyToMono(Map.class)
+                    .block(java.time.Duration.ofSeconds(5));
+            if (m != null && m.get("profile_picture_url") instanceof String u && !u.isBlank()) url = u;
+        } catch (Exception e) {
+            log.debug("Could not read the picture of {}: {}", instagramId, e.getMessage());
+        }
+        instagramPictures.put(instagramId, new CachedPicture(url, java.time.Instant.now()));
+        return url;
+    }
+
     /** An Instagram account's or a Facebook Page's username, or empty when there is none. */
     public Mono<String> getInstagramUsername(String instagramId, String pageAccessToken) {
         return webClient.get()

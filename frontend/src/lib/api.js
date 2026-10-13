@@ -144,8 +144,18 @@ export const getSamePerson = (threadId) =>
     axios.get(`/api/threads/${threadId}/same-person`).then(r => r.data);
 export const linkSamePerson = (threadId, otherThreadId) =>
     axios.post(`/api/threads/${threadId}/same-person`, { threadId: otherThreadId }).then(r => r.data);
+/** "Not the same person": that suggestion is not made again. */
+export const dismissSamePerson = (threadId, otherThreadId) =>
+    axios.post(`/api/threads/${threadId}/same-person/dismiss`, { threadId: otherThreadId }).then(r => r.data);
+export const undismissSamePerson = (threadId, otherThreadId) =>
+    axios.delete(`/api/threads/${threadId}/same-person/dismiss/${otherThreadId}`).then(r => r.data);
 export const unlinkSamePerson = (threadId) =>
     axios.delete(`/api/threads/${threadId}/same-person`).then(r => r.data);
+/** Website chat: the chat boxes this workspace has put on its websites. */
+export const getWidgets = () => axios.get('/api/widgets').then(r => r.data);
+export const createWidget = (form) => axios.post('/api/widgets', form).then(r => r.data);
+export const updateWidget = (id, form) => axios.put(`/api/widgets/${id}`, form).then(r => r.data);
+export const deleteWidget = (id) => axios.delete(`/api/widgets/${id}`).then(r => r.data);
 export const summariseThread = (threadId) =>
     axios.post(`/api/threads/${threadId}/summarise`).then(r => r.data);
 export const assignThread = (threadId, userId) =>

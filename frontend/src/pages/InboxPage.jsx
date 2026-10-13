@@ -19,6 +19,7 @@ import MessageList from './inbox/MessageList.jsx';
 import Composer from './inbox/Composer.jsx';
 import CustomerPanel from './inbox/CustomerPanel.jsx';
 import Lightbox from './inbox/Lightbox.jsx';
+import { channelName } from '../lib/channels.js';
 
 /**
  * The inbox: conversation list, the open conversation, and the customer's details.
@@ -155,7 +156,10 @@ export default function InboxPage({
         ? threads.filter(th => th.contactId === activeThread.contactId && !th.spam)
         : [];
 
-    const platformOf = (pageId) => pages.find(p => p.pageId === pageId)?.platform || 'facebook';
+    // The connected pages say which channel a page is; until they have loaded (just after a
+    // restart) the conversations themselves do, so an Instagram chat never shows as Messenger.
+    const platformOf = (pageId) => pages.find(p => p.pageId === pageId)?.platform
+        || String(threads.find(th => th.pageId === pageId)?.platform || 'facebook').toLowerCase();
 
     // Only take over the whole screen when there is genuinely nothing anywhere.
     // If a filter merely matches nothing, the chips must stay reachable — otherwise
@@ -280,7 +284,7 @@ export default function InboxPage({
 
                         <Composer
                             thread={activeThread}
-                            replyChannel={channelTabs.length > 1 ? (platformOf(activeThread.pageId) === 'instagram' ? 'Instagram' : 'Messenger') : null}
+                            replyChannel={channelTabs.length > 1 ? channelName(platformOf(activeThread.pageId)) : null}
                             me={me}
                             typing={Boolean(aiTyping[activeThread.id] || activeThread.aiTyping)}
                             acting={acting}

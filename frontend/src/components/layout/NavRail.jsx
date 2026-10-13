@@ -6,6 +6,7 @@ import {
 import Avatar from '../ui/Avatar.jsx';
 import { fullName } from '../../lib/avatar.js';
 import { LogoMark } from '../ui/Logo.jsx';
+import WorkspaceLogo from '../ui/WorkspaceLogo.jsx';
 import { t } from '../../lib/i18n.js';
 
 const ITEMS = [
@@ -32,7 +33,8 @@ const DOCKED = '(min-width: 1024px)';
  * `showSettings={false}` because workspace settings have no meaning outside a workspace.
  */
 export default function NavRail({ view, onNavigate, unread = 0, open, onClose, onToggle, onHome,
-                                  items = ITEMS, showSettings = true, onSignOut, user, onProfile, action }) {
+                                  items = ITEMS, showSettings = true, onSignOut, user, onProfile, action,
+                                  workspace, workspaceLogo }) {
 
     // Docked (desktop), the collapsed rail is still the menu: only off-screen on a phone is it
     // hidden from clicks and screen readers.
@@ -115,12 +117,19 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
             >
                 <div className="rail__head">
                     <button
-                        className="brand"
+                        className={`brand${workspaceLogo ? ' brand--workspace' : ''}`}
                         onClick={onHome}
+                        title={workspaceLogo ? workspace : undefined}
                         aria-label={t('EkSamadhan AI home')}
                     >
-                        <LogoMark size={28} color="#2563eb" />
-                        <span className="brand__name">EkSamadhan AI</span>
+                        {/* A workspace with its own logo sees its own brand; otherwise ours. */}
+                        {workspaceLogo ? <>
+                            <WorkspaceLogo name={workspace} logo={workspaceLogo} size={28} />
+                            <span className="brand__name">{workspace}</span>
+                        </> : <>
+                            <LogoMark size={28} color="#2563eb" />
+                            <span className="brand__name">EkSamadhan AI</span>
+                        </>}
                     </button>
                     <button
                         className="icon-btn rail__collapse"

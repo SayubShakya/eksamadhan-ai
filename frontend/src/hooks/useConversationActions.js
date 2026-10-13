@@ -4,10 +4,22 @@ import { useCallback, useRef, useState } from 'react';
 import * as api from '../lib/api.js';
 import { toast } from '../lib/toast.js';
 import { t } from '../lib/i18n.js';
+import { channelName } from '../lib/channels.js';
 
 /** Failures go to `setSendError`, the inbox's inline error line. */
-export default function useConversationActions({ setServerThreads, refreshThreads, setFilter, setSendError }) {
+/** The same person's open conversations on their other channels (linked as the same person). */
+export function linkedOpen(thread, threads = []) {
+    if (!thread?.contactId) return [];
+    return threads.filter(x => x.contactId === thread.contactId && x.id !== thread.id && x.status !== 'RESOLVED');
+}
+
+const channelOf = (th) => channelName(th.platform);
+
+export default function useConversationActions({ setServerThreads, refreshThreads, serverThreads, setFilter, setSendError }) {
     const [summarising, setSummarising] = useState(false);
+    // The latest list, for finding a person's other channels without re-creating the handlers.
+    const threadsRef = useRef([]);
+    threadsRef.current = serverThreads || [];
 
     // Held in a ref so handleSummarise and handleAssign can call it without depending on its identity.
     const refreshThreadsRef = useRef(null);
@@ -50,9 +62,14 @@ export default function useConversationActions({ setServerThreads, refreshThread
     const handleAssign = useCallback(async (thread, userId) => {
         if (!userId) return;
         try {
+            // One person, one owner: their open conversations on other channels go along.
+            const others = linkedOpen(thread, threadsRef.current);
             await api.assignThread(thread.id, userId);
+            await Promise.all(others.map(o => api.assignThread(o.id, userId).catch(() => null)));
             await refreshThreadsRef.current?.();
-            toast.success(t('Conversation reassigned'), { body: t('The new owner has been alerted.') });
+            toast.success(t('Conversation reassigned'), { body: others.length
+                ? t('Their {channels} conversation goes with it. The new owner has been alerted.', { channels: others.map(channelOf).join(', ') })
+                : t('The new owner has been alerted.') });
         } catch (err) {
             setSendError(api.errorMessage(err, t('Could not reassign that conversation.')));
         }
@@ -62,6 +79,10 @@ export default function useConversationActions({ setServerThreads, refreshThread
     const handleThreadAction = useCallback(async (thread, action) => {
         try {
             const { data: updated } = await api.setThreadState(thread.id, action);
+            // Resolving a person closes them everywhere: their other channel's open conversation
+            // would otherwise sit in Active with the matter already settled.
+            const others = action === 'resolve' ? linkedOpen(thread, threadsRef.current) : [];
+            await Promise.all(others.map(o => api.setThreadState(o.id, 'resolve').catch(() => null)));
             // Reopening or rescuing from Spam moves the conversation to Active. Follow it there
             // in the same render as its new state, or the filter hides it and the pane jumps
             // to some other conversation.
@@ -72,7 +93,9 @@ export default function useConversationActions({ setServerThreads, refreshThread
             await refreshThreads();
             const done = { 'take-over': [t('You took over'), t('The AI stops replying in this conversation.')],
                 'return-to-ai': [t('Handed back to the AI'), t('It answers the customer again.')],
-                resolve: [t('Conversation resolved'), t('It moves to Resolved. A new message opens it again.')],
+                resolve: [t('Conversation resolved'), others.length
+                    ? t('On every channel this customer uses. A new message opens it again.')
+                    : t('It moves to Resolved. A new message opens it again.')],
                 'not-spam': [t('Moved out of Spam'), t('The AI answers this customer again.')] }[action] || [t('Conversation updated'), ''];
             toast.success(done[0], { body: done[1] || undefined });
         } catch (err) {

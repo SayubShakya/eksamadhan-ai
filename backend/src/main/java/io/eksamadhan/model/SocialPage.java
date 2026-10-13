@@ -29,7 +29,7 @@ public class SocialPage {
     private String accessToken;
 
     @Column(nullable = false)
-    private String platform; // FACEBOOK, INSTAGRAM
+    private String platform; // FACEBOOK, INSTAGRAM, WEB (website chat)
 
     private String instagramBusinessId;
 
@@ -44,6 +44,24 @@ public class SocialPage {
     private Organization organization;
 
     private LocalDateTime connectedAt;
+
+    /** Website chat only: the websites allowed to use it, one origin per line. */
+    @Column(columnDefinition = "TEXT")
+    private String widgetOrigins;
+
+    /** Website chat only: the first message in the chat box; null uses the default. */
+    @Column(columnDefinition = "TEXT")
+    private String widgetGreeting;
+
+    /** Website chat only: #rrggbb for the button and the visitor's messages. */
+    private String widgetColor;
+
+    public static final String WEB = "WEB";
+
+    /** A website chat box rather than a Meta page: nothing about it goes through Meta. */
+    public static boolean isWebsite(SocialPage page) {
+        return page != null && WEB.equalsIgnoreCase(page.getPlatform());
+    }
 
     @PrePersist
     protected void onCreate() {

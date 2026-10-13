@@ -61,7 +61,8 @@ class ReviewRepliesAndGapsTest {
 
     @BeforeEach
     void setUp() {
-        List<SocialPage> all = pages.findAll();
+        // A Meta page: these tests check what is sent to Meta, which website chat never calls.
+        List<SocialPage> all = pages.findAll().stream().filter(p -> !SocialPage.isWebsite(p)).toList();
         assumeFalse(all.isEmpty(), "needs a connected page to hang a conversation on");
         page = all.get(0);
         when(llmClient.isConfigured()).thenReturn(true);

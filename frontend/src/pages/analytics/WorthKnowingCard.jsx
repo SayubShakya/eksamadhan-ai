@@ -3,6 +3,7 @@
 import { t } from '../../lib/i18n.js';
 import { IconInbox, IconClock, IconTeam, IconWarning, IconBolt, IconArrowRight, IconShield } from '../../components/ui/icons.jsx';
 import { percent, weekdayName, hourLabel, spamKinds } from './analyticsFormat.js';
+import { channelName } from '../../lib/channels.js';
 
 export default function WorthKnowingCard({ data, moods, spam, channels, busiest, onNavigate, onOpenSpam }) {
     const checks = [];
@@ -27,7 +28,7 @@ export default function WorthKnowingCard({ data, moods, spam, channels, busiest,
     }
     const worst = [...channels].filter(c => c.conversations >= 3).sort((a, b) => b.escalationRate - a.escalationRate)[0];
     if (worst && channels.length > 1) {
-        checks.push({ Icon: IconTeam, title: t('{channel} needs people most', { channel: worst.platform === 'instagram' ? 'Instagram' : 'Messenger' }),
+        checks.push({ Icon: IconTeam, title: t('{channel} needs people most', { channel: channelName(worst.platform) }),
             text: t('{pct} of its conversations reached a person.', { pct: percent(worst.escalationRate) }) });
     }
 

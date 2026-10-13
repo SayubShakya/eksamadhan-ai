@@ -3,7 +3,7 @@
 // the Write text tab; once that is added the question leaves the list. Dismiss is for the ones
 // no knowledge should answer.
 import { useState } from 'react';
-import { IconInfo, IconPlus, IconClose } from '../../components/ui/icons.jsx';
+import { IconInfo, IconPlus, IconClose, IconChat } from '../../components/ui/icons.jsx';
 import { formatDate } from '../../lib/format.js';
 import { t } from '../../lib/i18n.js';
 
@@ -26,6 +26,8 @@ export default function KnowledgeGaps({ gaps, answering, onAnswer, onDismiss }) 
             <ul className="kq-gaps__list">
                 {shown.map(gap => (
                     <li key={gap.question} className={`kq-gap${answering === gap.question ? ' kq-gap--on' : ''}`}>
+                        {/* Same tile as a source row above, so the two lists read alike. */}
+                        <span className="kq-badge kq-item__icon tone-blue" aria-hidden="true"><IconChat size={17} /></span>
                         <div className="kq-gap__body">
                             <q className="kq-gap__q">{gap.question}</q>
                             <span className="kq-gap__meta">

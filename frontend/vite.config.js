@@ -71,7 +71,11 @@ export default defineConfig(({ mode }) => ({
                 // own proxy is safe: the API authenticates with a bearer token the page sends
                 // itself, never a cookie a browser would attach for another site.
                 configure: (proxy) => {
-                    proxy.on('proxyReq', (proxyReq) => proxyReq.removeHeader('origin'));
+                    // Except for website chat: there the Origin is the whole check that the chat
+                    // box is on a website the business listed (WidgetService), so it must arrive.
+                    proxy.on('proxyReq', (proxyReq, req) => {
+                        if (!req.url.startsWith('/api/widget/')) proxyReq.removeHeader('origin');
+                    });
                 },
             },
         },

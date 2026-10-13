@@ -106,7 +106,7 @@ export default function App() {
 
     const actions = useConversationActions({
         setServerThreads: data.setServerThreads, refreshThreads: data.refreshThreads,
-        setFilter: selection.setFilter, setSendError,
+        serverThreads: data.serverThreads, setFilter: selection.setFilter, setSendError,
     });
     useWorkspacePolling(workspaceSession, data, { setPlatform: selection.setPlatform, setViewState });
     const inbox = useInboxThreads({
@@ -169,6 +169,7 @@ export default function App() {
             setView={setView}
             user={user}
             workspace={session?.organization?.name}
+            workspaceLogo={session?.organization?.logo}
             unread={inbox.unread}
             navOpen={navOpen}
             setNavOpen={setNavOpen}

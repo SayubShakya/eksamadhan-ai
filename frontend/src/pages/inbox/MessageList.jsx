@@ -1,4 +1,5 @@
 // The open conversation's scrolling body: "Load earlier messages", then the messages shown.
+import { useEffect, useRef } from 'react';
 import { t } from '../../lib/i18n.js';
 import ThreadMessage from './ThreadMessage.jsx';
 
@@ -10,6 +11,20 @@ export default function MessageList({
     bodyRef, endRef, thread, messages, shown, onLoadEarlier, me, picked, onPick,
     onReact, onReply, onHide, onOpenImage,
 }) {
+    // Switching between one person's channels (the Instagram and Messenger tabs) slides the
+    // other conversation in from the side of its tab; opening someone else does not animate.
+    const prev = useRef(thread);
+    useEffect(() => {
+        const was = prev.current;
+        prev.current = thread;
+        const el = bodyRef?.current;
+        if (!el || !was || was.id === thread.id || !thread.contactId || was.contactId !== thread.contactId) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const from = String(thread.platform).toLowerCase() === 'instagram' ? -24 : 24;
+        el.animate([{ opacity: 0, transform: `translateX(${from}px)` }, { opacity: 1, transform: 'none' }],
+            { duration: 240, easing: 'cubic-bezier(.2,.7,.3,1)' });
+    }, [thread, bodyRef]);
+
     return (
         <div className="thread__body" ref={bodyRef}>
             <div className="thread__spacer" />

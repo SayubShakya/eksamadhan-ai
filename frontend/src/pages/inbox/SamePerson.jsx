@@ -8,29 +8,10 @@ import { toast } from '../../lib/toast.js';
 import { t } from '../../lib/i18n.js';
 import { formatTimestamp } from '../../lib/format.js';
 import { IconSearch, IconPlus } from '../../components/ui/icons.jsx';
+import { Skel } from '../../components/ui/Loading.jsx';
 import PersonAvatar, { ChannelIcon } from './PersonAvatar.jsx';
+import { channelName } from '../../lib/channels.js';
 
-const channelName = (platform) => (String(platform).toLowerCase() === 'instagram' ? 'Instagram' : 'Messenger');
-
-function Other({ other, action, extra, footer }) {
-    const platform = String(other.platform).toLowerCase();
-    return (
-        <li className="sameperson__row">
-            <PersonAvatar name={other.name} url={other.avatarUrl} size={28} />
-            <span className="sameperson__who">
-                <span className="sameperson__name">{other.name || t('Unknown')}</span>
-                <span className="sameperson__channel">
-                    <ChannelIcon platform={platform} size={12} />
-                    {channelName(platform)}
-                    {other.status === 'RESOLVED' && <> · {t('resolved')}</>}
-                    {extra}
-                </span>
-            </span>
-            {action}
-            {footer && <div className="sameperson__footer">{footer}</div>}
-        </li>
-    );
-}
 
 const convId = (id) => `CONV-${String(id).slice(0, 8).toUpperCase()}`;
 
@@ -115,39 +96,91 @@ function ConversationPicker({ options, onPick, platformOf, disabled }) {
     );
 }
 
+/** A small labelled button. While its request is out, the row's border runs (see the CSS). */
+function RowAction({ kind, label, title, pending, disabled, onClick }) {
+    return (
+        <button type="button" className={`sameperson__btn sameperson__btn--${kind}`} disabled={disabled}
+                title={title || label} aria-busy={pending || undefined} onClick={onClick}>
+            {label}
+        </button>
+    );
+}
+
+/** One person in the panel: face, name and channel, then the actions on the right. */
+function PersonRow({ other, pending, actions, linked = false }) {
+    const platform = String(other.platform).toLowerCase();
+    return (
+        <div className={`sameperson__srow${linked ? ' sameperson__srow--linked' : ''}${pending ? ' is-pending' : ''}`}>
+            <PersonAvatar name={other.name} url={other.avatarUrl} size={30} />
+            <span className="sameperson__who">
+                <span className="sameperson__name">{other.name || t('Unknown')}</span>
+                <span className="sameperson__channel">
+                    <ChannelIcon platform={platform} size={12} />
+                    {channelName(platform)}
+                    {other.status === 'RESOLVED' && <> · {t('resolved')}</>}
+                </span>
+            </span>
+            <span className="sameperson__answer">{actions}</span>
+        </div>
+    );
+}
+
 export default function SamePerson({ thread, allThreads = [], platformOf, onOpenThread }) {
-    const [data, setData] = useState({ linked: [], suggestions: [] });
-    const [busy, setBusy] = useState(false);
+    const [data, setData] = useState(null);
+    // Which button is waiting on the server ("link:<id>"), so only that one spins.
+    const [pending, setPending] = useState('');
+    const busy = Boolean(pending);
+
+    // Set when the panel could not be loaded: shown as such, never as "Not linked", which
+    // hid a suggestion while the server was restarting.
+    const [failed, setFailed] = useState(false);
+    const [attempt, setAttempt] = useState(0);
 
     const load = () => api.getSamePerson(thread.id);
     useEffect(() => {
         let live = true;
-        setData({ linked: [], suggestions: [] });
-        load().then(d => { if (live) setData(d); }).catch(() => {});
+        setData(null);
+        setFailed(false);
+        load().then(d => { if (live) setData(d); })
+            .catch(() => { if (live) setFailed(true); });
         return () => { live = false; };
-    }, [thread.id]);  // eslint-disable-line react-hooks/exhaustive-deps
+    }, [thread.id, attempt]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-    const run = async (call, done) => {
-        setBusy(true);
+    // Long enough to see: on a fast connection the answer came back before the border had run once.
+    const atLeast = (ms) => new Promise(r => setTimeout(r, ms));
+    const run = async (key, call, done, options) => {
+        setPending(key);
         try {
-            await call();
-            setData(await load());
-            if (done) toast.success(done);
+            const [, fresh] = await Promise.all([atLeast(700), call().then(load)]);
+            setData(fresh);
+            if (done) toast.success(done, options);
         } catch (err) {
             toast.error(api.errorMessage(err, t('That did not work. Please try again.')));
         } finally {
-            setBusy(false);
+            setPending('');
         }
     };
-    const link = (otherId) => run(() => api.linkSamePerson(thread.id, otherId), t('Linked as the same person'));
-    // Unlinking one row takes that conversation's customer out of the group.
-    const unlink = (otherId) => run(() => api.unlinkSamePerson(otherId), t('No longer linked'));
+    const link = (otherId) => run(`link:${otherId}`, () => api.linkSamePerson(thread.id, otherId), t('Linked as the same person'));
+    // Unlinking takes that conversation's customer out of the group. One click, so it can be
+    // undone from the toast: a link removed by a slip was lost without trace before.
+    const unlink = (otherId) => run(`unlink:${otherId}`, () => api.unlinkSamePerson(otherId), t('No longer linked'), {
+        body: t('They are suggested again if the name or a number matches.'),
+        actions: [{ label: t('Undo'), onClick: () => link(otherId) }],
+    });
+    const undismiss = (otherId) => run(`no:${otherId}`, () => api.undismissSamePerson(thread.id, otherId));
+    const dismiss = (otherId) => run(`no:${otherId}`, () => api.dismissSamePerson(thread.id, otherId), t('Marked as a different person'), {
+        body: t('This suggestion will not be made again.'),
+        actions: [{ label: t('Undo'), onClick: () => undismiss(otherId) }],
+    });
+    const why = { phone: t('Same phone number'), email: t('Same email'), name: t('Same name') };
 
+    const linked = data?.linked || [];
+    const suggestions = data?.suggestions || [];
     // A person, not a conversation, is what gets linked: leave out this customer, anyone already
-    // linked, and anyone already offered as a same-name suggestion above.
+    // linked, and anyone already offered as a suggestion above.
     const identity = (th) => `${th.pageId}|${th.customerId}`;
     const taken = new Set([identity(thread)]);
-    for (const o of [...data.linked, ...data.suggestions]) {
+    for (const o of [...linked, ...suggestions]) {
         const th = allThreads.find(x => x.id === o.threadId);
         if (th) taken.add(identity(th));
     }
@@ -160,47 +193,54 @@ export default function SamePerson({ thread, allThreads = [], platformOf, onOpen
     return (
         <>
             <div className="context__section">{t('Same person')}</div>
-            <div className="sameperson">
-                {data.linked.length > 0 ? (
+            <div className="sameperson" aria-busy={(!data && !failed) || busy || undefined}>
+                {failed ? (
+                    <p className="sameperson__none">
+                        {t('Could not load this right now.')}{' '}
+                        <button type="button" className="sameperson__retry" onClick={() => setAttempt(a => a + 1)}>{t('Try again')}</button>
+                    </p>
+                ) : !data ? (
+                    // Loading: the shape of one row, so the panel does not jump when it arrives.
+                    <div className="sameperson__srow sameperson__srow--loading is-pending" aria-label={t('Loading')}>
+                        <Skel circle w={30} h={30} />
+                        <span className="sameperson__who"><Skel line w={110} /><Skel line w={70} /></span>
+                    </div>
+                ) : linked.length > 0 ? (
                     <>
-                        <p className="sameperson__hint">{t('Also messages you on:')}</p>
-                        <ul className="sameperson__list">
-                            {data.linked.map(o => (
-                                <Other key={o.threadId} other={o} footer={<>
-                                    <button type="button" className="btn btn--secondary btn--sm"
-                                            title={t('Open their {channel} conversation', { channel: channelName(o.platform) })}
-                                            onClick={() => onOpenThread?.(o.threadId)}>
-                                        {t('Open')}
-                                    </button>
-                                    <button type="button" className="btn btn--sm sameperson__unlink" disabled={busy}
-                                            title={t('Not the same person: remove the link')}
-                                            onClick={() => unlink(o.threadId)}>
-                                        {t('Unlink')}
-                                    </button>
+                        <p className="sameperson__suggest-q">{t('Also messages you on:')}</p>
+                        <div className="sameperson__list">
+                            {linked.map(o => (
+                                <PersonRow key={o.threadId} other={o} linked pending={pending === `unlink:${o.threadId}`} actions={<>
+                                    <RowAction kind="open" label={t('Open')}
+                                               title={t('Open their {channel} conversation', { channel: channelName(o.platform) })}
+                                               onClick={() => onOpenThread?.(o.threadId)} />
+                                    <RowAction kind="unlink" label={t('Unlink')} title={t('Not the same person: remove the link')}
+                                               disabled={busy} pending={pending === `unlink:${o.threadId}`} onClick={() => unlink(o.threadId)} />
                                 </>} />
                             ))}
-                        </ul>
+                        </div>
                     </>
-                ) : data.suggestions.length === 0 && (
+                ) : suggestions.length === 0 && (
                     <p className="sameperson__none">{t('Not linked to a conversation on another channel.')}</p>
                 )}
 
-                {/* A same-name match asks one question with one answer, apart from the list. */}
-                {data.suggestions.map(o => (
+                {/* A suggestion: a small question with why, then one row with the answer on the right. */}
+                {suggestions.map(o => (
                     <div className="sameperson__suggest" key={o.threadId}>
-                        <p className="sameperson__suggest-q">{t('Is this the same person?')}</p>
-                        <ul className="sameperson__list">
-                            <Other other={o} action={
-                                <button type="button" className="btn btn--primary btn--sm" disabled={busy}
-                                        onClick={() => link(o.threadId)}>
-                                    {t('Yes, link')}
-                                </button>
-                            } />
-                        </ul>
+                        <p className="sameperson__suggest-q">
+                            {t('Is this the same person?')}
+                            {why[o.reason] && <span className="sameperson__why">{why[o.reason]}</span>}
+                        </p>
+                        <PersonRow other={o} pending={pending.endsWith(`:${o.threadId}`)} actions={<>
+                            <RowAction kind="yes" label={t('Link')} title={t('Yes, the same person: link them')}
+                                       disabled={busy} pending={pending === `link:${o.threadId}`} onClick={() => link(o.threadId)} />
+                            <RowAction kind="no" label={t('Not them')} title={t('A different person: stop suggesting this')}
+                                       disabled={busy} pending={pending === `no:${o.threadId}`} onClick={() => dismiss(o.threadId)} />
+                        </>} />
                     </div>
                 ))}
 
-                <ConversationPicker options={choices} onPick={link} platformOf={platformOf} disabled={busy} />
+                <ConversationPicker options={choices} onPick={link} platformOf={platformOf} disabled={busy || !data} />
             </div>
         </>
     );

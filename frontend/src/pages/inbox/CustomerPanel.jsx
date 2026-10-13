@@ -11,6 +11,7 @@ import SpamStatus from './SpamStatus.jsx';
 import ConversationSummary from './ConversationSummary.jsx';
 import SamePerson from './SamePerson.jsx';
 import IconButton from '../../components/ui/IconButton.jsx';
+import { channelName } from '../../lib/channels.js';
 
 export default function CustomerPanel({
     thread, platform, participants, me, team, open, hidden, onClose, onHide,
@@ -38,7 +39,7 @@ export default function CustomerPanel({
                     <strong className="profile-card__name">{thread.name}</strong>
                     <span className={`profile-card__channel profile-card__channel--${platform}`}>
                         <ChannelIcon platform={platform} size={13} />
-                        {platform === 'instagram' ? 'Instagram' : 'Messenger'}
+                        {channelName(platform)}
                     </span>
                 </div>
                 <div className="context__section">{t('Information')}</div>

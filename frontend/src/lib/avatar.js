@@ -51,6 +51,59 @@ export function fileToAvatar(file) {
     });
 }
 
+const LOGO_SIZE = 160;
+
+/**
+ * Reads a logo into a small square data URL. Unlike a photo it is fitted, not cropped, so a
+ * wide wordmark keeps its ends, and it stays a PNG so a transparent background stays so.
+ */
+export function fileToLogo(file) {
+    return new Promise((resolve, reject) => {
+        if (!file.type.startsWith('image/')) {
+            reject(new Error('That file is not an image.'));
+            return;
+        }
+        if (file.size > 8 * 1024 * 1024) {
+            reject(new Error('That image is larger than 8 MB.'));
+            return;
+        }
+
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = LOGO_SIZE;
+            const ctx = canvas.getContext('2d');
+            const scale = Math.min(LOGO_SIZE / img.width, LOGO_SIZE / img.height);
+            const w = img.width * scale;
+            const h = img.height * scale;
+            ctx.drawImage(img, (LOGO_SIZE - w) / 2, (LOGO_SIZE - h) / 2, w, h);
+
+            // A busy PNG can still be large: then a JPEG on white, which the server accepts.
+            let out = canvas.toDataURL('image/png');
+            if (out.length > 120_000) {
+                const flat = document.createElement('canvas');
+                flat.width = flat.height = LOGO_SIZE;
+                const f = flat.getContext('2d');
+                f.fillStyle = '#fff';
+                f.fillRect(0, 0, LOGO_SIZE, LOGO_SIZE);
+                f.drawImage(canvas, 0, 0);
+                out = flat.toDataURL('image/jpeg', 0.85);
+            }
+            resolve(out);
+        };
+
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('That image could not be read.'));
+        };
+
+        img.src = url;
+    });
+}
+
 export function fullName(user) {
     return [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
 }

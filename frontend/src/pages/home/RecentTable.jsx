@@ -1,9 +1,11 @@
 // The latest conversations as a table, filterable by status, each row opens it.
 import { useLayoutEffect, useRef, useState } from 'react';
-import { IconArrowRight, IconFacebook, IconInstagram } from '../../components/ui/icons.jsx';
+import { IconArrowRight } from '../../components/ui/icons.jsx';
 import { formatTimestamp, STATUS_LABEL } from '../../lib/format.js';
 import Avatar from '../../components/ui/Avatar.jsx';
 import { t } from '../../lib/i18n.js';
+import { channelName } from '../../lib/channels.js';
+import { ChannelIcon } from '../inbox/PersonAvatar.jsx';
 
 const PRIORITY = { 1: 'Urgent', 2: 'Normal', 3: 'Low' };
 
@@ -57,7 +59,7 @@ export default function RecentTable({ threads, onOpen, onAll }) {
                                 <span className="dash__who">
                                     <Avatar user={{ avatar: th.avatarUrl, name: th.name }} size={32} />
                                     <span><strong>{th.name}</strong>
-                                        <small>{th.platform === 'instagram' ? <IconInstagram size={12} /> : <IconFacebook size={12} />} {th.platform === 'instagram' ? 'Instagram' : 'Messenger'}</small></span>
+                                        <small><ChannelIcon platform={th.platform} size={12} /> {channelName(th.platform)}</small></span>
                                 </span>
                             </td>
                             <td className="dash__preview">{th.last?.direction === 'outbound' && <span className="recent__you">{t('You:')} </span>}{th.last?.text || th.last?.content || t('Attachment')}</td>

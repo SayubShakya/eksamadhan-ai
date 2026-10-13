@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { IconThumb } from '../../components/ui/icons.jsx';
 import { t } from '../../lib/i18n.js';
+import VoiceNote from './VoiceNote.jsx';
 
 /**
  * A sticker, drawn as Messenger draws it: the image alone, no bubble. Meta's sticker links
@@ -26,7 +27,7 @@ export default function Attachment({ message, onOpenImage }) {
 
     if (type === 'sticker') return <Sticker url={url} />;
     if (type === 'audio') {
-        return <audio className="media media--audio" src={url} controls preload="none" />;
+        return <VoiceNote url={url} />;
     }
     if (type === 'image') {
         // A button, not a link: opening the raw file in a second tab loses the conversation

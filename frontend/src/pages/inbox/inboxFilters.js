@@ -19,6 +19,7 @@ export const PLATFORMS = [
     { id: 'all', label: 'All channels' },
     { id: 'facebook', label: 'Facebook' },
     { id: 'instagram', label: 'Instagram' },
+    { id: 'web', label: 'Website chat' },
 ];
 
 /**

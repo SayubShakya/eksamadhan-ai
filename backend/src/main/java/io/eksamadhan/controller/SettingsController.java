@@ -7,6 +7,7 @@ import io.eksamadhan.repository.OrganizationRepository;
 import io.eksamadhan.repository.UserRepository;
 import io.eksamadhan.service.AiReplyService;
 import io.eksamadhan.service.AccountLifecycleService;
+import io.eksamadhan.service.AccountService;
 import io.eksamadhan.service.AuthRateLimiter;
 import io.eksamadhan.service.CurrentUser;
 import io.eksamadhan.service.JwtService;
@@ -20,7 +21,7 @@ import java.time.Duration;
 import java.util.Map;
 
 /**
- * The Settings page. Only settings the system actually acts on: the workspace's name, whether
+ * The Settings page. Only settings the system actually acts on: the workspace's name and logo, whether
  * the AI answers its customers and in whose words a handover or a closing is put, and each
  * person's own email alerts and password. Tuning that the graded targets are measured with
  * (thresholds, models, triage) stays in server configuration on purpose.
@@ -56,10 +57,13 @@ public class SettingsController {
         this.jwt = jwt;
     }
 
-    /** `reviewAiReplies` may be left out, which keeps the current setting. */
+    /**
+     * `reviewAiReplies` may be left out, which keeps the current setting. So may `logo`; an
+     * empty one removes it.
+     */
     public record WorkspaceSettings(String name, boolean aiRepliesEnabled,
                                     String handoverMessage, String closingMessage,
-                                    Boolean reviewAiReplies) {}
+                                    Boolean reviewAiReplies, String logo) {}
 
     public record MySettings(Boolean emailAlerts) {}
 
@@ -70,7 +74,7 @@ public class SettingsController {
         User me = currentUser.require();
         Organization org = me.getOrganization();
         return Map.of(
-                "workspace", Map.of("name", org.getName()),
+                "workspace", Map.of("name", org.getName(), "logo", org.getLogo() == null ? "" : org.getLogo()),
                 "ai", Map.of(
                         "repliesEnabled", org.isAiRepliesEnabled(),
                         "reviewReplies", org.isReviewAiReplies(),
@@ -101,6 +105,7 @@ public class SettingsController {
         org.setName(name);
         org.setAiRepliesEnabled(request.aiRepliesEnabled());
         if (request.reviewAiReplies() != null) org.setReviewAiReplies(request.reviewAiReplies());
+        if (request.logo() != null) org.setLogo(AccountService.checkLogo(request.logo()));
         org.setHandoverMessage(message(request.handoverMessage(), "The handover message"));
         org.setClosingMessage(message(request.closingMessage(), "The closing message"));
         organizations.save(org);

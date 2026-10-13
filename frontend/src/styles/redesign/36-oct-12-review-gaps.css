@@ -35,3 +35,13 @@
     display: block; max-width: 100%; max-height: 40vh; margin: 0 auto 12px;
     border: 1px solid var(--border); border-radius: var(--r-sm); object-fit: contain;
 }
+
+/* How often each question was asked, as a quiet tile on the left of its row. */
+.kq-gap__count {
+    flex: none; display: grid; place-items: center; align-content: center; width: 44px; height: 40px;
+    border-radius: 8px; background: var(--surface); line-height: 1.1;
+}
+.kq-gap__count b { font-size: 14px; font-weight: 650; color: var(--text); }
+.kq-gap__count small { font-size: 10px; color: var(--text-muted); }
+.kq-gap--on .kq-gap__count { background: var(--accent-tint); }
+.kq-gap--on .kq-gap__count b { color: var(--accent); }

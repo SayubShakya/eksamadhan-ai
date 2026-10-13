@@ -92,3 +92,11 @@
     .an2-channel { grid-template-columns: 1fr auto; }
     .an2-channel__bar { grid-column: 1 / -1; grid-row: 2; }
 }
+
+/* The current menu item in the theme's blue rather than grey (Sayub, 2026-10-12). */
+.rail__item[aria-current="page"],
+.rail--closed .rail__item[aria-current="page"],
+:root[data-theme="dark"] .rail--closed .rail__item[aria-current="page"] {
+    background: var(--accent-tint); color: var(--accent);
+}
+.rail__item[aria-current="page"] .rail__icon { color: var(--accent); }

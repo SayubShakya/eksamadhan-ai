@@ -1,11 +1,12 @@
 // The left column: every customer message across workspaces, searchable, with how each ended.
 import { LoadError, LoadingRegion, Skel } from '../../components/ui/Loading.jsx';
-import { IconChevronLeft, IconFacebook, IconInstagram, IconSearch } from '../../components/ui/icons.jsx';
+import { IconChevronLeft, IconSearch } from '../../components/ui/icons.jsx';
 import { formatTimestamp } from '../../lib/format.js';
 import { OUTCOME_TONE } from './flowSteps.js';
+import { ChannelIcon } from '../inbox/PersonAvatar.jsx';
 
 function ChannelMark({ channel }) {
-    return channel === 'instagram' ? <IconInstagram size={14} /> : <IconFacebook size={14} />;
+    return <ChannelIcon platform={channel} size={14} />;
 }
 
 /** A message row inside the same classes as the real one, so it is the same height. */

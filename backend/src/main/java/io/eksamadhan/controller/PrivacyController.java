@@ -28,12 +28,14 @@ public class PrivacyController {
     @GetMapping(value = "/api/auth/privacy", produces = "text/html")
     public String getPrivacyPolicy() {
         return page("Privacy Policy", """
-                <p>EkSamadhan AI is a customer-support inbox for Facebook Messenger and Instagram,
-                   with AI replies and handover to people. It is a final-year project by Sayub Shakya at
+                <p>EkSamadhan AI is a customer-support inbox for Facebook Messenger, Instagram and a
+                   chat box businesses can add to their own website, with AI replies and handover to people. It is a final-year project by Sayub Shakya at
                    the University of Bedfordshire.</p>
                 <p>For the Pages and Instagram accounts a business connects, it stores the
                    conversations, the sender's name and profile photo as Meta provides them, and any
-                   photos or voice notes sent, so they can be shown in one inbox and answered. It sells
+                   photos or voice notes sent, so they can be shown in one inbox and answered. In a
+                   website chat box it stores the messages and the name the visitor gives, and
+                   keeps a random visitor code in that browser so the conversation carries on. It sells
                    no data, shows no advertising and uses no tracking.</p>
                 <p>Read the <a href="%1$s/privacy">full Privacy Policy</a>, including who else handles
                    the data and your rights, or the <a href="/api/auth/data-deletion">data deletion

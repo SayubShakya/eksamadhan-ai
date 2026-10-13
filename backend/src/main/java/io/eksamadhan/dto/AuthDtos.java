@@ -55,9 +55,9 @@ public final class AuthDtos {
         }
     }
 
-    public record Workspace(String id, String name) {
+    public record Workspace(String id, String name, String logo) {
         public static Workspace of(Organization organization) {
-            return new Workspace(organization.getId().toString(), organization.getName());
+            return new Workspace(organization.getId().toString(), organization.getName(), organization.getLogo());
         }
     }
 

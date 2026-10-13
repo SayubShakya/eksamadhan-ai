@@ -11,6 +11,7 @@ export default function ConversationList({
             thread={th}
             platform={platformOf(th.pageId)}
             platformOf={platformOf}
+            activeId={active?.id}
             isOpen={active?.id === th.id || Boolean(th.channels?.some(c => c.id === active?.id))}
             typing={Boolean(aiTyping[th.id] || th.aiTyping || th.channels?.some(c => aiTyping[c.id] || c.aiTyping))}
             showRef={Boolean(th.id && perCustomer.get(th.customerId) > 1)}

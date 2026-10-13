@@ -36,6 +36,7 @@ public class StatusResponse {
         private String pageAccessToken; // Not exposed to frontend, internal use
         private String platform; // "facebook", "instagram"
         private String username; // Instagram's @handle, for a link to the profile; null for Facebook
+        private String avatarUrl; // Instagram only: the account's own profile picture, or null when it has none
         private LocalDateTime connectedAt;
         /** Our own id for the page, used to disconnect just this one. */
         private String id;

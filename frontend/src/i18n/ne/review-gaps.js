@@ -18,4 +18,8 @@ export default {
     'Show fewer': 'कम देखाउनुहोस्',
     'Show all {n}': 'सबै {n} देखाउनुहोस्',
     'That could not be dismissed.': 'यो हटाउन सकिएन।',
+    'asked': 'पटक',
+    'Asked once.': 'एक पटक सोधियो।',
+    'Asked {n} times.': '{n} पटक सोधियो।',
+    'Last asked {date}': 'पछिल्लो पटक {date} मा सोधियो',
 };

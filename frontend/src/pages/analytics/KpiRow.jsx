@@ -17,9 +17,9 @@ export default function KpiRow({ deflection: d, replyTimes: r, spam, daily }) {
                 <Mini values={daily.map(x => (x.conversations ? x.handledByAi / x.conversations : null))} />
             </Kpi>
             <Kpi icon={IconInbox} label={t('Conversations')}
-                 info={t('New conversations started in this period, not counting ones closed as unrelated.')}
+                 info={t('New conversations started in this period, not counting ones closed as unrelated. Customers counts each person once, even on two channels.')}
                  value={d.total}
-                 note={d.escalated === 1 ? t('1 reached your team') : t('{n} reached your team', { n: d.escalated })}>
+                 note={<>{d.people === 1 ? t('1 customer') : t('{n} customers', { n: d.people ?? d.total })} · {d.escalated === 1 ? t('1 reached your team') : t('{n} reached your team', { n: d.escalated })}</>}>
                 <Mini kind="line" values={daily.map(x => x.conversations)} />
             </Kpi>
             <Kpi icon={IconClock} label={t('AI reply time')}

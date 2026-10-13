@@ -328,12 +328,21 @@ public class AccountService {
      * screen with the team list, so a multi-megabyte string would slow everyone down.
      */
     public static String checkAvatar(String avatar) {
+        return checkImage(avatar, "That photo could not be used. Choose a smaller image.");
+    }
+
+    /** The same rules for a workspace logo as for a profile photo. */
+    public static String checkLogo(String logo) {
+        return checkImage(logo, "That logo could not be used. Choose a smaller image.");
+    }
+
+    private static String checkImage(String avatar, String refusal) {
         if (avatar == null || avatar.isBlank()) return null;
         String a = avatar.trim();
         boolean image = a.startsWith("data:image/") && a.length() <= AVATAR_DATA_MAX;
         boolean web = a.startsWith("https://") && a.length() <= AVATAR_URL_MAX;
         if (!image && !web) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That photo could not be used. Choose a smaller image.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, refusal);
         }
         return a;
     }

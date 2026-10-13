@@ -248,4 +248,15 @@ export default {
     'Your name, email, photo, sign-in and devices are deleted immediately, and you are signed out everywhere. Support cannot restore any of it.': 'तपाईंको नाम, इमेल, फोटो, साइन इन र उपकरणहरू तुरुन्तै मेटिन्छन्, र तपाईं सबैतिरबाट साइन आउट हुनुहुन्छ। सपोर्टले पनि यीमध्ये केही फिर्ता ल्याउन सक्दैन।',
     '{name} becomes the tenant of {workspace}.': '{name} {workspace} को टेनेन्ट बन्नुहुन्छ।',
     'Yes, I am sure': 'हो, म पक्का छु',
+    // Workspace logo (13 October 2026).
+    'Logo': 'लोगो',
+    'Shown in the menu and the footer for everyone in this workspace. A square image works best.': 'यो वर्कस्पेसका सबैलाई मेनु र फुटरमा देखिन्छ। वर्गाकार तस्बिर राम्रो हुन्छ।',
+    'Upload logo': 'लोगो अपलोड गर्नुहोस्',
+    'Change logo': 'लोगो बदल्नुहोस्',
+    'Business details saved': 'व्यवसायको विवरण सेभ भयो',
+    'Invites, the menu and the footer use them now.': 'निमन्त्रणा, मेनु र फुटरमा अब यही देखिन्छ।',
+    'That logo could not be used. Choose a smaller image.': 'यो लोगो प्रयोग गर्न सकिएन। सानो तस्बिर छान्नुहोस्।',
+    'Your logo': 'तपाईंको लोगो',
+    'No logo yet, the menu shows your initial': 'अहिलेसम्म लोगो छैन, मेनुमा नामको पहिलो अक्षर देखिन्छ',
+    'PNG or JPG. Drop it here or choose a file.': 'PNG वा JPG। यहाँ तान्नुहोस् वा फाइल छान्नुहोस्।',
 };

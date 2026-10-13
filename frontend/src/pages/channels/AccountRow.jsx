@@ -14,7 +14,6 @@ export default function AccountRow({ page, isTenant, canManage, onReconnect, onD
                 <PageFace page={page} />
                 <div className="chn-acc__text">
                     <strong><span className="chn-acc__name">{page.pageName}</span></strong>
-                    {page.username && <small className="chn-acc__handle">@{page.username}</small>}
                     {since && <small className="chn-acc__since"><i className="chn-acc__live" aria-hidden="true" />{t('Connected {date}', { date: since })}</small>}
                 </div>
             </div>

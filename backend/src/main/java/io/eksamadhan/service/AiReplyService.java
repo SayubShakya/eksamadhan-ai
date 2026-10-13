@@ -45,7 +45,7 @@ public class AiReplyService {
      * both halves: decline when the context does not cover it, AND answer when it does.
      */
     private static final String SYSTEM_PROMPT = """
-            You are a customer support agent replying inside Facebook Messenger or Instagram.
+            You are a customer support agent replying inside Facebook Messenger, Instagram or the chat box on the business's website.
 
             A message is either CONVERSATIONAL (a greeting, thanks or goodbye, with nothing to look \
             up) or a QUESTION about the business.
@@ -96,8 +96,14 @@ public class AiReplyService {
     private final ConversationThreadRepository threadRepository;
     private final RetrievalService retrievalService;
     private final ConversationMemoryService memoryService;
+    /** Optional so the unit tests that build this service by hand need not supply it. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private CustomerLinkService customerLinks;
+    /** How much of the same person's other channel the prompt carries. */
+    private static final int ELSEWHERE_MESSAGES = 6;
+    private static final int ELSEWHERE_DAYS = 7;
     private final ThreadService threadService;
-    private final MetaService metaService;
+    private final ChannelSender channelSender;
     private final SyncService syncService;
     private final LlmClient llmClient;
     private final AgentRoutingService agentRouting;
@@ -137,7 +143,7 @@ public class AiReplyService {
                           RetrievalService retrievalService,
                           ConversationMemoryService memoryService,
                           ThreadService threadService,
-                          MetaService metaService,
+                          ChannelSender channelSender,
                           SyncService syncService,
                           LlmClient llmClient,
                           AgentRoutingService agentRouting,
@@ -166,7 +172,7 @@ public class AiReplyService {
         this.retrievalService = retrievalService;
         this.memoryService = memoryService;
         this.threadService = threadService;
-        this.metaService = metaService;
+        this.channelSender = channelSender;
         this.syncService = syncService;
         this.llmClient = llmClient;
         this.agentRouting = agentRouting;
@@ -616,14 +622,25 @@ public class AiReplyService {
 
     private void send(SocialMessage inbound, SocialPage page, Verdict verdict, String sources,
                       String picture, java.time.Instant startedAt) {
+        // Writing an answer takes seconds. If staff resolved the conversation or took it over in
+        // that time, the answer is dropped: sent, it was filed in the customer's next
+        // conversation and answered a question from one that had already ended (13 October 2026).
+        ThreadStatus now = inbound.getThread() == null ? null
+                : threadRepository.findStatusById(inbound.getThread().getId()).orElse(null);
+        if (now != null && !now.aiMayReply()) {
+            log.info("Thread {} became {} while the AI was writing; answer dropped", inbound.getThread().getId(), now);
+            trace.here(TraceRecorder.Kind.END, "Answer not sent", "a staff member closed or took it meanwhile",
+                    TraceRecorder.of("status", now.name()), null);
+            return;
+        }
         String reply = plainPunctuation(verdict.reply());
         trace.here(TraceRecorder.Kind.ACTION, "Reply sent to the customer", "answered",
                 TraceRecorder.of("reply", reply, "confidence", round(verdict.confidence())),
                 TraceRecorder.of("sources", sources == null ? "none (answered conversationally)" : sources,
                        "picture", picture == null ? "none" : picture,
                        "total time", millisSince(startedAt) + " ms"));
-        Map<String, Object> response = metaService.sendMessage(
-                inbound.getSenderId(), reply, page.getAccessToken(), null).block();
+        Map<String, Object> response = channelSender.sendText(
+                page, inbound.getSenderId(), reply, null).block();
 
         String metaMessageId = response == null ? null : (String) response.get("message_id");
         syncService.saveOutboundMessage(metaMessageId, inbound.getSenderId(), reply,
@@ -657,8 +674,8 @@ public class AiReplyService {
                 log.warn("Knowledge image {} is missing from storage", picture);
                 return;
             }
-            Map<String, Object> response = metaService
-                    .sendAttachment(customerId, file, "image", "image/jpeg", page.getAccessToken())
+            Map<String, Object> response = channelSender
+                    .sendAttachment(page, customerId, file, "image", "image/jpeg")
                     .block();
             String metaMessageId = response == null ? null : (String) response.get("message_id");
             syncService.saveOutboundMessage(metaMessageId, customerId, null, page.getId(), null,
@@ -689,6 +706,27 @@ public class AiReplyService {
             prompt.append("EARLIER IN THIS CONVERSATION:\n");
             memory.forEach(m -> prompt.append("- ").append(m.content()).append('\n'));
             prompt.append('\n');
+        }
+
+        // The same customer on their other channel (linked as the same person), so a follow-up
+        // that only makes sense with that conversation still gets a sensible answer.
+        if (customerLinks != null) {
+            try {
+                List<CustomerLinkService.Elsewhere> elsewhere =
+                        customerLinks.recentElsewhere(thread.getId(), ELSEWHERE_MESSAGES, ELSEWHERE_DAYS);
+                if (!elsewhere.isEmpty()) {
+                    prompt.append("THE SAME CUSTOMER RECENTLY, ON ANOTHER CHANNEL (oldest first):\n");
+                    for (int i = elsewhere.size() - 1; i >= 0; i--) {
+                        CustomerLinkService.Elsewhere m = elsewhere.get(i);
+                        String who = m.inbound() ? "Customer" : "Shop";
+                        prompt.append("- ").append(CustomerLinkService.channelName(m.platform())).append(", ")
+                              .append(who).append(": ").append(m.text().strip()).append('\n');
+                    }
+                    prompt.append('\n');
+                }
+            } catch (Exception e) {
+                log.debug("Could not read the linked channel: {}", e.getMessage());
+            }
         }
 
         if (weakContext) {
@@ -937,8 +975,8 @@ public class AiReplyService {
 
     private void sendNotice(SocialPage page, String customerId, String text) {
         try {
-            Map<String, Object> response = metaService
-                    .sendMessage(customerId, text, page.getAccessToken(), null).block();
+            Map<String, Object> response = channelSender
+                    .sendText(page, customerId, text, null).block();
             String metaMessageId = response == null ? null : (String) response.get("message_id");
             trace.here(TraceRecorder.Kind.ACTION, "Message sent to the customer", "sent",
                     TraceRecorder.of("text", text), TraceRecorder.of("meta message id", String.valueOf(metaMessageId)));

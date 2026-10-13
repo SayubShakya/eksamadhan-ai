@@ -48,6 +48,9 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         // Meta signs these itself (X-Hub-Signature-256); see WebhookSignatureVerifier.
                         .requestMatchers("/api/webhook/**").permitAll()
+                        // The website chat box: anyone on the business's website, so no sign-in.
+                        // WidgetService checks the website and the visitor's signed code instead.
+                        .requestMatchers("/api/widget/**").permitAll()
                         // A closing page's goodbye; sendBeacon cannot send the token. See LiveEvents.closeTab.
                         .requestMatchers(HttpMethod.POST, "/api/me/events/close").permitAll()
                         .requestMatchers("/api/auth/privacy", "/api/auth/terms", "/api/auth/data-deletion").permitAll()
@@ -97,6 +100,23 @@ public class SecurityConfig {
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // Website chat runs on businesses' own websites, so the browser must be let through from
+        // any of them; WidgetService then refuses every website the business did not list. No
+        // cookies, so no credentials. Registered first: the first matching pattern wins.
+        CorsConfiguration widget = new CorsConfiguration();
+        widget.setAllowedOriginPatterns(List.of("*"));
+        widget.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
+        widget.setAllowedHeaders(List.of("Content-Type", "X-Visitor"));
+        widget.setAllowCredentials(false);
+        widget.setMaxAge(3600L);
+        source.registerCorsConfiguration("/api/widget/**", widget);
+        // Media files are already public by unguessable name (see permitAll above); letting
+        // any site read them lets the website chat box draw a voice note's waveform.
+        CorsConfiguration mediaCors = new CorsConfiguration();
+        mediaCors.setAllowedOriginPatterns(List.of("*"));
+        mediaCors.setAllowedMethods(List.of("GET"));
+        mediaCors.setAllowCredentials(false);
+        source.registerCorsConfiguration("/api/media/**", mediaCors);
         source.registerCorsConfiguration("/**", config);
         return source;
     }

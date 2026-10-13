@@ -77,7 +77,7 @@ export default function ChannelsPage({ user, pages = [], statusLoaded = true, on
                                       onConnect={connect} onDisconnect={setRemoving} />
                     ))}
 
-                    <WidgetCard />
+                    <WidgetCard canManage={canManage} onChanged={onChanged} />
                 </div>
             )}
 

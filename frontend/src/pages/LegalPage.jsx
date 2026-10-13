@@ -23,8 +23,8 @@ function Privacy() {
 
             <h2>Who we are</h2>
             <p>
-                EkSamadhan AI is a customer-support inbox for Facebook Messenger and Instagram, with AI
-                replies and handover to people. It is a final-year project by Sayub Shakya at the
+                EkSamadhan AI is a customer-support inbox for Facebook Messenger, Instagram and a chat
+                box businesses can add to their own website, with AI replies and handover to people. It is a final-year project by Sayub Shakya at the
                 University of Bedfordshire, not a registered company. Questions about this policy or
                 your data: <Mail />.
             </p>
@@ -36,7 +36,7 @@ function Privacy() {
             </p>
             <p>
                 <strong>Customer messages</strong> are the conversations a business receives on its
-                Facebook Page or Instagram account. The business that connects its page decides why
+                Facebook Page, Instagram account or website chat box. The business that connects its page decides why
                 they are processed; we process them on its behalf, to show them in its inbox and to
                 answer them. If you messaged a business, it is the business you should contact first
                 about your data.
@@ -50,6 +50,10 @@ function Privacy() {
                 <li><strong>Customers, through Meta:</strong> the identifier Meta gives you for that page,
                     your name and profile photo as Meta provides them, your messages, and any photos,
                     voice notes or stickers you send, with a written transcript of voice notes.</li>
+                <li><strong>Customers, through website chat:</strong> your messages, the name you give before
+                    the chat starts, and a random visitor code kept in your browser so the
+                    conversation carries on when you come back. No cookies, and nothing else about your
+                    visit.</li>
                 <li><strong>What the system works out:</strong> AI replies and the passages they were based
                     on, the mood of a message, a priority, whether a conversation looks like spam, short
                     handover summaries, and a step-by-step record of how each message was handled.</li>
@@ -155,8 +159,8 @@ function Terms() {
 
             <h2>The service</h2>
             <p>
-                EkSamadhan AI collects a business's Facebook Messenger and Instagram conversations in one
-                inbox, answers them with AI from the business's own knowledge, and hands them to its
+                EkSamadhan AI collects a business's Facebook Messenger, Instagram and website chat
+                conversations in one inbox, answers them with AI from the business's own knowledge, and hands them to its
                 staff when needed. It is a final-year university project run by Sayub Shakya. By
                 creating a workspace, joining one, or signing in, you agree to these terms and to
                 the <a href="/privacy">Privacy Policy</a>.

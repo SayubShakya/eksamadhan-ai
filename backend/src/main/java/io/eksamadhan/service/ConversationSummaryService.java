@@ -71,6 +71,9 @@ public class ConversationSummaryService {
 
     private final SocialMessageRepository messageRepository;
     private final ConversationThreadRepository threadRepository;
+    /** The same person on their other channel; optional so hand-built tests need not supply it. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private CustomerLinkService customerLinks;
     private final LlmClient llmClient;
     private final long cooldownSeconds;
 
@@ -182,6 +185,24 @@ public class ConversationSummaryService {
 
         StringBuilder transcript = new StringBuilder();
         String customer = thread.getCustomerName() == null ? "Customer" : thread.getCustomerName();
+        // One brief for the person: what they said on their other channel comes first.
+        if (customerLinks != null) {
+            try {
+                List<CustomerLinkService.Elsewhere> elsewhere = customerLinks.recentElsewhere(threadId, 12, 14);
+                if (!elsewhere.isEmpty()) {
+                    transcript.append("(Earlier, the same customer on another channel:)\n");
+                    for (int i = elsewhere.size() - 1; i >= 0; i--) {
+                        CustomerLinkService.Elsewhere m = elsewhere.get(i);
+                        String who = m.inbound() ? customer : (m.aiGenerated() ? "AI" : "Staff");
+                        transcript.append('[').append(CustomerLinkService.channelName(m.platform())).append("] ")
+                                  .append(who).append(": ").append(m.text().strip()).append('\n');
+                    }
+                    transcript.append("(This conversation:)\n");
+                }
+            } catch (Exception e) {
+                log.debug("Could not read the linked channel: {}", e.getMessage());
+            }
+        }
         for (SocialMessage message : recent) {
             boolean inbound = "inbound".equals(message.getDirection());
             String who = inbound ? customer : (message.isAiGenerated() ? "AI" : "Staff");

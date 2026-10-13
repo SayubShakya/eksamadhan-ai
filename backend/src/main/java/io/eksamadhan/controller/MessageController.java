@@ -12,7 +12,7 @@ import io.eksamadhan.repository.SocialPageRepository;
 import io.eksamadhan.repository.UserRepository;
 import io.eksamadhan.service.ConversationMemoryService;
 import io.eksamadhan.service.CurrentUser;
-import io.eksamadhan.service.MetaService;
+import io.eksamadhan.service.ChannelSender;
 import io.eksamadhan.service.SentimentService;
 import io.eksamadhan.service.SyncService;
 import io.eksamadhan.service.ThreadService;
@@ -51,7 +51,7 @@ public class MessageController {
 
     private final SocialMessageRepository messageRepository;
     private final SocialPageRepository socialPageRepository;
-    private final MetaService metaService;
+    private final ChannelSender channelSender;
     private final SyncService syncService;
     private final VoiceMessageService voiceMessageService;
     private final ThreadService threadService;
@@ -99,10 +99,10 @@ public class MessageController {
         requireMayAnswer(page, request.getRecipientId());
 
         try {
-            Map<String, Object> response = metaService.sendMessage(
+            Map<String, Object> response = channelSender.sendText(
+                    page,
                     request.getRecipientId(),
                     request.getText(),
-                    page.getAccessToken(),
                     request.getReplyToId()
             ).block();
 
@@ -139,8 +139,8 @@ public class MessageController {
             String stored = voiceMessageService.convertAndStore(file);
             File converted = voiceMessageService.resolve(stored).toFile();
 
-            Map<String, Object> response = metaService
-                    .sendAudio(recipientId, converted, page.getAccessToken())
+            Map<String, Object> response = channelSender
+                    .sendAudio(page, recipientId, converted)
                     .block();
 
             String messageId = response != null ? (String) response.get("message_id") : null;
@@ -174,10 +174,9 @@ public class MessageController {
             String stored = voiceMessageService.store(file);
             File saved = voiceMessageService.resolve(stored).toFile();
 
-            Map<String, Object> response = metaService
-                    .sendAttachment(recipientId, saved, "image",
-                            file.getContentType() == null ? "image/jpeg" : file.getContentType(),
-                            page.getAccessToken())
+            Map<String, Object> response = channelSender
+                    .sendAttachment(page, recipientId, saved, "image",
+                            file.getContentType() == null ? "image/jpeg" : file.getContentType())
                     .block();
 
             String messageId = response != null ? (String) response.get("message_id") : null;
@@ -202,8 +201,8 @@ public class MessageController {
 
         String metaMessageId = body.get("metaMessageId");
         try {
-            metaService.sendReaction(body.get("recipientId"), metaMessageId,
-                    body.get("reaction"), page.getAccessToken()).block();
+            channelSender.sendReaction(page, body.get("recipientId"), metaMessageId,
+                    body.get("reaction")).block();
 
             messageRepository.findByMetaMessageId(metaMessageId)
                     // Only a message in this workspace, so a guessed id cannot mark up

@@ -1,34 +1,69 @@
 // The open conversation's header: who it is with, the channel, and the conversation actions
 // (pin, Not spam, Resolve or Reopen, Details; a "More" sheet on a phone).
+import { useLayoutEffect, useRef, useState } from 'react';
 import { IconPin, IconDots, IconBack, IconPanelRight } from '../../components/ui/icons.jsx';
 import { formatTimestamp } from '../../lib/format.js';
 import { t } from '../../lib/i18n.js';
 import PersonAvatar, { ChannelIcon } from './PersonAvatar.jsx';
 import ThreadActionSheet from './ThreadActionSheet.jsx';
 import IconButton from '../../components/ui/IconButton.jsx';
+import { channelName, channelLongName } from '../../lib/channels.js';
+
+// Where the highlight last was, per person: switching tab can briefly unmount the header while
+// the other conversation loads, and the highlight should still glide from the old tab.
+const lastBar = { key: '', left: 0, width: 0 };
+
+/** The channel tabs, with one highlight and underline that slide to the tab that is open. */
+function ChannelTabs({ tabs, activeId, platformOf, onSelect }) {
+    const navRef = useRef(null);
+    const group = tabs.map(tab => tab.id).sort().join('|');
+    const [bar, setBar] = useState(() => (lastBar.key === group ? { left: lastBar.left, width: lastBar.width } : null));
+    useLayoutEffect(() => {
+        const on = navRef.current?.querySelector('.chtabs__tab.is-on');
+        if (!on) return undefined;
+        const next = { left: on.offsetLeft, width: on.offsetWidth };
+        Object.assign(lastBar, { key: group }, next);
+        // One frame at the old place first, so the move is drawn as a slide.
+        const id = requestAnimationFrame(() => setBar(next));
+        return () => cancelAnimationFrame(id);
+    }, [activeId, group]);
+    const place = bar && { transform: `translateX(${bar.left}px)`, width: bar.width };
+    return (
+        <nav className="chtabs" role="tablist" aria-label={t('Channels of this customer')} ref={navRef}>
+            {place && <span className="chtabs__glow" aria-hidden="true" style={place} />}
+            {tabs.map(tab => {
+                const p = platformOf?.(tab.pageId) || 'facebook';
+                const on = tab.id === activeId;
+                return (
+                    <button key={tab.id} type="button" role="tab" aria-selected={on}
+                            className={`chtabs__tab${on ? ' is-on' : ''}`}
+                            onClick={() => { if (!on) onSelect?.(tab); }}>
+                        {/* Who on top, which channel underneath: the same in every tab. */}
+                        <PersonAvatar name={tab.name} url={tab.avatarUrl} size={26} />
+                        <span className="chtabs__text">
+                            <span className="chtabs__name">{tab.name || t('Unknown')}</span>
+                            <span className="chtabs__channel">
+                                <ChannelIcon platform={p} size={12} />
+                                {channelName(p)}
+                            </span>
+                        </span>
+                        {!on && tab.unanswered > 0 && <span className="chtabs__count">{tab.unanswered}</span>}
+                    </button>
+                );
+            })}
+            {place && <span className="chtabs__bar" aria-hidden="true" style={place} />}
+        </nav>
+    );
+}
 
 export default function ThreadHeader({
     thread, platform, channelTabs = [], platformOf, onSelect, me, acting, act, onBack, onPin,
     moreOpen, onMoreOpenChange, sheetDrag, onOpenDetails, onShowDetails, detailsExpanded,
 }) {
+    // One person on several channels (linked as the same person): a tab per channel, under
+    // the header. Each tab is its own conversation, so a reply goes out on that channel.
     const tabs = channelTabs.length > 1 && (
-        // One person on several channels (linked as the same person): a tab per channel, under
-        // the header. Each tab is its own conversation, so a reply goes out on that channel.
-        <nav className="chtabs" role="tablist" aria-label={t('Channels of this customer')}>
-            {channelTabs.map(tab => {
-                const p = platformOf?.(tab.pageId) || 'facebook';
-                const on = tab.id === thread.id;
-                return (
-                    <button key={tab.id} type="button" role="tab" aria-selected={on}
-                            className={`chtabs__tab${on ? ' is-on' : ''}`}
-                            onClick={() => { if (!on) onSelect?.(tab); }}>
-                        <ChannelIcon platform={p} size={14} />
-                        <span>{p === 'instagram' ? 'Instagram' : 'Messenger'}</span>
-                        {!on && tab.unanswered > 0 && <span className="chtabs__count">{tab.unanswered}</span>}
-                    </button>
-                );
-            })}
-        </nav>
+        <ChannelTabs tabs={channelTabs} activeId={thread.id} platformOf={platformOf} onSelect={onSelect} />
     );
 
     return (
@@ -47,7 +82,7 @@ export default function ThreadHeader({
                     <span className="thread__nametext">{thread.name}</span>
                     <span className="badge">
                         <ChannelIcon platform={platform} size={11} />
-                        <span className="badge__text">{platform === 'instagram' ? 'Instagram' : 'Facebook Messenger'}</span>
+                        <span className="badge__text">{channelLongName(platform)}</span>
                     </span>
                 </div>
                 <div className="thread__meta">

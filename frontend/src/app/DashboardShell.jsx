@@ -7,10 +7,11 @@ import DisconnectDialog from '../components/dialogs/DisconnectDialog.jsx';
 import NotificationPrompt from '../components/layout/NotificationPrompt.jsx';
 import InstallProblem from '../components/layout/InstallProblem.jsx';
 import Toaster from '../components/layout/Toaster.jsx';
+import WorkspaceLogo from '../components/ui/WorkspaceLogo.jsx';
 import { t } from '../lib/i18n.js';
 
 export default function DashboardShell({
-    app, view, setView, user, workspace, unread,
+    app, view, setView, user, workspace, workspaceLogo, unread,
     navOpen, setNavOpen, query, setQuery,
     profileOpen, setProfileOpen, saveProfile,
     myHours, changeAvailability, openNotification, requestSignOut, signOutDialog,
@@ -44,6 +45,8 @@ export default function DashboardShell({
                 onToggle={() => setNavOpen(o => !o)}
                 onHome={() => setView('home')}
                 onSignOut={requestSignOut}
+                workspace={workspace}
+                workspaceLogo={workspaceLogo}
             />
             <div className="main">
                 <TopBar
@@ -73,6 +76,7 @@ export default function DashboardShell({
                     top bar carries the page's name and today's date. */}
                 {workspace && (
                     <footer className="appfoot">
+                        <WorkspaceLogo name={workspace} logo={workspaceLogo} size={18} />
                         <span className="appfoot__ws" title={t('Workspace: {name}', { name: workspace })}>{workspace}</span>
                     </footer>
                 )}

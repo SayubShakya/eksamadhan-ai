@@ -109,13 +109,39 @@ public class ThreadController {
         return samePersonOf(threadId, me);
     }
 
+    /** "Not the same person": this suggestion is not made again. */
+    @PostMapping("/{threadId}/same-person/dismiss")
+    public Map<String, Object> dismiss(@PathVariable UUID threadId, @RequestBody LinkRequest body) {
+        User me = requireVisible(threadId);
+        if (body == null || body.threadId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose the conversation.");
+        }
+        requireVisible(body.threadId());
+        try {
+            customerLinks.dismiss(threadId, body.threadId(), me.getOrganization().getId(), me.getId());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+        return samePersonOf(threadId, me);
+    }
+
+    /** Undo of "Not the same person". */
+    @DeleteMapping("/{threadId}/same-person/dismiss/{otherThreadId}")
+    public Map<String, Object> undismiss(@PathVariable UUID threadId, @PathVariable UUID otherThreadId) {
+        User me = requireVisible(threadId);
+        requireVisible(otherThreadId);
+        customerLinks.undismiss(threadId, otherThreadId, me.getOrganization().getId());
+        return samePersonOf(threadId, me);
+    }
+
     private Map<String, Object> samePersonOf(UUID threadId, User me) {
         UUID org = me.getOrganization().getId();
         java.util.Set<UUID> visible = threadService.visibleTo(me).stream()
                 .map(ConversationThread::getId).collect(java.util.stream.Collectors.toSet());
         return Map.of(
                 "linked", customerLinks.linked(threadId, org).stream().filter(o -> visible.contains(o.threadId())).toList(),
-                "suggestions", customerLinks.suggestions(threadId, org).stream().filter(o -> visible.contains(o.threadId())).toList());
+                "suggestions", customerLinks.suggestions(threadId, org).stream().filter(o -> visible.contains(o.threadId())).toList(),
+                "totals", customerLinks.totals(threadId, org));
     }
 
     private User requireVisible(UUID threadId) {
