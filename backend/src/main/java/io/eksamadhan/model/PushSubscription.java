@@ -36,6 +36,10 @@ public class PushSubscription {
     private User user;
 
     /** Where the push service wants the message posted. Unique: one row per browser. */
+    /** The organization this row belongs to (multi-tenancy; V41). */
+    @Column(name = "organization_id", nullable = false)
+    private UUID organizationId;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String endpoint;
 
@@ -60,5 +64,12 @@ public class PushSubscription {
     @PrePersist
     void onCreate() {
         if (createdAt == null) createdAt = OffsetDateTime.now();
+        onSave();
+    }
+
+    /** A device that changes hands moves with its new owner's organization. */
+    @PreUpdate
+    void onSave() {
+        if (user != null) organizationId = user.getOrganization().getId();
     }
 }

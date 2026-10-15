@@ -180,7 +180,8 @@ public class AccountLifecycleService {
         // round them. Reusing it (not delete and insert) also lets two starts at once both succeed.
         OffsetDateTime now = OffsetDateTime.now();
         AccountDeletionChallenge c = challenges.findByUserId(me.getId())
-                .orElseGet(() -> AccountDeletionChallenge.builder().userId(me.getId()).build());
+                .orElseGet(() -> AccountDeletionChallenge.builder()
+                        .userId(me.getId()).organizationId(me.getOrganization().getId()).build());
         if (c.getExpiresAt() != null && c.getExpiresAt().isBefore(now)) {
             c.setCodeSends(0);
             c.setCodeSentAt(null);

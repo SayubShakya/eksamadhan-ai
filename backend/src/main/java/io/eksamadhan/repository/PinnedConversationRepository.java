@@ -27,8 +27,9 @@ public class PinnedConversationRepository {
 
     /** Pinning twice is not an error: the second one changes nothing. */
     public void pin(UUID userId, UUID threadId) {
-        jdbc.update("INSERT INTO pinned_conversations (user_id, thread_id) VALUES (?, ?) "
-                + "ON CONFLICT (user_id, thread_id) DO NOTHING", userId, threadId);
+        jdbc.update("INSERT INTO pinned_conversations (user_id, thread_id, organization_id) "
+                + "SELECT ?, ?, organization_id FROM users WHERE id = ? "
+                + "ON CONFLICT (user_id, thread_id) DO NOTHING", userId, threadId, userId);
     }
 
     public void unpin(UUID userId, UUID threadId) {

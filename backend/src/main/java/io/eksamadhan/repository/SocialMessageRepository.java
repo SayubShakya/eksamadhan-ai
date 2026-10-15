@@ -8,6 +8,11 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SocialMessageRepository extends JpaRepository<SocialMessage, UUID> {
+
+    /** The organization a message was filed under (its tenant key), for rows that hang off it. */
+    @org.springframework.data.jpa.repository.Query(nativeQuery = true, value =
+            "SELECT o.id FROM social_messages m JOIN organizations o ON o.api_key = m.tenant_id WHERE m.id = :messageId")
+    Optional<UUID> organizationIdOf(UUID messageId);
     List<SocialMessage> findBySocialPageOrderByTimestampDesc(SocialPage socialPage);
     Optional<SocialMessage> findByExternalMessageId(String externalMessageId);
     

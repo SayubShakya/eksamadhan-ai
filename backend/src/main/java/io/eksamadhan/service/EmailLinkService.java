@@ -147,8 +147,9 @@ public class EmailLinkService {
     private String issue(UUID userId, String purpose, Duration ttl) {
         String token = AccountService.randomToken(32);
         users.flush();            // a user made in this transaction must be written before the link points at it
-        jdbc.update("INSERT INTO email_links (id, user_id, purpose, token_hash, expires_at) VALUES (?, ?, ?, ?, ?)",
-                UUID.randomUUID(), userId, purpose, hash(token), OffsetDateTime.now().plus(ttl));
+        jdbc.update("INSERT INTO email_links (id, user_id, purpose, token_hash, expires_at, organization_id) "
+                + "SELECT ?, ?, ?, ?, ?, organization_id FROM users WHERE id = ?",
+                UUID.randomUUID(), userId, purpose, hash(token), OffsetDateTime.now().plus(ttl), userId);
         return token;
     }
 

@@ -31,6 +31,10 @@ public class AccountDeletionChallenge {
     @Column(name = "user_id", nullable = false, unique = true)
     private UUID userId;
 
+    /** The organization this row belongs to (multi-tenancy; V41). */
+    @Column(name = "organization_id", nullable = false)
+    private UUID organizationId;
+
     @JdbcTypeCode(SqlTypes.SMALLINT)
     @Column(nullable = false)
     private int stage;

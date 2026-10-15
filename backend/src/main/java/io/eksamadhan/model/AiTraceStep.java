@@ -25,6 +25,10 @@ public class AiTraceStep {
     @Column(name = "social_message_id", nullable = false)
     private UUID socialMessageId;
 
+    /** The organization this row belongs to (multi-tenancy; V41). */
+    @Column(name = "organization_id", nullable = false)
+    private UUID organizationId;
+
     @Column(nullable = false)
     private Long seq;
 

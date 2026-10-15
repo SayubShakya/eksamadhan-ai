@@ -35,6 +35,16 @@ public class TraceRecorder {
     // instant, or from two threads at once, still come back in the order they happened.
     private final AtomicLong sequence = new AtomicLong(System.currentTimeMillis() * 1000);
 
+    // Each step stores its organization. One message writes a dozen steps, so the lookup is
+    // remembered for the last few hundred messages instead of repeated for every step.
+    private final java.util.Map<UUID, UUID> organizations = java.util.Collections.synchronizedMap(
+            new java.util.LinkedHashMap<>(64, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(java.util.Map.Entry<UUID, UUID> eldest) {
+                    return size() > 512;
+                }
+            });
+
     public TraceRecorder(AiTraceStepRepository repository, ObjectMapper objectMapper) {
         this.repository = repository;
         this.objectMapper = objectMapper;
@@ -73,7 +83,11 @@ public class TraceRecorder {
                      Object input, Object output, Integer durationMs) {
         if (messageId == null) return;
         try {
+            UUID organizationId = organizations.computeIfAbsent(messageId,
+                    id -> repository.organizationOfMessage(id).orElse(null));
+            if (organizationId == null) return;   // the message is gone; nothing to file the step under
             repository.save(AiTraceStep.builder()
+                    .organizationId(organizationId)
                     .socialMessageId(messageId)
                     .seq(sequence.incrementAndGet())
                     .kind(kind.name())

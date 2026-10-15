@@ -10,6 +10,11 @@ public interface AiTraceStepRepository extends JpaRepository<AiTraceStep, UUID> 
 
     List<AiTraceStep> findBySocialMessageIdOrderBySeqAsc(UUID socialMessageId);
 
+    /** The organization a customer message was filed under, for the rows that hang off it. */
+    @org.springframework.data.jpa.repository.Query(nativeQuery = true, value =
+            "SELECT o.id FROM social_messages m JOIN organizations o ON o.api_key = m.tenant_id WHERE m.id = :messageId")
+    java.util.Optional<UUID> organizationOfMessage(UUID messageId);
+
     List<AiTraceStep> findBySocialMessageIdInOrderBySeqAsc(java.util.Collection<UUID> socialMessageIds);
 
     /**

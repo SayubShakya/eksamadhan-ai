@@ -35,6 +35,10 @@ public class Notification {
     @EqualsAndHashCode.Exclude
     private User user;
 
+    /** The organization this row belongs to (multi-tenancy; V41). */
+    @Column(name = "organization_id", nullable = false)
+    private UUID organizationId;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String title;
 
@@ -61,5 +65,6 @@ public class Notification {
     @PrePersist
     void onCreate() {
         if (createdAt == null) createdAt = OffsetDateTime.now();
+        if (organizationId == null && user != null) organizationId = user.getOrganization().getId();
     }
 }

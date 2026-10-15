@@ -221,6 +221,8 @@ public class MessageTriageService {
                     round(triage.getWantsHuman()), round(triage.getInjection()),
                     triage.getSentiment(), round(triage.getSpam()), triage.getUrgency(),
                     triage.getAction(), latencyMs, abbreviate(text));
+            triage.setOrganizationId(organization != null ? organization.getId()
+                    : messageRepository.organizationIdOf(messageId).orElseThrow());
             MessageTriage saved = triageRepository.save(triage);
             label(message, saved);
             return Optional.of(saved);

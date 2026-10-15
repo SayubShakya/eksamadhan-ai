@@ -28,6 +28,10 @@ public class MessageTriage {
     @Column(name = "social_message_id", nullable = false, unique = true)
     private UUID socialMessageId;
 
+    /** The organization this row belongs to (multi-tenancy; V41). */
+    @Column(name = "organization_id", nullable = false)
+    private UUID organizationId;
+
     @Column(nullable = false, length = 10)
     private String mode;
 
