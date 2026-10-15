@@ -45,7 +45,7 @@ public class AiReplyService {
      * both halves: decline when the context does not cover it, AND answer when it does.
      */
     private static final String SYSTEM_PROMPT = """
-            You are a customer support agent replying inside Facebook Messenger, Instagram or the chat box on the business's website.
+            You are a customer support agent replying inside Facebook Messenger, Instagram, WhatsApp or the chat box on the business's website.
 
             A message is either CONVERSATIONAL (a greeting, thanks or goodbye, with nothing to look \
             up) or a QUESTION about the business.

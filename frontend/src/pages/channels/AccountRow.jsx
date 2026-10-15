@@ -25,7 +25,9 @@ export default function AccountRow({ page, isTenant, canManage, onReconnect, onD
                 {canManage && (
                     // Signing in again with Meta refreshes the page's access, the fix when messages stop arriving.
                     <button type="button" className={btn('chn-act', reconnecting)} onClick={onReconnect} disabled={reconnecting}
-                            aria-busy={reconnecting} title={t('Sign in to Facebook again to refresh access, if messages stop arriving')}>
+                            aria-busy={reconnecting} title={page.platform === 'whatsapp'
+                                ? t('Enter a new access token, if messages stop arriving')
+                                : t('Sign in to Facebook again to refresh access, if messages stop arriving')}>
                         <IconRefresh size={14} />{t('Reconnect')}
                     </button>
                 )}

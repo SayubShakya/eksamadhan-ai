@@ -11,7 +11,8 @@ import java.util.UUID;
 
 /**
  * Sends to a customer on whichever channel the page is. Messenger and Instagram go through
- * Meta. Website chat has nobody to call, because the visitor's chat box fetches its messages
+ * Meta's Messenger API, WhatsApp through the WhatsApp Cloud API (WhatsAppService). Website
+ * chat has nobody to call, because the visitor's chat box fetches its messages
  * (WidgetController), so sending there only makes the id the message is saved under.
  *
  * Every send that used to call MetaService directly comes through here, so a reply, a
@@ -22,6 +23,7 @@ import java.util.UUID;
 public class ChannelSender {
 
     private final MetaService metaService;
+    private final WhatsAppService whatsApp;
 
     /** The id a website chat message is saved under; unique, like Meta's message ids. */
     public static String websiteMessageId() {
@@ -34,22 +36,26 @@ public class ChannelSender {
 
     public Mono<Map> sendText(SocialPage page, String recipientId, String text, String replyToMid) {
         if (SocialPage.isWebsite(page)) return delivered();
+        if (SocialPage.isWhatsApp(page)) return whatsApp.sendText(page.getPageId(), recipientId, text, page.getAccessToken(), replyToMid);
         return metaService.sendMessage(recipientId, text, page.getAccessToken(), replyToMid);
     }
 
     public Mono<Map> sendAttachment(SocialPage page, String recipientId, File file, String type, String mimeType) {
         if (SocialPage.isWebsite(page)) return delivered();
+        if (SocialPage.isWhatsApp(page)) return whatsApp.sendMedia(page.getPageId(), recipientId, file, type, mimeType, page.getAccessToken());
         return metaService.sendAttachment(recipientId, file, type, mimeType, page.getAccessToken());
     }
 
     public Mono<Map> sendAudio(SocialPage page, String recipientId, File file) {
         if (SocialPage.isWebsite(page)) return delivered();
+        if (SocialPage.isWhatsApp(page)) return whatsApp.sendMedia(page.getPageId(), recipientId, file, "audio", "audio/mp4", page.getAccessToken());
         return metaService.sendAudio(recipientId, file, page.getAccessToken());
     }
 
     /** A reaction on website chat is kept on the message only; the chat box does not show it. */
     public Mono<Map> sendReaction(SocialPage page, String recipientId, String messageId, String emoji) {
         if (SocialPage.isWebsite(page)) return Mono.just(Map.of());
+        if (SocialPage.isWhatsApp(page)) return whatsApp.sendReaction(page.getPageId(), recipientId, messageId, emoji, page.getAccessToken());
         return metaService.sendReaction(recipientId, messageId, emoji, page.getAccessToken());
     }
 }

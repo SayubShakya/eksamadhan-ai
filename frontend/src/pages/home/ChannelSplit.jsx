@@ -1,14 +1,14 @@
 // Conversations by channel over the last 30 days, from Analytics, with whether each channel
 // is connected.
-import { IconFacebook, IconInstagram, IconWidget } from '../../components/ui/icons.jsx';
+import { IconFacebook, IconInstagram, IconWhatsApp, IconWidget } from '../../components/ui/icons.jsx';
 import { Skel } from '../../components/ui/Loading.jsx';
 import { t } from '../../lib/i18n.js';
 
 export default function ChannelSplit({ analytics, pending, pages, canManage, onManage }) {
     const rows = (analytics?.channels || []).filter(c => c.conversations > 0);
     const total = rows.reduce((n, c) => n + c.conversations, 0);
-    const NAME = { facebook: 'Messenger', instagram: 'Instagram', web: 'Website chat' };
-    const ICON = { facebook: <IconFacebook size={16} />, instagram: <IconInstagram size={16} />, web: <IconWidget size={16} /> };
+    const NAME = { facebook: 'Messenger', instagram: 'Instagram', whatsapp: 'WhatsApp', web: 'Website chat' };
+    const ICON = { facebook: <IconFacebook size={16} />, instagram: <IconInstagram size={16} />, whatsapp: <IconWhatsApp size={16} />, web: <IconWidget size={16} /> };
     return (
         <section className="card dash__split" aria-labelledby="split-h">
             <div className="dash__cardhead">
@@ -30,7 +30,7 @@ export default function ChannelSplit({ analytics, pending, pages, canManage, onM
                     {/* A plain list (Sayub, 2026-10-05): each channel, one line about it, and Connect
                         for one that is not connected. No bars. */}
                     <ul className="dash__channels">
-                        {['facebook', 'instagram', 'web'].map(platform => {
+                        {['facebook', 'instagram', 'whatsapp', 'web'].map(platform => {
                             const c = rows.find(r => r.platform === platform);
                             const connected = pages.some(pg => (pg.platform || '').toLowerCase() === platform);
                             return (

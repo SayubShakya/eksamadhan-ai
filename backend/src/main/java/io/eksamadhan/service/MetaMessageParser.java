@@ -30,12 +30,18 @@ public class MetaMessageParser {
     private final MetaService metaService;
     private final ThreadService threadService;
     private final org.springframework.context.ApplicationEventPublisher events;
+    private final WhatsAppWebhookParser whatsAppParser;
 
     /** Profiles rarely change; one lookup per customer is plenty. */
     private final Map<String, Map> profileCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Transactional
     public void processWebhookPayload(Map<String, Object> payload) {
+        // WhatsApp shares the app's webhook but has its own shape (WhatsAppWebhookParser).
+        if ("whatsapp_business_account".equals(payload.get("object"))) {
+            whatsAppParser.process(payload);
+            return;
+        }
         try {
             List<Map> entries = (List<Map>) payload.get("entry");
             if (entries == null || entries.isEmpty()) {

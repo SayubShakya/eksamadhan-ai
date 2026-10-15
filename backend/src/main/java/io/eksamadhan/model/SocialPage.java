@@ -29,7 +29,7 @@ public class SocialPage {
     private String accessToken;
 
     @Column(nullable = false)
-    private String platform; // FACEBOOK, INSTAGRAM, WEB (website chat)
+    private String platform; // FACEBOOK, INSTAGRAM, WEB (website chat), WHATSAPP
 
     private String instagramBusinessId;
 
@@ -57,6 +57,22 @@ public class SocialPage {
     private String widgetColor;
 
     public static final String WEB = "WEB";
+    public static final String WHATSAPP = "WHATSAPP";
+
+    /** WhatsApp only: the WhatsApp Business account this phone number belongs to. */
+    private String whatsappBusinessId;
+
+    public static boolean isWhatsApp(SocialPage page) {
+        return page != null && WHATSAPP.equalsIgnoreCase(page.getPlatform());
+    }
+
+    /**
+     * A Facebook Page or an Instagram account: the Messenger API, with its conversation
+     * history, profiles and page subscriptions. Website chat and WhatsApp have none of those.
+     */
+    public static boolean usesMessengerApi(SocialPage page) {
+        return page != null && !isWebsite(page) && !isWhatsApp(page);
+    }
 
     /** A website chat box rather than a Meta page: nothing about it goes through Meta. */
     public static boolean isWebsite(SocialPage page) {

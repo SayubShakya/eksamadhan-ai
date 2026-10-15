@@ -55,3 +55,9 @@
 @media (max-width: 760px) { .voice { width: 210px; } }
 @media (prefers-reduced-motion: reduce) { .voice__wave.is-loading i { animation: none; } }
 
+
+/* WhatsApp's card (13 October 2026): its own green band, like Facebook's blue and Instagram's pink. */
+.chn-card--whatsapp { --brand: #128c4a; --brand-band: linear-gradient(135deg, #e7f8ee, #f3fbf6); }
+:root[data-theme="dark"] .chn-card--whatsapp { --brand: #3ccf7e; --brand-band: linear-gradient(135deg, #16291f, #1a2420); }
+.chn-face__badge--whatsapp { background: #fff; }
+.dash__chip--whatsapp { background: #e7f8ee; }

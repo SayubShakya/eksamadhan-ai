@@ -272,6 +272,18 @@ public class CustomerLinkService {
                     ON CONFLICT (social_page_id, customer_id) DO UPDATE SET contact_id = EXCLUDED.contact_id
                     """, id.pageId(), id.customerId(), organizationId, contact, linkedBy);
         }
+        // WhatsApp and website chat never give a profile photo; once linked, those conversations
+        // show the photo from the same person's Messenger or Instagram conversation.
+        jdbc.update("""
+                UPDATE conversation_threads t SET customer_avatar_url = (
+                    SELECT s.customer_avatar_url FROM conversation_threads s
+                    JOIN customer_links l ON l.social_page_id = s.social_page_id AND l.customer_id = s.customer_id
+                    WHERE l.contact_id = ? AND s.customer_avatar_url IS NOT NULL AND s.customer_avatar_url <> ''
+                    ORDER BY s.last_message_at DESC NULLS LAST LIMIT 1)
+                FROM customer_links l
+                WHERE l.contact_id = ? AND l.social_page_id = t.social_page_id AND l.customer_id = t.customer_id
+                  AND (t.customer_avatar_url IS NULL OR t.customer_avatar_url = '')
+                """, contact, contact);
         // Linking them is the answer "the same person": an earlier "Not them" for the pair no
         // longer stands, or unlinking later would leave them never suggested again.
         undismiss(threadId, otherThreadId, organizationId);
@@ -344,10 +356,11 @@ public class CustomerLinkService {
                 threadId, days, limit);
     }
 
-    /** "Instagram", "Messenger" or "Website chat", as a person would say it. */
+    /** "Instagram", "Messenger", "Website chat" or "WhatsApp", as a person would say it. */
     public static String channelName(String platform) {
         if ("INSTAGRAM".equalsIgnoreCase(platform)) return "Instagram";
         if (SocialPage.WEB.equalsIgnoreCase(platform)) return "Website chat";
+        if (SocialPage.WHATSAPP.equalsIgnoreCase(platform)) return "WhatsApp";
         return "Messenger";
     }
 

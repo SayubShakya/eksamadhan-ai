@@ -71,6 +71,13 @@ export const IconFacebook = ({ size = 16 }) => (
 // Each copy has its own gradient id: one shared id breaks every icon on the page when the
 // copy that defines it sits inside something hidden (display: none drops its defs).
 export const IconInstagram = ({ size = 16 }) => <InstagramSvg size={size} id={useId()} />;
+// WhatsApp: its green speech bubble with a handset, drawn here rather than loaded.
+export const IconWhatsApp = ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#25D366" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z" />
+        <path fill="#fff" d="M9.1 7.2c-.2-.5-.4-.5-.6-.5h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2c0 1.3.9 2.5 1 2.7.1.2 1.8 2.9 4.5 3.9 2.2.9 2.7.7 3.2.7.5-.1 1.6-.7 1.8-1.3.2-.6.2-1.2.2-1.3-.1-.1-.3-.2-.6-.3l-1.7-.8c-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.6.1a6.6 6.6 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.2 0-.3 0-.4l-.8-1.9z" />
+    </svg>
+);
 const InstagramSvg = ({ size, id }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
         <defs>

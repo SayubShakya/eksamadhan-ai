@@ -15,13 +15,14 @@ export default function ChannelsSummary({ loading, pages }) {
     }
     // Website chat counts as a channel too, alongside the Meta ones.
     const connectedPlatforms = PLATFORMS.filter(pl => pages.some(p => p.platform === pl.id)).length
-        + (pages.some(p => p.platform === 'web') ? 1 : 0);
+        + (pages.some(p => p.platform === 'web') ? 1 : 0)
+        + (pages.some(p => p.platform === 'whatsapp') ? 1 : 0);
     const totalConversations = pages.reduce((n, p) => n + (p.conversations ?? 0), 0);
     return (
         <div className="chn-summary">
             <div className="chn-stat">
                 <span className="chn-stat__icon"><IconChannels size={17} /></span>
-                <span className="chn-stat__text"><b>{connectedPlatforms}<small> / {PLATFORMS.length + 1}</small></b><span>{t('Channels connected')}</span></span>
+                <span className="chn-stat__text"><b>{connectedPlatforms}<small> / {PLATFORMS.length + 2}</small></b><span>{t('Channels connected')}</span></span>
             </div>
             <div className="chn-stat">
                 <span className="chn-stat__icon"><IconUser size={17} /></span>

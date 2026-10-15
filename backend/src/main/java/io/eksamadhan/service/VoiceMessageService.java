@@ -70,6 +70,14 @@ public class VoiceMessageService {
         return name;
     }
 
+    /** Stores bytes that arrived from elsewhere (a WhatsApp photo or voice note) under a new name. */
+    public String storeBytes(byte[] bytes, String ext) throws IOException {
+        String safe = ext != null && ext.matches("\\.[a-z0-9]{2,5}") ? ext : ".bin";
+        String name = UUID.randomUUID() + safe;
+        java.nio.file.Files.write(storageDir.resolve(name), bytes);
+        return name;
+    }
+
     public Path resolve(String fileName) {
         // Reject anything that tries to climb out of the media directory.
         Path candidate = storageDir.resolve(fileName).normalize();

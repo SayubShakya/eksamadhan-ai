@@ -151,6 +151,8 @@ export const undismissSamePerson = (threadId, otherThreadId) =>
     axios.delete(`/api/threads/${threadId}/same-person/dismiss/${otherThreadId}`).then(r => r.data);
 export const unlinkSamePerson = (threadId) =>
     axios.delete(`/api/threads/${threadId}/same-person`).then(r => r.data);
+/** WhatsApp: connect a number with the IDs and token from Meta's WhatsApp API Setup page. */
+export const connectWhatsApp = (form) => axios.post('/api/whatsapp/connect', form).then(r => r.data);
 /** Website chat: the chat boxes this workspace has put on its websites. */
 export const getWidgets = () => axios.get('/api/widgets').then(r => r.data);
 export const createWidget = (form) => axios.post('/api/widgets', form).then(r => r.data);

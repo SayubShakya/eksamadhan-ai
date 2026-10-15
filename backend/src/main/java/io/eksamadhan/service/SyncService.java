@@ -118,7 +118,7 @@ public class SyncService {
     public CompletableFuture<Void> subscribeToWebhooksAsync(UUID pageId) {
         log.info("🚀 Launching async webhook subscription for pageId: {}", pageId);
         try {
-            socialPageRepository.findWithOrganizationById(pageId).filter(page -> !SocialPage.isWebsite(page)).ifPresent(page ->
+            socialPageRepository.findWithOrganizationById(pageId).filter(SocialPage::usesMessengerApi).ifPresent(page ->
                 metaService.subscribeToWebhooks(page.getPageId(), page.getAccessToken()).subscribe()
             );
         } catch (Exception e) {
@@ -134,7 +134,7 @@ public class SyncService {
     @Transactional
     public void syncPageHistory(SocialPage page) {
         // Website chat has no history at Meta to fetch.
-        if (SocialPage.isWebsite(page)) return;
+        if (!SocialPage.usesMessengerApi(page)) return;
         rememberInstagramUsername(page);
         if (!syncingPages.add(page.getId())) {
             log.info("ℹ️ Sync already in progress for page: {}. Skipping.", page.getPageName());
@@ -473,7 +473,7 @@ public class SyncService {
      */
     @Async("taskExecutor")
     public CompletableFuture<Void> subscribePageToWebhooksAsync(SocialPage page) {
-        if (SocialPage.isWebsite(page)) return CompletableFuture.completedFuture(null);
+        if (!SocialPage.usesMessengerApi(page)) return CompletableFuture.completedFuture(null);
         log.info("🔔 Subscribing page {} to webhooks...", page.getPageName());
 
         try {
@@ -526,7 +526,7 @@ public class SyncService {
     @Transactional
     public void refreshCustomerProfiles(SocialPage page) {
         // A website visitor's name is the one they typed; there is no profile to look up.
-        if (SocialPage.isWebsite(page)) return;
+        if (!SocialPage.usesMessengerApi(page)) return;
         Instant refreshedAfter = Instant.now().minus(PROFILE_FRESH_FOR);
         if (profilesRefreshed.getOrDefault(page.getId(), Instant.EPOCH).isAfter(refreshedAfter)) {
             return;

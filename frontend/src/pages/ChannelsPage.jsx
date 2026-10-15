@@ -9,6 +9,7 @@ import ChannelsSummary from './channels/ChannelsSummary.jsx';
 import ChannelsSkeleton from './channels/ChannelsSkeleton.jsx';
 import PlatformCard from './channels/PlatformCard.jsx';
 import WidgetCard from './channels/WidgetCard.jsx';
+import WhatsAppCard from './channels/WhatsAppCard.jsx';
 import useReturnFromConnect from './channels/useReturnFromConnect.js';
 import { PLATFORMS } from './channels/platforms.js';
 
@@ -77,6 +78,8 @@ export default function ChannelsPage({ user, pages = [], statusLoaded = true, on
                                       onConnect={connect} onDisconnect={setRemoving} />
                     ))}
 
+                    <WhatsAppCard accounts={pages.filter(p => p.platform === 'whatsapp')} isTenant={isTenant} canManage={canManage}
+                                  onChanged={onChanged} onDisconnect={setRemoving} />
                     <WidgetCard canManage={canManage} onChanged={onChanged} />
                 </div>
             )}
