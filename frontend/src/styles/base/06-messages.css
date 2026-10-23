@@ -61,6 +61,9 @@
 
 /* A sticker stands alone, as it does in Messenger: no bubble behind it. */
 .bubble.bubble--sticker { background: none; border: 0; padding: 0; box-shadow: none; }
+/* A photo with nothing written under it stands on its own, like a sticker: no coloured frame
+   showing round its edges or through a transparent picture. */
+.bubble.bubble--photo { background: none; border: 0; padding: 0; box-shadow: none; }
 .media--sticker { display: block; width: 96px; height: 96px; object-fit: contain; }
 .media--sticker-fallback { display: inline-flex; padding: 6px; color: var(--accent); }
 .media--image { display: block; border-radius: 10px; max-width: 280px; max-height: 320px; }

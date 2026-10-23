@@ -111,7 +111,7 @@ export default function ThreadMessage({
                         buttons centre on the bubble rather than
                         on the bubble plus its timestamp. */}
                     <div className="msg__line" onClick={onPick}>
-                        <div className={`bubble ${!outbound ? 'bubble--customer' : isAi ? 'bubble--ai' : mine ? 'bubble--agent' : 'bubble--colleague'} ${m.attachmentType === 'sticker' ? 'bubble--sticker' : m.attachmentUrl ? 'bubble--media' : ''}`}>
+                        <div className={`bubble ${!outbound ? 'bubble--customer' : isAi ? 'bubble--ai' : mine ? 'bubble--agent' : 'bubble--colleague'} ${m.attachmentType === 'sticker' ? 'bubble--sticker' : m.attachmentUrl ? 'bubble--media' : ''}${m.attachmentType === 'image' && !(m.text || m.content) && !m.transcript ? ' bubble--photo' : ''}`}>
                             <Attachment message={m} onOpenImage={onOpenImage} />
                             {/* What the voice note said, marked as
                                 our reading rather than their words. */}
