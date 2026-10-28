@@ -24,6 +24,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query("SELECT u FROM User u JOIN FETCH u.organization WHERE u.organization = :organization ORDER BY u.createdAt")
     List<User> findByOrganization(Organization organization);
 
+    /** Every account with its business, for the platform admin's people list. */
+    @Query("SELECT u FROM User u JOIN FETCH u.organization")
+    List<User> findAllWithOrganization();
+
     long countByOrganization(Organization organization);
 
     /** Everyone who could pick up a conversation. Disabled and unaccepted invites are out. */

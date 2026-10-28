@@ -156,9 +156,18 @@ public class AccountService {
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This account has been disabled");
         }
+        requireBusinessActive(user);
 
         user.setLastLoginAt(OffsetDateTime.now());
         return userRepository.save(user);
+    }
+
+    /** A business suspended by the platform admin cannot sign in until it is restored. */
+    private static void requireBusinessActive(User user) {
+        if (user.getOrganization().isSuspended() && !user.isSystemAdmin()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "This workspace has been suspended. Contact EkSamadhan support to restore it.");
+        }
     }
 
     /**
@@ -189,6 +198,7 @@ public class AccountService {
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This account has been disabled");
         }
+        requireBusinessActive(user);
         // The one account that can read every workspace does not hang on an outside login.
         if (user.isSystemAdmin()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The system admin signs in with a password");

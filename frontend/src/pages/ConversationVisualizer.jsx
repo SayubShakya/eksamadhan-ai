@@ -25,9 +25,10 @@ import StepDrawer from './visualizer/StepDrawer.jsx';
 
 const POLL_MS = 4000;
 
-export default function ConversationVisualizer() {
+/** `initialQuery`: opened from a business's page, the list starts filtered to that business. */
+export default function ConversationVisualizer({ initialQuery = '' }) {
     const [messages, setMessages] = useState(null);
-    const [query, setQuery] = useState('');
+    const [query, setQuery] = useState(initialQuery);
     const [selectedId, setSelectedId] = useState(null);
     const [trace, setTrace] = useState(null);
     const [stepId, setStepId] = useState(null);

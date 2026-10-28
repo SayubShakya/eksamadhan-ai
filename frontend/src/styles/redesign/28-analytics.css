@@ -98,6 +98,9 @@
 .an2-checks__btn { flex-shrink: 0; }
 @media (max-width: 560px) {
     .an2-checks li { flex-wrap: wrap; }
+    /* The text takes the whole line beside the icon, so the button drops under it instead of
+       squeezing the text into a narrow column. */
+    .an2-checks__text { flex-basis: calc(100% - 48px); }
     .an2-checks__btn { margin-left: 48px; }
 }
 .an2-link { justify-self: start; display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; padding: 0; font-size: 13px; font-weight: 600; color: var(--accent); }

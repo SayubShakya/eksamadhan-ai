@@ -27,6 +27,7 @@ export const IconSend = (p) => <svg {...s({ size: p.size || 16 })}><path d="M22 
 export const IconPlus = (p) => <svg {...s({ size: p.size || 16 })}><path d="M12 5v14" /><path d="M5 12h14" /></svg>;
 export const IconBolt = (p) => <svg {...s({ size: p.size || 18 })} fill="currentColor" stroke="none"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z" /></svg>;
 export const IconChevronLeft = (p) => <svg {...s(p)}><path d="M15 18l-6-6 6-6" /></svg>;
+export const IconChevronRight = (p) => <svg {...s(p)}><path d="M9 18l6-6-6-6" /></svg>;
 export const IconTrash = (p) => <svg {...s({ size: p.size || 14 })}><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /></svg>;
 export const IconUser = (p) => <svg {...s(p)}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>;
 export const IconUpload = (p) => <svg {...s({ size: p.size || 15 })}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 9l5-5 5 5" /><path d="M12 4v12" /></svg>;

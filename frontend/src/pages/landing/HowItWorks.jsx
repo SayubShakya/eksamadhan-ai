@@ -32,7 +32,7 @@ export default function HowItWorks({ reduced }) {
             <div className="lp-how__head">
                 <h2>How It Works</h2>
                 <p>
-                    Customers write to your Facebook Page or Instagram the way they always do. Every
+                    Customers write on Messenger, Instagram, WhatsApp or your website the way they always do. Every
                     message arrives in one inbox, where the AI answers what it can and your team
                     handles the rest. Nothing is left without a reply and nobody is ignored.
                 </p>

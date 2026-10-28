@@ -175,7 +175,7 @@ export default {
     'You were invited as an admin, using {email}.': 'तपाईंलाई {email} बाट एडमिनको रूपमा निमन्त्रणा गरिएको छ।',
     'You were invited as staff, using {email}.': 'तपाईंलाई {email} बाट स्टाफको रूपमा निमन्त्रणा गरिएको छ।',
     'Sign in to your support inbox.': 'आफ्नो सपोर्ट इनबक्समा साइन इन गर्नुहोस्।',
-    'One inbox for your Facebook and Instagram messages.': 'तपाईंका Facebook र Instagram मेसेजका लागि एउटै इनबक्स।',
+    'One inbox for your Facebook, Instagram, WhatsApp and website chat messages.': 'तपाईंका Facebook, Instagram, WhatsApp र वेबसाइट च्याटका मेसेजका लागि एउटै इनबक्स।',
     'Checking your invite': 'तपाईंको निमन्त्रणा जाँचिँदैछ',
     'This invite is not valid': 'यो निमन्त्रणा मान्य छैन',
     'The link may have expired or already been used. Ask your admin for a new one.': 'लिंकको म्याद सकिएको वा पहिल्यै प्रयोग भइसकेको हुन सक्छ। आफ्नो एडमिनसँग नयाँ लिंक माग्नुहोस्।',
@@ -241,8 +241,8 @@ export default {
         'पुष्टि लिंक एक पटक र 24 घण्टासम्म मात्र चल्छ। नयाँ लिंकका लागि साइन इन गरेर ड्यासबोर्डमा "फेरि पठाउनुहोस्" थिच्नुहोस्।',
 
     // AuthArt
-    "A customer's message travelling from Messenger and Instagram into the EkSamadhan inbox, and out to the team":
-        'ग्राहकको मेसेज Messenger र Instagram बाट EkSamadhan इनबक्समा आउँदै, र त्यहाँबाट टिमसम्म पुग्दै',
+    "A customer's message travelling from Messenger, Instagram, WhatsApp or website chat into the EkSamadhan inbox, and out to the team":
+        'ग्राहकको मेसेज Messenger, Instagram, WhatsApp वा वेबसाइट च्याटबाट EkSamadhan इनबक्समा आउँदै, र त्यहाँबाट टिमसम्म पुग्दै',
     'YOUR SHOP': 'तपाईंको पसल',
     'Your business': 'तपाईंको व्यवसाय',
     'Your customer': 'तपाईंको ग्राहक',

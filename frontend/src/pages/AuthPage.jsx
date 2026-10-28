@@ -120,7 +120,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
     }[invite.role] || t('You were invited as staff, using {email}.', { email: invite.email }));
 
     const subtitle = mode === 'login' ? t('Sign in to your support inbox.')
-        : mode === 'signup' ? t('One inbox for your Facebook and Instagram messages.')
+        : mode === 'signup' ? t('One inbox for your Facebook, Instagram, WhatsApp and website chat messages.')
         : invitedAs || '';
 
     if (loadingInvite) {

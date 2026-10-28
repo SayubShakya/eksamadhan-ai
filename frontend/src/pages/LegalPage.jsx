@@ -23,7 +23,7 @@ function Privacy() {
 
             <h2>Who we are</h2>
             <p>
-                EkSamadhan AI is a customer-support inbox for Facebook Messenger, Instagram and a chat
+                EkSamadhan AI is a customer-support inbox for Facebook Messenger, Instagram, WhatsApp and a chat
                 box businesses can add to their own website, with AI replies and handover to people. It is a final-year project by Sayub Shakya at the
                 University of Bedfordshire, not a registered company. Questions about this policy or
                 your data: <Mail />.
@@ -159,7 +159,7 @@ function Terms() {
 
             <h2>The service</h2>
             <p>
-                EkSamadhan AI collects a business's Facebook Messenger, Instagram and website chat
+                EkSamadhan AI collects a business's Facebook Messenger, Instagram, WhatsApp and website chat
                 conversations in one inbox, answers them with AI from the business's own knowledge, and hands them to its
                 staff when needed. It is a final-year university project run by Sayub Shakya. By
                 creating a workspace, joining one, or signing in, you agree to these terms and to

@@ -15,7 +15,7 @@ const SITE = 'EkSamadhan AI';
 const SITE_URL = (import.meta.env.VITE_SITE_URL || '').replace(/\/+$/, '');
 
 export const DEFAULT_DESCRIPTION =
-    'One inbox for Messenger and Instagram. The AI answers from your own knowledge and hands the rest to your team.';
+    'One inbox for Messenger, Instagram, WhatsApp and your website chat. The AI answers from your own knowledge and hands the rest to your team.';
 
 function tag(selector, create) {
     let el = document.head.querySelector(selector);
@@ -72,15 +72,15 @@ export const VIEW_TITLES = Object.defineProperties({}, Object.fromEntries(
 export const PUBLIC_META = {
     landing: {
         title: '', index: true, path: '/',
-        description: 'EkSamadhan AI answers your customers on Facebook Messenger and Instagram from your own business knowledge, and hands the rest to an available person on your team.',
+        description: 'EkSamadhan AI answers your customers on Facebook Messenger, Instagram, WhatsApp and your own website from your own business knowledge, and hands the rest to an available person on your team.',
     },
     login: {
         title: 'Sign in', index: true, path: '/login',
-        description: 'Sign in to EkSamadhan AI, the support inbox for Facebook Messenger and Instagram.',
+        description: 'Sign in to EkSamadhan AI, the support inbox for Facebook Messenger, Instagram, WhatsApp and website chat.',
     },
     signup: {
         title: 'Create a workspace', index: true, path: '/signup',
-        description: 'Create an EkSamadhan AI workspace: one inbox for Messenger and Instagram, with replies drafted from your own business knowledge.',
+        description: 'Create an EkSamadhan AI workspace: one inbox for Messenger, Instagram, WhatsApp and website chat, with replies drafted from your own business knowledge.',
     },
     invite: { title: 'Join your team', index: false },
     forgot: { title: 'Forgot password', index: false },
@@ -92,6 +92,6 @@ export const PUBLIC_META = {
     },
     terms: {
         title: 'Terms & Conditions', index: true, path: '/terms',
-        description: 'The terms for using EkSamadhan AI, the support inbox for Facebook Messenger and Instagram.',
+        description: 'The terms for using EkSamadhan AI, the support inbox for Facebook Messenger, Instagram, WhatsApp and website chat.',
     },
 };

@@ -1,12 +1,14 @@
 // The grid of channels, inputs and devices the product works with.
 import {
     IconBell, IconDownload, IconFacebook, IconImage, IconInbox, IconInstagram, IconKnowledge, IconLock, IconMic,
+    IconWhatsApp,
 } from '../../components/ui/icons.jsx';
 import { GoogleG, IconDoc, IconGlobe } from './LandingIcons.jsx';
 
 const WORKS_WITH = [
     { icon: <IconFacebook size={20} />, label: 'Messenger' },
     { icon: <IconInstagram size={20} />, label: 'Instagram' },
+    { icon: <IconWhatsApp size={20} />, label: 'WhatsApp' },
     { icon: <GoogleG />, label: 'Google sign-in' },
     { icon: <IconMic size={20} />, label: 'Voice notes' },
     { icon: <IconImage size={20} />, label: 'Photos' },
@@ -16,7 +18,6 @@ const WORKS_WITH = [
     { icon: <IconBell size={20} />, label: 'Push alerts' },
     { icon: <IconInbox size={20} />, label: 'Email alerts' },
     { icon: <IconDownload size={20} />, label: 'Phone and laptop' },
-    { icon: <IconLock size={20} />, label: 'Data export' },
 ];
 
 export default function WorksWith() {

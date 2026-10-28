@@ -16,7 +16,7 @@ export default function LandingFooter({ signedIn, primary }) {
                         <a className="lp-foot__logo" href="/" aria-label="EkSamadhan AI home">
                             <LogoMark size={30} color="#2563eb" /> <strong>EkSamadhan AI</strong>
                         </a>
-                        <p>One inbox for Messenger and Instagram, with AI that knows when to ask a person.</p>
+                        <p>One inbox for Messenger, Instagram, WhatsApp and website chat, with AI that knows when to ask a person.</p>
                         <div className="lp-foot__social">
                             <a href={FACEBOOK_PAGE} target="_blank" rel="noopener" aria-label="EkSamadhan AI on Facebook"><IconFacebook size={20} /></a>
                             <a href={INSTAGRAM_PAGE} target="_blank" rel="noopener" aria-label="EkSamadhan AI on Instagram"><IconInstagram size={20} /></a>

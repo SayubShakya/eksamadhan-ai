@@ -25,9 +25,21 @@ export default function usePanZoom(fitKey) {
         setView({ x: Math.max(pad, (vp.clientWidth - w * z) / 2), y: pad, z });
     }, []);
 
-    // Fit whenever a different message opens — not on every poll, or the view would jump
+    // A message opens at a size its steps can be read at, from the first step: fitting a long
+    // flow into the panel shrank it to about 30%, every label unreadable. Fit still shows it all.
+    const READABLE = 0.8;
+    const open = useCallback(() => {
+        const vp = viewport.current, st = stage.current;
+        if (!vp || !st) return;
+        const pad = 24;
+        const whole = Math.min(1, (vp.clientWidth - pad * 2) / st.offsetWidth, (vp.clientHeight - pad * 2) / st.offsetHeight);
+        if (whole >= READABLE) { fit(); return; }
+        setView({ x: pad, y: pad, z: clamp(READABLE) });
+    }, [fit]);
+
+    // Opened whenever a different message opens, not on every poll, or the view would jump
     // back while you are looking around.
-    useLayoutEffect(() => { fit(); }, [fitKey, fit]);
+    useLayoutEffect(() => { open(); }, [fitKey, open]);
 
     const zoomAt = useCallback((factor, cx, cy) => {
         setView(v => {

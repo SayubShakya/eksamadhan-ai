@@ -140,6 +140,8 @@ class AgentNotificationServiceTest {
         public List<User> findByOrganization(Organization organization) { return members; }
         @Override
         public long countByOrganization(Organization organization) { return members.size(); }
+        @Override
+        public List<User> findAllWithOrganization() { return members; }
 
         // JpaRepository's remaining surface, none of which these rules touch.
         @Override public void flush() { throw new UnsupportedOperationException(); }

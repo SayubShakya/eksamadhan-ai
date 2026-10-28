@@ -235,3 +235,18 @@ export const getSystemMessages = (q) =>
     axios.get('/api/system/messages', { params: { limit: 100, ...(q ? { q } : {}) } }).then(r => r.data);
 export const getMessageTrace = (id) =>
     axios.get(`/api/system/messages/${id}/trace`).then(r => r.data);
+
+// Admin panel: every business and its people (AdminController).
+export const getAdminOverview = (days) => axios.get('/api/system/admin/overview', { params: { days } }).then(r => r.data);
+export const getAdminBusinesses = (params) => axios.get('/api/system/admin/businesses', { params }).then(r => r.data);
+export const getAdminBusiness = (id) => axios.get(`/api/system/admin/businesses/${id}`).then(r => r.data);
+export const createBusiness = (payload) => axios.post('/api/system/admin/businesses', payload).then(r => r.data);
+export const editBusiness = (id, payload) => axios.patch(`/api/system/admin/businesses/${id}`, payload).then(r => r.data);
+export const suspendBusiness = (id, reason) => axios.post(`/api/system/admin/businesses/${id}/suspend`, { reason }).then(r => r.data);
+export const restoreBusiness = (id) => axios.post(`/api/system/admin/businesses/${id}/restore`).then(r => r.data);
+export const deleteBusiness = (id, confirmName) => axios.post(`/api/system/admin/businesses/${id}/delete`, { confirmName }).then(r => r.data);
+export const inviteIntoBusiness = (id, payload) => axios.post(`/api/system/admin/businesses/${id}/invites`, payload).then(r => r.data);
+export const getAdminPeople = (params) => axios.get('/api/system/admin/people', { params }).then(r => r.data);
+export const adminPersonAction = (id, action) => axios.post(`/api/system/admin/people/${id}/${action}`).then(r => r.data);
+export const adminChangeRole = (id, role) => axios.patch(`/api/system/admin/people/${id}/role`, { role }).then(r => r.data);
+export const getAdminAudit = (params) => axios.get('/api/system/admin/audit', { params }).then(r => r.data);

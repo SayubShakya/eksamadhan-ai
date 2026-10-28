@@ -34,7 +34,7 @@ const html = `<!doctype html><html><head><style>
 </style></head><body>
   <div class="mark">${logo}</div>
   <h1>EkSamadhan <b>AI</b></h1>
-  <p>One inbox for Messenger and Instagram. The AI answers from your own knowledge and hands the rest to your team.</p>
+  <p>One inbox for Messenger, Instagram, WhatsApp and your website chat. The AI answers from your own knowledge and hands the rest to your team.</p>
   <div class="foot"></div>
 </body></html>`;
 

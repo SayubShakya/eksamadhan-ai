@@ -1,4 +1,4 @@
-// The left column: every customer message across workspaces, searchable, with how each ended.
+// The left column: every customer message across businesses, searchable, with how each ended.
 import { LoadError, LoadingRegion, Skel } from '../../components/ui/Loading.jsx';
 import { IconChevronLeft, IconSearch } from '../../components/ui/icons.jsx';
 import { formatTimestamp } from '../../lib/format.js';
@@ -41,11 +41,11 @@ export default function MessageList({
                         <IconChevronLeft />
                     </button>
                 </div>
-                <p className="viz__sub">Every customer message across all workspaces, and how the AI handled it.</p>
+                <p className="viz__sub">Every customer message across all businesses, and how the AI handled it.</p>
                 <label className="search viz__search">
                     <IconSearch />
                     <input value={query} onChange={e => onQuery(e.target.value)}
-                           placeholder="Search message, customer, workspace, CONV-id" />
+                           placeholder="Search message, customer, business, CONV-id" />
                 </label>
             </div>
             {error && messages !== null && <p className="viz__error" role="alert">{error}</p>}

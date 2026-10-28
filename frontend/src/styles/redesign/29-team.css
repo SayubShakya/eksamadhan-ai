@@ -1,6 +1,6 @@
 /* ── Team, after the "Invite your team" reference (2026-10-03): an invite card with faces,
    one list of people and invites with a role menu per person, and what each role may do. ── */
-.tm { display: grid; gap: 18px; }
+.tm { display: grid; gap: 18px; align-content: start; }
 .tm > .page__head { margin-bottom: 0; }
 .tm-invite { display: grid; justify-items: center; text-align: center; gap: 8px; padding: 26px 24px 22px; }
 .tm-faces { display: flex; align-items: center; margin-bottom: 4px; }
@@ -67,7 +67,18 @@
 
 /* Team: the invite card beside a share card, and role counts in the list header (2026-10-03). */
 .tm-top { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr); gap: 18px; align-items: stretch; }
-.tm-top--solo { grid-template-columns: minmax(0, 420px); }
+/* Staff see only the phone card: the full width of the team list below it, the link on the
+   left and the QR code beside it on the right. */
+.tm-top--solo { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 761px) {
+    .tm-top--solo .tm-share { grid-template-columns: minmax(0, 1fr) auto; column-gap: 32px; }
+    .tm-top--solo .tm-share > * { grid-column: 1; }
+    .tm-top--solo .tm-share > .tm-share__scan {
+        grid-column: 2; grid-row: 1 / span 4; align-self: center;
+        margin-top: 0; padding: 0 0 0 32px; border-top: 0; border-left: 1px solid var(--border);
+    }
+    .tm-top--solo .tm-share__scantext { max-width: 220px; }
+}
 .tm-share { display: grid; gap: 8px; align-content: start; padding: 20px 22px; }
 .tm-share h2 { margin: 0; font-size: 16px; font-weight: 600; }
 .tm-share__sub { margin: 0 0 6px; font-size: 13.5px; color: var(--text-muted); }

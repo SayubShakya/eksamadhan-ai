@@ -6,7 +6,7 @@ import RoleArt from './RoleArt.jsx';
 const ROLES = [
     {
         icon: IconUser, badge: 'TENANT', title: 'Business owner',
-        text: 'Creates the workspace, connects Facebook and Instagram, and owns its data. Only the tenant can disconnect a page or delete history.',
+        text: 'Creates the workspace, connects the channels (Facebook, Instagram, WhatsApp, website chat), and owns its data. Only the tenant can disconnect a page or delete history.',
     },
     {
         icon: IconSettings, badge: 'ADMIN', title: 'Team lead',

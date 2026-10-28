@@ -303,6 +303,14 @@ public class AiReplyService {
         if (page == null) return;
         Organization organization = page.getOrganization();
 
+        // Suspended by the platform admin: the message is already stored and stays waiting in
+        // the inbox for when the business is restored. No AI reply and no alert meanwhile.
+        if (organization.isSuspended()) {
+            trace.here(TraceRecorder.Kind.END, "Business suspended", "message kept, no reply",
+                    TraceRecorder.of("workspace", organization.getName()), null);
+            return;
+        }
+
         // The same message again: sent twice, resent while the reply was on its way, or "hi"
         // a second time. One answer covers every copy; see RepeatDetector for the rules.
         RepeatDetector.Result repeat = RepeatDetector.check(message,

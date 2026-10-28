@@ -148,6 +148,19 @@ public class LlmClient {
         return !apiKey.isEmpty() || local;
     }
 
+    /** Whether the model's server answers at all (its model list), for the admin panel. */
+    public boolean reachable() {
+        try {
+            webClient.get().uri("/models")
+                    .headers(h -> { if (!apiKey.isEmpty()) h.setBearerAuth(apiKey); })
+                    .retrieve().toBodilessEntity()
+                    .block(Duration.ofSeconds(3));
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
     public String model() {
         return model;
     }

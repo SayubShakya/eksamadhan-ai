@@ -7,10 +7,11 @@ export default function Hero({ primary }) {
         <section className="lp-hero">
             <h1>
                 <em>Answering</em> Customers<br />
-                on Messenger &amp; Instagram
+                on Every Channel
             </h1>
             <p>
-                EkSamadhan AI answers your customers from what your business has told it: your
+                EkSamadhan AI answers your customers on Messenger, Instagram, WhatsApp and your own
+                website, from what your business has told it: your
                 prices, policies and product details. When it cannot answer, it hands the chat to
                 someone on your team who is free, with a short summary of what the customer needs.
             </p>

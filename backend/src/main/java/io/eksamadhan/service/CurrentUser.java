@@ -57,6 +57,10 @@ public class CurrentUser {
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Signed out");
         }
+        // The business was suspended by the platform admin: its open sessions end the same way.
+        if (user.getOrganization().isSuspended() && !user.isSystemAdmin()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Signed out");
+        }
         // Signed in before the password last changed: that sign-in is over (User#endSessions).
         if (user.getSessionsValidFrom() != null && jwt.getIssuedAt() != null
                 && jwt.getIssuedAt().isBefore(user.getSessionsValidFrom().toInstant())) {

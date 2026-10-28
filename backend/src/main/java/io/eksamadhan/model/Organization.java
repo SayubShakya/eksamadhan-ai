@@ -60,6 +60,21 @@ public class Organization {
     @Column(name = "closing_message", columnDefinition = "TEXT")
     private String closingMessage;
 
+    /** ACTIVE or SUSPENDED, set only by the platform admin (AdminService). */
+    @Builder.Default
+    @Column(nullable = false, length = 20)
+    private String status = "ACTIVE";
+
+    @Column(name = "suspended_at")
+    private OffsetDateTime suspendedAt;
+
+    @Column(name = "suspended_reason", columnDefinition = "TEXT")
+    private String suspendedReason;
+
+    public boolean isSuspended() {
+        return "SUSPENDED".equals(status);
+    }
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) createdAt = OffsetDateTime.now();

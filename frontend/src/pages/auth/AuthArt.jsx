@@ -1,4 +1,4 @@
-import { IconBolt, IconFacebook, IconInstagram, IconKnowledge, IconTeam, IconArrowRight, IconCheck, IconInbox } from '../../components/ui/icons.jsx';
+import { IconBolt, IconFacebook, IconInstagram, IconWhatsApp, IconWidget, IconKnowledge, IconTeam, IconArrowRight, IconCheck, IconInbox } from '../../components/ui/icons.jsx';
 import { t } from '../../lib/i18n.js';
 
 /**
@@ -57,7 +57,7 @@ function Scene() {
         && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     return (
         <svg className="auth-art__scene" viewBox="0 0 640 600" role="img"
-             aria-label={t("A customer's message travelling from Messenger and Instagram into the EkSamadhan inbox, and out to the team")}>
+             aria-label={t("A customer's message travelling from Messenger, Instagram, WhatsApp or website chat into the EkSamadhan inbox, and out to the team")}>
             <defs>
                 <pattern id="aa-dots" width="9" height="9" patternUnits="userSpaceOnUse">
                     <circle cx="2" cy="2" r="1.6" fill="#9aa9bf" />
@@ -196,7 +196,8 @@ function Scene() {
 const TOP = [
     { icon: <IconFacebook size={18} />, label: 'Messenger' },
     { icon: <IconInstagram size={18} />, label: 'Instagram' },
-    { icon: <IconKnowledge size={18} />, label: 'Your knowledge' },
+    { icon: <IconWhatsApp size={18} />, label: 'WhatsApp' },
+    { icon: <IconWidget size={18} />, label: 'Website chat' },
 ];
 
 const JOURNEY = [
@@ -216,6 +217,7 @@ export default function AuthArt() {
                     <span className="auth-art__faces" aria-hidden="true">
                         <i><IconFacebook size={16} /></i>
                         <i><IconInstagram size={16} /></i>
+                        <i><IconWhatsApp size={16} /></i>
                         <i className="is-you">{t('You')}</i>
                     </span>
                 </div>
