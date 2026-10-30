@@ -42,6 +42,33 @@ public class MetaService {
     }
 
     /**
+     * Swaps a short-lived user token (the WhatsApp API Setup one lasts about a day) for a
+     * long-lived one (about 60 days), using the app's ID and secret. Null when Meta will not
+     * swap it: a system user token, for one, never expires and is kept as it is.
+     */
+    public String longLived(String shortToken) {
+        if (appId == null || appSecret == null || appId.isBlank() || appSecret.isBlank()) return null;
+        try {
+            Map<?, ?> res = webClient.get()
+                    .uri(u -> u.path("/oauth/access_token")
+                            .queryParam("grant_type", "fb_exchange_token")
+                            .queryParam("client_id", appId)
+                            .queryParam("client_secret", appSecret)
+                            .queryParam("fb_exchange_token", shortToken)
+                            .build())
+                    .retrieve().bodyToMono(Map.class)
+                    .block(java.time.Duration.ofSeconds(20));
+            Object token = res == null ? null : res.get("access_token");
+            if (token == null) return null;
+            log.info("Swapped a short-lived token for a long-lived one (expires in {} s)", res.get("expires_in"));
+            return token.toString();
+        } catch (RuntimeException e) {
+            log.info("Token kept as given; Meta did not swap it: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Get pages with Instagram Business Account info and permissions (tasks)
      * This matches the Node.js implementation that requests additional fields
      */

@@ -309,7 +309,10 @@ public class ThreadController {
                         : t.getLastMessageAt().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
                 .lastMessagePreview(t.getLastMessagePreview())
                 .lastMessageDirection(t.getLastMessageDirection())
-                .unanswered(t.getUnanswered())
+                // Our reply was the last word, so nothing is waiting, whatever the stored count
+                // says: a save from a copy loaded before the reply could put the old count back,
+                // which left an Inbox badge that opening the conversation never cleared.
+                .unanswered("outbound".equals(t.getLastMessageDirection()) ? 0 : t.getUnanswered())
                 .summary(t.getSummary())
                 .aiDraft(t.getAiDraft())
                 .summaryStale(t.getSummary() != null && t.getSummaryMessageCount() != null

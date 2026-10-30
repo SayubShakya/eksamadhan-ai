@@ -61,3 +61,4 @@
 :root[data-theme="dark"] .chn-card--whatsapp { --brand: #3ccf7e; --brand-band: linear-gradient(135deg, #16291f, #1a2420); }
 .chn-face__badge--whatsapp { background: #fff; }
 .dash__chip--whatsapp { background: #e7f8ee; }
+.chn-wform__secret { -webkit-text-security: disc; font-family: ui-monospace, Menlo, monospace; }

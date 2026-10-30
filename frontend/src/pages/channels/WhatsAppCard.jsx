@@ -19,16 +19,19 @@ function ConnectForm({ initial, saving, onSave, onCancel }) {
             <p className="chn-card__sub">{t('From Meta for Developers: your app, WhatsApp, API Setup.')}</p>
             <label className="chn-wform__field">
                 <span>{t('Phone number ID')}</span>
-                <input type="text" inputMode="numeric" value={form.phoneNumberId} onChange={set('phoneNumberId')} required autoComplete="off" />
+                <input type="text" inputMode="numeric" name="wa-phone-number-id" value={form.phoneNumberId} onChange={set('phoneNumberId')} required autoComplete="off" data-1p-ignore data-lpignore="true" />
             </label>
             <label className="chn-wform__field">
                 <span>{t('WhatsApp Business account ID')}</span>
-                <input type="text" inputMode="numeric" value={form.businessAccountId} onChange={set('businessAccountId')} required autoComplete="off" />
+                <input type="text" inputMode="numeric" name="wa-business-account-id" value={form.businessAccountId} onChange={set('businessAccountId')} required autoComplete="off" data-1p-ignore data-lpignore="true" />
             </label>
             <label className="chn-wform__field">
                 <span>{t('Access token')}</span>
-                <input type="password" value={form.accessToken} onChange={set('accessToken')} required autoComplete="off" />
-                <small>{t('A system user token does not expire. The temporary one from API Setup lasts about a day.')}</small>
+                {/* Masked text, not a password box: with a password box Chrome took this for a sign-in
+                    form and filled the owner's email and saved password into it. */}
+                <input type="text" className="chn-wform__secret" name="wa-access-token" value={form.accessToken} onChange={set('accessToken')}
+                       required autoComplete="off" spellCheck={false} data-1p-ignore data-lpignore="true" />
+                <small>{t('A system user token never expires. A token from API Setup is extended to about 60 days when you connect.')}</small>
             </label>
             <div className="chn-wform__actions">
                 <button type="button" className="btn btn--secondary" onClick={onCancel} disabled={saving}>{t('Cancel')}</button>

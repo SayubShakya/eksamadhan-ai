@@ -28,6 +28,7 @@ public class WhatsAppController {
     private final WhatsAppService whatsApp;
     private final SocialPageRepository pages;
     private final CurrentUser currentUser;
+    private final io.eksamadhan.service.MetaService meta;
 
     public record Connect(String phoneNumberId, String businessAccountId, String accessToken) {}
 
@@ -35,12 +36,18 @@ public class WhatsAppController {
     public Map<String, Object> connect(@RequestBody Connect body) {
         currentUser.requireTeamManager();
         Organization organization = currentUser.organization();
-        String phoneNumberId = clean(body.phoneNumberId(), "the phone number ID");
-        String businessId = clean(body.businessAccountId(), "the WhatsApp Business account ID");
+        // Digits only: copied from Meta's page, an ID can bring a hidden space or its label along.
+        String phoneNumberId = clean(body.phoneNumberId(), "the phone number ID").replaceAll("[^0-9]", "");
+        String businessId = clean(body.businessAccountId(), "the WhatsApp Business account ID").replaceAll("[^0-9]", "");
         String token = clean(body.accessToken(), "the access token");
         if (!phoneNumberId.matches("\\d{6,30}") || !businessId.matches("\\d{6,30}")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The two IDs are numbers only. Copy them from WhatsApp, API Setup.");
         }
+
+        // The API Setup token lasts about a day: swapped here for one that lasts about 60 days, so
+        // replies do not stop the next morning. A system user token (never expires) stays as it is.
+        String longLived = meta.longLived(token);
+        if (longLived != null) token = longLived;
 
         WhatsAppService.NumberInfo info;
         try {

@@ -5,7 +5,7 @@ export default {
     'Phone number ID': 'फोन नम्बर ID',
     'WhatsApp Business account ID': 'WhatsApp Business खाता ID',
     'Access token': 'पहुँच टोकन',
-    'A system user token does not expire. The temporary one from API Setup lasts about a day.': 'System user टोकनको म्याद सकिँदैन। API Setup को अस्थायी टोकन करिब एक दिन चल्छ।',
+    'A system user token never expires. A token from API Setup is extended to about 60 days when you connect.': 'System user टोकनको म्याद कहिल्यै सकिँदैन। API Setup को टोकन जोड्दा करिब ६० दिनसम्म चल्ने बनाइन्छ।',
     'WhatsApp connected': 'WhatsApp जोडियो',
     '{number} now arrives in the inbox.': '{number} का सन्देश अब इनबक्समा आउँछन्।',
     'That number could not be connected.': 'त्यो नम्बर जोड्न सकिएन।',
