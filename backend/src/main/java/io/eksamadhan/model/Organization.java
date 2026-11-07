@@ -71,6 +71,34 @@ public class Organization {
     @Column(name = "suspended_reason", columnDefinition = "TEXT")
     private String suspendedReason;
 
+    /** Onboarding: channels chosen on the welcome page, comma separated (FACEBOOK, INSTAGRAM, WHATSAPP, WEB). */
+    @Column(name = "onboarding_channels", columnDefinition = "TEXT")
+    private String onboardingChannels;
+
+    /** The welcome page has been answered or skipped. */
+    @Builder.Default
+    @Column(name = "onboarding_welcomed", nullable = false)
+    private boolean onboardingWelcomed = false;
+
+    /** The setup guide was hidden from Home. */
+    @Builder.Default
+    @Column(name = "onboarding_hidden", nullable = false)
+    private boolean onboardingHidden = false;
+
+    /** "I work alone": the invite step counts as done. */
+    @Builder.Default
+    @Column(name = "onboarding_solo", nullable = false)
+    private boolean onboardingSolo = false;
+
+    /** The owner chose how careful the AI is in the first week (checked first, or straight out). */
+    @Builder.Default
+    @Column(name = "onboarding_ai_chosen", nullable = false)
+    private boolean onboardingAiChosen = false;
+
+    /** When every setup step was first done. */
+    @Column(name = "onboarding_completed_at")
+    private OffsetDateTime onboardingCompletedAt;
+
     public boolean isSuspended() {
         return "SUSPENDED".equals(status);
     }

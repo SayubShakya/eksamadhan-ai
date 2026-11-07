@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import * as api from '../lib/api.js';
 import ConfirmDialog from '../components/dialogs/ConfirmDialog.jsx';
-import { useHeldLoading } from '../lib/loading.js';
+import { useHeldLoading, useResource } from '../lib/loading.js';
 import { toast } from '../lib/toast.js';
 import { t } from '../lib/i18n.js';
 import PageHeader from '../components/ui/PageHeader.jsx';
@@ -12,6 +12,7 @@ import WidgetCard from './channels/WidgetCard.jsx';
 import WhatsAppCard from './channels/WhatsAppCard.jsx';
 import useReturnFromConnect from './channels/useReturnFromConnect.js';
 import { PLATFORMS } from './channels/platforms.js';
+import ChannelGuide from './channels/ChannelGuide.jsx';
 
 /**
  * Channels: where customers message the workspace from, and each connected account on its own.
@@ -32,6 +33,10 @@ export default function ChannelsPage({ user, pages = [], statusLoaded = true, on
     const [error, setError] = useState('');
     const [removing, setRemoving] = useState(null);
     const [removed, setRemoved] = useState('');
+    // Onboarding: the channel the owner chose on the welcome page opens first in the guide.
+    const setup = useResource('setup', api.getSetup);
+    const connectedIds = [...new Set(pages.map(p => (p.platform === 'web' ? 'WEB' : String(p.platform).toUpperCase())))];
+    const firstChoice = setup.data?.channels?.find(c => !connectedIds.includes(c)) || setup.data?.channels?.[0];
 
     // Meta's sign-in page, and back. The link is fetched, not built here, because the backend
     // signs the workspace into it.
@@ -66,6 +71,11 @@ export default function ChannelsPage({ user, pages = [], statusLoaded = true, on
 
             {/* Where things stand, from what is connected. */}
             <ChannelsSummary loading={loading} pages={pages} />
+
+            {canManage && (
+                <ChannelGuide first={firstChoice} connected={connectedIds}
+                              open={Boolean(setup.data && !setup.data.complete && !setup.data.hidden && connectedIds.length === 0)} />
+            )}
 
             {error && <p className="auth__error" role="alert">{error}</p>}
             {removed && <p className="notice notice--ok" role="status">{removed}</p>}

@@ -1,7 +1,7 @@
 // Reading the address bar: which dashboard screen, sign-in route, email link or public page
 // the current path names. No router library; the path is read directly (see App.jsx).
 
-export const VIEWS = ['home', 'inbox', 'knowledge', 'channels', 'team', 'hours', 'analytics', 'settings', 'notifications', 'delete-account'];
+export const VIEWS = ['home', 'welcome', 'inbox', 'knowledge', 'channels', 'team', 'hours', 'analytics', 'settings', 'notifications', 'delete-account'];
 export const BASE = '/dashboard';
 
 export const viewFromPath = () => {

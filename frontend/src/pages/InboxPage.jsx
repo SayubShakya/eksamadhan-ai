@@ -35,7 +35,7 @@ export default function InboxPage({
     active, onSelect, onSend, onSendVoice, onSendImage, onReact, onHideMessage, onThreadAction,
     onConnect, search, onSearchChange, sendError, onDismissError, me, team = [], onAssign,
     platform: platformFilter = 'all', onPlatformChange,
-    onSummarise, summarising, onPin, aiTyping = {}, allThreads = [], onOpenThread,
+    onSummarise, summarising, onPin, aiTyping = {}, allThreads = [], onOpenThread, onNavigate,
 }) {
     const [shown, setShown] = useState(PAGE_SIZE);   // messages rendered, newest first
     const [lightbox, setLightbox] = useState(null);  // photo opened full size, or null
@@ -199,7 +199,7 @@ export default function InboxPage({
         );
     }
 
-    if (nothingAtAll) return <InboxNoChannels onConnect={onConnect} />;
+    if (nothingAtAll) return <InboxNoChannels connected={pages.length > 0} onNavigate={onNavigate} />;
 
     return (
         <div className={`inbox ${activeThread ? 'inbox--has-active' : ''}${panelHidden ? ' inbox--details-hidden' : ''}${listCollapsed ? ' inbox--list-collapsed' : ''}`}>

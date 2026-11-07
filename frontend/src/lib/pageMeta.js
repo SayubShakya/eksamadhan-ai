@@ -52,6 +52,7 @@ export function setPageMeta({ title, description = DEFAULT_DESCRIPTION, index = 
 // getters so each lookup is in the language chosen now, not the one at import time.
 const VIEW_TITLE_TEXT = {
     home: 'Dashboard',
+    welcome: 'Welcome',
     inbox: 'Inbox',
     knowledge: 'Knowledge',
     channels: 'Channels',

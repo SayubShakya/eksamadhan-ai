@@ -211,6 +211,9 @@ export const deactivateAccount = () => axios.post('/api/account/deactivate').the
 export const exportMyData = () => axios.get('/api/account/export', { responseType: 'blob' }).then(r => r.data);
 
 // ── Settings ────────────────────────────────────────────────────────────────
+// Onboarding: the setup guide's state, and the welcome page's answers (OnboardingController).
+export const getSetup = () => axios.get('/api/setup').then(r => r.data);
+export const updateSetup = (payload) => axios.patch('/api/setup', payload).then(r => r.data);
 export const getSettings = () => axios.get('/api/settings').then(r => r.data);
 export const saveWorkspaceSettings = (payload) => axios.put('/api/settings/workspace', payload).then(r => r.data);
 export const saveMySettings = (payload) => axios.put('/api/settings/me', payload).then(r => r.data);

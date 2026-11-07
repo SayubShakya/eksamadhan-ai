@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { IconPlus, IconKnowledge } from '../components/ui/icons.jsx';
 import * as api from '../lib/api.js';
 import { useHeldLoading, useResource } from '../lib/loading.js';
@@ -5,12 +6,11 @@ import { t } from '../lib/i18n.js';
 import PageHeader from '../components/ui/PageHeader.jsx';
 import VerifyEmailBanner from './home/VerifyEmailBanner.jsx';
 import HoursNotice from './home/HoursNotice.jsx';
-import SetupChecklist from './home/SetupChecklist.jsx';
+import SetupGuide from './home/SetupGuide.jsx';
 import StatCards from './home/StatCards.jsx';
 import ActivityChart from './home/ActivityChart.jsx';
 import ChannelSplit from './home/ChannelSplit.jsx';
 import RecentConversations from './home/RecentConversations.jsx';
-import { setupSteps } from './home/setupSteps.js';
 
 function greeting() {
     const h = new Date().getHours();
@@ -40,11 +40,13 @@ export default function HomePage({
     const connected = pages.length > 0;
     // Connecting a channel is the tenant's and admins' job (the server refuses Staff).
     const canManage = user?.role === 'OWNER' || user?.role === 'ADMIN';
-    const steps = setupSteps({ connected, knowledge, team, onConnect, onNavigate });
-    const doneCount = steps.filter(s => s.done).length;
-    const nextStep = steps.findIndex(s => !s.done);
-    // Once everything is done the checklist has nothing left to say, so it goes.
-    const setupDone = !statusPending && !failed && doneCount === steps.length;
+    // The setup guide (onboarding). A new business's owner or admin sees the welcome page first.
+    const setup = useResource('setup', api.getSetup);
+    useEffect(() => {
+        if (setup.data && !setup.data.welcomed && setup.data.canManage) onNavigate('welcome');
+    }, [setup.data, onNavigate]);
+    // While the guide is open it has a working-hours step, so the separate notice would say it twice.
+    const guideOpen = setup.data ? !setup.data.hidden : false;
 
     return (
         <div className="page">
@@ -64,12 +66,10 @@ export default function HomePage({
                 )}
             </PageHeader>
 
-            {hours && !hours.hasAvailability && <HoursNotice onSetHours={() => onNavigate('hours')} />}
+            {hours && !hours.hasAvailability && !guideOpen && <HoursNotice onSetHours={() => onNavigate('hours')} />}
 
-            {!setupDone && (
-                <SetupChecklist steps={steps} doneCount={doneCount} nextStep={nextStep} pending={statusPending}
-                                failed={failed} loadError={loadError} onRetry={onRetry} canManage={canManage} />
-            )}
+            <SetupGuide setup={setup.data} error={setup.error} onRetry={setup.reload}
+                        onChanged={(fresh) => setup.mutate(() => fresh)} onNavigate={onNavigate} />
 
             <StatCards analytics={analytics} connected={connected} todayCount={todayCount} threadCount={threadCount}
                        todayPending={statusPending || recentPending} figuresPending={figuresPending} />

@@ -66,6 +66,10 @@ export default function HoursPage({ onStatus }) {
     return (
         <div className="page hours">
             <PageHeader title={t('Working hours')} sub={t('The days and times new conversations may come to you. Available or Busy in the top bar is about right now; new conversations come only when both say yes.')} />
+            {/* Onboarding: these are easily read as the shop's opening hours. */}
+            <p className="notice hours__tip">
+                {t('These are your own hours, not the shop\'s. Conversations the AI hands over come to you only inside them; outside them the AI keeps answering customers.')}
+            </p>
 
             {loadError ? (
                 <LoadError className="empty--panel" message={api.errorMessage(loadError, t('Your hours could not be loaded.'))} onRetry={load} />

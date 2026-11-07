@@ -28,6 +28,16 @@ import KnowledgeGaps from './knowledge/KnowledgeGaps.jsx';
  * `canManage` comes from the signed-in role and only decides whether the add forms are drawn
  * while the library loads; once it has loaded, the server's answer is used.
  */
+/** A first knowledge text for a new shop (onboarding): the questions customers ask most, to fill in. */
+const KNOWLEDGE_TEMPLATE = () => [
+    t('Delivery: where do you deliver, how long does it take, and how much does it cost?'),
+    t('Prices: your main products and their prices.'),
+    t('Payment: cash on delivery, eSewa, Khalti, bank transfer?'),
+    t('Returns and exchanges: what can be returned, and within how many days?'),
+    t('Location and opening hours: your address and when you are open.'),
+    t('Contact: a phone number for anything urgent.'),
+].join('\n\n');
+
 export default function KnowledgePage({ canManage: roleCanManage = false }) {
     const { data: library, error: loadError, reload: load } = useResource('knowledge', api.getKnowledge);
     const firstLoad = useHeldLoading(!library && !loadError);
@@ -106,7 +116,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
 
     return (
         <div className="page">
-            <PageHeader title={t('Knowledge')} sub={t('What the AI is allowed to answer from. Each source is split into passages and indexed by meaning, so a question finds the right passage even in other words.')} />
+            <PageHeader title={t('Knowledge')} sub={t('Write what a good shop assistant would know: prices, delivery, payment, returns and opening hours. The AI answers only from this.')} />
 
             {!loading && !library.aiConfigured && <AiNotConfigured />}
 
@@ -127,9 +137,19 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
                 <div className="empty empty--panel">
                     <p className="muted">
                         {canManage
-                            ? t('Nothing here yet. Add your policies or FAQs above and the AI can start answering from them.')
+                            ? t('Nothing here yet. Not sure what to write? Start from a template and fill in your own details.')
                             : t('Nothing here yet. The tenant or an admin can add your policies and FAQs here.')}
                     </p>
+                    {canManage && (
+                        <button className="btn btn--secondary" onClick={() => {
+                            setAddTab('text');
+                            add.setTitle(t('About our shop'));
+                            add.setText(KNOWLEDGE_TEMPLATE());
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}>
+                            {t('Start from a template')}
+                        </button>
+                    )}
                 </div>
             ) : (
                 <SourceList sources={loading ? [] : library.sources} loading={loading} canManage={canManage}

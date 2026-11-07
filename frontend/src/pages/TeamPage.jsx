@@ -129,7 +129,7 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
 
     return (
         <div className="page tm">
-            <PageHeader title={t('Team')} sub={t('The people who answer your customers when the AI hands a conversation over.')} />
+            <PageHeader title={t('Team')} sub={t('The people who answer your customers when the AI hands a conversation over. The tenant owns the business; admins also manage the team and settings; staff answer the conversations given to them.')} />
 
             <div className={`tm-top${canManage ? '' : ' tm-top--solo'}`}>
             {canManage && (
@@ -144,7 +144,8 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
 
             <section className="card tm-list" aria-labelledby="tm-list-h">
                 <TeamListHead loading={loading} active={active} here={here} invites={invites} canManage={canManage} />
-                {!loading && !here && (
+                {/* A lone owner still setting up is not "nobody available": they just have not set hours. */}
+                {!loading && !here && !(active.length <= 1 && invites.length === 0) && (
                     <p className="notice notice--warn tm-list__warn">
                         {t('Nobody is available right now. Conversations the AI hands over will wait, and go to the first person who becomes available. The tenant and admins are alerted meanwhile.')}
                     </p>

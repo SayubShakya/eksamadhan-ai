@@ -7,6 +7,7 @@ import { CenteredSpinner } from '../components/ui/Loading.jsx';
 import { t } from '../lib/i18n.js';
 
 const HomePage = lazyPage('home');
+const WelcomePage = lazyPage('welcome');
 const InboxPage = lazyPage('inbox');
 const ChannelsPage = lazyPage('channels');
 const HoursPage = lazyPage('hours');
@@ -53,6 +54,8 @@ export default function DashboardPages({
             />
         )}
 
+        {view === 'welcome' && <WelcomePage user={user} onNavigate={setView} />}
+
         {view === 'inbox' && (
             <InboxPage
                 threads={threads}
@@ -89,6 +92,7 @@ export default function DashboardPages({
                 summarising={actions.summarising}
                 allThreads={allThreads}
                 onOpenThread={(threadId) => openNotification({ threadId })}
+                onNavigate={setView}
             />
         )}
 
@@ -124,6 +128,7 @@ export default function DashboardPages({
                 pages={pages}
                 statusLoaded={loaded.status}
                 onChanged={() => { refreshStatus(); refreshThreads(); refreshMessages(); }}
+                onConnect={handleConnect}
             />
         )}
         </Suspense>

@@ -82,7 +82,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
     const withGoogle = async () => {
         setError('');
         if (mode === 'signup' && !form.organizationName.trim()) {
-            setError(t('Name your workspace first. It is the one thing Google cannot tell us.'));
+            setError(t('Name your business first. It is the one thing Google cannot tell us.'));
             return;
         }
         setGoogleBusy(true);
@@ -154,9 +154,9 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
 
                 {mode === 'signup' && (
                     <label className="field">
-                        <span>{t('Workspace name')}</span>
+                        <span>{t('Business name')}</span>
                         <input value={form.organizationName} onChange={set('organizationName')}
-                               placeholder="Acme Support" maxLength={60} required autoFocus />
+                               placeholder={t('For example: Patan Silver House')} maxLength={60} required autoFocus />
                     </label>
                 )}
 

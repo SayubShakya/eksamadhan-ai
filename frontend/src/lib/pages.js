@@ -13,6 +13,7 @@ import { t } from './i18n.js';
  */
 export const PAGES = {
     home: () => import('../pages/HomePage.jsx'),
+    welcome: () => import('../pages/onboarding/WelcomePage.jsx'),
     inbox: () => import('../pages/InboxPage.jsx'),
     channels: () => import('../pages/ChannelsPage.jsx'),
     hours: () => import('../pages/HoursPage.jsx'),
