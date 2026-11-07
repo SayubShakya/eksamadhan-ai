@@ -1,5 +1,6 @@
 // The signed-in dashboard's frame: the menu, the top bar, and the panels and dialogs that open
 // over any page. The page itself comes in as `children`.
+import { useEffect } from 'react';
 import NavRail from '../components/layout/NavRail.jsx';
 import TopBar from '../components/layout/TopBar.jsx';
 import ProfilePanel from '../components/layout/ProfilePanel.jsx';
@@ -9,6 +10,8 @@ import InstallProblem from '../components/layout/InstallProblem.jsx';
 import Toaster from '../components/layout/Toaster.jsx';
 import WorkspaceLogo from '../components/ui/WorkspaceLogo.jsx';
 import { t } from '../lib/i18n.js';
+import * as api from '../lib/api.js';
+import { useResource } from '../lib/loading.js';
 
 export default function DashboardShell({
     app, view, setView, user, workspace, workspaceLogo, unread,
@@ -19,6 +22,19 @@ export default function DashboardShell({
     askNotifications, setAskNotifications,
     children,
 }) {
+    // Setup progress for the menu (onboarding), while the owner's guide is still open.
+    const setupResource = useResource('setup', api.getSetup);
+    const setup = setupResource.data;
+    // Re-read on each page change: steps are finished on other pages.
+    useEffect(() => { setupResource.reload(); }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        const again = () => setupResource.reload();
+        window.addEventListener('setup:changed', again);
+        return () => window.removeEventListener('setup:changed', again);
+    }, [setupResource.reload]); // eslint-disable-line react-hooks/exhaustive-deps
+    const setupProgress = setup && setup.canManage && !setup.hidden && !setup.complete
+        ? { done: setup.steps.filter(s => s.done).length, total: setup.steps.length } : null;
+
     return (
         <div className="shell">
             {/* A new version is installed and waiting (see public/sw.js on why it waits). */}
@@ -47,6 +63,7 @@ export default function DashboardShell({
                 onSignOut={requestSignOut}
                 workspace={workspace}
                 workspaceLogo={workspaceLogo}
+                setup={setupProgress}
             />
             <div className="main">
                 <TopBar

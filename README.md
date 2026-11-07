@@ -1,113 +1,92 @@
-# Eksamadhan AI
+# EkSamadhan AI
 
-AI-powered customer support for e-commerce businesses — one inbox for Instagram,
-Facebook Messenger and an embeddable website widget, answered by a RAG agent that
-hands over to a human when it is out of its depth.
+One inbox for a small business's Facebook Messenger, Instagram, WhatsApp and website chat. An AI
+answers customers from the business's own knowledge, and hands anything it cannot answer to an
+available person on the team, with an alert.
 
-> **Status:** the AI answers customers on Facebook Messenger and Instagram from each business's
-> own knowledge, and hands a chat to an available staff member when it cannot answer. Built:
-> accounts, workspaces and roles, Google sign-in, the unified inbox, the knowledge base with
-> semantic search, triage with Jev, availability and working hours, alerts, analytics, and an
-> installable app. Next: the website chat widget.
-
-Final-year college project · Author: Sayub Shakya · Supervisor: Pawan KC
+Final-year project, CIS017-3 Undergraduate Project, University of Bedfordshire.
+Student: Sayub Shakya (2337659). Supervisor: Pawan KC.
 
 ---
 
-## The idea
+## Run it (for markers)
 
-SMEs answer the same product and policy questions across several disconnected
-inboxes. Generic chatbots hallucinate on business-specific detail; human-only support
-does not scale.
+Needs only **Docker Desktop**. Full steps, logins and troubleshooting: [INSTALL.md](INSTALL.md).
 
-Eksamadhan AI takes a **hybrid** approach. Incoming messages are answered from the
-business's own knowledge base using Retrieval-Augmented Generation. When the AI is
-not confident, detects frustration, or the customer asks for a person, the thread is
-escalated to a live agent — who sees the full AI conversation and picks up mid-thread.
-The agent is alerted by push notification even if the tab is in the background.
+```bash
+sh setup.sh                              # writes the settings files with fresh secrets
+docker compose --profile app up --build  # database, backend and dashboard
+```
 
-## Features
+Open **http://localhost:8088** and sign in to the demo business:
 
-- **Unified inbox** — Facebook, Instagram and web-widget threads in one place ✅ *(FB/IG working)*
-- **Knowledge engine** — ingest text, PDFs or a URL; chunked, embedded and searched semantically
-- **Hybrid handover** — escalation on low confidence, negative sentiment, or explicit request
-- **Round-robin routing** to agents marked online
-- **Human-in-the-loop** — the AI pauses on a thread once an agent replies
-- **Real-time alerts** — encrypted Web Push to an agent's own devices
-- **Embeddable widget** — one `<script>` tag for Shopify/WordPress
+| Who | Email | Password |
+| :--- | :--- | :--- |
+| Business owner | owner@demo.eksamadhan.ai | Demo-Owner-2026 |
+| Staff member | staff@demo.eksamadhan.ai | Demo-Staff-2026 |
+| Platform admin | admin@demo.eksamadhan.ai | Admin-Demo-2026 |
 
-## Planned stack
+How to use each screen: [USER_GUIDE.md](USER_GUIDE.md).
+
+## What it does
+
+- **One inbox** for Messenger, Instagram, WhatsApp and a chat box on the business's own website.
+- **AI answers from the business's knowledge** (text, PDF, pictures or a website it reads),
+  found by meaning with pgvector, and only sent when the AI is confident enough.
+- **Hand-over to a person** when the AI cannot answer, the customer is upset or asks for a person;
+  the conversation goes to an available staff member inside their working hours, with an alert.
+- **Jev triage** (TypeSafe) reads every message first: greetings, spam, requests for a person.
+- **Onboarding**: a welcome page and a six-step setup guide, including "Try your AI" before any
+  customer writes.
+- **Team, roles and hours**, **analytics** against the project's targets, **Nepali and English**,
+  dark mode, and an **installable app** (PWA) with push notifications.
+- **Platform admin panel**: every business, its people and usage; create, suspend, delete; audit log.
+
+## Stack
 
 | Layer | Choice |
 | :--- | :--- |
-| Backend | Java 21 · Spring Boot 3 |
-| Frontend | React · Vite |
-| Database | PostgreSQL |
-| Vector search | Pinecone |
-| LLM | OpenAI API |
-| Notifications | Web Push (VAPID) |
-| Auth | OAuth 2.0 · JWT |
-| Vector search | pgvector (PostgreSQL) |
-| Embeddings | OpenAI `text-embedding-3-small` via OpenRouter |
-| Hosting | PrabhuHost |
-
-Rationale for each choice is in the contextual report §5.2.
-
-## Targets
-
-| Metric | Target |
-| :--- | :--- |
-| Reply latency | < 2 seconds |
-| RAG answer accuracy | 85% |
-| Handover alert latency | < 3 seconds |
-| Queries resolved without a human | 60–65% |
+| Backend | Java 21, Spring Boot 4, Flyway |
+| Frontend | React 19, Vite 7, installable PWA |
+| Database | PostgreSQL 16 with pgvector |
+| AI | Gemma 4 on Ollama (local) or a hosted model through OpenRouter; embeddings `text-embedding-3-small` |
+| Triage | Jev by TypeSafe |
+| Channels | Meta Graph API (Messenger, Instagram), WhatsApp Cloud API, own website widget |
+| Alerts | Web Push (VAPID), email with Resend |
+| Sign-in | Email and password or Google (Firebase), JWT sessions |
 
 ## Repository layout
 
 ```
-backend/    Spring Boot API — Meta OAuth, webhooks, message ingestion
-frontend/   React + Vite agent dashboard (unified inbox)
-meta-proxy/ Vercel proxy giving Meta a stable webhook/callback URL in development
-run.sh      Starts database, tunnel, backend and frontend together
+backend/        Spring Boot API: channels, AI replies, knowledge, team, admin panel (Dockerfile)
+frontend/       React dashboard, website chat widget (public/widget.js), nginx config (Dockerfile)
+evaluation/     Scripts that measured the project's targets (accuracy, reply time, load)
+meta-proxy/     Small Vercel service giving Meta one fixed webhook address in development
+docker-compose.yml   Database; with --profile app, the whole application
+setup.sh        First-time settings for running the package
+run.sh          Development: database, tunnels, backend and frontend with live reload
+package.sh      Builds the submission zip
 ```
 
-## Getting started
+## Development
 
-Requires **JDK 21**, Maven, Node 20+ and Docker.
+Requires JDK 21, Maven, Node 20 or newer and Docker.
 
 ```bash
-git clone git@github-b:SayubShakya/eksamadhan-ai.git
-cd eksamadhan-ai
-
-cp .env.example .env          # set DB_PASSWORD
-cp .env.example backend/.env  # required — the app fails to start without it
-
-./run.sh                      # starts PostgreSQL, backend :8080, frontend :5174
+cp backend/.env.example backend/.env   # fill in the keys you have
+./run.sh                               # database, backend :8080, dashboard :5174
 ```
 
-Open <http://localhost:5174>. `run.sh` also opens a public Pinggy tunnel, which Meta
-needs to reach your webhook — the URLs to paste into the Meta app dashboard are
-printed when it starts. Logs go to `backend.log` and `frontend.log`; Ctrl+C stops
-everything.
+Tests: `cd backend && ./mvnw test` (212 tests). Connecting real Facebook, Instagram or WhatsApp
+accounts needs a Meta developer app: see [META_SETUP.md](META_SETUP.md).
 
-### Running the parts separately
+## Targets and results
 
-```bash
-docker compose up -d                              # PostgreSQL only
-cd backend  && mvn spring-boot:run                # API on :8080
-cd frontend && npm install && npm run dev         # UI on :5174
-```
+| Target | Goal | Measured |
+| :--- | :--- | :--- |
+| AI answer accuracy | 85% | 88.9 to 96.3% |
+| Hand-over alert | under 3 s | 15 ms |
+| Questions answered without a person | 60% | 69% of messages (27% of whole conversations) |
+| AI reply time | under 2 s | 15.4 s with the laptop model; 1.8 to 3 s with a hosted model |
 
-Connecting a Facebook page or Instagram account requires a Meta app — see
-[`META_SETUP.md`](META_SETUP.md).
-
-JDK 21 is required. If installed via Homebrew it is keg-only, so set:
-
-```bash
-export JAVA_HOME=/opt/homebrew/opt/openjdk@21
-```
-
-## Build plan
-
-Eight weeks, 15 September – 9 November 2026 — a compression of the contextual report's
-twelve-week plan, with the trade-offs written down.
+How each was measured is in [evaluation/README.md](evaluation/README.md).

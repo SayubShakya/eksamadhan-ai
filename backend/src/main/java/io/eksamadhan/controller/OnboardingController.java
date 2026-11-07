@@ -40,7 +40,7 @@ public class OnboardingController {
                         List<String> connected, boolean reviewAiReplies, boolean canManage, List<Step> steps) {}
 
     public record Update(List<String> channels, Boolean welcomed, Boolean hidden, Boolean solo, Boolean aiChosen,
-                         Boolean reviewAiReplies) {}
+                         Boolean reviewAiReplies, Boolean aiTried) {}
 
     @GetMapping
     public Setup get() {
@@ -60,6 +60,7 @@ public class OnboardingController {
         if (body.hidden() != null) org.setOnboardingHidden(body.hidden());
         if (body.solo() != null) org.setOnboardingSolo(body.solo());
         if (body.aiChosen() != null) org.setOnboardingAiChosen(body.aiChosen());
+        if (body.aiTried() != null) org.setOnboardingAiTried(body.aiTried());
         // The guide's last step: whether the AI's answers wait for a person to check them first.
         if (body.reviewAiReplies() != null) org.setReviewAiReplies(body.reviewAiReplies());
         organizations.saveAndFlush(org);
@@ -83,11 +84,13 @@ public class OnboardingController {
                 Integer.class, id, me.getId(), id);
         String hours = me.getWorkingHours();
 
+        // Value first: teach the AI and see it answer before the slower work of connecting a
+        // channel (Meta and WhatsApp can take days). A message that really arrived counts as tried.
         List<Step> steps = List.of(
-                new Step("channel", !connected.isEmpty()),
                 new Step("knowledge", ready != null && ready > 0),
+                new Step("try", org.isOnboardingAiTried() || (conversations != null && conversations > 0)),
+                new Step("channel", !connected.isEmpty()),
                 new Step("hours", hours != null && !hours.isBlank() && !"[]".equals(hours.trim())),
-                new Step("test", conversations != null && conversations > 0),
                 new Step("team", org.isOnboardingSolo() || (others != null && others > 0)),
                 new Step("ai", org.isOnboardingAiChosen()));
         boolean complete = steps.stream().allMatch(Step::done);

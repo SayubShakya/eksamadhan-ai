@@ -23,5 +23,40 @@ services:
       timeout: 5s
       retries: 5
 
+  # The whole application in containers (project packaging): `docker compose --profile app up`.
+  # Development still runs the backend and frontend directly (run.sh); this profile is for anyone
+  # who only wants to run EkSamadhan: a marker, or a fresh machine. See INSTALL.md.
+  backend:
+    profiles: ["app"]
+    build: ./backend
+    container_name: eksamadhan-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: ./backend/.env
+    environment:
+      # Inside Docker the database and the AI model are reached by their container or host name.
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-eksamadhan}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434/v1}
+      FRONTEND_URL: ${APP_URL:-http://localhost:8088}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # The backend reads its settings file from its working directory as well (Dotenv).
+      - ./backend/.env:/app/.env:ro
+      - media_data:/app/media
+    restart: unless-stopped
+
+  frontend:
+    profiles: ["app"]
+    build: ./frontend
+    container_name: eksamadhan-frontend
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:${APP_PORT:-8088}:80"
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  media_data:

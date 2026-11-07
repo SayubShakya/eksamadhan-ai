@@ -54,8 +54,8 @@ class OnboardingTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.welcomed").value(false))
                 .andExpect(jsonPath("$.complete").value(false))
-                .andExpect(jsonPath("$.steps[0].id").value("channel"))
-                .andExpect(jsonPath("$.steps[0].done").value(false));
+                .andExpect(jsonPath("$.steps[0].id").value("knowledge"))
+                .andExpect(jsonPath("$.steps[?(@.id == 'channel')].done").value(false));
 
         mvc.perform(patch("/api/setup").header("Authorization", bearer(owner)).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"welcomed\":true,\"channels\":[\"whatsapp\",\"web\",\"nonsense\"]}"))
@@ -68,11 +68,12 @@ class OnboardingTest {
         jdbc.update("INSERT INTO social_pages (id, page_id, page_name, platform, organization_id, connected_at) VALUES (gen_random_uuid(), ?, 'Site', 'WEB', ?, now())",
                 "web-" + UUID.randomUUID(), org.getId());
         mvc.perform(patch("/api/setup").header("Authorization", bearer(owner)).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"solo\":true,\"aiChosen\":true,\"reviewAiReplies\":true}"))
+                        .content("{\"solo\":true,\"aiChosen\":true,\"reviewAiReplies\":true,\"aiTried\":true}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.steps[0].done").value(true))
-                .andExpect(jsonPath("$.steps[4].done").value(true))
-                .andExpect(jsonPath("$.steps[5].done").value(true))
+                .andExpect(jsonPath("$.steps[?(@.id == 'channel')].done").value(true))
+                .andExpect(jsonPath("$.steps[?(@.id == 'team')].done").value(true))
+                .andExpect(jsonPath("$.steps[?(@.id == 'ai')].done").value(true))
+                .andExpect(jsonPath("$.steps[?(@.id == 'try')].done").value(true))
                 .andExpect(jsonPath("$.reviewAiReplies").value(true));
     }
 

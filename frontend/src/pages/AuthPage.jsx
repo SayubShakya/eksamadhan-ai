@@ -140,7 +140,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                 <p className="auth__sub">{subtitle}</p>
                 {mode === 'login' && (
                     <p className="auth__switch">
-                        {t('New here?')} <button type="button" className="linkish" onClick={() => onNavigate('signup')}>{t('Create a workspace')}</button>
+                        {t('New here?')} <button type="button" className="linkish" onClick={() => onNavigate('signup')}>{t('Create account')}</button>
                     </p>
                 )}
                 {mode === 'signup' && (

@@ -81,6 +81,26 @@ public class KnowledgeController {
         return new Library(sources, me.getRole().canManageTeam(), aiConfigured());
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private io.eksamadhan.service.AiReplyService aiReplies;
+
+    public record TryRequest(String question) {}
+
+    /**
+     * Try the AI (onboarding): what a customer asking this would get, from the same search,
+     * model and gates as a real reply. Nothing is sent and no conversation is made.
+     */
+    @PostMapping("/try")
+    public io.eksamadhan.service.AiReplyService.Preview tryAi(@RequestBody TryRequest request) {
+        Organization organization = currentUser.require().getOrganization();
+        String question = request == null || request.question() == null ? "" : request.question().strip();
+        if (question.isEmpty() || question.length() > 500) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "Ask a question of up to 500 characters");
+        }
+        return aiReplies.preview(organization, question);
+    }
+
     @PostMapping("/text")
     public SourceView addText(@RequestBody TextRequest request) {
         Organization organization = currentUser.requireTeamManager().getOrganization();

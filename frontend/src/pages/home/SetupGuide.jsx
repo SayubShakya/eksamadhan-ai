@@ -5,13 +5,21 @@ import { useState } from 'react';
 import * as api from '../../lib/api.js';
 import { t } from '../../lib/i18n.js';
 import { toast } from '../../lib/toast.js';
-import { IconArrowRight, IconCheck, IconChevronLeft } from '../../components/ui/icons.jsx';
+import { IconArrowRight, IconChannels, IconCheck, IconChevronLeft, IconClock, IconKnowledge, IconShield, IconSparkle, IconTeam } from '../../components/ui/icons.jsx';
+import TryAi from '../knowledge/TryAi.jsx';
 import { LoadError, LoadingRegion, Skel } from '../../components/ui/Loading.jsx';
 
 const CHANNEL_NAMES = { FACEBOOK: 'your Facebook Page', INSTAGRAM: 'your Instagram account', WHATSAPP: 'your WhatsApp number', WEB: 'the chat box on your website' };
 
 /** Which page each step is done on. */
-export const STEP_VIEW = { channel: 'channels', knowledge: 'knowledge', hours: 'hours', test: 'inbox', team: 'team', ai: 'home' };
+export const STEP_VIEW = { channel: 'channels', knowledge: 'knowledge', try: 'home', hours: 'hours', team: 'team', ai: 'home' };
+
+/** Each step's picture and roughly how long it takes, so a step never looks bigger than it is. */
+const STEP_LOOK = {
+    knowledge: { Icon: IconKnowledge, time: '5 min' }, try: { Icon: IconSparkle, time: '1 min' },
+    channel: { Icon: IconChannels, time: '5 to 10 min' }, hours: { Icon: IconClock, time: '1 min' },
+    team: { Icon: IconTeam, time: '2 min' }, ai: { Icon: IconShield, time: '1 min' },
+};
 
 /** What each step says, and what its button does. `go` opens a page; the rest are handled here. */
 export function stepText(id, setup) {
@@ -33,12 +41,9 @@ export function stepText(id, setup) {
             why: t('Conversations the AI hands over come to you only inside these hours. Outside them the AI keeps answering.'),
             cta: t('Set hours'), go: 'hours',
         };
-        case 'test': return {
-            title: t('Send yourself a test message'),
-            why: setup.connected?.includes('WEB') && setup.connected.length === 1
-                ? t('Open Channels, Website chat, "Try the chat box", and ask something a customer would, for example "Do you deliver to Lalitpur?". It appears in the inbox and the AI answers it.')
-                : t('From your own phone, message the channel you connected, for example "Do you deliver to Lalitpur?". It appears in the inbox and the AI answers it.'),
-            cta: t('Open the inbox'), go: 'inbox',
+        case 'try': return {
+            title: t('Try your AI'),
+            why: t('Ask a question the way a customer would and see the answer, before any customer writes. Nothing is sent to anyone.'),
         };
         case 'team': return {
             title: t('Invite your team'),
@@ -58,11 +63,14 @@ export default function SetupGuide({ setup, error, onRetry, onChanged, onNavigat
     // Any unfinished step can be opened, not only the first: connecting WhatsApp can take days,
     // and "I work alone" or the AI choice should not wait for it.
     const [picked, setPicked] = useState(null);
+    // The AI answered in "Try your AI": the step waits for the owner to read it before closing.
+    const [triedNow, setTriedNow] = useState(false);
 
     const save = async (patch, done) => {
         setBusy(true);
         try {
             onChanged(await api.updateSetup(patch));
+            window.dispatchEvent(new Event('setup:changed'));   // the menu's progress badge
             if (done) toast.success(done);
         } catch (err) {
             toast.error(t('Not saved'), { body: api.errorMessage(err) });
@@ -122,9 +130,12 @@ export default function SetupGuide({ setup, error, onRetry, onChanged, onNavigat
                         const text = stepText(step.id, setup);
                         const shown = picked && steps.some(s => s.id === picked && !s.done) ? picked : steps[next]?.id;
                         const current = step.id === shown;
+                        const look = STEP_LOOK[step.id] || {};
                         return (
                             <li key={step.id} className={`sg__step${step.done ? ' is-done' : ''}${current ? ' is-current' : ''}`}>
-                                <span className="sg__num" aria-hidden="true">{step.done ? <IconCheck size={14} /> : i + 1}</span>
+                                <span className="sg__num" aria-hidden="true">
+                                    {step.done ? <IconCheck size={14} /> : look.Icon ? <look.Icon size={15} /> : i + 1}
+                                </span>
                                 <div className="sg__body">
                                     {!current && !step.done ? (
                                         <button className="sg__step-title sg__step-open" onClick={() => setPicked(step.id)}
@@ -137,11 +148,22 @@ export default function SetupGuide({ setup, error, onRetry, onChanged, onNavigat
                                             {step.done && <span className="sr-only"> {t('Done')}</span>}
                                         </p>
                                     )}
+                                    {!step.done && look.time && <span className="sg__time">{t('About {time}', { time: t(look.time) })}</span>}
                                     {/* Only the step to do now explains itself: six paragraphs at once read as a wall. */}
                                     {current && <p className="sg__why">{text.why}</p>}
                                     {current && setup.canManage && (
                                         <div className="sg__actions">
-                                            {step.id === 'ai' ? (
+                                            {step.id === 'try' ? (
+                                                <>
+                                                    <TryAi compact onAnswered={() => setTriedNow(true)} onAddKnowledge={() => onNavigate('knowledge')} />
+                                                    {triedNow && (
+                                                        <button className="btn btn--primary btn--sm" disabled={busy}
+                                                                onClick={() => save({ aiTried: true })}>
+                                                            {t('Done, next step')} <IconArrowRight size={14} />
+                                                        </button>
+                                                    )}
+                                                </>
+                                            ) : step.id === 'ai' ? (
                                                 <>
                                                     <button className="btn btn--primary btn--sm" disabled={busy}
                                                             onClick={() => save({ aiChosen: true, reviewAiReplies: true }, t('Answers wait for you to check them'))}>

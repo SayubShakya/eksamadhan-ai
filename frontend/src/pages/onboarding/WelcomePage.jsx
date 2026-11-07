@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import * as api from '../../lib/api.js';
+import { primeResource } from '../../lib/loading.js';
 import { t } from '../../lib/i18n.js';
 import { toast } from '../../lib/toast.js';
 import { IconArrowRight, IconCheck, IconFacebook, IconInstagram, IconWhatsApp, IconWidget } from '../../components/ui/icons.jsx';
@@ -25,8 +26,10 @@ export default function WelcomePage({ user, onNavigate }) {
     const finish = async (channels) => {
         setBusy(true);
         try {
-            await api.updateSetup({ welcomed: true, ...(channels ? { channels } : {}) });
-            onNavigate(channels?.length ? 'channels' : 'home');
+            // The answer is the new setup state: stored, so Home does not read the old copy
+            // ("not welcomed yet") and send the owner straight back here.
+            primeResource('setup', await api.updateSetup({ welcomed: true, ...(channels ? { channels } : {}) }));
+            onNavigate('home');
         } catch (err) {
             toast.error(t('Not saved'), { body: api.errorMessage(err) });
             setBusy(false);
@@ -44,7 +47,7 @@ export default function WelcomePage({ user, onNavigate }) {
                 </ol>
 
                 <h2 className="onb__q">{t('Where do your customers write to you?')}</h2>
-                <p className="onb__hint">{t('Choose all that apply. Setup starts with these.')}</p>
+                <p className="onb__hint">{t('Choose all that apply. We will show you how to connect them.')}</p>
                 <div className="onb__choices" role="group" aria-label={t('Where do your customers write to you?')}>
                     {CHANNEL_CHOICES.map(({ id, label, note, Icon }) => {
                         const on = chosen.includes(id);

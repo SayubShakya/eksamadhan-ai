@@ -708,8 +708,9 @@ public class AiReplyService {
 
         // Earlier messages that bear on this one, so a follow-up like "and the blue one?"
         // still makes sense without resending the whole thread.
-        List<ConversationMemoryService.Recalled> memory =
-                memoryService.recallForThread(thread.getId(), question, MEMORY_MESSAGES);
+        // No conversation in a preview (the owner trying the AI): nothing earlier to recall.
+        List<ConversationMemoryService.Recalled> memory = thread == null ? List.of()
+                : memoryService.recallForThread(thread.getId(), question, MEMORY_MESSAGES);
         if (!memory.isEmpty()) {
             prompt.append("EARLIER IN THIS CONVERSATION:\n");
             memory.forEach(m -> prompt.append("- ").append(m.content()).append('\n'));
@@ -718,7 +719,7 @@ public class AiReplyService {
 
         // The same customer on their other channel (linked as the same person), so a follow-up
         // that only makes sense with that conversation still gets a sensible answer.
-        if (customerLinks != null) {
+        if (customerLinks != null && thread != null) {
             try {
                 List<CustomerLinkService.Elsewhere> elsewhere =
                         customerLinks.recentElsewhere(thread.getId(), ELSEWHERE_MESSAGES, ELSEWHERE_DAYS);
@@ -795,6 +796,35 @@ public class AiReplyService {
      *                opposite responses — a person, or the door.
      */
     private record Verdict(boolean related, boolean answered, double confidence, String reply) {}
+
+    /** What the AI would do with a question, for the owner trying it before customers do. */
+    public record Preview(boolean answered, String reply, double confidence, List<String> sources, String why) {}
+
+    /**
+     * Try the AI (onboarding, "test your AI before going live"): the same knowledge search, prompt,
+     * model and confidence gates as a real reply, with no conversation and nothing sent. Says
+     * whether a customer would get this answer or be handed to a person, and why.
+     */
+    public Preview preview(Organization organization, String question) {
+        if (!llmClient.isConfigured()) return new Preview(false, "", 0, List.of(), "no AI model is set up on this system");
+        List<RetrievalService.Passage> passages = retrievalService.search(organization, question, KNOWLEDGE_PASSAGES);
+        double best = passages.isEmpty() ? 0 : passages.get(0).similarity();
+        boolean weakContext = passages.isEmpty() || best < minSimilarity;
+        String prompt = buildPrompt(question, weakContext ? List.of() : passages, null, weakContext);
+        Verdict verdict;
+        try {
+            verdict = parse(llmClient.complete(SYSTEM_PROMPT, prompt));
+        } catch (RuntimeException e) {
+            return new Preview(false, "", 0, List.of(), "the AI could not be reached; try again");
+        }
+        List<String> sources = weakContext ? List.of()
+                : passages.stream().map(RetrievalService.Passage::sourceTitle).filter(java.util.Objects::nonNull).distinct().limit(3).toList();
+        boolean ok = verdict.answered() && !verdict.reply().isBlank() && verdict.confidence() >= minConfidence;
+        String why = ok ? "" : weakContext ? "nothing in your knowledge matches this question"
+                : !verdict.answered() || verdict.reply().isBlank() ? "your knowledge does not answer this question"
+                : "the AI was not sure enough of its answer";
+        return new Preview(ok, ok ? verdict.reply() : "", round(verdict.confidence()), sources, why);
+    }
 
     /**
      * The reply as a person at the business would type it: no em or en dashes, which models

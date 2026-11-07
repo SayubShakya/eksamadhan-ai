@@ -95,6 +95,11 @@ public class Organization {
     @Column(name = "onboarding_ai_chosen", nullable = false)
     private boolean onboardingAiChosen = false;
 
+    /** The owner asked the AI a question on the setup guide and saw it answer. */
+    @Builder.Default
+    @Column(name = "onboarding_ai_tried", nullable = false)
+    private boolean onboardingAiTried = false;
+
     /** When every setup step was first done. */
     @Column(name = "onboarding_completed_at")
     private OffsetDateTime onboardingCompletedAt;

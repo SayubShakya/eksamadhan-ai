@@ -5,6 +5,8 @@ import { LoadError } from '../components/ui/Loading.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
 import { toast } from '../lib/toast.js';
 import { t } from '../lib/i18n.js';
+import TryAi from './knowledge/TryAi.jsx';
+import { primeResource } from '../lib/loading.js';
 import SetupStepBar from '../components/SetupStepBar.jsx';
 import PageHeader from '../components/ui/PageHeader.jsx';
 import useAddKnowledge from './knowledge/useAddKnowledge.js';
@@ -159,6 +161,16 @@ export default function KnowledgePage({ canManage: roleCanManage = false, onNavi
             )}
 
             {canManage && <KnowledgeGaps gaps={gaps} answering={answering} onAnswer={answerGap} onDismiss={dismissGap} />}
+
+            {/* Try your AI: the answer a customer would get, before any customer writes. */}
+            {!loading && library.sources.some(src => src.status === 'READY') && (
+                <section className="card tryai-card" aria-labelledby="tryai-h">
+                    <h2 id="tryai-h" className="tryai-card__title">{t('Try your AI')}</h2>
+                    <p className="tryai-card__sub">{t('Ask a question the way a customer would and see the answer, before any customer writes. Nothing is sent to anyone.')}</p>
+                    <TryAi onAnswered={() => api.updateSetup({ aiTried: true }).then(fresh => primeResource('setup', fresh)).catch(() => {})}
+                           onAddKnowledge={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
+                </section>
+            )}
 
             <KnowledgeTest query={test.query} onQuery={test.setQuery} results={test.results}
                            searching={test.searching} onSearch={test.search} onClear={test.clear} />

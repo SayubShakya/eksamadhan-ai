@@ -212,6 +212,8 @@ export const exportMyData = () => axios.get('/api/account/export', { responseTyp
 
 // ── Settings ────────────────────────────────────────────────────────────────
 // Onboarding: the setup guide's state, and the welcome page's answers (OnboardingController).
+// Try your AI: what a customer asking this would get, nothing sent (KnowledgeController /try).
+export const tryAi = (question) => axios.post('/api/knowledge/try', { question }).then(r => r.data);
 export const getSetup = () => axios.get('/api/setup').then(r => r.data);
 export const updateSetup = (payload) => axios.patch('/api/setup', payload).then(r => r.data);
 export const getSettings = () => axios.get('/api/settings').then(r => r.data);

@@ -27,7 +27,7 @@ export default function LandingPage({ signedIn = false }) {
 
     const primary = signedIn
         ? { href: '/dashboard', label: 'Open your inbox' }
-        : { href: '/signup', label: 'Create a workspace' };
+        : { href: '/signup', label: 'Create account' };
 
     return (
         <div className="lp">

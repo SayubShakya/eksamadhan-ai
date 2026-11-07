@@ -65,6 +65,11 @@ export function clearResources() {
     store.clear();
 }
 
+/** Puts a fresh copy in the session store, from an answer that already carries it (a save). */
+export function primeResource(key, data) {
+    store.set(key, { data });
+}
+
 function fetchInto(key, fetcher) {
     const entry = store.get(key) || {};
     if (entry.promise) return entry.promise;

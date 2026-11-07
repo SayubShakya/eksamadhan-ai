@@ -126,3 +126,39 @@
 .sg__step-open { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--text); text-align: left; cursor: pointer; }
 .sg__step-open:hover { color: var(--accent); }
 .sg__step:not(.is-current):not(.is-done):hover { background: var(--surface); }
+
+/* Step pictures and time (research: show how small each step is) */
+.sg__time { font-size: 12px; color: var(--text-muted); }
+.sg__step.is-current .sg__num svg, .sg__num svg { display: block; }
+.sg__actions:has(.tryai) { display: grid; gap: 10px; justify-items: start; }
+.sg__actions .tryai { width: 100%; }
+
+/* Menu: setup progress */
+.rail__setup {
+    margin-left: auto; font-size: 11px; font-weight: 650; padding: 2px 7px; border-radius: var(--r-sm);
+    background: var(--accent-weak); color: var(--accent); font-variant-numeric: tabular-nums;
+}
+
+/* Try your AI */
+.tryai { display: grid; gap: 10px; }
+.tryai__ask { display: flex; gap: 8px; }
+.tryai__ask input {
+    flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--r-sm);
+    background: var(--bg); color: var(--text); font: inherit; font-size: 14px;
+}
+.tryai__ask input:focus { outline: none; border-color: var(--accent); }
+.tryai__examples { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--text-muted); }
+.tryai__chip { padding: 5px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg); color: var(--text); font: inherit; font-size: 13px; }
+.tryai__chip:hover { border-color: var(--accent); color: var(--accent); }
+.tryai__chat { display: grid; gap: 8px; }
+.tryai__q { justify-self: end; max-width: 80%; margin: 0; padding: 8px 12px; border-radius: 12px 12px 4px 12px; background: var(--accent); color: #fff; font-size: 14px; }
+.tryai__wait { display: flex; gap: 8px; align-items: center; margin: 0; color: var(--text-muted); font-size: 13px; }
+.tryai__a { max-width: 85%; padding: 10px 12px; border-radius: 12px 12px 12px 4px; background: var(--surface); border: 1px solid var(--border); display: grid; gap: 4px; }
+.tryai__a p { margin: 0; font-size: 14px; line-height: 1.5; }
+.tryai__who { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--text-muted); }
+.tryai__from { font-size: 12px; color: var(--text-muted); }
+.tryai__none { padding: 10px 12px; border-radius: var(--r-sm); background: var(--warning-weak); font-size: 13px; display: grid; gap: 4px; }
+.tryai__none p { margin: 0; line-height: 1.5; }
+.tryai-card { padding: 20px 22px; }
+.tryai-card__title { font-size: 16px; font-weight: 600; margin: 0 0 2px; }
+.tryai-card__sub { color: var(--text-muted); font-size: 13px; margin: 0 0 12px; }

@@ -34,7 +34,7 @@ const DOCKED = '(min-width: 1024px)';
  */
 export default function NavRail({ view, onNavigate, unread = 0, open, onClose, onToggle, onHome,
                                   items = ITEMS, showSettings = true, onSignOut, user, onProfile, action,
-                                  workspace, workspaceLogo }) {
+                                  workspace, workspaceLogo, setup = null }) {
 
     // Docked (desktop), the collapsed rail is still the menu: only off-screen on a phone is it
     // hidden from clicks and screen readers.
@@ -170,6 +170,10 @@ export default function NavRail({ view, onNavigate, unread = 0, open, onClose, o
                         <span>{label}</span>
                         {id === 'inbox' && unread > 0 && (
                             <span className="rail__badge" aria-label={t('{n} awaiting reply', { n: unread })}>{unread}</span>
+                        )}
+                        {/* Setup progress, seen from every page while the guide is open. */}
+                        {id === 'home' && setup && (
+                            <span className="rail__setup" aria-label={t('Setup: {done} of {total} done', setup)}>{setup.done}/{setup.total}</span>
                         )}
                     </button>
                     );

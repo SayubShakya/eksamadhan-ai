@@ -58,3 +58,6 @@ __pycache__/
 # (owner's decision, 2026-09-30).
 docs/
 PROJECT_TRACKING.md
+
+# Submission package (package.sh)
+dist-package/
