@@ -22,6 +22,8 @@ export const PRESENCE = {
     BUSY: presence('Busy', 'dot--busy', 'You keep your conversations; new ones go to others'),
     // Available, but outside the working hours on the Hours page: new ones go to others.
     OUTSIDE_HOURS: presence('Outside hours', 'dot--away', ''),
+    // No hours at all yet (a new account): "Outside hours" read as if something were wrong.
+    NO_HOURS: presence('Hours not set', 'dot--away', ''),
     OFFLINE: presence('Offline', 'dot--offline', ''),
 };
 
@@ -40,7 +42,7 @@ export default function AvailabilityMenu({ value = 'AVAILABLE', onChange, hours,
     const boxRef = useRef(null);
     // Chosen Available, but the schedule says no: say so, never "Available" with nothing coming.
     const outside = value === 'AVAILABLE' && hours && !hours.withinHours;
-    const current = outside ? PRESENCE.OUTSIDE_HOURS : (PRESENCE[value] || PRESENCE.AVAILABLE);
+    const current = outside ? (hours.hasAvailability ? PRESENCE.OUTSIDE_HOURS : PRESENCE.NO_HOURS) : (PRESENCE[value] || PRESENCE.AVAILABLE);
     const why = hoursNote(hours);
 
     useEffect(() => {

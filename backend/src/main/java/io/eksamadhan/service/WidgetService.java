@@ -81,6 +81,15 @@ public class WidgetService {
     private final Clock clock;
     private final Map<String, Deque<Instant>> recent = new ConcurrentHashMap<>();
 
+    /**
+     * The dashboard's own address (onboarding): its preview page lets an owner try the chat box
+     * before the code is on their website. Set from configuration; null in unit tests.
+     */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private PublicUrl publicUrl;
+    @Value("${app.frontend-url:}")
+    private String frontendUrl;
+
     @org.springframework.beans.factory.annotation.Autowired
     public WidgetService(SocialPageRepository pages, SocialMessageRepository messages, ThreadService threads,
                          ApplicationEventPublisher events, JdbcTemplate jdbc,
@@ -223,12 +232,33 @@ public class WidgetService {
      * @throws ResponseStatusException 404 for an unknown key, 403 from any other website
      */
     public SocialPage forWebsite(String key, String origin) {
+        return forWebsite(key, origin, null);
+    }
+
+    /** As above; `referer` stands in for a missing Origin, for the dashboard's preview only. */
+    public SocialPage forWebsite(String key, String origin, String referer) {
         SocialPage page = key == null ? null : pages.findByPageIdAndPlatform(key, SocialPage.WEB).orElse(null);
         if (page == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "This chat box no longer exists.");
-        if (!allows(page, origin)) {
+        if (!allows(page, origin) && !isDashboard(origin != null ? origin : referer)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This chat box is not set up for this website.");
         }
         return page;
+    }
+
+    /**
+     * The dashboard itself, for the "Try the chat box" preview. On a laptop running the app
+     * locally, any localhost port counts, since the dashboard may be served on another port.
+     */
+    boolean isDashboard(String origin) {
+        String asked = origin == null ? null : normalOrigin(origin.strip());
+        if (asked == null) return false;
+        for (String own : new String[] { frontendUrl, publicUrl == null ? null : publicUrl.get() }) {
+            String o = own == null || own.isBlank() ? null : normalOrigin(own.strip());
+            if (o == null) continue;
+            if (o.equals(asked)) return true;
+            if (o.startsWith("http://localhost") && asked.startsWith("http://localhost")) return true;
+        }
+        return false;
     }
 
     /** Whether the browser's Origin is one of the page's websites. No Origin, no chat. */

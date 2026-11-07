@@ -98,3 +98,31 @@
     .sg__ready-actions { width: 100%; }
     .sg__ready-actions .btn { flex: 1; justify-content: center; }
 }
+
+/* Setup step bar on the setup pages */
+.ssb {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 16px;
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border)); background: var(--accent-weak); border-radius: var(--r-md);
+}
+.ssb--done { border-color: color-mix(in srgb, var(--success) 35%, var(--border)); background: var(--success-weak); }
+.ssb__num {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    background: var(--accent); color: #fff; font-weight: 650; font-size: 13px;
+}
+.ssb--done .ssb__num { background: var(--success); }
+.ssb__text { margin: 0; flex: 1; min-width: 180px; font-weight: 600; font-size: 14px; display: flex; flex-direction: column; }
+.ssb__step { font-weight: 500; font-size: 12px; color: var(--text-muted); }
+.ssb__back { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; font-size: 13px; font-weight: 500; }
+.ssb__back:hover { text-decoration: underline; }
+.chn > .ssb, .tm > .ssb { margin-bottom: 0; }
+
+/* How the inbox works (reading pane, nothing open) */
+.inbox-help { margin-top: 18px; max-width: 420px; text-align: left; border-top: 1px solid var(--border); padding-top: 14px; }
+.inbox-help__title { font-weight: 600; font-size: 13px; margin: 0 0 8px; }
+.inbox-help ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+.inbox-help strong { color: var(--text); font-weight: 600; }
+
+/* An unfinished step that is not open: its title opens it. */
+.sg__step-open { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--text); text-align: left; cursor: pointer; }
+.sg__step-open:hover { color: var(--accent); }
+.sg__step:not(.is-current):not(.is-done):hover { background: var(--surface); }

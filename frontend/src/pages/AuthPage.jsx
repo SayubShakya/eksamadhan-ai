@@ -110,7 +110,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
     // The accent word, *marked*, in the product page's italic serif, so the two pages read as
     // one site. Only the fixed titles carry one: a workspace name is shown as typed.
     const title = mode === 'login' ? emph(t('Welcome *back*'))
-        : mode === 'signup' ? emph(t('Create your *workspace*'))
+        : mode === 'signup' ? emph(t('Set up your *business*'))
         : invite?.organizationName ? t('Join {name}', { name: invite.organizationName }) : t('Join the team');
 
     // A whole sentence per role, not a role dropped into one: the words around it change in Nepali.
@@ -198,7 +198,7 @@ export default function AuthPage({ mode, inviteToken, onSession, onNavigate, not
                 <button className={`btn btn--primary auth__submit${busy ? ' btn--busy' : ''}`} type="submit"
                         disabled={busy || googleBusy} aria-busy={busy}>
                     {mode === 'login' ? t('Sign in')
-                        : mode === 'signup' ? t('Create workspace') : t('Join the team')}
+                        : mode === 'signup' ? t('Create account') : t('Join the team')}
                 </button>
 
                 <AuthLegal mode={mode} />

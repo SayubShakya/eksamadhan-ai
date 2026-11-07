@@ -104,7 +104,9 @@ public class WidgetController {
     }
 
     private SocialPage page(String key, HttpServletRequest request) {
-        return widgets.forWebsite(key, request.getHeader("Origin"));
+        // A browser leaves Origin off a same-site GET, which is what the dashboard's own preview
+        // page sends; its Referer still says where it came from. Only the dashboard check uses it.
+        return widgets.forWebsite(key, request.getHeader("Origin"), request.getHeader("Referer"));
     }
 
     /** The first X-Forwarded-For entry behind the proxy or tunnel, else the connection's address. */

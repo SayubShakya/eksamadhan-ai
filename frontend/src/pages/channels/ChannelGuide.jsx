@@ -29,13 +29,12 @@ const GUIDES = [
     {
         id: 'WHATSAPP', label: 'WhatsApp', Icon: IconWhatsApp,
         steps: [
-            'Open developers.facebook.com, choose your app, then WhatsApp, then API Setup.',
-            'Copy the Phone number ID and the WhatsApp Business Account ID shown there.',
-            'For the token, use a system user token (Business settings, System users, Generate token, expiry Never) so it never runs out. A token from API Setup also works; it is extended to about 60 days when you connect.',
-            'Paste the three into the WhatsApp card below and click Connect.',
+            'You need a WhatsApp Business number set up with Meta. If you do not have one yet, ask EkSamadhan support to set it up with you.',
+            'From Meta, copy three things: the phone number ID, the WhatsApp Business account ID and an access token. Whoever set up the number can send you these.',
+            'Paste them into the WhatsApp card below and click Connect.',
             'Send a WhatsApp message to that number from your phone to test it.',
         ],
-        note: 'The two IDs are numbers only. If your browser fills in your email or password, clear those boxes first.',
+        note: 'Ask for a token that never expires (a system user token). If your browser fills in your email or password in the card, clear those boxes first.',
     },
     {
         id: 'WEB', label: 'Your website', Icon: IconWidget,

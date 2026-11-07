@@ -4,6 +4,7 @@ import ConfirmDialog from '../components/dialogs/ConfirmDialog.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
 import { toast } from '../lib/toast.js';
 import { t } from '../lib/i18n.js';
+import SetupStepBar from '../components/SetupStepBar.jsx';
 import PageHeader from '../components/ui/PageHeader.jsx';
 import ChannelsSummary from './channels/ChannelsSummary.jsx';
 import ChannelsSkeleton from './channels/ChannelsSkeleton.jsx';
@@ -24,7 +25,7 @@ import ChannelGuide from './channels/ChannelGuide.jsx';
  * Connecting is for the tenant and admins; disconnecting one account deletes its conversations,
  * so it is the tenant's alone, as the server enforces.
  */
-export default function ChannelsPage({ user, pages = [], statusLoaded = true, onChanged }) {
+export default function ChannelsPage({ user, pages = [], statusLoaded = true, onChanged, onNavigate }) {
     const canManage = user?.role === 'OWNER' || user?.role === 'ADMIN';
     const isTenant = user?.role === 'OWNER';
     const loading = useHeldLoading(!statusLoaded);
@@ -67,6 +68,7 @@ export default function ChannelsPage({ user, pages = [], statusLoaded = true, on
 
     return (
         <div className="page chn">
+            <SetupStepBar step="channel" onNavigate={onNavigate} />
             <PageHeader title={t('Channels')} sub={t('Where your customers message you from. Every conversation arrives in the one inbox.')} />
 
             {/* Where things stand, from what is connected. */}

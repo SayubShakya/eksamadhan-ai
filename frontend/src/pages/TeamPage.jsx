@@ -4,6 +4,7 @@ import * as api from '../lib/api.js';
 import { LoadError, LoadingRegion } from '../components/ui/Loading.jsx';
 import { toast } from '../lib/toast.js';
 import { t } from '../lib/i18n.js';
+import SetupStepBar from '../components/SetupStepBar.jsx';
 import PageHeader from '../components/ui/PageHeader.jsx';
 import ShareCard from './team/ShareCard.jsx';
 import InviteForm from './team/InviteForm.jsx';
@@ -27,7 +28,7 @@ export { isReachable } from './team/reachable.js';
  * `canManage` comes from the signed-in role and only decides whether the invite form is drawn
  * while the team loads; once it has loaded, the server's answer is used.
  */
-export default function TeamPage({ canManage: roleCanManage = false }) {
+export default function TeamPage({ canManage: roleCanManage = false, onNavigate }) {
     const { team, loadError, load, mutate, firstLoad } = useLiveTeam();
     const [email, setEmail] = useState('');
     const [role, setRole] = useState('AGENT');
@@ -129,6 +130,7 @@ export default function TeamPage({ canManage: roleCanManage = false }) {
 
     return (
         <div className="page tm">
+            <SetupStepBar step="team" onNavigate={onNavigate} />
             <PageHeader title={t('Team')} sub={t('The people who answer your customers when the AI hands a conversation over. The tenant owns the business; admins also manage the team and settings; staff answer the conversations given to them.')} />
 
             <div className={`tm-top${canManage ? '' : ' tm-top--solo'}`}>

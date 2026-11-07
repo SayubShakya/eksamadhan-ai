@@ -96,9 +96,9 @@ export default function DashboardPages({
             />
         )}
 
-        {view === 'team' && <TeamPage canManage={canManage} />}
+        {view === 'team' && <TeamPage canManage={canManage} onNavigate={setView} />}
 
-        {view === 'knowledge' && <KnowledgePage canManage={canManage} />}
+        {view === 'knowledge' && <KnowledgePage canManage={canManage} onNavigate={setView} />}
 
         {view === 'analytics' && <AnalyticsPage onNavigate={setView} onOpenSpam={openSpam} />}
 
@@ -121,7 +121,7 @@ export default function DashboardPages({
         )}
 
 
-        {view === 'hours' && <HoursPage onStatus={setMyHours} />}
+        {view === 'hours' && <HoursPage onStatus={setMyHours} onNavigate={setView} />}
         {view === 'channels' && (
             <ChannelsPage
                 user={user}
@@ -129,6 +129,7 @@ export default function DashboardPages({
                 statusLoaded={loaded.status}
                 onChanged={() => { refreshStatus(); refreshThreads(); refreshMessages(); }}
                 onConnect={handleConnect}
+                onNavigate={setView}
             />
         )}
         </Suspense>

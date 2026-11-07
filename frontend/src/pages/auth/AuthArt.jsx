@@ -202,7 +202,7 @@ const TOP = [
 
 const JOURNEY = [
     { icon: IconInbox, label: 'Message arrives' },
-    { icon: IconBolt, label: 'Jev checks it' },
+    { icon: IconBolt, label: 'Spam is filtered out' },
     { icon: IconCheck, label: 'AI answers' },
     { icon: IconTeam, label: 'Your team steps in' },
 ];

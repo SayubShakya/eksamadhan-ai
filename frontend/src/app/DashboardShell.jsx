@@ -91,7 +91,7 @@ export default function DashboardShell({
             {signOutDialog}
 
             <NotificationPrompt
-                open={askNotifications}
+                open={askNotifications && view !== 'welcome'}
                 onClose={() => setAskNotifications(false)}
             />
 

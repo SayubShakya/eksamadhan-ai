@@ -11,7 +11,7 @@ export default function AuthLegal({ mode }) {
             {mode !== 'login' && (
                 <p className="auth__legal">
                     {rich(mode === 'signup'
-                        ? t('By creating a workspace, you agree to the {terms} and confirm you have read the {privacy}.')
+                        ? t('By creating an account, you agree to the {terms} and confirm you have read the {privacy}.')
                         : t('By joining, you agree to the {terms} and confirm you have read the {privacy}.'), {
                         terms: <a href="/terms" target="_blank" rel="noopener">{t('Terms & Conditions')}</a>,
                         privacy: <a href="/privacy" target="_blank" rel="noopener">{t('Privacy Policy')}</a>,

@@ -22,6 +22,17 @@ export default function ThreadPlaceholder({ hasThreads, filter, platformFilter }
                     : filter === 'resolved' ? t('Conversations move here when they are resolved.')
                     : t('No conversation is open right now.')}
             </p>
+            {/* How the inbox works, for anyone new to it: what each label means and what to do. */}
+            {hasThreads && (
+                <div className="inbox-help">
+                    <p className="inbox-help__title">{t('How the inbox works')}</p>
+                    <ul>
+                        <li><strong>{t('AI is handling')}</strong> {t('The AI is answering. You can read along; nothing to do.')}</li>
+                        <li><strong>{t('Needs staff')}</strong> {t('or')} <strong>{t('Waiting for you')}</strong> {t('The AI handed it over. Open it and reply; the AI stays quiet while a person handles it.')}</li>
+                        <li><strong>{t('Resolve')}</strong> {t('when the customer has what they needed. If they write again, the AI picks it up.')}</li>
+                    </ul>
+                </div>
+            )}
         </div>
     );
 }

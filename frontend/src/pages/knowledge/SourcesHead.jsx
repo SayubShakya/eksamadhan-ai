@@ -9,7 +9,7 @@ export default function SourcesHead({ sources }) {
             {sources && sources.length > 0 && (
                 <span className="kq-sources-meta">
                     {sources.length === 1 ? t('1 source') : t('{n} sources', { n: sources.length })}
-                    {totalChunks > 0 && <> · {t('{n} passages indexed', { n: totalChunks })}</>}
+                    {totalChunks > 0 && <> · {totalChunks === 1 ? t('1 passage ready') : t('{n} passages ready', { n: totalChunks })}</>}
                 </span>
             )}
         </div>

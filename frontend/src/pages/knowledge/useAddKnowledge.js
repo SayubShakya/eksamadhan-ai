@@ -21,6 +21,11 @@ export default function useAddKnowledge({ load, setError, afterText }) {
     const addText = async (e) => {
         e.preventDefault();
         setError('');
+        // The template's blanks: saved unfilled, the AI would learn the questions, not the answers.
+        if (text.includes('___')) {
+            setError(t('Fill in the blanks marked ___ with your own details first, or delete the lines you do not need.'));
+            return;
+        }
         setBusy(true);
         try {
             await api.addKnowledgeText({ title, text });

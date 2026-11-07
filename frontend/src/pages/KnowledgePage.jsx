@@ -5,6 +5,7 @@ import { LoadError } from '../components/ui/Loading.jsx';
 import { useHeldLoading, useResource } from '../lib/loading.js';
 import { toast } from '../lib/toast.js';
 import { t } from '../lib/i18n.js';
+import SetupStepBar from '../components/SetupStepBar.jsx';
 import PageHeader from '../components/ui/PageHeader.jsx';
 import useAddKnowledge from './knowledge/useAddKnowledge.js';
 import useKnowledgeSearch from './knowledge/useKnowledgeSearch.js';
@@ -30,15 +31,15 @@ import KnowledgeGaps from './knowledge/KnowledgeGaps.jsx';
  */
 /** A first knowledge text for a new shop (onboarding): the questions customers ask most, to fill in. */
 const KNOWLEDGE_TEMPLATE = () => [
-    t('Delivery: where do you deliver, how long does it take, and how much does it cost?'),
-    t('Prices: your main products and their prices.'),
-    t('Payment: cash on delivery, eSewa, Khalti, bank transfer?'),
-    t('Returns and exchanges: what can be returned, and within how many days?'),
-    t('Location and opening hours: your address and when you are open.'),
-    t('Contact: a phone number for anything urgent.'),
+    t('Delivery: we deliver to ___. It takes ___ days and costs NPR ___.'),
+    t('Prices: ___ costs NPR ___.'),
+    t('Payment: we accept ___ (for example cash on delivery, eSewa, Khalti, bank transfer).'),
+    t('Returns and exchanges: ___ can be returned within ___ days.'),
+    t('Location and opening hours: our shop is at ___, open ___.'),
+    t('Contact: for anything urgent, call ___.'),
 ].join('\n\n');
 
-export default function KnowledgePage({ canManage: roleCanManage = false }) {
+export default function KnowledgePage({ canManage: roleCanManage = false, onNavigate }) {
     const { data: library, error: loadError, reload: load } = useResource('knowledge', api.getKnowledge);
     const firstLoad = useHeldLoading(!library && !loadError);
     const [addTab, setAddTab] = useState('text');
@@ -116,6 +117,7 @@ export default function KnowledgePage({ canManage: roleCanManage = false }) {
 
     return (
         <div className="page">
+            <SetupStepBar step="knowledge" onNavigate={onNavigate} />
             <PageHeader title={t('Knowledge')} sub={t('Write what a good shop assistant would know: prices, delivery, payment, returns and opening hours. The AI answers only from this.')} />
 
             {!loading && !library.aiConfigured && <AiNotConfigured />}

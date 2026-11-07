@@ -47,6 +47,10 @@ export default function HomePage({
     }, [setup.data, onNavigate]);
     // While the guide is open it has a working-hours step, so the separate notice would say it twice.
     const guideOpen = setup.data ? !setup.data.hidden : false;
+    // A brand-new business has nothing to chart: while setup is under way and no conversation has
+    // arrived, the guide is the page, not one card among empty charts and repeated buttons.
+    const settingUp = Boolean(setup.data && setup.data.canManage && !setup.data.hidden
+        && !setup.data.complete && threadCount === 0);
 
     return (
         <div className="page">
@@ -54,7 +58,7 @@ export default function HomePage({
             <PageHeader echo={false} title={user.firstName ? t('{greeting}, {name}', { greeting: greeting(), name: user.firstName }) : greeting()} sub={t('Your conversations, channels and setup at a glance.')}>
                 {/* The two things that make the AI useful: where messages come from, and what it
                     answers from. Side by side so a new owner sees both first steps. */}
-                {canManage && (
+                {canManage && !settingUp && (
                     <div className="home__actions">
                         <button className="btn btn--outline home__knowledge" onClick={() => onNavigate('knowledge')}>
                             <IconKnowledge size={16} /> {t('Add knowledge')}
@@ -71,6 +75,7 @@ export default function HomePage({
             <SetupGuide setup={setup.data} error={setup.error} onRetry={setup.reload}
                         onChanged={(fresh) => setup.mutate(() => fresh)} onNavigate={onNavigate} />
 
+            {!settingUp && <>
             <StatCards analytics={analytics} connected={connected} todayCount={todayCount} threadCount={threadCount}
                        todayPending={statusPending || recentPending} figuresPending={figuresPending} />
 
@@ -83,6 +88,7 @@ export default function HomePage({
             <RecentConversations pending={recentPending} loadError={loadError} threadsLoaded={threadsLoaded}
                                  threadCount={threadCount} threads={threads} canManage={canManage} onRetry={onRetry}
                                  onOpen={onOpenConversation} onNavigate={onNavigate} />
+            </>}
         </div>
     );
 }

@@ -10,8 +10,11 @@ import { LoadError, LoadingRegion, Skel } from '../../components/ui/Loading.jsx'
 
 const CHANNEL_NAMES = { FACEBOOK: 'your Facebook Page', INSTAGRAM: 'your Instagram account', WHATSAPP: 'your WhatsApp number', WEB: 'the chat box on your website' };
 
+/** Which page each step is done on. */
+export const STEP_VIEW = { channel: 'channels', knowledge: 'knowledge', hours: 'hours', test: 'inbox', team: 'team', ai: 'home' };
+
 /** What each step says, and what its button does. `go` opens a page; the rest are handled here. */
-function stepText(id, setup) {
+export function stepText(id, setup) {
     const first = setup.channels?.[0];
     switch (id) {
         case 'channel': return {
@@ -32,7 +35,9 @@ function stepText(id, setup) {
         };
         case 'test': return {
             title: t('Send yourself a test message'),
-            why: t('From your own phone, message the channel you connected, for example "Do you deliver to Lalitpur?". It appears in the inbox and the AI answers it.'),
+            why: setup.connected?.includes('WEB') && setup.connected.length === 1
+                ? t('Open Channels, Website chat, "Try the chat box", and ask something a customer would, for example "Do you deliver to Lalitpur?". It appears in the inbox and the AI answers it.')
+                : t('From your own phone, message the channel you connected, for example "Do you deliver to Lalitpur?". It appears in the inbox and the AI answers it.'),
             cta: t('Open the inbox'), go: 'inbox',
         };
         case 'team': return {
@@ -50,6 +55,9 @@ function stepText(id, setup) {
 export default function SetupGuide({ setup, error, onRetry, onChanged, onNavigate }) {
     const [open, setOpen] = useState(true);
     const [busy, setBusy] = useState(false);
+    // Any unfinished step can be opened, not only the first: connecting WhatsApp can take days,
+    // and "I work alone" or the AI choice should not wait for it.
+    const [picked, setPicked] = useState(null);
 
     const save = async (patch, done) => {
         setBusy(true);
@@ -65,6 +73,8 @@ export default function SetupGuide({ setup, error, onRetry, onChanged, onNavigat
 
     if (error && !setup) return <section className="card"><LoadError message={api.errorMessage(error)} onRetry={onRetry} /></section>;
     if (!setup) return <GuideSkeleton />;
+    // Staff do not set the business up; they get their own short start instead.
+    if (!setup.canManage) return <StaffGuide hoursDone={setup.steps.find(s => s.id === 'hours')?.done} onNavigate={onNavigate} />;
     if (setup.hidden) return null;
 
     const steps = setup.steps;
@@ -110,17 +120,25 @@ export default function SetupGuide({ setup, error, onRetry, onChanged, onNavigat
                 <ol className="sg__steps">
                     {steps.map((step, i) => {
                         const text = stepText(step.id, setup);
-                        const current = i === next;
+                        const shown = picked && steps.some(s => s.id === picked && !s.done) ? picked : steps[next]?.id;
+                        const current = step.id === shown;
                         return (
                             <li key={step.id} className={`sg__step${step.done ? ' is-done' : ''}${current ? ' is-current' : ''}`}>
                                 <span className="sg__num" aria-hidden="true">{step.done ? <IconCheck size={14} /> : i + 1}</span>
                                 <div className="sg__body">
-                                    <p className="sg__step-title">
-                                        {text.title}
-                                        {step.done && <span className="sr-only"> {t('Done')}</span>}
-                                    </p>
-                                    {(current || !step.done) && <p className="sg__why">{text.why}</p>}
-                                    {current && !setup.canManage && <p className="sg__why">{t('Set by the tenant or an admin.')}</p>}
+                                    {!current && !step.done ? (
+                                        <button className="sg__step-title sg__step-open" onClick={() => setPicked(step.id)}
+                                                aria-label={t('Open step: {step}', { step: text.title })}>
+                                            {text.title}
+                                        </button>
+                                    ) : (
+                                        <p className="sg__step-title">
+                                            {text.title}
+                                            {step.done && <span className="sr-only"> {t('Done')}</span>}
+                                        </p>
+                                    )}
+                                    {/* Only the step to do now explains itself: six paragraphs at once read as a wall. */}
+                                    {current && <p className="sg__why">{text.why}</p>}
                                     {current && setup.canManage && (
                                         <div className="sg__actions">
                                             {step.id === 'ai' ? (
@@ -146,11 +164,6 @@ export default function SetupGuide({ setup, error, onRetry, onChanged, onNavigat
                                             )}
                                         </div>
                                     )}
-                                    {!current && !step.done && setup.canManage && (
-                                        step.id === 'ai'
-                                            ? null
-                                            : <button className="sg__link" onClick={() => onNavigate(text.go)}>{text.cta}</button>
-                                    )}
                                 </div>
                             </li>
                         );
@@ -162,6 +175,51 @@ export default function SetupGuide({ setup, error, onRetry, onChanged, onNavigat
                     <button className="sg__link" disabled={busy} onClick={() => save({ hidden: true })}>{t('Hide the guide')}</button>
                 </div>
             )}
+        </section>
+    );
+}
+
+/**
+ * A new staff member's start: their own working hours, alerts on this device, and where the
+ * work arrives. Hidden for good on this device once they say so.
+ */
+function StaffGuide({ hoursDone, onNavigate }) {
+    const read = () => { try { return localStorage.getItem('staff-guide-hidden') === '1'; } catch { return false; } };
+    const [hidden, setHidden] = useState(read);
+    const alerts = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+    if (hidden) return null;
+    const hide = () => { try { localStorage.setItem('staff-guide-hidden', '1'); } catch { /* this visit only */ } setHidden(true); };
+    const steps = [
+        { id: 'hours', done: hoursDone, title: t('Set your working hours'), why: t('Conversations handed over by the AI come to you only inside these hours.'), cta: t('Set hours'), go: 'hours' },
+        { id: 'alerts', done: alerts, title: t('Turn on alerts on this device'), why: t('So you hear the moment a customer needs you, even with the dashboard closed. Use the bell at the top, or Settings, Notifications.'), cta: t('Open settings'), go: 'settings' },
+        { id: 'inbox', done: false, title: t('Answer from the inbox'), why: t('Conversations marked "Waiting for you" are yours. Reply, then Resolve when the customer has what they needed.'), cta: t('Open the inbox'), go: 'inbox' },
+    ];
+    const next = steps.findIndex(s => !s.done);
+    return (
+        <section className="card sg" aria-labelledby="sg-h">
+            <div className="sg__head">
+                <div>
+                    <h2 id="sg-h" className="sg__title">{t('Getting started')}</h2>
+                    <p className="sg__sub">{t('Three things to know before your first conversation.')}</p>
+                </div>
+            </div>
+            <ol className="sg__steps">
+                {steps.map((step, i) => (
+                    <li key={step.id} className={`sg__step${step.done ? ' is-done' : ''}${i === next ? ' is-current' : ''}`}>
+                        <span className="sg__num" aria-hidden="true">{step.done ? <IconCheck size={14} /> : i + 1}</span>
+                        <div className="sg__body">
+                            <p className="sg__step-title">{step.title}</p>
+                            {i === next && <p className="sg__why">{step.why}</p>}
+                            {i === next && (
+                                <div className="sg__actions">
+                                    <button className="btn btn--primary btn--sm" onClick={() => onNavigate(step.go)}>{step.cta} <IconArrowRight size={14} /></button>
+                                </div>
+                            )}
+                        </div>
+                    </li>
+                ))}
+            </ol>
+            <div className="sg__foot"><button className="sg__link" onClick={hide}>{t('Hide this')}</button></div>
         </section>
     );
 }

@@ -3,6 +3,7 @@ import { LoadError } from '../components/ui/Loading.jsx';
 import { useHeldLoading } from '../lib/loading.js';
 import { toast } from '../lib/toast.js';
 import { t } from '../lib/i18n.js';
+import SetupStepBar from '../components/SetupStepBar.jsx';
 import PageHeader from '../components/ui/PageHeader.jsx';
 import { DAYS, dayName, endMin, toTime } from './hours/week.js';
 import useWorkingHours from './hours/useWorkingHours.js';
@@ -25,7 +26,7 @@ import DayRow from './hours/DayRow.jsx';
  *
  * This file holds the edits and wires the parts together; each part lives in ./hours/.
  */
-export default function HoursPage({ onStatus }) {
+export default function HoursPage({ onStatus, onNavigate }) {
     const { days, zone, deviceZone, loadError, load, save, invalid, setWeek, retry } = useWorkingHours(onStatus);
     const loading = useHeldLoading(!days && !loadError);
 
@@ -65,6 +66,7 @@ export default function HoursPage({ onStatus }) {
 
     return (
         <div className="page hours">
+            <SetupStepBar step="hours" onNavigate={onNavigate} />
             <PageHeader title={t('Working hours')} sub={t('The days and times new conversations may come to you. Available or Busy in the top bar is about right now; new conversations come only when both say yes.')} />
             {/* Onboarding: these are easily read as the shop's opening hours. */}
             <p className="notice hours__tip">

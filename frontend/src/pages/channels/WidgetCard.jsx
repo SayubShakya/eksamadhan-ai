@@ -74,6 +74,8 @@ function WidgetRow({ widget, canManage, onEdit, onRemove }) {
             <code className="chn-widget__code" title={code} aria-label={t('Code for your website')}>{code}</code>
             <div className="chn-acc__actions">
                 <button type="button" className="chn-act chn-act--accent" onClick={copy}><IconCopy size={14} />{t('Copy code')}</button>
+                {/* Onboarding: try it before the code is on the website (the dashboard's own preview page). */}
+                <a className="chn-act" href={`/widget-preview.html?key=${encodeURIComponent(widget.key)}`} target="_blank" rel="noopener">{t('Try the chat box')}</a>
                 {canManage && <button type="button" className="chn-act" onClick={onEdit}><IconSettings size={14} />{t('Edit')}</button>}
                 {canManage && <button type="button" className="chn-act chn-act--danger" onClick={onRemove}><IconTrash size={14} />{t('Remove')}</button>}
             </div>
